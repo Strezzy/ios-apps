@@ -1,0 +1,6 @@
+[submodule "Commune/OpenSSL"]
+  path = Commune/OpenSSL
+  url = https://github.com/krzyzanowskim/OpenSSL
+[submodule "Commune/litehook"]
+  path = Commune/litehook
+  url = https://github.com/LiveContainerMirror/litehook

@@ -1,0 +1,9 @@
+Commune is an independent modified distribution of LiveContainer.
+Upstream mirror: https://github.com/LiveContainerMirror/LiveContainer
+Upstream commit: 4dbe0f9a626de801184a42c0be8d2cb105058e3d
+Original project: https://github.com/LiveContainer/LiveContainer
+License: GNU AGPL version 3; see LICENSE and retained upstream notices.
+OpenSSL: krzyzanowskim/OpenSSL@623c84da314e85363236507ca38a4bde65df21c3
+litehook: LiveContainerMirror/litehook@a7e9f599d7f0b3d77008ad62bf10cb10dab6eca9
+The mirror is used because the original repository is unavailable.
+Source publication does not certify a physical-iPhone test or a security audit.
