@@ -1,0 +1,19 @@
+name: Commune - source snapshot
+on:
+  push:
+    branches: [commune-development]
+    paths: [.github/workflows/commune-source-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive editable source
+        run: git archive --format=tar.gz HEAD -o commune-source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commune-source
+          path: commune-source.tar.gz
+          retention-days: 2
