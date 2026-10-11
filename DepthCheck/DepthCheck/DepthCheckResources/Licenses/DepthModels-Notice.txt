@@ -1,0 +1,32 @@
+Depth Check uses the following third-party depth-estimation models:
+
+Depth Anything V2 Small
+Authors: Lihe Yang, Bingyi Kang, Zilong Huang, Zhen Zhao, Xiaogang Xu,
+Jiashi Feng, Hengshuang Zhao.
+Original project: https://github.com/DepthAnything/Depth-Anything-V2
+Core ML distribution: https://huggingface.co/apple/coreml-depth-anything-v2-small
+Core ML integration examples: https://github.com/huggingface/coreml-examples
+License: Apache License, Version 2.0, for the Small variant.
+Paper: https://arxiv.org/abs/2406.09414
+
+Depth Anything 3 Base
+Authors: Haotong Lin, Sili Chen, Jun Hao Liew, Donny Y. Chen, Zhenyu Li,
+Guang Shi, Jiashi Feng, Bingyi Kang / ByteDance Seed.
+Original project: https://github.com/ByteDance-Seed/Depth-Anything-3
+Core ML conversion: Daisuke Majima / john-rocky.
+Conversion project: https://github.com/john-rocky/CoreML-Models
+Core ML distribution: https://huggingface.co/mlboydaisuke/Depth-Anything-3-Base-CoreML
+License: Apache License, Version 2.0, for the Base variant.
+Paper: https://arxiv.org/abs/2511.10647
+
+Depth Check bundles compiled versions of the above published Core ML packages.
+The training weights are not retrained or fine-tuned by Depth Check. The DA3
+community conversion exposes single-image depth and confidence, not the full
+research model's multiview/camera/Gaussian-splat capabilities. Depth Check adds
+aspect-preserving input preparation, depth normalization and stereo rendering.
+Model byte hashes and source revisions are included in Models/ModelSources.json.
+
+The names Apple, Hugging Face, ByteDance and Depth Anything identify sources and
+do not imply that their authors endorse Depth Check.
+
+The complete Apache License, Version 2.0 is included as Apache-2.0.txt.

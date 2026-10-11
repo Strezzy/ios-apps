@@ -30,5 +30,13 @@
     "icon": "Moonhop.png",
     "category": "games",
     "tintColor": "#AA9CFF"
+  },
+  "com.billy.depthcheck": {
+    "name": "Depth Check",
+    "subtitle": "Another dimension. Every frame.",
+    "localizedDescription": "Native Liquid Glass photo and video conversion with bundled on-device Core ML depth models. Apple spatial media, full side-by-side, over-under, anaglyph, separate eyes, and depth exports. Preserves source pixel dimensions and video timing; exact encoder limits are checked on the device. HDR video is exported as SDR. Physical iPhone 17 Pro performance validation remains required.",
+    "icon": "DepthCheck.png",
+    "category": "photo-video",
+    "tintColor": "#4DE8DD"
   }
 }

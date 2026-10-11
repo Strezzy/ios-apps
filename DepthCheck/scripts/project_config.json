@@ -1,0 +1,8 @@
+{
+  "app": "DepthCheck",
+  "bundle_identifier": "com.billy.depthcheck",
+  "remote_packages": [],
+  "local_packages": [],
+  "required_frameworks": ["CoreML", "Metal", "AVFoundation", "SwiftUI"],
+  "test_package_products": []
+}

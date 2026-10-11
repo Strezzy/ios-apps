@@ -1,0 +1,7 @@
+Build/
+.build/
+DepthCheck/DepthCheckResources/Models/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+__pycache__/

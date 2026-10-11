@@ -168,7 +168,7 @@ Export important creations before changing installations; an in-place update on 
 """.replace("SOURCE_URL", source)
     for app in catalog["apps"]:
         version = app["versions"][0]
-        text += (f"| <img src=\"assets/{app['name']}.png\" width=\"44\" alt=\"\"/> **{app['name']}** — {app['subtitle']} "
+        text += (f"| <img src=\"{app['iconURL']}\" width=\"44\" alt=\"\"/> **{app['name']}** — {app['subtitle']} "
                  f"| {version['version']} ({version['buildVersion']}) | [Download IPA]({version['downloadURL']}) "
                  f"| iOS {version['minOSVersion']}+ |\n")
     text += """
