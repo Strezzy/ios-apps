@@ -12,7 +12,8 @@ Evidence: Build/HostChecks/native-media-result.json and build-manifest.json
 The production module and XCTest executable compile once. Exact individual
 tests then run in order, each in a fresh process. An individual assertion
 failure does not prevent independent remaining cases from running; the final
-gate still fails and retains every result. The full 4K60 test has a 900-second deadline.
+gate still fails and retains every result. The 920-frame 4K60 case has a
+900-second deadline; the distinct three-minute 4K60 case has 1,800 seconds.
 An unsupported required capability, missing test, skipped test, failure, or
 missing evidence is an unsuccessful validation and never produces a pass.
 """
@@ -42,12 +43,14 @@ SUSTAINED_TEST_NAMES = (
     "test920FramesOf60FPSSBSWithAACEndingBeforeVideo",
     "testThreeMinute60FPSSBSWithDelayedAAC",
     "test920FramesOf4K60FPSPreservesFullSBSWithAAC",
+    "testThreeMinute4K60FPSPreservesFullSBSWithAAC",
 )
 TEST_TIMEOUTS = {
     SUSTAINED_TEST_NAMES[0]: 300,
     SUSTAINED_TEST_NAMES[1]: 300,
     SUSTAINED_TEST_NAMES[2]: 600,
     SUSTAINED_TEST_NAMES[3]: 900,
+    SUSTAINED_TEST_NAMES[4]: 1800,
     SPATIAL_TEST_NAME: 300,
 }
 SUSTAINED_REQUIREMENTS = {
@@ -55,12 +58,14 @@ SUSTAINED_REQUIREMENTS = {
     SUSTAINED_TEST_NAMES[1]: (640, 360, 920, Fraction(920, 60)),
     SUSTAINED_TEST_NAMES[2]: (160, 90, 10_800, Fraction(180) + Fraction(137, 1000)),
     SUSTAINED_TEST_NAMES[3]: (3840, 2160, 920, Fraction(920, 60) + Fraction(137, 1000)),
+    SUSTAINED_TEST_NAMES[4]: (3840, 2160, 10_800, Fraction(180) + Fraction(137, 1000)),
 }
 SUSTAINED_AUDIO_RANGES = {
     SUSTAINED_TEST_NAMES[0]: (Fraction(0), Fraction(920, 60)),
     SUSTAINED_TEST_NAMES[1]: (Fraction(0), Fraction(920, 60) - 2),
     SUSTAINED_TEST_NAMES[2]: (Fraction(9, 4), Fraction(180) + Fraction(137, 1000)),
     SUSTAINED_TEST_NAMES[3]: (Fraction(0), Fraction(920, 60) + Fraction(137, 1000)),
+    SUSTAINED_TEST_NAMES[4]: (Fraction(0), Fraction(180) + Fraction(137, 1000)),
 }
 RESULT_PATH = BUILD / "native-media-result.json"
 PRODUCTION_FILES = (
@@ -155,6 +160,7 @@ def sustained_coverage_passed(coverage: dict, test_name: str) -> bool:
     packets = source.get("audio_packet_count")
     byte_count = source.get("audio_payload_bytes")
     if not (source.get("audio_codec") == output.get("audio_codec") == "AAC"
+            and source.get("audio_timing_domain") == output.get("audio_timing_domain") == "asset_presentation"
             and isinstance(packets, int) and packets > 500 and output.get("audio_packet_count") == packets
             and isinstance(byte_count, int) and byte_count > 0 and output.get("audio_payload_bytes") == byte_count):
         return False
@@ -166,6 +172,9 @@ def sustained_coverage_passed(coverage: dict, test_name: str) -> bool:
     # offset must therefore come from independently inspected nonempty segment
     # target ranges, not from the whole track's container-level start time.
     for key, expected in zip(("audio_playable_start", "audio_playable_end"), SUSTAINED_AUDIO_RANGES[test_name]):
+        if rational_time(source.get(key)) != expected or rational_time(output.get(key)) != expected:
+            return False
+    for key, expected in zip(("audio_first_pts", "audio_end"), SUSTAINED_AUDIO_RANGES[test_name]):
         if rational_time(source.get(key)) != expected or rational_time(output.get(key)) != expected:
             return False
     if not all(playable_segments_match(media, SUSTAINED_AUDIO_RANGES[test_name]) for media in (source, output)):
@@ -214,7 +223,8 @@ def manifest_matches_current_sources(manifest: dict) -> bool:
     except OSError:
         return False
     return (manifest.get("sources") == expected and manifest.get("swift_optimization") == "-O"
-            and manifest.get("case_timeouts_seconds", {}).get(SUSTAINED_TEST_NAMES[3]) == 900)
+            and manifest.get("case_timeouts_seconds", {}).get(SUSTAINED_TEST_NAMES[3]) == 900
+            and manifest.get("case_timeouts_seconds", {}).get(SUSTAINED_TEST_NAMES[4]) == 1800)
 
 
 def save_result(result: dict) -> None:
@@ -229,6 +239,7 @@ def run_case(executable: Path, name: str, index: int) -> dict:
     environment = os.environ.copy()
     environment["DEPTHCHECK_RUN_THREE_MINUTE_SUSTAINED"] = "1"
     environment["DEPTHCHECK_RUN_4K_SUSTAINED"] = "1"
+    environment["DEPTHCHECK_RUN_THREE_MINUTE_4K_SUSTAINED"] = "1"
     timeout = TEST_TIMEOUTS[name]
     started = time.monotonic()
     print(f"Running required native test {name} (deadline {timeout} seconds)", flush=True)

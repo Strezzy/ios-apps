@@ -15,7 +15,8 @@ enum NativeMediaChecks {
         "test874FramesWithAudioTailReproduce920FrameEstimate",
         "test920FramesOf60FPSSBSWithAACEndingBeforeVideo",
         "testThreeMinute60FPSSBSWithDelayedAAC",
-        "test920FramesOf4K60FPSPreservesFullSBSWithAAC"
+        "test920FramesOf4K60FPSPreservesFullSBSWithAAC",
+        "testThreeMinute4K60FPSPreservesFullSBSWithAAC"
     ]
 
     static func main() {

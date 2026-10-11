@@ -67,6 +67,19 @@ final class SustainedVideoExportTests: XCTestCase {
         )
     }
 
+    func testThreeMinute4K60FPSPreservesFullSBSWithAAC() async throws {
+        guard ProcessInfo.processInfo.environment["DEPTHCHECK_RUN_THREE_MINUTE_4K_SUSTAINED"] == "1" else {
+            throw XCTSkip("The sustained native gate runs all 10,800 real 4K60 frames with full 7680 × 2160 SBS output and an explicit 30-minute deadline.")
+        }
+        // Three full minutes at the user's source dimensions, followed by the
+        // same non-frame-aligned 137 ms AAC tail as the shorter 4K regression.
+        try await run(
+            name: "testThreeMinute4K60FPSPreservesFullSBSWithAAC",
+            configuration: Configuration(size: PixelSize(width: 3_840, height: 2_160),
+                frameCount: 10_800, audioStart: 0, audioEnd: 10_800 * 800 + 6_576)
+        )
+    }
+
     private func run(name: String, configuration: Configuration, expectedEstimate: Int? = nil) async throws {
         guard MTLCreateSystemDefaultDevice() != nil else {
             throw XCTSkip("These encoder/renderer tests require a real Metal device; an unsupported host is not a passing native gate.")
@@ -102,6 +115,9 @@ final class SustainedVideoExportTests: XCTestCase {
                              "Fixture playable audio start must be \(Self.timeString(expectedAudioStart)). \(sourceAudio.timelineDescription)")
             try Self.require(CMTimeCompare(sourceAudio.playableEnd, expectedAudioEnd) == 0,
                              "Fixture playable audio end must be \(Self.timeString(expectedAudioEnd)). \(sourceAudio.timelineDescription)")
+            try Self.require(CMTimeCompare(sourceAudio.firstPTS, expectedAudioStart) == 0 &&
+                             CMTimeCompare(sourceAudio.end, expectedAudioEnd) == 0,
+                             "AAC output presentation must cover exactly \(Self.timeString(expectedAudioStart))…\(Self.timeString(expectedAudioEnd)), including its real gap and tail. \(sourceAudio.timelineDescription)")
             try Self.require(CMTimeCompare(CMTimeRangeGetEnd(sourceAudio.trackRange), expectedAudioEnd) == 0,
                              "Fixture track end must be \(Self.timeString(expectedAudioEnd)). \(sourceAudio.timelineDescription)")
             if configuration.audioStart > 0 {
@@ -169,7 +185,10 @@ final class SustainedVideoExportTests: XCTestCase {
             try Self.require(outputAudio.payloadHash == sourceAudio.payloadHash,
                              "Original AAC payload bytes were lost, changed, reordered, or re-encoded.")
             try Self.require(outputAudio.timingHash == sourceAudio.timingHash,
-                             "The AAC packet timeline changed, including its initial offset or final duration.")
+                             "The AAC packet output presentation timeline changed, including its initial offset or final duration.")
+            try Self.require(CMTimeCompare(outputAudio.firstPTS, sourceAudio.firstPTS) == 0 &&
+                             CMTimeCompare(outputAudio.end, sourceAudio.end) == 0,
+                             "The AAC output presentation range changed. Source: \(sourceAudio.timelineDescription) Output: \(outputAudio.timelineDescription)")
             try Self.require(CMTimeCompare(outputAudio.trackRange.start, sourceAudio.trackRange.start) == 0 &&
                              CMTimeCompare(outputAudio.trackRange.duration, sourceAudio.trackRange.duration) == 0,
                              "The aggregate audio track range changed. Source: \(sourceAudio.timelineDescription) Output: \(outputAudio.timelineDescription)")
@@ -434,8 +453,14 @@ final class SustainedVideoExportTests: XCTestCase {
         let payloadBytes: Int
         let payloadHash: String
         let timingHash: String
+        let rawTimingHash: String
         let firstPTS: CMTime
         let end: CMTime
+        let rawFirstPTS: CMTime
+        let rawEnd: CMTime
+        let firstBufferOutputPTS: CMTime
+        let firstBufferRawDuration: CMTime
+        let firstBufferOutputDuration: CMTime
         let trackRange: CMTimeRange
         let playableStart: CMTime
         let playableEnd: CMTime
@@ -443,8 +468,15 @@ final class SustainedVideoExportTests: XCTestCase {
         var evidence: [String: Any] {
             ["audio_codec": "AAC", "audio_packet_count": packetCount, "audio_payload_bytes": payloadBytes,
              "audio_payload_sha256": payloadHash, "audio_timing_sha256": timingHash,
+             "audio_timing_domain": "asset_presentation",
              "audio_first_pts": SustainedVideoExportTests.timeString(firstPTS),
              "audio_end": SustainedVideoExportTests.timeString(end),
+             "audio_raw_timing_sha256": rawTimingHash,
+             "audio_raw_first_pts": SustainedVideoExportTests.timeString(rawFirstPTS),
+             "audio_raw_end": SustainedVideoExportTests.timeString(rawEnd),
+             "audio_first_buffer_output_pts": SustainedVideoExportTests.timeString(firstBufferOutputPTS),
+             "audio_first_buffer_raw_duration": SustainedVideoExportTests.timeString(firstBufferRawDuration),
+             "audio_first_buffer_output_duration": SustainedVideoExportTests.timeString(firstBufferOutputDuration),
              "audio_track_start": SustainedVideoExportTests.timeString(trackRange.start),
              "audio_track_end": SustainedVideoExportTests.timeString(CMTimeRangeGetEnd(trackRange)),
              "audio_playable_start": SustainedVideoExportTests.timeString(playableStart),
@@ -452,7 +484,7 @@ final class SustainedVideoExportTests: XCTestCase {
              "audio_segments": segments.map(\.evidence)]
         }
         var timelineDescription: String {
-            "Track \(SustainedVideoExportTests.rangeString(trackRange)); playable \(SustainedVideoExportTests.timeString(playableStart))…\(SustainedVideoExportTests.timeString(playableEnd)); first AAC PTS \(SustainedVideoExportTests.timeString(firstPTS)); final AAC end \(SustainedVideoExportTests.timeString(end)); segments [\(segments.map(\.description).joined(separator: "; "))]."
+            "Track \(SustainedVideoExportTests.rangeString(trackRange)); playable \(SustainedVideoExportTests.timeString(playableStart))…\(SustainedVideoExportTests.timeString(playableEnd)); AAC output \(SustainedVideoExportTests.timeString(firstPTS))…\(SustainedVideoExportTests.timeString(end)); AAC raw \(SustainedVideoExportTests.timeString(rawFirstPTS))…\(SustainedVideoExportTests.timeString(rawEnd)); first buffer output PTS \(SustainedVideoExportTests.timeString(firstBufferOutputPTS)), raw duration \(SustainedVideoExportTests.timeString(firstBufferRawDuration)), output duration \(SustainedVideoExportTests.timeString(firstBufferOutputDuration)); segments [\(segments.map(\.description).joined(separator: "; "))]."
         }
     }
 
@@ -505,13 +537,42 @@ final class SustainedVideoExportTests: XCTestCase {
         var payloadBytes = 0
         var payloadHash = SHA256()
         var timingHash = SHA256()
+        var rawTimingHash = SHA256()
         var firstPTS: CMTime?
         var end = CMTime.zero
+        var rawFirstPTS: CMTime?
+        var rawEnd = CMTime.zero
+        var firstBufferOutputPTS: CMTime?
+        var firstBufferRawDuration: CMTime?
+        var firstBufferOutputDuration: CMTime?
         while true {
             let hadSample = try autoreleasepool { () throws -> Bool in
                 guard let sample = output.copyNextSampleBuffer() else { return false }
                 let count = CMSampleBufferGetNumSamples(sample)
                 if count == 0 { return true } // An empty edit marker is not an AAC packet.
+                let bufferOutputPTS = CMSampleBufferGetOutputPresentationTimeStamp(sample)
+                let bufferOutputDuration = CMSampleBufferGetOutputDuration(sample)
+                if firstBufferOutputPTS == nil {
+                    firstBufferOutputPTS = bufferOutputPTS
+                    firstBufferRawDuration = CMSampleBufferGetDuration(sample)
+                    firstBufferOutputDuration = bufferOutputDuration
+                    log("[DepthCheckSustainedAudioBuffer] \(url.lastPathComponent): first raw PTS \(timeString(CMSampleBufferGetPresentationTimeStamp(sample))), raw duration \(timeString(CMSampleBufferGetDuration(sample))); output PTS \(timeString(bufferOutputPTS)), output duration \(timeString(bufferOutputDuration)); \(count) packets")
+                }
+                try require(bufferOutputPTS.isNumeric && bufferOutputDuration.isNumeric && CMTimeCompare(bufferOutputDuration, .zero) >= 0,
+                            "AAC output buffer has invalid presentation timing: \(timeString(bufferOutputPTS)) for \(timeString(bufferOutputDuration)).")
+                // Encoder preroll remains in the packet stream even if an
+                // edit trims a whole buffer to zero audible duration.
+                if CMTimeCompare(bufferOutputDuration, .zero) > 0 {
+                    if firstPTS == nil { firstPTS = bufferOutputPTS }
+                    end = CMTimeMaximum(end, CMTimeAdd(bufferOutputPTS, bufferOutputDuration))
+                }
+                // Core Media performs the media-time to output-time mapping,
+                // including edits, rather than treating raw PTS as playback.
+                // One entry can describe every equally spaced packet; expand
+                // that representation before hashing to ignore reader batching.
+                let outputTimings = try sample.outputSampleTimingInfos()
+                try require(outputTimings.count == 1 || outputTimings.count == count,
+                            "AAC output timing has \(outputTimings.count) entries for \(count) packets.")
                 let block = try XCTUnwrap(CMSampleBufferGetDataBuffer(sample))
                 var offset = 0
                 for index in 0..<count {
@@ -531,9 +592,18 @@ final class SustainedVideoExportTests: XCTestCase {
                     // of how AVAssetReader batches packets into sample buffers.
                     payloadHash.update(data: Data("\(size):".utf8))
                     payloadHash.update(data: Data(bytes))
-                    timingHash.update(data: Data(try timingToken(timing).utf8))
-                    if firstPTS == nil { firstPTS = timing.presentationTimeStamp }
-                    end = CMTimeMaximum(end, CMTimeAdd(timing.presentationTimeStamp, timing.duration))
+                    rawTimingHash.update(data: Data(try timingToken(timing).utf8))
+                    var presentation = outputTimings[outputTimings.count == 1 ? 0 : index]
+                    if outputTimings.count == 1 && index > 0 {
+                        presentation.presentationTimeStamp = CMTimeAdd(presentation.presentationTimeStamp,
+                            CMTimeMultiply(presentation.duration, multiplier: Int32(index)))
+                    }
+                    // A zero-duration output packet can be valid AAC priming.
+                    try require(presentation.presentationTimeStamp.isNumeric && presentation.duration.isNumeric && CMTimeCompare(presentation.duration, .zero) >= 0,
+                                "AAC packet output timing is invalid: \(timeString(presentation.presentationTimeStamp)) for \(timeString(presentation.duration)).")
+                    timingHash.update(data: Data(try timingToken(presentation).utf8))
+                    if rawFirstPTS == nil { rawFirstPTS = timing.presentationTimeStamp }
+                    rawEnd = CMTimeMaximum(rawEnd, CMTimeAdd(timing.presentationTimeStamp, timing.duration))
                     offset += size
                     payloadBytes += size
                     packetCount += 1
@@ -545,7 +615,12 @@ final class SustainedVideoExportTests: XCTestCase {
         try require(reader.status == .completed, "AAC verification did not reach EOF: \(reader.error?.localizedDescription ?? "unknown error").")
         return AudioInspection(packetCount: packetCount, payloadBytes: payloadBytes,
             payloadHash: hex(payloadHash.finalize()), timingHash: hex(timingHash.finalize()),
-            firstPTS: try XCTUnwrap(firstPTS), end: end, trackRange: trackRange,
+            rawTimingHash: hex(rawTimingHash.finalize()),
+            firstPTS: try XCTUnwrap(firstPTS), end: end,
+            rawFirstPTS: try XCTUnwrap(rawFirstPTS), rawEnd: rawEnd,
+            firstBufferOutputPTS: try XCTUnwrap(firstBufferOutputPTS),
+            firstBufferRawDuration: try XCTUnwrap(firstBufferRawDuration),
+            firstBufferOutputDuration: try XCTUnwrap(firstBufferOutputDuration), trackRange: trackRange,
             playableStart: firstPlayable.target.start, playableEnd: playableEnd, segments: segments)
     }
 

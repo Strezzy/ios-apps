@@ -151,7 +151,8 @@ def validate_spatial_video(report, run_native=True):
                     except (OSError, ValueError) as error:
                         native[key + "_error"] = str(error)
     # The 874-frame EOF regression, early-audio EOF, three-minute timeline, and
-    # 920-frame full 4K60 SBS export are mandatory even without stereo MV-HEVC.
+    # both 920-frame and 10,800-frame full 4K60 SBS exports are mandatory even
+    # without stereo MV-HEVC.
     # Re-check the same saved evidence after simulator execution; never rebuild
     # or rerun native cases and never count a skipped method as a pass.
     result = native.get("result", {})
