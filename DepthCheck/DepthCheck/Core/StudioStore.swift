@@ -12,6 +12,7 @@ struct StudioAlert: Identifiable {
     let id = UUID()
     var title: String
     var message: String
+    var details: String? = nil
 }
 
 @MainActor
@@ -208,7 +209,22 @@ final class StudioStore: ObservableObject {
                 if error is CancellationError || Task.isCancelled {
                     if self.activityNote == nil { self.activityNote = "Conversion canceled." }
                 } else {
-                    self.alert = StudioAlert(title: "Conversion could not finish", message: error.localizedDescription)
+                    let description = error.localizedDescription
+                    let message = description.components(separatedBy: "\n\nDiagnostic state:").first ?? description
+                    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+                    let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+                    let details = """
+                    Depth Check \(version) (\(build))
+                    \(ProcessInfo.processInfo.operatingSystemVersionString)
+                    Source: \(source.size.label), \(source.frameRate) fps, \(source.duration) seconds
+                    Output: \(selectedOptions.format.rawValue); model: \(selectedOptions.model.rawValue)
+                    Memory saver: \(selectedOptions.memorySaver); steadier depth: \(selectedOptions.temporalStability)
+                    Depth amount: \(selectedOptions.depthAmount); convergence: \(selectedOptions.convergence)
+                    Thermal state: \(ProcessInfo.processInfo.thermalState.rawValue)
+
+                    \(description)
+                    """
+                    self.alert = StudioAlert(title: "Conversion could not finish", message: message, details: details)
                     UINotificationFeedbackGenerator().notificationOccurred(.error)
                 }
             }

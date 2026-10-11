@@ -107,7 +107,8 @@ final class DepthEstimator: @unchecked Sendable {
         // never resized here; only the depth-estimation copy is small.
         let crop = try cropDepth(raw, fittedRect: fittedRect)
         let normalized = try normalization.normalize(crop.values, isInverseDepth: choice == .balanced,
-                                                       luma: lumaSignature(in: fittedRect), temporal: temporal)
+                                                       luma: temporal ? lumaSamples(in: fittedRect) : [],
+                                                       temporal: temporal, width: crop.width, height: crop.height)
         try Task.checkCancellation()
         return DepthMap(width: crop.width, height: crop.height, values: normalized)
     }
@@ -198,24 +199,26 @@ final class DepthEstimator: @unchecked Sendable {
         return RawDepth(width: width, height: height, values: cropped)
     }
 
-    private func lumaSignature(in fittedRect: CGRect) -> [Float] {
+    /// Match the cropped depth pixel for pixel. Temporal filtering needs local
+    /// appearance to reject moving regions; a sparse whole-frame signature
+    /// cannot safely distinguish a moving edge from an unchanged surface.
+    private func lumaSamples(in fittedRect: CGRect) -> [Float] {
         guard CVPixelBufferLockBaseAddress(inputBuffer, .readOnly) == kCVReturnSuccess else { return [] }
         defer { CVPixelBufferUnlockBaseAddress(inputBuffer, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(inputBuffer) else { return [] }
         let stride = CVPixelBufferGetBytesPerRow(inputBuffer)
         let xOrigin = Int(fittedRect.minX)
         let yOrigin = inputHeight - Int(fittedRect.maxY)
-        var signature = [Float]()
-        signature.reserveCapacity(24 * 24)
-        for y in 0..<24 {
-            let sampleY = yOrigin + min(Int(fittedRect.height) - 1, Int((Double(y) + 0.5) * Double(fittedRect.height) / 24))
-            let row = base.advanced(by: sampleY * stride).assumingMemoryBound(to: UInt8.self)
-            for x in 0..<24 {
-                let sampleX = xOrigin + min(Int(fittedRect.width) - 1, Int((Double(x) + 0.5) * Double(fittedRect.width) / 24))
-                let pixel = sampleX * 4
-                signature.append((0.2126 * Float(row[pixel + 2]) + 0.7152 * Float(row[pixel + 1]) + 0.0722 * Float(row[pixel])) / 255)
+        let width = Int(fittedRect.width)
+        let height = Int(fittedRect.height)
+        var samples = [Float](repeating: 0, count: width * height)
+        for y in 0..<height {
+            let row = base.advanced(by: (yOrigin + y) * stride).assumingMemoryBound(to: UInt8.self)
+            for x in 0..<width {
+                let pixel = (xOrigin + x) * 4
+                samples[y * width + x] = (0.2126 * Float(row[pixel + 2]) + 0.7152 * Float(row[pixel + 1]) + 0.0722 * Float(row[pixel])) / 255
             }
         }
-        return signature
+        return samples
     }
 }

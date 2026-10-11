@@ -1,8 +1,6 @@
 # Depth Check
 
-**Another dimension. Every frame.**
-
-A native Swift iPhone app for turning photos and videos into stereoscopic media, with Apple's Liquid Glass interface and bundled offline Core ML models.
+A native iPhone app that converts photos and videos to 3D. Export Apple Spatial, side-by-side and other stereo formats at the source's pixel dimensions and video timing. Both depth models are included and run on your device.
 
 ## Install
 
@@ -46,6 +44,8 @@ The exact HEVC encoder settings are tested on the current device before the dept
 
 The pipeline processes one frame at a time and retains one additional source frame to recover exact timing when a decoder omits sample durations. Submitted buffers are retained by the encoder and recycled only after it releases them; the renderer caps its buffer pool. No entire movie or 24-frame 4K batch is accumulated in RAM. Memory Saver clears Core Image and Metal caches every 24 processed frames while keeping one continuous output timeline. No segment seams or frame-rate conversion are introduced.
 
+Audio and video announce their end independently of whether the writer can accept another sample. This prevents a full encoder queue from waiting indefinitely for a track that has already ended. Audio uses one packet of lookahead and the writer's own backpressure, so an audio tail or delayed audio start does not impose an artificial video limit. Progress estimates use the video track's duration and become exact when its final frame is read. A timeout includes copyable writer diagnostics instead of assuming the problem is memory.
+
 ## Models
 
 - **Detailed, default:** Depth Anything 3 Base (Core ML FP16), using the pinned community conversion by Daisuke Majima / john-rocky, based on ByteDance-Seed's Apache-2.0 DA3 Base. 504 × 504 network input with aspect-preserving padding.
@@ -53,7 +53,7 @@ The pipeline processes one frame at a time and retains one additional source fra
 
 The exact versions and SHA-256 hashes are pinned in `scripts/prepare_models.py`. Approximately 283 MB of source model data is downloaded during the build, then compiled and bundled. [Research and source links](docs/MODEL-RESEARCH.md) explain the selection, other candidates, and the limits of comparison with Spatial Media Toolkit. No definitive iPhone 17 Pro quality/performance ranking is claimed.
 
-Video stability smooths normalization ranges with scene-cut resets. It does not average old object silhouettes into moving frames, and it is not a trained temporal video-depth network.
+Each frame's relative depth is normalized in its own model scale. This avoids introducing disparity movement when a model changes only its arbitrary depth scale or offset. Video stability then filters normalized depth conservatively in visually unchanged regions, rejecting changed appearance, depth edges, large depth changes and scene cuts. It keeps only one previous model-resolution depth map and luminance image, independent of clip length. This is not a trained temporal video-depth network; some wobble can remain, particularly at strong depth settings. The displayed strength is a percentage of the slider range: 54% corresponds to a maximum disparity range of 2.7% of the source width.
 
 ## Color and file formats
 
@@ -72,7 +72,9 @@ python3 scripts/build_ios.py
 
 The script verifies model download hashes, compiles both Core ML packages, generates the Xcode project, builds and runs focused XCTest cases, launches the app in an iPhone simulator, captures a screenshot, builds the actual arm64 iPhone executable, signs it ad hoc, and verifies the IPA structure, platform, entry point, compiled models and Metal shaders. The GitHub workflow publishes successful builds and adds their verified metadata to the existing app source.
 
-When the Mac exposes an MV-HEVC encoder, the same spatial-video test also runs natively against the production Swift and Metal code. It must verify both eye layers, spatial metadata, audio, and exact frame durations before packaging can proceed. The build report distinguishes native Mac, simulator, and physical-device coverage.
+Native Mac validation compiles the production Swift and Metal code and requires packetized-AAC side-by-side regressions: 874 video frames with an audio tail that previously produced a 920-frame estimate, 920 frames with shorter audio, a three-minute 60 FPS timeline with delayed audio, and 920 full-4K60 source frames producing 7680 × 2160 side-by-side output. These tests compare every video timestamp and duration, audio packet timing and payload, dimensions, and the decoded final frame. They inject deterministic depth to isolate the media pipeline; separate simulator tests load both actual models and test normalization.
+
+When the Mac exposes an MV-HEVC encoder, the existing spatial-video test also runs natively. It must verify both eye layers, spatial metadata, audio, and exact frame durations before packaging can proceed. Required native cases cannot pass by being skipped. The build report records each fixture's actual dimensions, frame count, duration and platform; a small-resolution three-minute timeline is distinct from the full-4K 920-frame test.
 
 The workflow requires repository Contents write permission for its requested release and catalog update. No paid Apple Developer membership or distribution certificate is used by CI. SideStore provides the user's device provisioning later.
 

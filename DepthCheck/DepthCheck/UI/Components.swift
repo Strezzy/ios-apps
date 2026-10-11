@@ -1,4 +1,16 @@
 import SwiftUI
+import UIKit
+
+extension StudioAlert {
+    @MainActor var systemAlert: Alert {
+        if let details {
+            return Alert(title: Text(title), message: Text(message),
+                         primaryButton: .default(Text("Copy Details")) { UIPasteboard.general.string = details },
+                         secondaryButton: .cancel(Text("OK")))
+        }
+        return Alert(title: Text(title), message: Text(message), dismissButton: .default(Text("OK")))
+    }
+}
 
 enum DepthCheckTheme {
     static let accent = Color(red: 0.32, green: 0.93, blue: 0.88)

@@ -18,7 +18,7 @@ struct DepthCheckRootView: View {
         .tint(DepthCheckTheme.accent)
         .preferredColorScheme(.dark)
         .alert(item: Binding(get: { store.previewIsPresented ? nil : store.alert }, set: { store.alert = $0 })) { alert in
-            Alert(title: Text(alert.title), message: Text(alert.message), dismissButton: .default(Text("OK")))
+            alert.systemAlert
         }
     }
 }

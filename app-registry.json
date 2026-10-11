@@ -33,8 +33,8 @@
   },
   "com.billy.depthcheck": {
     "name": "Depth Check",
-    "subtitle": "Another dimension. Every frame.",
-    "localizedDescription": "Native Liquid Glass photo and video conversion with bundled on-device Core ML depth models. Apple spatial media, full side-by-side, over-under, anaglyph, separate eyes, and depth exports. Preserves source pixel dimensions and video timing; exact encoder limits are checked on the device. HDR video is exported as SDR. Physical iPhone 17 Pro performance validation remains required.",
+    "subtitle": "Convert photos and videos to 3D",
+    "localizedDescription": "Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.",
     "icon": "DepthCheck.png",
     "category": "photo-video",
     "tintColor": "#4DE8DD"

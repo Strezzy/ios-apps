@@ -3,6 +3,7 @@ import SwiftUI
 struct StudioSettingsView: View {
     @EnvironmentObject private var store: StudioStore
     @State private var showFormats = false
+    @State private var showPrivacy = false
     @State private var showCredits = false
     @State private var confirmReset = false
 
@@ -11,16 +12,6 @@ struct StudioSettingsView: View {
             StudioBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: 23) {
-                    VStack(alignment: .leading, spacing: 9) {
-                        Eyebrow(text: "Make it your perspective")
-                        Text("Fine-tune the feeling.")
-                            .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                            .tracking(-0.8)
-                        Text("A few thoughtful controls. Your original resolution and frame timing are always kept.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
                     modelCard
                     depthCard
                     processingCard
@@ -46,6 +37,7 @@ struct StudioSettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showFormats) { OutputFormatPicker(selection: $store.options.format) }
+        .sheet(isPresented: $showPrivacy) { PrivacyInfoView() }
         .sheet(isPresented: $showCredits) { ModelCreditsView() }
         .confirmationDialog("Restore the default depth and export settings?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Restore defaults") { store.resetOptions() }
@@ -58,11 +50,11 @@ struct StudioSettingsView: View {
     private var modelCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 18) {
-                Eyebrow(text: "Depth intelligence", symbol: "cpu")
-                modelOption(.detailed, title: "Detailed", modelName: "Depth Anything 3 · Base", detail: "A larger, newer depth model. Uses more memory and takes longer to process.")
+                Eyebrow(text: "Depth model", symbol: "cpu")
+                modelOption(.detailed, title: "Detailed", modelName: "Depth Anything 3 · Base", detail: "Larger model. Uses more memory and processing time.")
                 Divider()
-                modelOption(.balanced, title: "Balanced", modelName: "Depth Anything V2 · Small", detail: "Apple's smaller Core ML model package. A lighter option for long videos.")
-                InfoNote(text: "Both models are included and run on your iPhone. Depth is estimated at the model's working size, then used to render views at your original pixel dimensions.")
+                modelOption(.balanced, title: "Balanced", modelName: "Depth Anything V2 · Small", detail: "Smaller model. Uses less memory.")
+                InfoNote(text: "Models estimate depth at their working resolution. Exports retain the source dimensions.")
             }
             .disabled(store.isBusy)
         }
@@ -94,8 +86,8 @@ struct StudioSettingsView: View {
     private var depthCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 20) {
-                Eyebrow(text: "Depth & perspective", symbol: "view.3d")
-                SettingRow("Screen plane", subtitle: "Choose the depth that rests on the screen. Other parts of the scene appear in front of or behind it.") {
+                Eyebrow(text: "3D view", symbol: "view.3d")
+                SettingRow("Screen plane", subtitle: "Sets which depth appears level with the screen.") {
                     HStack {
                         Text("Far")
                         Spacer()
@@ -115,7 +107,7 @@ struct StudioSettingsView: View {
                 Toggle(isOn: $store.options.swapEyes) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Swap left & right").font(.headline)
-                        Text("For 3D viewers that expect the opposite eye order.")
+                        Text("For viewers that expect reversed eye order.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -133,7 +125,7 @@ struct StudioSettingsView: View {
                 Toggle(isOn: $store.options.memorySaver) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Memory saver").font(.headline)
-                        Text("Extra memory cleanup while processing. Useful for long, high-resolution videos; may take longer.")
+                        Text("Reduces cached memory for large videos. May take longer.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -142,21 +134,15 @@ struct StudioSettingsView: View {
                 Toggle(isOn: $store.options.temporalStability) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Steadier video depth").font(.headline)
-                        Text("Smooths sudden depth changes between frames to help reduce flicker.")
+                        Text("Reduces flicker in unchanged areas. Strong depth can still show wobble.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
                 Divider()
                 Toggle(isOn: $store.options.preserveAudio) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Keep original audio").font(.headline)
-                        Text("Include the source video's audio in your exports.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text("Keep original audio").font(.headline)
                 }
-                InfoNote(text: "Video is always processed one frame at a time. Memory saver also releases rendering caches every 24 frames; it keeps the original frame timing.", symbol: "memorychip")
             }
             .tint(DepthCheckTheme.accent)
             .disabled(store.isBusy)
@@ -166,7 +152,7 @@ struct StudioSettingsView: View {
     private var outputCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 19) {
-                Eyebrow(text: "Export preferences", symbol: "square.and.arrow.up")
+                Eyebrow(text: "Export", symbol: "square.and.arrow.up")
                 Button { showFormats = true } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 5) {
@@ -180,15 +166,14 @@ struct StudioSettingsView: View {
                 }
                 .buttonStyle(.plain)
                 Divider()
-                SettingRow("Photo file type", subtitle: store.options.format == .spatial ? "Apple Spatial photos always use stereo HEIC. This preference applies to other photo exports." : "Choose the file type for rendered photos. PNG stores pixels losslessly; HEIC and JPEG use high-quality compression.") {
+                SettingRow("Photo file type", subtitle: store.options.format == .spatial ? "Apple Spatial photos use stereo HEIC." : "PNG is lossless. HEIC and JPEG use compression.") {
                     Picker("Photo file type", selection: $store.options.photoEncoding) {
                         ForEach(PhotoEncoding.allCases) { format in Text(format.title).tag(format) }
                     }
                     .pickerStyle(.segmented)
                     .disabled(store.options.format == .spatial)
                 }
-                InfoNote(text: "Videos export as HEVC in MOV files. HDR is tone-mapped to SDR in this version. Source dimensions and frame timing are preserved.")
-                InfoNote(text: "An output size your iPhone's encoder cannot handle produces a clear error. Separate eye files can be a practical option for very large sources.", symbol: "arrow.up.left.and.arrow.down.right")
+                InfoNote(text: "Video: HEVC (.mov). HDR exports as SDR.")
             }
             .disabled(store.isBusy)
         }
@@ -197,13 +182,17 @@ struct StudioSettingsView: View {
     private var privacyCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                Label("Your media stays with you.", systemImage: "lock.shield")
+                Button { showPrivacy = true } label: {
+                    HStack {
+                        Label("Privacy", systemImage: "lock.shield")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption)
+                    }
                     .font(.headline)
-                    .foregroundStyle(DepthCheckTheme.accent)
-                Text("Depth estimation and rendering run locally. Both models are bundled with the app. Photos and videos are shared or saved to your photo library only when you choose.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Divider()
                 Button { showCredits = true } label: {
                     Label("Model credits & licenses", systemImage: "text.document")
                         .font(.footnote.weight(.medium))
@@ -221,6 +210,58 @@ struct StudioSettingsView: View {
     }
 }
 
+struct PrivacyInfoView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                StudioBackground()
+                ScrollView {
+                    GlassCard {
+                        VStack(alignment: .leading, spacing: 20) {
+                            detail("On-device processing", symbol: "iphone",
+                                   text: "Both depth models run on your iPhone. Depth Check does not upload your photos or videos.")
+                            Divider()
+                            detail("You choose what to share", symbol: "square.and.arrow.up",
+                                   text: "Only selected media is imported. Saving to Photos and sharing happen when you choose.")
+                            Divider()
+                            detail("File storage", symbol: "folder",
+                                   text: "Imports and exports are stored in Depth Check. iCloud items may need to download before import.")
+                        }
+                    }
+                    .frame(maxWidth: 680)
+                    .padding(20)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .navigationTitle("Privacy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .tint(DepthCheckTheme.accent)
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func detail(_ title: String, symbol: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: symbol)
+                .font(.headline)
+                .foregroundStyle(DepthCheckTheme.accent)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 struct ModelCreditsView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -230,8 +271,6 @@ struct ModelCreditsView: View {
                 StudioBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("Built on open depth research.")
-                            .font(.title2.weight(.semibold))
                         Text(credits)
                             .font(.footnote)
                             .foregroundStyle(.secondary)

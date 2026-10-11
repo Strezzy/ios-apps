@@ -49,7 +49,7 @@ jobs:
           git fetch origin main
           git restore DepthCheck/DepthCheck/Info.plist DepthCheck/DepthCheck.xcodeproj/project.pbxproj
           git rebase origin/main
-          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local DepthCheck/Build/DepthCheck.ipa --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --notes "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details."
+          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local DepthCheck/Build/DepthCheck.ipa --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --notes "Convert photos and videos to 3D on your iPhone. Fixes side-by-side exports stalling near the end, improves depth stability, and simplifies the interface. Keeps original pixel dimensions and video timing."
           git add apps.json README.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

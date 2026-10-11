@@ -12,15 +12,6 @@ struct ExportsView: View {
             StudioBackground()
             ScrollView {
                 VStack(alignment: .leading, spacing: 23) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Eyebrow(text: "Made on your iPhone", symbol: "square.stack")
-                        Text("A new point of view.")
-                            .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                            .tracking(-0.8)
-                        Text(store.exports.isEmpty ? "Your finished photos and videos will be right here." : "\(store.exports.count.formatted()) \(store.exports.count == 1 ? "export" : "exports") · Ready to save, share, or explore.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
                     if store.exports.isEmpty {
                         emptyState
                     } else {
@@ -35,7 +26,7 @@ struct ExportsView: View {
                                 )
                             }
                         }
-                        InfoNote(text: "Exports are also available in Files → On My iPhone → Depth Check → Exports.", symbol: "folder")
+                        InfoNote(text: "Files → On My iPhone → Depth Check → Exports", symbol: "folder")
                     }
                 }
                 .frame(maxWidth: 680)
@@ -80,13 +71,10 @@ struct ExportsView: View {
                     .foregroundStyle(DepthCheckTheme.accent)
                     .padding(.vertical, 8)
                     .accessibilityHidden(true)
-                Text("Your first perspective awaits.")
+                Text("No exports yet")
                     .font(.title2.weight(.semibold))
-                Text("Turn a favorite photo or video into spatial media, full side-by-side, or another 3D format.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
                 Button { store.selectedTab = .create } label: {
-                    Label("Create something", systemImage: "plus")
+                    Label("Create 3D media", systemImage: "plus")
                         .foregroundStyle(DepthCheckTheme.primaryButtonInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -119,7 +107,7 @@ private struct ExportCard: View {
                     Spacer(minLength: 4)
                     Menu {
                         Button(action: onPreview) { Label("Preview", systemImage: "eye") }.disabled(!available)
-                        Button(action: onShare) { Label("Share original export", systemImage: "square.and.arrow.up") }.disabled(!available)
+                        Button(action: onShare) { Label("Share", systemImage: "square.and.arrow.up") }.disabled(!available)
                         Button { store.saveToPhotos(export) } label: { Label("Save to Photos", systemImage: "photo.badge.plus") }.disabled(!available || store.isSavingToPhotos)
                         Divider()
                         Button(role: .destructive, action: onDelete) { Label("Delete export", systemImage: "trash") }

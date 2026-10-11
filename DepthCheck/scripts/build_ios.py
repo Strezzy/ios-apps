@@ -14,7 +14,8 @@ import time
 import zipfile
 from pathlib import Path
 from generate_project import generate
-from run_macos_media_checks import TEST_NAME as SPATIAL_TEST_NAME
+from run_macos_media_checks import (SPATIAL_TEST_NAME, SUSTAINED_TEST_NAMES, case_passed,
+                                    manifest_matches_current_sources, native_result_passed)
 from verify_ipa import verify
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -94,8 +95,8 @@ def package(app):
 
 
 def validate_spatial_video(report, run_native=True):
-    """Run the native check early, or reuse its evidence after simulator tests."""
-    previous_native = report.get("spatial_video_validation", {}).get("macos_host", {})
+    """Run required native media checks early; reuse the same evidence later."""
+    previous_native = report.get("native_media_validation", {})
     logs = BUILD / "Logs"
     logs.mkdir(parents=True, exist_ok=True)
     simulator_log = logs / "simulator-tests.log"
@@ -118,16 +119,15 @@ def validate_spatial_video(report, run_native=True):
                   "physical_iphone": "Not performed"}
     report["spatial_video_validation"] = validation
     host_supported = report.get("macos_host_capabilities", {}).get("stereo_mv_hevc_encoder") is True
-    native = (dict(previous_native) if host_supported and not run_native
-              else {"status": "not run", "encoder_available": host_supported})
-    validation["macos_host"] = native
-    native_passed = False
-    if host_supported and run_native:
+    native = (dict(previous_native) if not run_native
+              else {"status": "not run", "stereo_encoder_available": host_supported})
+    report["native_media_validation"] = native
+    if run_native:
         native["status"] = "in progress"
         native["log"] = "Build/Logs/macos-native-media.log"
-        result_path = BUILD / "HostChecks/native-mvhevc-result.json"
+        result_path = BUILD / "HostChecks/native-media-result.json"
         manifest_path = BUILD / "HostChecks/build-manifest.json"
-        artifacts = ((result_path, logs / "macos-native-mvhevc-result.json", "result"),
+        artifacts = ((result_path, logs / "macos-native-media-result.json", "result"),
                      (manifest_path, logs / "macos-native-build-manifest.json", "build_manifest"))
         for source, destination, _ in artifacts:
             # Do not report a stale result if tool discovery fails before the
@@ -135,7 +135,8 @@ def validate_spatial_video(report, run_native=True):
             source.unlink(missing_ok=True)
             destination.unlink(missing_ok=True)
         try:
-            native["exit_code"] = run([sys.executable, ROOT / "scripts/run_macos_media_checks.py"],
+            native["exit_code"] = run([sys.executable, ROOT / "scripts/run_macos_media_checks.py",
+                                      "--stereo-available", "true" if host_supported else "false"],
                                       name="macos-native-media", check=False)
         except Exception as error:
             native["runner_error"] = str(error)
@@ -149,29 +150,51 @@ def validate_spatial_video(report, run_native=True):
                         native[key] = json.loads(source.read_text())
                     except (OSError, ValueError) as error:
                         native[key + "_error"] = str(error)
-    if host_supported:
-        # Re-evaluate the exact stored result on the later invocation. Missing
-        # or invalid evidence still blocks the build, without another compile
-        # or test run and without converting a simulator skip into a pass.
-        result = native.get("result", {})
-        manifest = native.get("build_manifest", {})
-        native_passed = (native.get("exit_code") == 0 and isinstance(result, dict)
-                         and result.get("status") == "passed" and result.get("test") == SPATIAL_TEST_NAME
-                         and result.get("native_mvhevc_supported") is True and result.get("completed") is True
-                         and result.get("execution_count") == 1 and result.get("test_case_count") == 1
-                         and result.get("skip_count") == 0 and result.get("failure_count") == 0
-                         and isinstance(manifest, dict) and bool(manifest.get("sources")))
-        native["status"] = "passed" if native_passed else "failed"
-        if not native_passed:
-            native["reason"] = "The capable macOS host did not complete exactly one unskipped, passing native MV-HEVC test."
-    else:
-        native["reason"] = "VideoToolbox reports no stereo MV-HEVC encoder on this macOS host."
+    # The 874-frame EOF regression, early-audio EOF, three-minute timeline, and
+    # 920-frame full 4K60 SBS export are mandatory even without stereo MV-HEVC.
+    # Re-check the same saved evidence after simulator execution; never rebuild
+    # or rerun native cases and never count a skipped method as a pass.
+    result = native.get("result", {})
+    manifest = native.get("build_manifest", {})
+    source_match = manifest_matches_current_sources(manifest)
+    native_passed = (native.get("exit_code") == 0 and source_match
+                     and native_result_passed(result, host_supported))
+    native["status"] = "passed" if native_passed else "failed"
+    native["compiled_source_hashes_match"] = source_match
+    if not native_passed:
+        native["reason"] = "The native host did not prove every required sustained media test and available spatial encoder test completed without failures or skips."
+    cases = result.get("results", []) if isinstance(result, dict) else []
+    cases = cases if isinstance(cases, list) else []
+    by_name = {case.get("test"): case for case in cases if isinstance(case, dict)}
+    sustained_cases = [by_name.get(name, {"test": name, "status": "not run"}) for name in SUSTAINED_TEST_NAMES]
+    sustained_passed = source_match and all(case_passed(case, name)
+                                            for case, name in zip(sustained_cases, SUSTAINED_TEST_NAMES))
+    report["sustained_video_validation"] = {
+        "status": "passed" if sustained_passed else "failed",
+        "platform": "macOS host",
+        "required_test_names": list(SUSTAINED_TEST_NAMES),
+        "cases": [{key: case[key] for key in ("test", "status", "coverage", "duration_seconds",
+                                               "process_duration_seconds", "timeout_seconds") if key in case}
+                  for case in sustained_cases],
+        "depth_inference": "Injected deterministic depth; the production renderer and media pipeline are unchanged.",
+        "physical_iphone": "Not performed by this harness",
+        "log": "Build/Logs/macos-native-media.log",
+    }
+    spatial_case = by_name.get(SPATIAL_TEST_NAME, {})
+    native_spatial_passed = source_match and case_passed(spatial_case, SPATIAL_TEST_NAME)
+    validation["macos_host"] = {
+        "encoder_available": host_supported,
+        "test": SPATIAL_TEST_NAME,
+        "status": "passed" if native_spatial_passed else ("failed" if host_supported else "unsupported"),
+        "result": spatial_case,
+        "log": "Build/Logs/macos-native-media.log",
+    }
 
     if simulator["status"] == "passed":
         validation["validated_platforms"].append("iOS Simulator")
-    if native_passed:
+    if native_spatial_passed:
         validation["validated_platforms"].append("macOS host")
-    if host_supported and not native_passed:
+    if host_supported and not native_spatial_passed:
         validation["status"] = "failed"
     elif validation["validated_platforms"]:
         validation["status"] = "passed"
@@ -189,7 +212,8 @@ def validate_spatial_video(report, run_native=True):
             )
     print("Spatial video validation: " + json.dumps({key: validation.get(key) for key in
           ("status", "validated_platforms", "limitation")}), flush=True)
-    return not host_supported or native_passed
+    print("Required native sustained video validation: " + report["sustained_video_validation"]["status"], flush=True)
+    return native_passed
 
 
 def main():
@@ -225,9 +249,8 @@ print(String(decoding: data, as: UTF8.self))
             run(["xcodebuild", "-downloadComponent", "metalToolchain"], name="metal-download")
         # Surface native harness/compiler/encoder errors before downloading
         # models or waiting for the simulator's first-boot migration.
-        if report["macos_host_capabilities"].get("stereo_mv_hevc_encoder") is True:
-            if not validate_spatial_video(report):
-                raise RuntimeError("Native macOS spatial-video validation failed; see Build/Logs/macos-native-media.log")
+        if not validate_spatial_video(report):
+            raise RuntimeError("Required native macOS media validation failed; see Build/Logs/macos-native-media.log")
         run([sys.executable, ROOT / "scripts/prepare_models.py"], name="prepare-models")
         report["project"] = generate()
         common = ["xcodebuild", "-project", ROOT / "DepthCheck.xcodeproj", "-scheme", "DepthCheck",
@@ -255,12 +278,12 @@ print(String(decoding: data, as: UTF8.self))
                                   name="simulator-tests", check=False)
         # Combine the current simulator outcome with the already completed
         # native check. Do not compile or run the native harness a second time.
-        native_spatial_passed = validate_spatial_video(report, run_native=False)
+        native_media_passed = validate_spatial_video(report, run_native=False)
         failures = []
         if simulator_test_exit:
             failures.append(f"Simulator tests failed with exit {simulator_test_exit}; see Build/Logs/simulator-tests.log")
-        if not native_spatial_passed:
-            failures.append("Native macOS spatial-video validation failed; see Build/Logs/macos-native-media.log")
+        if not native_media_passed:
+            failures.append("Required native macOS media validation failed; see Build/Logs/macos-native-media.log")
         if failures:
             raise RuntimeError("; ".join(failures))
         run(["xcrun", "simctl", "install", udid, simulator_app])

@@ -1,5 +1,18 @@
 Depth Check turns photos and videos into stereo media locally on your iPhone.
 
+## Conversion reliability and steadier depth
+
+- Fixes an end-of-stream scheduling bug in side-by-side encoding. Video and audio now signal completion even while their writer inputs are applying backpressure. An audio tail or a delayed audio start can finish without waiting for a nonexistent next video frame.
+- Progress uses the video track's duration, then shows the exact decoded frame count while the writer finishes audio and video. An audio tail no longer inflates the video-work estimate.
+- Corrects a depth-normalization bug that could turn arbitrary model scale/offset changes into left/right image wobble. Steadier Video Depth also filters normalized estimates in visually unchanged regions, with moving-edge and scene-cut rejection.
+- Conversion errors offer **Copy Details** with app/build, conversion settings and writer state. A writer timeout no longer incorrectly tells users that Memory Saver must be enabled.
+- Simplifies Create, Exports and Settings, removes repeated slogans, gives the app source a clear description, and makes the toolbar Privacy button open its privacy sheet.
+- Requires sustained native Mac media tests before publication: a matching 874-frame/audio-tail regression, shorter audio, a three-minute 60 FPS timeline, and 920 full-4K60 frames exported as 7680 × 2160 side-by-side. Tests check exact video timing, AAC packets and the final decoded frame. The report records actual fixture dimensions and results; deterministic depth isolates the media pipeline, while separate tests run both bundled models.
+
+Memory Saver continues to process frames with bounded buffers and periodic cache cleanup. This fix addresses track-completion scheduling without introducing segment seams or changing source resolution, frame count or timing. A three-minute full-4K conversion on a physical iPhone remains a device test; the three-minute native timeline fixture uses a smaller image, while the native full-4K fixture is about 15 seconds.
+
+## Included features
+
 - Native SwiftUI Liquid Glass interface, Photos and Files import, original-file storage, export history, share and save.
 - Bundled Detailed (Depth Anything 3 Base, community Core ML conversion) and Balanced (Apple Depth Anything V2 Small FP16) models; media conversion works offline.
 - Apple spatial HEIC / multiview HEVC, full side-by-side, full over-under, red/cyan anaglyph, separate eye files, and depth maps.

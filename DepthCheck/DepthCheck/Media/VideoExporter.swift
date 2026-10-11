@@ -19,6 +19,7 @@ final class VideoExporter {
     private var transform = CGAffineTransform.identity
     private var size = PixelSize(width: 0, height: 0)
     private var duration = CMTime.zero
+    private var videoStartTime = CMTime.zero
     private var videoEndTime = CMTime.zero
     private var nominalRate: Double = 0
     private var timeScale: CMTimeScale = 60_000
@@ -47,7 +48,9 @@ final class VideoExporter {
         transform = preferredTransform
         nominalRate = Double(rate)
         duration = try await asset.load(.duration)
-        videoEndTime = try await track.load(.timeRange).end
+        let videoTimeRange = try await track.load(.timeRange)
+        videoStartTime = videoTimeRange.start
+        videoEndTime = videoTimeRange.end
         timeScale = max(1, try await track.load(.naturalTimeScale))
         guard size.width > 0, size.height > 0,
               duration.isNumeric, duration.seconds.isFinite, duration.seconds > 0 else {
@@ -99,23 +102,29 @@ final class VideoExporter {
             var timings = FrameTimingLedger()
             var videoFinished = false
             var lastProgressAt = Date()
-            let estimate = nominalRate > 0 ? Int(min(Double(Int.max), (duration.seconds * nominalRate).rounded())) : 0
+            // The asset can include an audio tail. Estimate video work from the
+            // video track alone, then replace that estimate with the exact count
+            // as soon as the decoder reaches EOF.
+            let videoDuration = CMTimeSubtract(videoEndTime, videoStartTime).seconds
+            let estimate = nominalRate.isFinite && nominalRate > 0 && videoDuration.isFinite && videoDuration > 0
+                ? Int(min(Double(Int.max / 2), (videoDuration * nominalRate).rounded())) : 0
             while !videoFinished || outputs.contains(where: { !$0.audioFinished }) {
                 try Task.checkCancellation()
                 for output in outputs { try output.checkStatus() }
                 var madeProgress = false
                 // Separate audio readers prevent a blocked video reader from
                 // retaining decoded frames while waiting for interleaved audio.
-                let audioHorizon = videoFinished ? nil : CMTimeAdd(timings.lastPTS ?? .zero, CMTime(seconds: 1, preferredTimescale: 600))
+                // Let each writer input control its own interleaving. A second
+                // timeline limit can withhold audio the writer needs before it
+                // will accept more video, especially near an audio tail or gap.
                 for output in outputs {
-                    madeProgress = try autoreleasepool { try output.pumpAudio(until: audioHorizon) } || madeProgress
+                    madeProgress = try autoreleasepool { try output.pumpAudio() } || madeProgress
                     madeProgress = try output.pumpVideo() || madeProgress
                 }
-                if !videoFinished, outputs.allSatisfy({ $0.isReadyForVideoFrame }) {
-                    let frameRead = try autoreleasepool { () throws -> Bool in
+                if !videoFinished, nextSourceSample != nil, outputs.allSatisfy({ $0.isReadyForVideoFrame }) {
+                    try autoreleasepool {
                         guard let sample = nextSourceSample else {
-                            if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Source video decoding failed.") }
-                            return false
+                            throw DepthCheckError.message("The next source video frame was unexpectedly unavailable.")
                         }
                         nextSourceSample = decoded.copyNextSampleBuffer()
                         if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Source video decoding failed.") }
@@ -159,24 +168,36 @@ final class VideoExporter {
                                 preconditionFailure("Depth-map conversion is handled before stereo rendering")
                             }
                         }
-                        return true
                     }
                     madeProgress = true
-                    if frameRead {
-                        if options.memorySaver, timings.count.isMultiple(of: 24) { renderer.purgeCaches() }
-                        let progress = min(0.94, max(0, (timings.lastPTS?.seconds ?? 0) / duration.seconds) * 0.9 + 0.04)
-                        onProgress(.init(fraction: progress, stage: "Converting at full resolution",
-                                         framesProcessed: timings.count, totalFramesEstimate: estimate))
-                    } else {
-                        videoFinished = true
-                        for output in outputs { try output.finishVideoInput() }
-                    }
+                    if options.memorySaver, timings.count.isMultiple(of: 24) { renderer.purgeCaches() }
+                    let completedVideoTime = CMTimeSubtract(timings.endTime, videoStartTime).seconds
+                    let fraction = videoDuration > 0 ? completedVideoTime / videoDuration : 0
+                    let progress = min(0.94, max(0, fraction) * 0.9 + 0.04)
+                    onProgress(.init(fraction: progress, stage: "Converting at full resolution",
+                                     framesProcessed: timings.count, totalFramesEstimate: estimate))
+                }
+                // EOF is already known from the source lookahead. Announcing
+                // it must not wait for readiness to append another frame: the
+                // writer may be waiting for this very signal to finish video
+                // and release an audio tail. Only an actual pending compressed
+                // frame must drain before this input can be marked finished.
+                if !videoFinished, nextSourceSample == nil, outputs.allSatisfy({ !$0.hasPendingVideo }) {
+                    if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Source video decoding failed.") }
+                    if reader.status == .cancelled { throw CancellationError() }
+                    for output in outputs { try output.finishVideoInput() }
+                    videoFinished = true
+                    madeProgress = true
+                    onProgress(.init(fraction: 0.95, stage: "Finishing video and audio",
+                                     framesProcessed: timings.count, totalFramesEstimate: timings.count))
                 }
                 if madeProgress {
                     lastProgressAt = Date()
                 } else {
                     guard Date().timeIntervalSince(lastProgressAt) < 180 else {
-                        throw DepthCheckError.message("The encoder stopped accepting full-resolution frames. Close other large apps, enable Memory Saver, and retry; no lower-quality export was saved.")
+                        let states = outputs.map(\.diagnosticState).joined(separator: "\n")
+                        let sourceState = "frames=\(timings.count), lastPTS=\(timings.lastPTS?.seconds ?? 0), sourceReader=\(reader.status.rawValue), sourceEOF=\(nextSourceSample == nil), videoFinished=\(videoFinished)"
+                        throw DepthCheckError.message("The movie writer made no progress for 180 seconds. The incomplete export was stopped without changing its resolution or frame timing.\n\nDiagnostic state: \(sourceState)\n\(states)")
                     }
                     try await Task.sleep(for: .milliseconds(5))
                 }
@@ -523,10 +544,24 @@ private final class VideoOutput {
     var hasPendingVideo: Bool { pendingSpatialSample != nil }
     var isReadyForVideoFrame: Bool { pendingSpatialSample == nil && videoInput.isReadyForMoreMediaData }
 
-    func pumpAudio(until time: CMTime?) throws -> Bool {
+    func pumpAudio() throws -> Bool {
         var progressed = false
-        for stream in audio { progressed = try stream.pump(until: time) || progressed }
+        for stream in audio { progressed = try stream.pump() || progressed }
         return progressed
+    }
+
+    var diagnosticState: String {
+        let status: String
+        switch writer.status {
+        case .unknown: status = "unknown"
+        case .writing: status = "writing"
+        case .completed: status = "completed"
+        case .failed: status = "failed"
+        case .cancelled: status = "cancelled"
+        @unknown default: status = "\(writer.status.rawValue)"
+        }
+        let audioState = audio.enumerated().map { "audio[\($0.offset)]={\($0.element.diagnosticState)}" }.joined(separator: ", ")
+        return "\(url.lastPathComponent): writer=\(status), videoReady=\(videoInput.isReadyForMoreMediaData), pendingVideo=\(hasPendingVideo), \(audioState)"
     }
 
     func append(pair: StereoPair, pts: CMTime, duration: CMTime) throws {
@@ -724,6 +759,7 @@ private final class AudioCopyStream {
     let input: AVAssetWriterInput
     private let output: AVAssetReaderTrackOutput
     private var pending: CMSampleBuffer?
+    private var sourceEnded = false
     private(set) var finished = false
 
     init(track: AVAssetTrack, asset: AVAsset) async throws {
@@ -742,31 +778,60 @@ private final class AudioCopyStream {
         guard reader.startReading() else { throw reader.error ?? DepthCheckError.message("Original audio copying could not start.") }
     }
 
-    func pump(until horizon: CMTime?) throws -> Bool {
+    func pump() throws -> Bool {
         guard !finished else { return false }
-        var progressed = false
+        // Pull at most one packet ahead independently of writer readiness. This
+        // lets us discover EOF immediately after appending the final packet,
+        // even when that append changes isReadyForMoreMediaData to false.
+        var progressed = try prefetch()
         // A small cap makes cancellation and video work responsive even for
         // sources containing many tiny audio packets.
         var packets = 0
         while input.isReadyForMoreMediaData, packets < 32 {
             try Task.checkCancellation()
-            guard let sample = pending ?? output.copyNextSampleBuffer() else {
-                if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Original audio could not be fully copied.") }
-                input.markAsFinished()
-                finished = true
-                return true
-            }
-            if let horizon, CMTimeCompare(CMSampleBufferGetPresentationTimeStamp(sample), horizon) > 0 {
-                pending = sample
-                break
-            }
+            guard let sample = pending else { break }
             guard input.append(sample) else {
                 throw DepthCheckError.message("The movie writer rejected an original audio packet. The incomplete export was stopped.")
             }
             pending = nil
             packets += 1
             progressed = true
+            _ = try prefetch()
+        }
+        // markAsFinished is an EOF signal, not an append. It is legal and
+        // necessary while readiness is false, so another track can finish its
+        // interleaving instead of waiting forever for audio that does not exist.
+        if sourceEnded, pending == nil {
+            input.markAsFinished()
+            finished = true
+            return true
         }
         return progressed
+    }
+
+    private func prefetch() throws -> Bool {
+        guard pending == nil, !sourceEnded else { return false }
+        try Task.checkCancellation()
+        pending = output.copyNextSampleBuffer()
+        if pending == nil {
+            if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Original audio could not be fully copied.") }
+            if reader.status == .cancelled { throw CancellationError() }
+            sourceEnded = true
+        }
+        return true
+    }
+
+    var diagnosticState: String {
+        let status: String
+        switch reader.status {
+        case .unknown: status = "unknown"
+        case .reading: status = "reading"
+        case .completed: status = "completed"
+        case .failed: status = "failed"
+        case .cancelled: status = "cancelled"
+        @unknown default: status = "\(reader.status.rawValue)"
+        }
+        let pendingPTS = pending.map { String(CMSampleBufferGetPresentationTimeStamp($0).seconds) } ?? "none"
+        return "reader=\(status), ready=\(input.isReadyForMoreMediaData), sourceEOF=\(sourceEnded), pendingPTS=\(pendingPTS), finished=\(finished)"
     }
 }

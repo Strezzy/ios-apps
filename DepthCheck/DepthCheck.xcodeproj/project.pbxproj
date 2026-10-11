@@ -468,6 +468,16 @@
 			"isa" = "PBXBuildFile";
 			"fileRef" = "6310A989FBFFAD2C9181BF10";
 		};
+		"D0B6710E3E57704CCF3AA97C" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "DepthCheckTests/SustainedVideoExportTests.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"ED74661F8F23ACED74829282" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D0B6710E3E57704CCF3AA97C";
+		};
 		"C4E2E7F217DE3642E7714F4E" = {
 			"isa" = "PBXGroup";
 			"children" = (
@@ -476,6 +486,7 @@
 				"CE4C2F87A99BE2B4CC919727",
 				"EE3B01E8F670CD1C6D16A475",
 				"6310A989FBFFAD2C9181BF10",
+				"D0B6710E3E57704CCF3AA97C",
 			);
 			"name" = "DepthCheckTests";
 			"sourceTree" = "<group>";
@@ -553,6 +564,7 @@
 				"D161FB3F1FBFFBD9CFA3EAD5",
 				"41C1E0790CFFBAEBE81A7912",
 				"72C3C15D84F2A4B6E4D79974",
+				"ED74661F8F23ACED74829282",
 			);
 			"runOnlyForDeploymentPostprocessing" = 0;
 		};

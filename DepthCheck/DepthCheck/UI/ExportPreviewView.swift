@@ -64,7 +64,7 @@ struct ExportPreviewView: View {
         .onAppear { store.previewIsPresented = true }
         .onDisappear { store.previewIsPresented = false }
         .alert(item: $store.alert) { alert in
-            Alert(title: Text(alert.title), message: Text(alert.message), dismissButton: .default(Text("OK")))
+            alert.systemAlert
         }
     }
 }
