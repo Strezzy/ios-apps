@@ -151,6 +151,17 @@
       "versions": [
         {
           "version": "1.0",
+          "buildVersion": "5",
+          "buildNumber": "5",
+          "date": "2026-10-11T23:02:50Z",
+          "localizedDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-5/DepthCheck.ipa",
+          "size": 228712902,
+          "minOSVersion": "26.0",
+          "sha256": "831f335c38637cec421779dbbccfdd6d7023d83db353c49f5d0653743dcf064e"
+        },
+        {
+          "version": "1.0",
           "buildVersion": "4",
           "buildNumber": "4",
           "date": "2026-10-11T22:47:11Z",
@@ -169,10 +180,10 @@
         }
       },
       "version": "1.0",
-      "versionDate": "2026-10-11T22:47:11Z",
+      "versionDate": "2026-10-11T23:02:50Z",
       "versionDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-4/DepthCheck.ipa",
-      "size": 228701625
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-5/DepthCheck.ipa",
+      "size": 228712902
     }
   ],
   "news": []
