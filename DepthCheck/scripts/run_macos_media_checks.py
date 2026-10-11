@@ -10,8 +10,9 @@ Usage: python3 scripts/run_macos_media_checks.py
 Evidence: Build/HostChecks/native-media-result.json and build-manifest.json
 
 The production module and XCTest executable compile once. Exact individual
-tests then run in order, each in a fresh process, retaining every prior result
-if a later case fails or times out. The full 4K60 test has a 900-second deadline.
+tests then run in order, each in a fresh process. An individual assertion
+failure does not prevent independent remaining cases from running; the final
+gate still fails and retains every result. The full 4K60 test has a 900-second deadline.
 An unsupported required capability, missing test, skipped test, failure, or
 missing evidence is an unsuccessful validation and never produces a pass.
 """
@@ -100,6 +101,33 @@ def rational_time(value):
     return Fraction(int(match[1]), int(match[2]))
 
 
+def playable_segments_match(media: dict, expected: tuple[Fraction, Fraction]) -> bool:
+    segments = media.get("audio_segments")
+    if not isinstance(segments, list) or not segments:
+        return False
+    playable = []
+    for segment in segments:
+        if not isinstance(segment, dict) or type(segment.get("empty")) is not bool:
+            return False
+        start = rational_time(segment.get("target_start"))
+        end = rational_time(segment.get("target_end"))
+        if start is None or end is None or end < start:
+            return False
+        if not segment["empty"] and end > start:
+            playable.append((start, end))
+    if not playable or min(start for start, _ in playable) != expected[0]:
+        return False
+    # These fixtures contain one continuous playable AAC interval. Inspecting
+    # every nonempty target range rules out an earlier data segment or an
+    # internal gap hidden by aggregate track/playable start and end values.
+    cursor = expected[0]
+    for start, end in sorted(playable):
+        if start > cursor:
+            return False
+        cursor = max(cursor, end)
+    return cursor == expected[1]
+
+
 def sustained_coverage_passed(coverage: dict, test_name: str) -> bool:
     """Check the measured contract, not just a test's self-described pass label."""
     if not isinstance(coverage, dict) or test_name not in SUSTAINED_REQUIREMENTS:
@@ -130,13 +158,18 @@ def sustained_coverage_passed(coverage: dict, test_name: str) -> bool:
             and isinstance(packets, int) and packets > 500 and output.get("audio_packet_count") == packets
             and isinstance(byte_count, int) and byte_count > 0 and output.get("audio_payload_bytes") == byte_count):
         return False
-    for key in ("audio_first_pts", "audio_end"):
+    for key in ("audio_first_pts", "audio_end", "audio_track_start", "audio_track_end"):
         value = rational_time(source.get(key))
         if value is None or rational_time(output.get(key)) != value:
             return False
-    for key, expected in zip(("audio_track_start", "audio_track_end"), SUSTAINED_AUDIO_RANGES[test_name]):
+    # An AVAssetTrack time range can include a leading empty edit. The actual
+    # offset must therefore come from independently inspected nonempty segment
+    # target ranges, not from the whole track's container-level start time.
+    for key, expected in zip(("audio_playable_start", "audio_playable_end"), SUSTAINED_AUDIO_RANGES[test_name]):
         if rational_time(source.get(key)) != expected or rational_time(output.get(key)) != expected:
             return False
+    if not all(playable_segments_match(media, SUSTAINED_AUDIO_RANGES[test_name]) for media in (source, output)):
+        return False
     elapsed = coverage.get("elapsed_seconds", {})
     return (isinstance(elapsed, dict)
             and all(isinstance(elapsed.get(key), (int, float)) and math.isfinite(elapsed[key]) and elapsed[key] >= 0
@@ -347,6 +380,7 @@ def main() -> int:
     ])
 
     evidence["status"] = "in progress"
+    evidence["failed_test_names"] = []
     started = time.monotonic()
     for index, name in enumerate(required_tests, start=1):
         evidence["active_test"] = name
@@ -358,16 +392,23 @@ def main() -> int:
         evidence["duration_seconds"] = time.monotonic() - started
         if not case_passed(case, name):
             evidence["status"] = "failed"
-            evidence["failed_test"] = name
+            evidence["failed_test_names"].append(name)
+            evidence.setdefault("failed_test", name)
             evidence["error"] = "A required native case failed, skipped, timed out, or did not record its measured verification."
             save_result(evidence)
             print(f"Required native media validation failed: {name}; evidence: {RESULT_PATH}", file=sys.stderr)
-            return 1
+        if case.get("status") == "unsupported":
+            evidence["halted_reason"] = "The native runner reported a missing required hardware capability."
+            break
         save_result(evidence)
     evidence.pop("active_test", None)
-    evidence["status"] = "passed"
-    evidence["completed"] = True
+    evidence["status"] = "failed" if evidence["failed_test_names"] else "passed"
+    evidence["completed"] = (len(evidence["results"]) == len(required_tests)
+                             and all(case.get("completed") is True for case in evidence["results"]))
     save_result(evidence)
+    if evidence["failed_test_names"]:
+        print("Required native media checks failed: " + ", ".join(evidence["failed_test_names"]), file=sys.stderr)
+        return 1
     if not native_result_passed(evidence, stereo_supported):
         raise RuntimeError("The aggregate native result does not prove every required completed, unskipped case.")
     print(f"All {len(required_tests)} required native media checks passed. Evidence: {RESULT_PATH}", flush=True)

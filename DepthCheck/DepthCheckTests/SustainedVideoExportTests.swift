@@ -90,16 +90,23 @@ final class SustainedVideoExportTests: XCTestCase {
             let sourceVideo = try await Self.inspectVideo(original, expectedCount: configuration.frameCount,
                                                           expectedSize: configuration.size)
             let sourceAudio = try await Self.inspectAAC(original)
-            try Self.require(sourceAudio.packetCount > 500, "Fixture must contain hundreds of actual AAC packets.")
             let expectedAudioStart = CMTime(value: Int64(configuration.audioStart), timescale: 48_000)
             let expectedAudioEnd = CMTime(value: Int64(configuration.audioEnd), timescale: 48_000)
-            try Self.require(CMTimeCompare(sourceAudio.trackRange.start, expectedAudioStart) == 0,
-                             "The fixture's playable audio must start at its requested offset, independently of AAC priming.")
+            try Self.logAudioInspection(sourceAudio, name: name, phase: "source",
+                                        expectedStart: expectedAudioStart, expectedEnd: expectedAudioEnd)
+            try Self.require(sourceAudio.packetCount > 500, "Fixture must contain hundreds of actual AAC packets.")
+            // An initial empty edit can make track.timeRange start at zero.
+            // The nonempty segment's target range identifies playable audio;
+            // its source range separately exposes the AAC media/priming edit.
+            try Self.require(CMTimeCompare(sourceAudio.playableStart, expectedAudioStart) == 0,
+                             "Fixture playable audio start must be \(Self.timeString(expectedAudioStart)). \(sourceAudio.timelineDescription)")
+            try Self.require(CMTimeCompare(sourceAudio.playableEnd, expectedAudioEnd) == 0,
+                             "Fixture playable audio end must be \(Self.timeString(expectedAudioEnd)). \(sourceAudio.timelineDescription)")
             try Self.require(CMTimeCompare(CMTimeRangeGetEnd(sourceAudio.trackRange), expectedAudioEnd) == 0,
-                             "The fixture's playable audio must end at its requested time, independently of AAC padding.")
+                             "Fixture track end must be \(Self.timeString(expectedAudioEnd)). \(sourceAudio.timelineDescription)")
             if configuration.audioStart > 0 {
                 try Self.require(CMTimeCompare(sourceAudio.firstPTS, CMTime(value: 1, timescale: 1)) > 0,
-                                 "The delayed-audio fixture must retain a real initial gap in its AAC packet timeline.")
+                                 "The delayed-audio fixture must retain a real initial gap in its AAC packet timeline. \(sourceAudio.timelineDescription)")
             }
             if configuration.audioEnd < configuration.frameCount * 800 {
                 try Self.require(CMTimeCompare(sourceAudio.end, configuration.videoEnd) < 0,
@@ -134,11 +141,12 @@ final class SustainedVideoExportTests: XCTestCase {
             defer { renderer.purgeCaches() }
             let exporter = VideoExporter(source: source, options: options, outputDirectory: directory, renderer: renderer)
             mark = Self.now
-            try await exporter.prepare(onProgress: progress.receive)
+            try await exporter.prepare(onProgress: { update in progress.receive(update) })
             elapsed["prepare"] = Self.now - mark
             Self.logPhase(name, phase: "prepare", seconds: elapsed["prepare"]!)
             mark = Self.now
-            let result = try await exporter.export(predictDepth: Self.fixtureDepth, onProgress: progress.receive)
+            let result = try await exporter.export(predictDepth: Self.fixtureDepth,
+                                                   onProgress: { update in progress.receive(update) })
             elapsed["export"] = Self.now - mark
             Self.logPhase(name, phase: "export", seconds: elapsed["export"]!)
 
@@ -152,6 +160,8 @@ final class SustainedVideoExportTests: XCTestCase {
             let outputVideo = try await Self.inspectVideo(outputURL, expectedCount: configuration.frameCount,
                                                           expectedSize: outputSize)
             let outputAudio = try await Self.inspectAAC(outputURL)
+            try Self.logAudioInspection(outputAudio, name: name, phase: "output",
+                                        expectedStart: expectedAudioStart, expectedEnd: expectedAudioEnd)
             try Self.require(outputVideo.timingHash == sourceVideo.timingHash,
                              "The exported video changed a source frame's PTS or duration.")
             try Self.require(outputAudio.packetCount == sourceAudio.packetCount,
@@ -162,7 +172,10 @@ final class SustainedVideoExportTests: XCTestCase {
                              "The AAC packet timeline changed, including its initial offset or final duration.")
             try Self.require(CMTimeCompare(outputAudio.trackRange.start, sourceAudio.trackRange.start) == 0 &&
                              CMTimeCompare(outputAudio.trackRange.duration, sourceAudio.trackRange.duration) == 0,
-                             "The playable audio range changed, including its intentional initial gap or final trim.")
+                             "The aggregate audio track range changed. Source: \(sourceAudio.timelineDescription) Output: \(outputAudio.timelineDescription)")
+            try Self.require(CMTimeCompare(outputAudio.playableStart, sourceAudio.playableStart) == 0 &&
+                             CMTimeCompare(outputAudio.playableEnd, sourceAudio.playableEnd) == 0,
+                             "The playable audio interval changed, including its initial gap or final trim. Source: \(sourceAudio.timelineDescription) Output: \(outputAudio.timelineDescription)")
             let outputAsset = AVURLAsset(url: outputURL)
             let outputDuration = try await outputAsset.load(.duration)
             try Self.require(CMTimeCompare(outputDuration, duration) == 0,
@@ -424,13 +437,38 @@ final class SustainedVideoExportTests: XCTestCase {
         let firstPTS: CMTime
         let end: CMTime
         let trackRange: CMTimeRange
+        let playableStart: CMTime
+        let playableEnd: CMTime
+        let segments: [AudioSegmentInspection]
         var evidence: [String: Any] {
             ["audio_codec": "AAC", "audio_packet_count": packetCount, "audio_payload_bytes": payloadBytes,
              "audio_payload_sha256": payloadHash, "audio_timing_sha256": timingHash,
              "audio_first_pts": SustainedVideoExportTests.timeString(firstPTS),
              "audio_end": SustainedVideoExportTests.timeString(end),
              "audio_track_start": SustainedVideoExportTests.timeString(trackRange.start),
-             "audio_track_end": SustainedVideoExportTests.timeString(CMTimeRangeGetEnd(trackRange))]
+             "audio_track_end": SustainedVideoExportTests.timeString(CMTimeRangeGetEnd(trackRange)),
+             "audio_playable_start": SustainedVideoExportTests.timeString(playableStart),
+             "audio_playable_end": SustainedVideoExportTests.timeString(playableEnd),
+             "audio_segments": segments.map(\.evidence)]
+        }
+        var timelineDescription: String {
+            "Track \(SustainedVideoExportTests.rangeString(trackRange)); playable \(SustainedVideoExportTests.timeString(playableStart))…\(SustainedVideoExportTests.timeString(playableEnd)); first AAC PTS \(SustainedVideoExportTests.timeString(firstPTS)); final AAC end \(SustainedVideoExportTests.timeString(end)); segments [\(segments.map(\.description).joined(separator: "; "))]."
+        }
+    }
+
+    private struct AudioSegmentInspection {
+        let isEmpty: Bool
+        let source: CMTimeRange
+        let target: CMTimeRange
+        var evidence: [String: Any] {
+            ["empty": isEmpty,
+             "source_start": SustainedVideoExportTests.timeString(source.start),
+             "source_end": SustainedVideoExportTests.timeString(CMTimeRangeGetEnd(source)),
+             "target_start": SustainedVideoExportTests.timeString(target.start),
+             "target_end": SustainedVideoExportTests.timeString(CMTimeRangeGetEnd(target))]
+        }
+        var description: String {
+            "\(isEmpty ? "empty" : "media") source \(SustainedVideoExportTests.rangeString(source)) → target \(SustainedVideoExportTests.rangeString(target))"
         }
     }
 
@@ -440,6 +478,19 @@ final class SustainedVideoExportTests: XCTestCase {
         try require(tracks.count == 1, "A complete stereo AAC track must be present.")
         let track = try XCTUnwrap(tracks.first)
         let trackRange = try await track.load(.timeRange)
+        let trackSegments = try await track.load(.segments)
+        let segments = trackSegments.map {
+            AudioSegmentInspection(isEmpty: $0.isEmpty, source: $0.timeMapping.source, target: $0.timeMapping.target)
+        }
+        let playableSegments = segments.filter {
+            !$0.isEmpty && $0.target.start.isNumeric && $0.target.duration.isNumeric && CMTimeCompare($0.target.duration, .zero) > 0
+        }.sorted { CMTimeCompare($0.target.start, $1.target.start) < 0 }
+        guard let firstPlayable = playableSegments.first else {
+            throw Failure("No nonempty audio segment maps to a playable interval. Track \(rangeString(trackRange)); segments [\(segments.map(\.description).joined(separator: "; "))].")
+        }
+        let playableEnd = playableSegments.reduce(CMTimeRangeGetEnd(firstPlayable.target)) {
+            CMTimeMaximum($0, CMTimeRangeGetEnd($1.target))
+        }
         let formats = try await track.load(.formatDescriptions)
         let format = try XCTUnwrap(formats.first)
         try require(CMFormatDescriptionGetMediaSubType(format) == kAudioFormatMPEG4AAC,
@@ -494,7 +545,19 @@ final class SustainedVideoExportTests: XCTestCase {
         try require(reader.status == .completed, "AAC verification did not reach EOF: \(reader.error?.localizedDescription ?? "unknown error").")
         return AudioInspection(packetCount: packetCount, payloadBytes: payloadBytes,
             payloadHash: hex(payloadHash.finalize()), timingHash: hex(timingHash.finalize()),
-            firstPTS: try XCTUnwrap(firstPTS), end: end, trackRange: trackRange)
+            firstPTS: try XCTUnwrap(firstPTS), end: end, trackRange: trackRange,
+            playableStart: firstPlayable.target.start, playableEnd: playableEnd, segments: segments)
+    }
+
+    private static func logAudioInspection(_ audio: AudioInspection, name: String, phase: String,
+                                           expectedStart: CMTime, expectedEnd: CMTime) throws {
+        let diagnostic = audio.evidence.merging([
+            "test": name, "phase": phase,
+            "expected_playable_start": timeString(expectedStart),
+            "expected_playable_end": timeString(expectedEnd)
+        ]) { _, new in new }
+        let json = try JSONSerialization.data(withJSONObject: diagnostic, options: [.sortedKeys])
+        log("[DepthCheckSustainedAudio] " + String(decoding: json, as: UTF8.self))
     }
 
     private static func verifyFinalFrame(at url: URL, configuration: Configuration, outputSize: PixelSize) async throws {
@@ -543,6 +606,7 @@ final class SustainedVideoExportTests: XCTestCase {
     }
 
     private static func timeString(_ time: CMTime) -> String { "\(time.value)/\(time.timescale)@\(time.epoch)" }
+    private static func rangeString(_ range: CMTimeRange) -> String { "\(timeString(range.start))…\(timeString(CMTimeRangeGetEnd(range)))" }
     private static var now: Double { ProcessInfo.processInfo.systemUptime }
     private static func require(_ condition: Bool, _ message: String) throws { if !condition { throw Failure(message) } }
     private struct Failure: LocalizedError {
