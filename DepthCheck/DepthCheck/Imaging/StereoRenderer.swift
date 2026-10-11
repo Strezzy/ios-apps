@@ -61,6 +61,12 @@ final class StereoRenderer {
     }
 
     func render(source: CIImage, depth: DepthMap, options: ConversionOptions) throws -> StereoPair {
+        guard !source.extent.isInfinite, !source.extent.isNull,
+              source.extent.width.isFinite, source.extent.height.isFinite,
+              source.extent.width >= 1, source.extent.height >= 1,
+              source.extent.width <= 16384, source.extent.height <= 16384 else {
+            throw DepthCheckError.message("This image has invalid or unsupported rendering dimensions. The source was not resized.")
+        }
         let size = PixelSize(width: Int(source.extent.width.rounded()), height: Int(source.extent.height.rounded()))
         try validate(size)
         let input = try buffer(size)

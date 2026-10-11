@@ -6,7 +6,7 @@ import CoreVideo
 import CryptoKit
 import VideoToolbox
 
-/// Streaming conversion with one application-owned source frame at a time.
+/// Streaming conversion with one processed frame and one source lookahead.
 /// No frame-rate preset, video-composition frameDuration, or segment join is used.
 final class VideoExporter {
     private let source: MediaSource
@@ -19,6 +19,7 @@ final class VideoExporter {
     private var transform = CGAffineTransform.identity
     private var size = PixelSize(width: 0, height: 0)
     private var duration = CMTime.zero
+    private var videoEndTime = CMTime.zero
     private var nominalRate: Double = 0
     private var timeScale: CMTimeScale = 60_000
     private var sourceIsHDR = false
@@ -43,6 +44,7 @@ final class VideoExporter {
         transform = preferredTransform
         nominalRate = Double(rate)
         duration = try await asset.load(.duration)
+        videoEndTime = try await track.load(.timeRange).end
         timeScale = max(1, try await track.load(.naturalTimeScale))
         guard size.width > 0, size.height > 0,
               duration.isNumeric, duration.seconds.isFinite, duration.seconds > 0 else {
@@ -86,6 +88,9 @@ final class VideoExporter {
             }
             for output in outputs { try output.start() }
             guard reader.startReading() else { throw reader.error ?? DepthCheckError.message("Video decoding could not start.") }
+            // One-frame lookahead recovers a missing sample duration from the
+            // next original PTS. It never determines a new frame rate.
+            var nextSourceSample = decoded.copyNextSampleBuffer()
 
             let metadata = VirtualStereoMetadata(options: options)
             var timings = FrameTimingLedger()
@@ -104,15 +109,23 @@ final class VideoExporter {
                 }
                 if !videoFinished, outputs.allSatisfy({ $0.videoInput.isReadyForMoreMediaData }) {
                     let frameRead = try autoreleasepool { () throws -> Bool in
-                        guard let sample = decoded.copyNextSampleBuffer() else {
+                        guard let sample = nextSourceSample else {
                             if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Source video decoding failed.") }
                             return false
                         }
+                        nextSourceSample = decoded.copyNextSampleBuffer()
+                        if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Source video decoding failed.") }
                         guard let buffer = CMSampleBufferGetImageBuffer(sample) else {
                             throw DepthCheckError.message("A source frame could not be decoded. The export was stopped instead of dropping it.")
                         }
                         let pts = CMSampleBufferGetOutputPresentationTimeStamp(sample)
-                        let frameDuration = CMSampleBufferGetOutputDuration(sample)
+                        let declaredDuration = CMSampleBufferGetOutputDuration(sample)
+                        let nextPTS = nextSourceSample.map(CMSampleBufferGetOutputPresentationTimeStamp) ?? videoEndTime
+                        let frameDuration = declaredDuration.isNumeric && CMTimeCompare(declaredDuration, .zero) > 0
+                            ? declaredDuration : CMTimeSubtract(nextPTS, pts)
+                        guard frameDuration.isNumeric, CMTimeCompare(frameDuration, .zero) > 0 else {
+                            throw DepthCheckError.message("A source frame has no recoverable duration. The export was stopped rather than inventing its timing.")
+                        }
                         try timings.record(pts: pts, duration: frameDuration)
                         let image = Self.orientedImage(buffer, transform: transform)
                         guard Int(image.extent.width.rounded()) == size.width,
@@ -131,7 +144,7 @@ final class VideoExporter {
                                 options: spatial ? metadata.unshiftedOptions : options)
                             switch options.format {
                             case .spatial:
-                                try outputs[0].append(pair: pair, pts: pts)
+                                try outputs[0].append(pair: pair, pts: pts, duration: frameDuration)
                             case .separateEyes:
                                 try outputs[0].append(buffer: pair.left, pts: pts, duration: frameDuration)
                                 try outputs[1].append(buffer: pair.right, pts: pts, duration: frameDuration)
@@ -279,7 +292,7 @@ final class VideoExporter {
                 }
                 let pts = CMTimeMultiply(frameDuration, multiplier: Int32(index))
                 if options.format == .spatial {
-                    try output.append(pair: StereoPair(left: frame, right: frame), pts: pts)
+                    try output.append(pair: StereoPair(left: frame, right: frame), pts: pts, duration: frameDuration)
                 } else {
                     try output.append(buffer: frame, pts: pts, duration: frameDuration)
                 }
@@ -378,8 +391,9 @@ final class VideoExporter {
             }
             if !read { break }
         }
-        guard reader.status == .completed, exported.count == timings.count, exported.signature == timings.signature else {
-            throw DepthCheckError.message("The encoded frame count or timestamps differ from the source. The export was rejected instead of keeping a frame-rate downgrade.")
+        guard reader.status == .completed, exported.count == timings.count,
+              exported.signature == timings.signature, CMTimeCompare(exported.endTime, timings.endTime) == 0 else {
+            throw DepthCheckError.message("The encoded frame count, timestamps, or final frame duration differ from the source. The export was rejected instead of keeping altered timing.")
         }
     }
 }
@@ -414,12 +428,14 @@ private final class VideoOutput {
     let url: URL
     let writer: AVAssetWriter
     let videoInput: AVAssetWriterInput
-    private let spatialAdapter: AVAssetWriterInputTaggedPixelBufferGroupAdaptor?
+    private let spatial: Bool
+    private var spatialDescription: CMTaggedBufferGroupFormatDescription?
     private var videoDescription: CMVideoFormatDescription?
     private var audio: [AudioCopyStream] = []
 
     init(url: URL, settings: [String: Any], spatial: Bool, timeScale: CMTimeScale) throws {
         self.url = url
+        self.spatial = spatial
         writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         writer.movieTimeScale = timeScale
         guard writer.canApply(outputSettings: settings, forMediaType: .video) else {
@@ -428,12 +444,6 @@ private final class VideoOutput {
         videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         videoInput.expectsMediaDataInRealTime = false
         videoInput.mediaTimeScale = timeScale
-        if spatial {
-            spatialAdapter = AVAssetWriterInputTaggedPixelBufferGroupAdaptor(assetWriterInput: videoInput,
-                sourcePixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-                                               kCVPixelBufferWidthKey as String: settings[AVVideoWidthKey]!,
-                                               kCVPixelBufferHeightKey as String: settings[AVVideoHeightKey]!])
-        } else { spatialAdapter = nil }
         guard writer.canAdd(videoInput) else { throw DepthCheckError.message("A full-resolution video track could not be created.") }
         writer.add(videoInput)
     }
@@ -463,12 +473,23 @@ private final class VideoOutput {
         return progressed
     }
 
-    func append(pair: StereoPair, pts: CMTime) throws {
-        let tagged = [
-            CMTaggedBuffer(tags: [.videoLayerID(0), .stereoView(.leftEye)], buffer: .pixelBuffer(pair.left)),
-            CMTaggedBuffer(tags: [.videoLayerID(1), .stereoView(.rightEye)], buffer: .pixelBuffer(pair.right))
+    func append(pair: StereoPair, pts: CMTime, duration: CMTime) throws {
+        guard spatial else { throw DepthCheckError.message("A stereo frame was sent to a single-view output.") }
+        // iOS 26's ready sample buffer carries BOTH PTS and duration. The older
+        // tagged-pixel adaptor accepts PTS alone and can stretch the last frame
+        // when the movie's audio lasts longer than its video track.
+        let tagged: [CMTaggedDynamicBuffer] = [
+            CMTaggedDynamicBuffer(tags: [.videoLayerID(0), .stereoView(.leftEye), .mediaType(.video)],
+                content: CVReadOnlyPixelBuffer(unsafeBuffer: pair.left)),
+            CMTaggedDynamicBuffer(tags: [.videoLayerID(1), .stereoView(.rightEye), .mediaType(.video)],
+                content: CVReadOnlyPixelBuffer(unsafeBuffer: pair.right))
         ]
-        guard let spatialAdapter, spatialAdapter.appendTaggedBuffers(tagged, withPresentationTime: pts) else {
+        if spatialDescription == nil {
+            spatialDescription = CMTaggedBufferGroupFormatDescription(taggedBuffers: tagged)
+        }
+        let ready = CMReadySampleBuffer(taggedBuffers: tagged, formatDescription: spatialDescription,
+                                        presentationTimeStamp: pts, duration: duration)
+        guard ready.withUnsafeSampleBuffer({ videoInput.append($0) }) else {
             throw writer.error ?? DepthCheckError.message("The multiview encoder rejected a full-resolution stereo frame.")
         }
     }

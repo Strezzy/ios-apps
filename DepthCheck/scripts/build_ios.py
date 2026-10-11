@@ -119,10 +119,10 @@ def main():
         udid = device["udid"]
         if device.get("state") != "Booted":
             run(["xcrun", "simctl", "boot", udid])
-        run(["xcrun", "simctl", "bootstatus", udid, "-b"], name="simulator-boot")
         sim = common + ["-configuration", "Debug", "-destination", "id=" + udid,
                         "ARCHS=arm64", "ONLY_ACTIVE_ARCH=YES", *signing]
         run(sim + ["build-for-testing"], name="simulator-build")
+        run(["xcrun", "simctl", "bootstatus", udid, "-b"], name="simulator-boot")
         simulator_app = DERIVED / "Build/Products/Debug-iphonesimulator/DepthCheck.app"
         metadata(simulator_app)
         results = BUILD / "TestResults.xcresult"

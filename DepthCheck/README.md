@@ -42,7 +42,7 @@ The exact HEVC encoder settings are tested on the current device before the dept
 
 ## Memory
 
-The pipeline owns one source frame at a time. Submitted buffers are retained by the encoder and recycled only after it releases them; the renderer caps its buffer pool. No entire movie or 24-frame 4K batch is accumulated in RAM. Memory Saver clears Core Image and Metal caches every 24 processed frames while keeping one continuous output timeline. No segment seams or frame-rate conversion are introduced.
+The pipeline processes one frame at a time and retains one additional source frame to recover exact timing when a decoder omits sample durations. Submitted buffers are retained by the encoder and recycled only after it releases them; the renderer caps its buffer pool. No entire movie or 24-frame 4K batch is accumulated in RAM. Memory Saver clears Core Image and Metal caches every 24 processed frames while keeping one continuous output timeline. No segment seams or frame-rate conversion are introduced.
 
 ## Models
 

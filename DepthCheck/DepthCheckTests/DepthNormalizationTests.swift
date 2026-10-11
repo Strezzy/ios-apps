@@ -56,6 +56,8 @@ final class DepthNormalizationTests: XCTestCase {
             XCTAssertEqual(depth.values.count, depth.width * depth.height)
             XCTAssertEqual(Double(depth.width) / Double(depth.height), 1.5, accuracy: 0.01)
             XCTAssertTrue(depth.values.allSatisfy { $0.isFinite && (0...1).contains($0) })
+            XCTAssertGreaterThan((depth.values.max() ?? 0) - (depth.values.min() ?? 0), 0.01,
+                                 "The bundled model must return non-flat depth for this two-layer image.")
         }
     }
 }

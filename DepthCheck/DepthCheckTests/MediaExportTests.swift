@@ -75,6 +75,13 @@ final class MediaExportTests: XCTestCase {
         try await runVideoTest(durations: [1_000, 1_000, 2_000, 500, 1_500, 1_000, 2_000, 500], format: .separateEyes)
     }
 
+    func testSpatialVideoPreservesBothEyeLayersAndLastFrameDurationWithLongerAudio() async throws {
+        // Exercise the native tagged sample-buffer path. Audio ends 0.1 s after
+        // video, so a PTS-only writer would silently stretch the final frame.
+        try await runVideoTest(durations: Array(repeating: 1_000, count: 12),
+                               format: .spatial, audioTailTicks: 6_000)
+    }
+
     func testPhotoPreservesOddDimensionsAndWritesSpatialMetadata() throws {
         let renderer = try Self.renderer()
         let directory = try Self.temporaryDirectory()
@@ -111,18 +118,18 @@ final class MediaExportTests: XCTestCase {
         try PhotoExporter.verify(spatial.files[0], expectedSize: spatialSource.size, spatial: true)
     }
 
-    private func runVideoTest(durations: [Int64], format: OutputFormat) async throws {
+    private func runVideoTest(durations: [Int64], format: OutputFormat, audioTailTicks: Int64 = 0) async throws {
         let renderer = try Self.renderer()
         let directory = try Self.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let input = directory.appendingPathComponent("source.mov")
-        let expected = try await Self.makeVideoFixture(at: input, durations: durations)
+        let expected = try await Self.makeVideoFixture(at: input, durations: durations, audioTailTicks: audioTailTicks)
         let source = MediaSource(url: input, name: "source.mov", kind: .video,
             size: PixelSize(width: 128, height: 72), frameRate: 60,
-            duration: Double(durations.reduce(0, +)) / 60_000, hasAudio: true)
+            duration: Double(durations.reduce(0, +) + audioTailTicks) / 60_000, hasAudio: true)
         var options = ConversionOptions()
         options.format = format
-        options.depthAmount = 0
+        options.depthAmount = format == .spatial ? 0.018 : 0
         let exporter = VideoExporter(source: source, options: options, outputDirectory: directory, renderer: renderer)
         try await exporter.prepare(onProgress: { _ in })
         let result = try await exporter.export(predictDepth: Self.fakeDepth, onProgress: { _ in })
@@ -145,9 +152,26 @@ final class MediaExportTests: XCTestCase {
             reader.add(output)
             XCTAssertTrue(reader.startReading())
             var times: [CMTime] = []
-            while let sample = output.copyNextSampleBuffer() { times.append(CMSampleBufferGetPresentationTimeStamp(sample)) }
+            var actualDurations: [CMTime] = []
+            while let sample = output.copyNextSampleBuffer() {
+                times.append(CMSampleBufferGetPresentationTimeStamp(sample))
+                actualDurations.append(CMSampleBufferGetDuration(sample))
+            }
+            XCTAssertEqual(reader.status, .completed)
             XCTAssertEqual(times.count, expected.count)
             for (actual, requested) in zip(times, expected) { XCTAssertEqual(CMTimeCompare(actual, requested), 0) }
+            XCTAssertEqual(actualDurations.count, durations.count)
+            for (actual, requested) in zip(actualDurations, durations) {
+                XCTAssertEqual(CMTimeCompare(actual, CMTime(value: requested, timescale: 60_000)), 0,
+                               "Every encoded video duration, including the last, must match its source frame.")
+            }
+            if format == .spatial {
+                // The exporter's own verification additionally requires both
+                // layers and exact baseline/FOV/convergence metadata.
+                let stereoTracks = try await asset.loadTracks(withMediaCharacteristic: .containsStereoMultiviewVideo)
+                XCTAssertEqual(stereoTracks.count, 1)
+                XCTAssertEqual(stereoTracks.first?.trackID, track.trackID)
+            }
             let audioReader = try AVAssetReader(asset: asset)
             let audioOutput = AVAssetReaderTrackOutput(track: audio[0], outputSettings: nil)
             audioReader.add(audioOutput)
@@ -198,7 +222,7 @@ final class MediaExportTests: XCTestCase {
         return [bytes[index + 2], bytes[index + 1], bytes[index]]
     }
 
-    private static func makeVideoFixture(at url: URL, durations: [Int64]) async throws -> [CMTime] {
+    private static func makeVideoFixture(at url: URL, durations: [Int64], audioTailTicks: Int64 = 0) async throws -> [CMTime] {
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         writer.movieTimeScale = 60_000
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
@@ -206,9 +230,8 @@ final class MediaExportTests: XCTestCase {
             AVVideoCompressionPropertiesKey: [AVVideoAllowFrameReorderingKey: false, AVVideoExpectedSourceFrameRateKey: 60]
         ])
         input.mediaTimeScale = 60_000
-        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: nil)
         writer.add(input)
-        let totalTicks = durations.reduce(0, +)
+        let totalTicks = durations.reduce(0, +) + audioTailTicks
         let audioSample = try makeAudioSample(frameCount: Int(totalTicks * 48_000 / 60_000))
         let audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: nil,
                                           sourceFormatHint: CMSampleBufferGetFormatDescription(audioSample))
@@ -227,7 +250,18 @@ final class MediaExportTests: XCTestCase {
                 try await Task.sleep(for: .milliseconds(2))
             }
             let time = CMTime(value: pts, timescale: 60_000)
-            guard adaptor.append(try quadrantBuffer(width: 128, height: 72), withPresentationTime: time) else {
+            let buffer = try quadrantBuffer(width: 128, height: 72)
+            var format: CMVideoFormatDescription?
+            guard CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault,
+                imageBuffer: buffer, formatDescriptionOut: &format) == noErr, let format else {
+                throw DepthCheckError.message("Fixture video description failed")
+            }
+            var timing = CMSampleTimingInfo(duration: CMTime(value: duration, timescale: 60_000),
+                                           presentationTimeStamp: time, decodeTimeStamp: .invalid)
+            var sample: CMSampleBuffer?
+            guard CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer,
+                formatDescription: format, sampleTiming: &timing, sampleBufferOut: &sample) == noErr,
+                  let sample, input.append(sample) else {
                 throw writer.error ?? DepthCheckError.message("Fixture frame write failed")
             }
             requested.append(time)
