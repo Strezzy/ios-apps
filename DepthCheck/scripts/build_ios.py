@@ -128,7 +128,10 @@ def main():
         results = BUILD / "TestResults.xcresult"
         if results.exists():
             shutil.rmtree(results)
-        run(sim + ["-parallel-testing-enabled", "NO", "-resultBundlePath", results, "test-without-building"], name="simulator-tests")
+        run(sim + ["-parallel-testing-enabled", "NO", "-test-timeouts-enabled", "YES",
+                   "-default-test-execution-time-allowance", "180",
+                   "-maximum-test-execution-time-allowance", "300",
+                   "-resultBundlePath", results, "test-without-building"], name="simulator-tests")
         report["tests"] = "passed; see TestResults.xcresult for executed and skipped tests"
         run(["xcrun", "simctl", "install", udid, simulator_app])
         run(["xcrun", "simctl", "launch", "--terminate-running-process", udid, BUNDLE], name="simulator-launch")

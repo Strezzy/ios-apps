@@ -71,6 +71,13 @@ final class MediaExportTests: XCTestCase {
         try await runVideoTest(durations: Array(repeating: 1_000, count: 12), format: .sideBySide)
     }
 
+    func test4K60VideoEncodesThreeFramesAtFull7680By2160SBSSize() async throws {
+        // Three real 4K source frames exercise the full decoder, Metal renderer,
+        // 7680-wide encoder, audio copy and timestamp verification paths.
+        try await runVideoTest(durations: Array(repeating: 1_000, count: 3),
+                               format: .sideBySide, size: PixelSize(width: 3_840, height: 2_160))
+    }
+
     func testVariableTimingAndSeparateEyesStaySynchronized() async throws {
         try await runVideoTest(durations: [1_000, 1_000, 2_000, 500, 1_500, 1_000, 2_000, 500], format: .separateEyes)
     }
@@ -118,14 +125,17 @@ final class MediaExportTests: XCTestCase {
         try PhotoExporter.verify(spatial.files[0], expectedSize: spatialSource.size, spatial: true)
     }
 
-    private func runVideoTest(durations: [Int64], format: OutputFormat, audioTailTicks: Int64 = 0) async throws {
+    private func runVideoTest(durations: [Int64], format: OutputFormat,
+                              size: PixelSize = PixelSize(width: 128, height: 72),
+                              audioTailTicks: Int64 = 0) async throws {
         let renderer = try Self.renderer()
         let directory = try Self.temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let input = directory.appendingPathComponent("source.mov")
-        let expected = try await Self.makeVideoFixture(at: input, durations: durations, audioTailTicks: audioTailTicks)
+        let expected = try await Self.makeVideoFixture(at: input, durations: durations, size: size,
+                                                       audioTailTicks: audioTailTicks)
         let source = MediaSource(url: input, name: "source.mov", kind: .video,
-            size: PixelSize(width: 128, height: 72), frameRate: 60,
+            size: size, frameRate: 60,
             duration: Double(durations.reduce(0, +) + audioTailTicks) / 60_000, hasAudio: true)
         var options = ConversionOptions()
         options.format = format
@@ -201,14 +211,18 @@ final class MediaExportTests: XCTestCase {
         let buffer = try VideoExporter.blankBuffer(size: PixelSize(width: width, height: height))
         CVPixelBufferLockBaseAddress(buffer, [])
         defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        let bytes = CVPixelBufferGetBaseAddress(buffer)!.assumingMemoryBound(to: UInt8.self)
+        let base = CVPixelBufferGetBaseAddress(buffer)!
         let stride = CVPixelBufferGetBytesPerRow(buffer)
-        for y in 0..<height {
-            for x in 0..<width {
-                let rgb: [UInt8] = y < height / 2 ? (x < width / 2 ? [255, 0, 0] : [0, 255, 0])
-                    : (x < width / 2 ? [0, 0, 255] : [255, 255, 255])
-                let index = y * stride + x * 4
-                bytes[index] = rgb[2]; bytes[index + 1] = rgb[1]; bytes[index + 2] = rgb[0]; bytes[index + 3] = 255
+        // Two short row patterns avoid allocating an RGB array for every pixel
+        // when constructing the real 4K regression fixture.
+        let top: [UInt32] = (0..<width).map { ($0 < width / 2 ? UInt32(0xFFFF0000) : UInt32(0xFF00FF00)).littleEndian }
+        let bottom: [UInt32] = (0..<width).map { ($0 < width / 2 ? UInt32(0xFF0000FF) : UInt32(0xFFFFFFFF)).littleEndian }
+        top.withUnsafeBytes { topBytes in
+            bottom.withUnsafeBytes { bottomBytes in
+                for y in 0..<height {
+                    let row = y < height / 2 ? topBytes.baseAddress! : bottomBytes.baseAddress!
+                    base.advanced(by: y * stride).copyMemory(from: row, byteCount: width * 4)
+                }
             }
         }
         return buffer
@@ -222,11 +236,12 @@ final class MediaExportTests: XCTestCase {
         return [bytes[index + 2], bytes[index + 1], bytes[index]]
     }
 
-    private static func makeVideoFixture(at url: URL, durations: [Int64], audioTailTicks: Int64 = 0) async throws -> [CMTime] {
+    private static func makeVideoFixture(at url: URL, durations: [Int64], size: PixelSize,
+                                         audioTailTicks: Int64 = 0) async throws -> [CMTime] {
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         writer.movieTimeScale = 60_000
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 128, AVVideoHeightKey: 72,
+            AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: size.width, AVVideoHeightKey: size.height,
             AVVideoCompressionPropertiesKey: [AVVideoAllowFrameReorderingKey: false, AVVideoExpectedSourceFrameRateKey: 60]
         ])
         input.mediaTimeScale = 60_000
@@ -244,25 +259,29 @@ final class MediaExportTests: XCTestCase {
         audioInput.markAsFinished()
         var pts: Int64 = 0
         var requested: [CMTime] = []
+        // Reuse one immutable source buffer. Encoding may retain it, but no
+        // caller changes its pixels and the fixture never holds a frame array.
+        let buffer = try quadrantBuffer(width: size.width, height: size.height)
+        var description: CMVideoFormatDescription?
+        guard CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault,
+            imageBuffer: buffer, formatDescriptionOut: &description) == noErr, let description else {
+            throw DepthCheckError.message("Fixture video description failed")
+        }
         for duration in durations {
             while !input.isReadyForMoreMediaData {
                 if writer.status == .failed { throw writer.error! }
                 try await Task.sleep(for: .milliseconds(2))
             }
             let time = CMTime(value: pts, timescale: 60_000)
-            let buffer = try quadrantBuffer(width: 128, height: 72)
-            var format: CMVideoFormatDescription?
-            guard CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault,
-                imageBuffer: buffer, formatDescriptionOut: &format) == noErr, let format else {
-                throw DepthCheckError.message("Fixture video description failed")
-            }
-            var timing = CMSampleTimingInfo(duration: CMTime(value: duration, timescale: 60_000),
-                                           presentationTimeStamp: time, decodeTimeStamp: .invalid)
-            var sample: CMSampleBuffer?
-            guard CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer,
-                formatDescription: format, sampleTiming: &timing, sampleBufferOut: &sample) == noErr,
-                  let sample, input.append(sample) else {
-                throw writer.error ?? DepthCheckError.message("Fixture frame write failed")
+            try autoreleasepool {
+                var timing = CMSampleTimingInfo(duration: CMTime(value: duration, timescale: 60_000),
+                                               presentationTimeStamp: time, decodeTimeStamp: .invalid)
+                var sample: CMSampleBuffer?
+                guard CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: buffer,
+                    formatDescription: description, sampleTiming: &timing, sampleBufferOut: &sample) == noErr,
+                      let sample, input.append(sample) else {
+                    throw writer.error ?? DepthCheckError.message("Fixture frame write failed")
+                }
             }
             requested.append(time)
             pts += duration
