@@ -181,15 +181,35 @@ final class PhotoExporter {
                   (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue == expectedSize.height else {
                 throw DepthCheckError.message("The image encoder changed the requested dimensions. The export was rejected.")
             }
-            if spatial {
-                // Some ImageIO versions return one group dictionary, others an array.
-                let groups = (properties[kCGImagePropertyGroups] as? [[CFString: Any]])
-                    ?? (properties[kCGImagePropertyGroups] as? [CFString: Any]).map { [$0] } ?? []
-                guard groups.contains(where: {
-                    ($0[kCGImagePropertyGroupType] as? String) == (kCGImagePropertyGroupTypeStereoPair as String)
-                }) else {
-                    throw DepthCheckError.message("ImageIO did not write the required stereo-pair metadata. The incomplete spatial photo was rejected.")
+        }
+        if spatial {
+            // AddImage takes per-image group membership instructions, but on
+            // readback ImageIO exposes the resulting relationship in the
+            // container properties. Its left/right indices identify the two
+            // member images; CopyPropertiesAtIndex is only for an image's
+            // individual properties and does not expose this file-level group.
+            // https://developer.apple.com/documentation/imageio/image-properties
+            // https://developer.apple.com/documentation/imageio/writing-spatial-photos
+            let properties = CGImageSourceCopyProperties(image, nil) as? [CFString: Any]
+            let groups = properties?[kCGImagePropertyGroups] as? [[CFString: Any]] ?? []
+            let count = CGImageSourceGetCount(image)
+            let hasStereoPair = groups.contains { group in
+                guard (group[kCGImagePropertyGroupType] as? String) == (kCGImagePropertyGroupTypeStereoPair as String),
+                      let leftIndex = group[kCGImagePropertyGroupImageIndexLeft] as? Int,
+                      let rightIndex = group[kCGImagePropertyGroupImageIndexRight] as? Int else { return false }
+                return leftIndex != rightIndex && (0..<count).contains(leftIndex) && (0..<count).contains(rightIndex)
+            }
+            guard hasStereoPair else {
+                #if DEBUG
+                // Restrict diagnostics to group relationships, not image data
+                // or unrelated EXIF properties, if an OS changes this contract.
+                let imageGroups: [Any] = (0..<count).map { index in
+                    let item = CGImageSourceCopyPropertiesAtIndex(image, index, nil) as? [CFString: Any]
+                    return item?[kCGImagePropertyGroups] ?? "missing"
                 }
+                print("Spatial HEIC verification: container groups = \(String(describing: properties?[kCGImagePropertyGroups])); image groups = \(imageGroups)")
+                #endif
+                throw DepthCheckError.message("ImageIO did not write the required stereo-pair metadata. The incomplete spatial photo was rejected.")
             }
         }
     }

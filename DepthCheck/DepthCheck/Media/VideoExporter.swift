@@ -34,6 +34,9 @@ final class VideoExporter {
 
     func prepare(onProgress: @Sendable (ConversionProgress) -> Void) async throws {
         try Task.checkCancellation()
+        if options.format == .spatial, !VTIsStereoMVHEVCEncodeSupported() {
+            throw DepthCheckError.message("This device does not support native MV-HEVC spatial video encoding. Choose Side by Side or Separate Eyes to keep both views at the full source resolution.")
+        }
         onProgress(.init(fraction: 0.005, stage: "Checking source video"))
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw DepthCheckError.message("This file does not contain a readable video track.")
@@ -270,7 +273,10 @@ final class VideoExporter {
 
     private func preflight(size: PixelSize) async throws {
         let url = outputDirectory.appendingPathComponent("encoder-check.mov")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer {
+            // AVAssetWriter may already remove its file after a failed encode.
+            if FileManager.default.fileExists(atPath: url.path) { try? FileManager.default.removeItem(at: url) }
+        }
         let output: VideoOutput
         do {
             output = try VideoOutput(url: url, settings: writerSettings(size: size),
@@ -279,6 +285,10 @@ final class VideoExporter {
         do {
             try output.start()
             let frame = try Self.blankBuffer(size: size)
+            // Each tagged eye owns a distinct surface, just as in a real render.
+            // Reusing one CVPixelBuffer for both tags is not a valid capability
+            // probe for an encoder that requires separate multiview images.
+            let rightFrame = options.format == .spatial ? try Self.blankBuffer(size: size) : nil
             let frameDuration = CMTime(seconds: 1 / max(1, nominalRate), preferredTimescale: timeScale)
             for index in 0..<2 {
                 let began = Date()
@@ -291,8 +301,8 @@ final class VideoExporter {
                     try await Task.sleep(for: .milliseconds(5))
                 }
                 let pts = CMTimeMultiply(frameDuration, multiplier: Int32(index))
-                if options.format == .spatial {
-                    try output.append(pair: StereoPair(left: frame, right: frame), pts: pts, duration: frameDuration)
+                if let rightFrame {
+                    try output.append(pair: StereoPair(left: frame, right: rightFrame), pts: pts, duration: frameDuration)
                 } else {
                     try output.append(buffer: frame, pts: pts, duration: frameDuration)
                 }
@@ -305,9 +315,14 @@ final class VideoExporter {
                 throw output.writer.error ?? DepthCheckError.message("The encoder rejected the test frames.")
             }
         } catch {
+            // Keep the original encoder error before cancellation can update
+            // AVAssetWriter.error or remove an incomplete output file.
+            let wasCancelled = error is CancellationError
+            let native = error as NSError
+            let detail = "\(native.localizedDescription) (\(native.domain), \(native.code))"
             output.cancel()
-            if error is CancellationError { throw error }
-            throw unsupportedSize(size, detail: error.localizedDescription)
+            if wasCancelled { throw CancellationError() }
+            throw unsupportedSize(size, detail: detail)
         }
     }
 
@@ -383,10 +398,9 @@ final class VideoExporter {
             try Task.checkCancellation()
             let read = try autoreleasepool { () throws -> Bool in
                 guard let sample = output.copyNextSampleBuffer() else { return false }
-                guard CMSampleBufferGetNumSamples(sample) == 1 else {
-                    throw DepthCheckError.message("The encoder produced an unexpected video sample layout.")
+                try VideoSampleTiming.forEach(in: sample) { timing in
+                    try exported.record(pts: timing.presentationTimeStamp, duration: timing.duration)
                 }
-                try exported.record(pts: CMSampleBufferGetPresentationTimeStamp(sample), duration: CMSampleBufferGetDuration(sample))
                 return true
             }
             if !read { break }
@@ -394,6 +408,30 @@ final class VideoExporter {
         guard reader.status == .completed, exported.count == timings.count,
               exported.signature == timings.signature, CMTimeCompare(exported.endTime, timings.endTime) == 0 else {
             throw DepthCheckError.message("The encoded frame count, timestamps, or final frame duration differ from the source. The export was rejected instead of keeping altered timing.")
+        }
+    }
+}
+
+/// A compressed reader can coalesce several video samples into one buffer or
+/// return a zero-sample marker describing an empty timeline interval. Neither
+/// changes the number of encoded frames. Read every actual sample's own timing.
+enum VideoSampleTiming {
+    static func forEach(in buffer: CMSampleBuffer, _ visit: (CMSampleTimingInfo) throws -> Void) throws {
+        let count = CMSampleBufferGetNumSamples(buffer)
+        guard count >= 0 else { throw DepthCheckError.message("The encoded sample count is invalid.") }
+        if count == 0 {
+            guard CMSampleBufferGetTotalSampleSize(buffer) == 0, CMSampleBufferGetImageBuffer(buffer) == nil else {
+                throw DepthCheckError.message("An encoded buffer contains media without a sample count. Its frame timing cannot be verified.")
+            }
+            return
+        }
+        for index in 0..<count {
+            var timing = CMSampleTimingInfo(duration: .invalid, presentationTimeStamp: .invalid, decodeTimeStamp: .invalid)
+            let status = CMSampleBufferGetSampleTimingInfo(buffer, at: index, timingInfoOut: &timing)
+            guard status == noErr else {
+                throw DepthCheckError.message("An encoded frame's timing could not be read (Core Media \(status)).")
+            }
+            try visit(timing)
         }
     }
 }
@@ -519,7 +557,7 @@ private final class VideoOutput {
     func cancel() {
         for stream in audio { stream.reader.cancelReading() }
         if writer.status == .writing { writer.cancelWriting() }
-        try? FileManager.default.removeItem(at: url)
+        if FileManager.default.fileExists(atPath: url.path) { try? FileManager.default.removeItem(at: url) }
     }
 }
 

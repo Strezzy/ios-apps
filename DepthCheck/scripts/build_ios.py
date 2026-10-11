@@ -108,6 +108,19 @@ def main():
     try:
         if int(report["sdk"].split(".")[0]) < 26:
             raise RuntimeError("The native Liquid Glass build requires iOS SDK 26 or later.")
+        capability_probe = '''import Foundation
+import Metal
+import VideoToolbox
+let values: [String: Any] = [
+    "stereo_mv_hevc_encoder": VTIsStereoMVHEVCEncodeSupported(),
+    "metal_device": MTLCreateSystemDefaultDevice()?.name ?? "none",
+    "physical_memory_bytes": ProcessInfo.processInfo.physicalMemory
+]
+let data = try JSONSerialization.data(withJSONObject: values, options: [.sortedKeys])
+print(String(decoding: data, as: UTF8.self))
+'''
+        report["macos_host_capabilities"] = json.loads(run(
+            ["xcrun", "swift", "-target", "arm64-apple-macosx26.0", "-e", capability_probe], capture=True))
         if run(["xcrun", "--sdk", "iphoneos", "metal", "--version"], name="metal-check", check=False):
             run(["xcodebuild", "-downloadComponent", "metalToolchain"], name="metal-download")
         run([sys.executable, ROOT / "scripts/prepare_models.py"], name="prepare-models")
@@ -117,11 +130,13 @@ def main():
         signing = ["CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM="]
         device = simulator_device()
         udid = device["udid"]
-        if device.get("state") != "Booted":
-            run(["xcrun", "simctl", "boot", udid])
         sim = common + ["-configuration", "Debug", "-destination", "id=" + udid,
                         "ARCHS=arm64", "ONLY_ACTIVE_ARCH=YES", *signing]
         run(sim + ["build-for-testing"], name="simulator-build")
+        # First-boot migration and Swift compilation compete for the hosted
+        # runner's memory. Compile first, then let migration run on its own.
+        if device.get("state") != "Booted":
+            run(["xcrun", "simctl", "boot", udid])
         run(["xcrun", "simctl", "bootstatus", udid, "-b"], name="simulator-boot")
         simulator_app = DERIVED / "Build/Products/Debug-iphonesimulator/DepthCheck.app"
         metadata(simulator_app)
@@ -132,7 +147,6 @@ def main():
                    "-default-test-execution-time-allowance", "180",
                    "-maximum-test-execution-time-allowance", "300",
                    "-resultBundlePath", results, "test-without-building"], name="simulator-tests")
-        report["tests"] = "passed; see TestResults.xcresult for executed and skipped tests"
         run(["xcrun", "simctl", "install", udid, simulator_app])
         run(["xcrun", "simctl", "launch", "--terminate-running-process", udid, BUNDLE], name="simulator-launch")
         time.sleep(3)
@@ -160,11 +174,18 @@ def main():
         report["error"] = str(error)
         raise
     finally:
-        (BUILD / "BUILD-REPORT.json").write_text(json.dumps(report, indent=2) + "\n")
         results = BUILD / "TestResults.xcresult"
         if results.exists():
-            run(["xcrun", "xcresulttool", "get", "test-results", "summary", "--path", results,
-                 "--compact"], name="test-summary", check=False)
+            try:
+                summary = json.loads(run(["xcrun", "xcresulttool", "get", "test-results", "summary",
+                                          "--path", results, "--compact"], capture=True))
+                report["tests"] = summary
+                (BUILD / "Logs/test-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+                print("Native test summary: " + json.dumps({key: summary.get(key) for key in
+                      ["result", "totalTestCount", "passedTests", "failedTests", "skippedTests"]}), flush=True)
+            except Exception as summary_error:
+                report["test_summary_error"] = str(summary_error)
+        (BUILD / "BUILD-REPORT.json").write_text(json.dumps(report, indent=2) + "\n")
 
 
 if __name__ == "__main__":

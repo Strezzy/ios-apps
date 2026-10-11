@@ -7,6 +7,7 @@ import CoreVideo
 import ImageIO
 import Metal
 import UniformTypeIdentifiers
+import VideoToolbox
 @testable import DepthCheck
 
 final class MediaExportTests: XCTestCase {
@@ -83,6 +84,11 @@ final class MediaExportTests: XCTestCase {
     }
 
     func testSpatialVideoPreservesBothEyeLayersAndLastFrameDurationWithLongerAudio() async throws {
+        let supported = VTIsStereoMVHEVCEncodeSupported()
+        print("[DepthCheckTests] VTIsStereoMVHEVCEncodeSupported = \(supported)")
+        guard supported else {
+            throw XCTSkip("VideoToolbox reports that this test host does not support stereo MV-HEVC encoding.")
+        }
         // Exercise the native tagged sample-buffer path. Audio ends 0.1 s after
         // video, so a PTS-only writer would silently stretch the final frame.
         try await runVideoTest(durations: Array(repeating: 1_000, count: 12),
@@ -164,8 +170,10 @@ final class MediaExportTests: XCTestCase {
             var times: [CMTime] = []
             var actualDurations: [CMTime] = []
             while let sample = output.copyNextSampleBuffer() {
-                times.append(CMSampleBufferGetPresentationTimeStamp(sample))
-                actualDurations.append(CMSampleBufferGetDuration(sample))
+                try VideoSampleTiming.forEach(in: sample) { timing in
+                    times.append(timing.presentationTimeStamp)
+                    actualDurations.append(timing.duration)
+                }
             }
             XCTAssertEqual(reader.status, .completed)
             XCTAssertEqual(times.count, expected.count)
