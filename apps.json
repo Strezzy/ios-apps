@@ -1,0 +1,145 @@
+{
+  "name": "Strezzy’s Apps",
+  "identifier": "com.strezzy.ios-apps",
+  "subtitle": "Your iPhone apps, together.",
+  "description": "Music, VoiceGlass, Prism, Moonhop, and future apps from Strezzy. Refresh this source for the latest published builds.",
+  "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png",
+  "website": "https://github.com/Strezzy/ios-apps",
+  "tintColor": "#9D8CFF",
+  "apps": [
+    {
+      "name": "Music",
+      "subtitle": "Your music. Offline.",
+      "localizedDescription": "A native offline music player with songs, albums, playlists, local search, editable artwork, and Liquid Glass controls. Version 0.10 adds all 15 Cask 3 scrolling presets in Settings.",
+      "category": "entertainment",
+      "tintColor": "#70A6FF",
+      "bundleIdentifier": "com.billy.glassmusic",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "0.10",
+          "buildVersion": "11",
+          "buildNumber": "11",
+          "date": "2026-10-11",
+          "localizedDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa",
+          "size": 2861255,
+          "minOSVersion": "16.0",
+          "sha256": "c443c3dcc8473f4f0d52168dbb4e8f5a6757486b3040f4d29c8fa71eb548e069"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Music.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      },
+      "version": "0.10",
+      "versionDate": "2026-10-11",
+      "versionDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa",
+      "size": 2861255
+    },
+    {
+      "name": "VoiceGlass",
+      "subtitle": "Create with your voice. On your iPhone.",
+      "localizedDescription": "Native on-device voice cloning and text-to-speech, reference recording/import, saved voices and clips, playback and WAV export. Download compatible Core ML models once, then create locally. Built device IPA; physical-iPhone inference validation is still required.",
+      "category": "utilities",
+      "tintColor": "#9D8CFF",
+      "bundleIdentifier": "com.billy.voiceglass",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "buildNumber": "1",
+          "date": "2026-10-11",
+          "localizedDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa",
+          "size": 3600579,
+          "minOSVersion": "26.0",
+          "sha256": "033f981c50f0d469f490f00ad520bd30e038f9994f13ad454f2cbf90fb4bcdc0"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSMicrophoneUsageDescription": "Record a short voice sample on this iPhone.",
+          "NSSpeechRecognitionUsageDescription": "Transcribe your voice sample on this iPhone so Qwen can match your voice. VoiceGlass requires on-device recognition; audio is not sent to a server."
+        }
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-11",
+      "versionDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa",
+      "size": 3600579
+    },
+    {
+      "name": "Prism",
+      "subtitle": "Your imagination. On your iPhone.",
+      "localizedDescription": "Native AI image generation and reference-image editing with Generate, Edit, Gallery and Settings tabs. FLUX.2 Klein and Z-Image Turbo run through MLX and Metal with separately downloaded models. Built device IPA; physical-iPhone inference validation is still required.",
+      "category": "photo-video",
+      "tintColor": "#CA8BFF",
+      "bundleIdentifier": "com.billy.prism",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "buildNumber": "1",
+          "date": "2026-10-11",
+          "localizedDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa",
+          "size": 7705935,
+          "minOSVersion": "26.0",
+          "sha256": "76c3f665f69c6ffadcb6e6c56382d72a10f60a274056734d6b46305d9a6300fa"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Save the images you create in Prism to your photo library."
+        }
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-11",
+      "versionDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa",
+      "size": 7705935
+    },
+    {
+      "name": "Moonhop",
+      "subtitle": "A little moonlit adventure.",
+      "localizedDescription": "An offline landscape pixel-art platformer with touch controls, jumping, checkpoints, collectibles, and a moonlit world.",
+      "category": "games",
+      "tintColor": "#AA9CFF",
+      "bundleIdentifier": "com.billy.moonhop",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "buildNumber": "1",
+          "date": "2026-10-11",
+          "localizedDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Moonhop.ipa",
+          "size": 55937,
+          "minOSVersion": "16.0",
+          "sha256": "166e63b8ccf539f694e5841f60db9eac67648848bf21a900f99df75cffebb691"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonhop.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-11",
+      "versionDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Moonhop.ipa",
+      "size": 55937
+    }
+  ],
+  "news": []
+}

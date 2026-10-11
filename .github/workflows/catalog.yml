@@ -1,0 +1,44 @@
+name: Update app catalog
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published release tag
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-catalog
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Read and verify published IPAs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: python3 scripts/update_catalog.py --tag "$RELEASE_TAG"
+      - name: Save catalog and download page
+        run: |
+          git add apps.json README.md
+          if git diff --cached --quiet; then
+            echo "The catalog already matches this release."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update app catalog from verified release assets"
+          git push origin HEAD:main
