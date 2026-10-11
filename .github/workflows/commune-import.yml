@@ -1,0 +1,56 @@
+name: Commune - import upstream source
+on:
+  push:
+    branches: [commune-development]
+    paths: [.github/workflows/commune-import.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: commune-development
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: LiveContainerMirror/LiveContainer
+          ref: 4dbe0f9a626de801184a42c0be8d2cb105058e3d
+          path: upstream-import
+          persist-credentials: false
+      - name: Preserve source, licenses and pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e Commune
+          mkdir Commune
+          git -C upstream-import archive HEAD | tar -x -C Commune
+          mv Commune/.gitmodules Commune/UPSTREAM.gitmodules
+          cat > .gitmodules <<'EOF'
+          [submodule "Commune/OpenSSL"]
+            path = Commune/OpenSSL
+            url = https://github.com/krzyzanowskim/OpenSSL
+          [submodule "Commune/litehook"]
+            path = Commune/litehook
+            url = https://github.com/LiveContainerMirror/litehook
+          EOF
+          cat > Commune/UPSTREAM.txt <<'EOF'
+          Commune is an independent modified distribution of LiveContainer.
+          Upstream mirror: https://github.com/LiveContainerMirror/LiveContainer
+          Upstream commit: 4dbe0f9a626de801184a42c0be8d2cb105058e3d
+          Original project: https://github.com/LiveContainer/LiveContainer
+          License: GNU AGPL version 3; see LICENSE and retained upstream notices.
+          OpenSSL: krzyzanowskim/OpenSSL@623c84da314e85363236507ca38a4bde65df21c3
+          litehook: LiveContainerMirror/litehook@a7e9f599d7f0b3d77008ad62bf10cb10dab6eca9
+          The mirror is used because the original repository is unavailable.
+          Source publication does not certify a physical-iPhone test or a security audit.
+          EOF
+          git config user.name 'Strezzy'
+          git config user.email '180245152+Strezzy@users.noreply.github.com'
+          git add Commune .gitmodules
+          git update-index --add --cacheinfo 160000,623c84da314e85363236507ca38a4bde65df21c3,Commune/OpenSSL
+          git update-index --add --cacheinfo 160000,a7e9f599d7f0b3d77008ad62bf10cb10dab6eca9,Commune/litehook
+          git commit -m 'Import full LiveContainer source as Commune foundation, with upstream attribution'
+          git pull --rebase origin commune-development
+          git push origin HEAD:commune-development
