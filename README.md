@@ -18,10 +18,11 @@ Export important creations before changing installations; an in-place update on 
 
 | App | Version | Download | Requires |
 | --- | --- | --- | --- |
-| <img src="assets/Music.png" width="44" alt=""/> **Music** — Your music. Offline. | 0.10 (11) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa) | iOS 16.0+ |
-| <img src="assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Create with your voice. On your iPhone. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
-| <img src="assets/Prism.png" width="44" alt=""/> **Prism** — Your imagination. On your iPhone. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa) | iOS 26.0+ |
-| <img src="assets/Moonhop.png" width="44" alt=""/> **Moonhop** — A little moonlit adventure. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Moonhop.ipa) | iOS 16.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Music.png" width="44" alt=""/> **Music** — Your music. Offline. | 0.10 (11) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa) | iOS 16.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Create with your voice. On your iPhone. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Your imagination. On your iPhone. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonhop.png" width="44" alt=""/> **Moonhop** — A little moonlit adventure. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Moonhop.ipa) | iOS 16.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png" width="44" alt=""/> **Depth Check** — Another dimension. Every frame. | 1.0 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-4/DepthCheck.ipa) | iOS 26.0+ |
 
 IPAs are device builds for a signing/sideloading installer or LiveContainer. They are not App Store packages.
 VoiceGlass and Prism download model weights separately, then process locally. Physical-iPhone model inference has not yet been validated for these builds.

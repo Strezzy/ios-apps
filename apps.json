@@ -139,6 +139,40 @@
       "versionDescription": "Initial catalog release: Music 0.10 (11), VoiceGlass 1.0 (1), Prism 1.0 (1), and Moonhop 1.0 (1).",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Moonhop.ipa",
       "size": 55937
+    },
+    {
+      "name": "Depth Check",
+      "subtitle": "Another dimension. Every frame.",
+      "localizedDescription": "Native Liquid Glass photo and video conversion with bundled on-device Core ML depth models. Apple spatial media, full side-by-side, over-under, anaglyph, separate eyes, and depth exports. Preserves source pixel dimensions and video timing; exact encoder limits are checked on the device. HDR video is exported as SDR. Physical iPhone 17 Pro performance validation remains required.",
+      "category": "photo-video",
+      "tintColor": "#4DE8DD",
+      "bundleIdentifier": "com.billy.depthcheck",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "4",
+          "buildNumber": "4",
+          "date": "2026-10-11T22:47:11Z",
+          "localizedDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-4/DepthCheck.ipa",
+          "size": 228701625,
+          "minOSVersion": "26.0",
+          "sha256": "02d6399498291e343ec0139192c318de49c87cac8acd9e3ba9ee0b73db529551"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Save the spatial photos and videos you create in Depth Check to Photos."
+        }
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-11T22:47:11Z",
+      "versionDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-4/DepthCheck.ipa",
+      "size": 228701625
     }
   ],
   "news": []
