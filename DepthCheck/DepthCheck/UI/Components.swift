@@ -3,6 +3,7 @@ import SwiftUI
 enum DepthCheckTheme {
     static let accent = Color(red: 0.32, green: 0.93, blue: 0.88)
     static let secondaryAccent = Color(red: 0.31, green: 0.58, blue: 1)
+    static let primaryButtonInk = Color(red: 0.02, green: 0.10, blue: 0.13)
 }
 
 struct StudioBackground: View {

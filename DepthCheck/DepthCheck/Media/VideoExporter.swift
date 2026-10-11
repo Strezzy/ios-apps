@@ -109,8 +109,9 @@ final class VideoExporter {
                 let audioHorizon = videoFinished ? nil : CMTimeAdd(timings.lastPTS ?? .zero, CMTime(seconds: 1, preferredTimescale: 600))
                 for output in outputs {
                     madeProgress = try autoreleasepool { try output.pumpAudio(until: audioHorizon) } || madeProgress
+                    madeProgress = try output.pumpVideo() || madeProgress
                 }
-                if !videoFinished, outputs.allSatisfy({ $0.videoInput.isReadyForMoreMediaData }) {
+                if !videoFinished, outputs.allSatisfy({ $0.isReadyForVideoFrame }) {
                     let frameRead = try autoreleasepool { () throws -> Bool in
                         guard let sample = nextSourceSample else {
                             if reader.status == .failed { throw reader.error ?? DepthCheckError.message("Source video decoding failed.") }
@@ -168,7 +169,7 @@ final class VideoExporter {
                                          framesProcessed: timings.count, totalFramesEstimate: estimate))
                     } else {
                         videoFinished = true
-                        for output in outputs { output.videoInput.markAsFinished() }
+                        for output in outputs { try output.finishVideoInput() }
                     }
                 }
                 if madeProgress {
@@ -292,9 +293,10 @@ final class VideoExporter {
             let frameDuration = CMTime(seconds: 1 / max(1, nominalRate), preferredTimescale: timeScale)
             for index in 0..<2 {
                 let began = Date()
-                while !output.videoInput.isReadyForMoreMediaData {
+                while !output.isReadyForVideoFrame {
                     try Task.checkCancellation()
                     try output.checkStatus()
+                    _ = try output.pumpVideo()
                     guard Date().timeIntervalSince(began) < 30 else {
                         throw DepthCheckError.message("The device did not accept the requested encoder configuration.")
                     }
@@ -307,7 +309,17 @@ final class VideoExporter {
                     try output.append(buffer: frame, pts: pts, duration: frameDuration)
                 }
             }
-            output.videoInput.markAsFinished()
+            let drainBegan = Date()
+            while output.hasPendingVideo {
+                try Task.checkCancellation()
+                try output.checkStatus()
+                _ = try output.pumpVideo()
+                guard Date().timeIntervalSince(drainBegan) < 30 else {
+                    throw DepthCheckError.message("The device did not finish the full-resolution encoder check.")
+                }
+                if output.hasPendingVideo { try await Task.sleep(for: .milliseconds(5)) }
+            }
+            try output.finishVideoInput()
             output.writer.endSession(atSourceTime: CMTimeMultiply(frameDuration, multiplier: 2))
             await output.writer.finishWriting()
             try Task.checkCancellation()
@@ -466,20 +478,23 @@ private final class VideoOutput {
     let url: URL
     let writer: AVAssetWriter
     let videoInput: AVAssetWriterInput
-    private let spatial: Bool
-    private var spatialDescription: CMTaggedBufferGroupFormatDescription?
+    private let spatialEncoder: SpatialVideoEncoder?
+    private var pendingSpatialSample: CMSampleBuffer?
     private var videoDescription: CMVideoFormatDescription?
     private var audio: [AudioCopyStream] = []
 
     init(url: URL, settings: [String: Any], spatial: Bool, timeScale: CMTimeScale) throws {
         self.url = url
-        self.spatial = spatial
         writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         writer.movieTimeScale = timeScale
-        guard writer.canApply(outputSettings: settings, forMediaType: .video) else {
+        if !spatial, !writer.canApply(outputSettings: settings, forMediaType: .video) {
             throw DepthCheckError.message("The HEVC writer does not accept these dimensions and settings.")
         }
-        videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
+        spatialEncoder = spatial ? try SpatialVideoEncoder(settings: settings) : nil
+        // VideoToolbox emits compressed media of type Video. QuickTime .mov
+        // accepts this pass-through input without a source format hint; the first
+        // compressed sample supplies the complete multiview format description.
+        videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: spatial ? nil : settings)
         videoInput.expectsMediaDataInRealTime = false
         videoInput.mediaTimeScale = timeScale
         guard writer.canAdd(videoInput) else { throw DepthCheckError.message("A full-resolution video track could not be created.") }
@@ -505,6 +520,9 @@ private final class VideoOutput {
 
     var audioFinished: Bool { audio.allSatisfy(\.finished) }
 
+    var hasPendingVideo: Bool { pendingSpatialSample != nil }
+    var isReadyForVideoFrame: Bool { pendingSpatialSample == nil && videoInput.isReadyForMoreMediaData }
+
     func pumpAudio(until time: CMTime?) throws -> Bool {
         var progressed = false
         for stream in audio { progressed = try stream.pump(until: time) || progressed }
@@ -512,24 +530,29 @@ private final class VideoOutput {
     }
 
     func append(pair: StereoPair, pts: CMTime, duration: CMTime) throws {
-        guard spatial else { throw DepthCheckError.message("A stereo frame was sent to a single-view output.") }
-        // iOS 26's ready sample buffer carries BOTH PTS and duration. The older
-        // tagged-pixel adaptor accepts PTS alone and can stretch the last frame
-        // when the movie's audio lasts longer than its video track.
-        let tagged: [CMTaggedDynamicBuffer] = [
-            CMTaggedDynamicBuffer(tags: [.videoLayerID(0), .stereoView(.leftEye), .mediaType(.video)],
-                content: CVReadOnlyPixelBuffer(unsafeBuffer: pair.left)),
-            CMTaggedDynamicBuffer(tags: [.videoLayerID(1), .stereoView(.rightEye), .mediaType(.video)],
-                content: CVReadOnlyPixelBuffer(unsafeBuffer: pair.right))
-        ]
-        if spatialDescription == nil {
-            spatialDescription = CMTaggedBufferGroupFormatDescription(taggedBuffers: tagged)
+        guard let spatialEncoder else { throw DepthCheckError.message("A stereo frame was sent to a single-view output.") }
+        guard pendingSpatialSample == nil else {
+            throw DepthCheckError.message("The previous spatial frame has not finished writing.")
         }
-        let ready = CMReadySampleBuffer(taggedBuffers: tagged, formatDescription: spatialDescription,
-                                        presentationTimeStamp: pts, duration: duration)
-        guard ready.withUnsafeSampleBuffer({ videoInput.append($0) }) else {
-            throw writer.error ?? DepthCheckError.message("The multiview encoder rejected a full-resolution stereo frame.")
+        pendingSpatialSample = try spatialEncoder.encode(pair: pair, pts: pts, duration: duration)
+        _ = try pumpVideo()
+    }
+
+    /// Retain at most one compressed frame when the movie interleaver applies
+    /// backpressure. The caller can keep pumping audio before trying again.
+    func pumpVideo() throws -> Bool {
+        guard let sample = pendingSpatialSample, videoInput.isReadyForMoreMediaData else { return false }
+        guard videoInput.append(sample) else {
+            throw writer.error ?? DepthCheckError.message("The movie writer rejected a compressed spatial frame. No frame was skipped.")
         }
+        pendingSpatialSample = nil
+        return true
+    }
+
+    func finishVideoInput() throws {
+        guard pendingSpatialSample == nil else { throw DepthCheckError.message("A spatial frame is still waiting to be written.") }
+        spatialEncoder?.invalidate()
+        videoInput.markAsFinished()
     }
 
     func append(buffer: CVPixelBuffer, pts: CMTime, duration: CMTime) throws {
@@ -556,8 +579,143 @@ private final class VideoOutput {
 
     func cancel() {
         for stream in audio { stream.reader.cancelReading() }
+        pendingSpatialSample = nil
+        spatialEncoder?.invalidate()
         if writer.status == .writing { writer.cancelWriting() }
         if FileManager.default.fileExists(atPath: url.path) { try? FileManager.default.removeItem(at: url) }
+    }
+}
+
+/// VideoToolbox's multiview entry point accepts both PTS and explicit duration.
+/// The AVFoundation tagged-pixel adaptor/receiver only accepts PTS, while a raw
+/// TaggedBufferGroup sample is not media type Video and cannot be appended to a
+/// video AVAssetWriterInput. Encode here, then mux ordinary compressed samples.
+private final class SpatialVideoEncoder {
+    private var session: VTCompressionSession?
+
+    init(settings: [String: Any]) throws {
+        guard let width = settings[AVVideoWidthKey] as? Int,
+              let height = settings[AVVideoHeightKey] as? Int,
+              width > 0, height > 0, width <= Int(Int32.max), height <= Int(Int32.max),
+              let compression = settings[AVVideoCompressionPropertiesKey] as? [String: Any] else {
+            throw DepthCheckError.message("The full-resolution spatial encoder settings are invalid.")
+        }
+        let attributes: [String: Any] = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferMetalCompatibilityKey as String: true,
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:]
+        ]
+        var created: VTCompressionSession?
+        let creation = VTCompressionSessionCreate(allocator: kCFAllocatorDefault,
+            width: Int32(width), height: Int32(height), codecType: kCMVideoCodecType_HEVC,
+            encoderSpecification: nil, imageBufferAttributes: attributes as CFDictionary,
+            compressedDataAllocator: nil, outputCallback: nil, refcon: nil, compressionSessionOut: &created)
+        guard creation == noErr, let created else {
+            throw Self.failure(creation, operation: "Creating the full-resolution MV-HEVC encoder")
+        }
+        session = created
+        do {
+            // AVAssetWriter compression names are not all VideoToolbox names.
+            // Convert the generic controls and retain the native multiview keys.
+            var properties: [String: Any] = [:]
+            for (key, value) in compression {
+                let destination: CFString
+                switch key {
+                case AVVideoAverageBitRateKey: destination = kVTCompressionPropertyKey_AverageBitRate
+                case AVVideoExpectedSourceFrameRateKey: destination = kVTCompressionPropertyKey_ExpectedFrameRate
+                case AVVideoAllowFrameReorderingKey: destination = kVTCompressionPropertyKey_AllowFrameReordering
+                case AVVideoMaxKeyFrameIntervalKey: destination = kVTCompressionPropertyKey_MaxKeyFrameInterval
+                case AVVideoProfileLevelKey: destination = kVTCompressionPropertyKey_ProfileLevel
+                default: destination = key as CFString
+                }
+                properties[destination as String] = value
+            }
+            if let colors = settings[AVVideoColorPropertiesKey] as? [String: String] {
+                properties[kVTCompressionPropertyKey_ColorPrimaries as String] = colors[AVVideoColorPrimariesKey]
+                properties[kVTCompressionPropertyKey_TransferFunction as String] = colors[AVVideoTransferFunctionKey]
+                properties[kVTCompressionPropertyKey_YCbCrMatrix as String] = colors[AVVideoYCbCrMatrixKey]
+            }
+            let configured = VTSessionSetProperties(created, propertyDictionary: properties as CFDictionary)
+            guard configured == noErr else { throw Self.failure(configured, operation: "Configuring multiview encoding and spatial metadata") }
+            let prepared = VTCompressionSessionPrepareToEncodeFrames(created)
+            guard prepared == noErr else { throw Self.failure(prepared, operation: "Preparing the full-resolution MV-HEVC encoder") }
+        } catch {
+            invalidate()
+            throw error
+        }
+    }
+
+    func encode(pair: StereoPair, pts: CMTime, duration: CMTime) throws -> CMSampleBuffer {
+        try Task.checkCancellation()
+        guard let session else { throw DepthCheckError.message("The spatial encoder has already finished.") }
+        let tagged = [
+            CMTaggedBuffer(tags: [.videoLayerID(0), .stereoView(.leftEye)], buffer: .pixelBuffer(pair.left)),
+            CMTaggedBuffer(tags: [.videoLayerID(1), .stereoView(.rightEye)], buffer: .pixelBuffer(pair.right))
+        ]
+        let frame = SpatialEncodedFrame()
+        var flags: VTEncodeInfoFlags = []
+        let encoded = VTCompressionSessionEncodeMultiImageFrame(session, taggedBuffers: tagged,
+            presentationTimeStamp: pts, duration: duration, frameProperties: nil, infoFlagsOut: &flags) {
+                status, info, sample in frame.receive(status: status, flags: info, sample: sample)
+            }
+        guard encoded == noErr else { throw Self.failure(encoded, operation: "Encoding a full-resolution stereo frame") }
+        guard !flags.contains(.frameDropped) else {
+            throw DepthCheckError.message("The multiview encoder dropped a frame. The export was stopped to preserve the source frame count.")
+        }
+        // Only one submitted frame is outstanding. CompleteFrames guarantees
+        // its output callback has been emitted before returning, bounding the
+        // encoder's application-owned input/output queue without segment joins.
+        let completed = VTCompressionSessionCompleteFrames(session, untilPresentationTimeStamp: pts)
+        guard completed == noErr else { throw Self.failure(completed, operation: "Completing a full-resolution stereo frame") }
+        try Task.checkCancellation()
+        let sample = try frame.take()
+        guard let format = CMSampleBufferGetFormatDescription(sample),
+              CMFormatDescriptionGetMediaType(format) == kCMMediaType_Video,
+              CMSampleBufferDataIsReady(sample) else {
+            throw DepthCheckError.message("The multiview encoder did not return a ready compressed video sample.")
+        }
+        return sample
+    }
+
+    func invalidate() {
+        if let session { VTCompressionSessionInvalidate(session) }
+        session = nil
+    }
+
+    deinit { invalidate() }
+
+    private static func failure(_ status: OSStatus, operation: String) -> DepthCheckError {
+        .message("\(operation) failed (VideoToolbox \(status)).")
+    }
+}
+
+/// The encoder may invoke its output handler on another thread. The lock guards
+/// a single result, and no callback touches AVAssetWriter or the render buffers.
+private final class SpatialEncodedFrame: @unchecked Sendable {
+    private let lock = NSLock()
+    private var result: Result<CMSampleBuffer, DepthCheckError>?
+
+    func receive(status: OSStatus, flags: VTEncodeInfoFlags, sample: CMSampleBuffer?) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard result == nil else {
+            result = .failure(.message("The multiview encoder returned more than one result for a source frame."))
+            return
+        }
+        guard status == noErr, !flags.contains(.frameDropped), let sample else {
+            result = .failure(.message("The multiview encoder failed to produce a source frame (VideoToolbox \(status)). No frame was skipped."))
+            return
+        }
+        result = .success(sample)
+    }
+
+    func take() throws -> CMSampleBuffer {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let result else {
+            throw DepthCheckError.message("The multiview encoder finished without returning a source frame. The incomplete export was stopped.")
+        }
+        return try result.get()
     }
 }
 

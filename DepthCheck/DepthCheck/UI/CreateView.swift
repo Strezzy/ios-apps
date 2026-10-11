@@ -126,6 +126,7 @@ struct CreateView: View {
     private func photosButton(prominent: Bool) -> some View {
         let picker = PhotosPicker(selection: $photoSelection, matching: .any(of: [.images, .videos]), preferredItemEncoding: .current) {
             Label(prominent ? "Choose from Photos" : "Photos", systemImage: "photo.on.rectangle")
+                .foregroundStyle(prominent ? DepthCheckTheme.primaryButtonInk : DepthCheckTheme.accent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, prominent ? 9 : 5)
         }
@@ -294,6 +295,7 @@ struct CreateView: View {
                 Image(systemName: "arrow.right")
             }
             .font(.headline)
+            .foregroundStyle(DepthCheckTheme.primaryButtonInk)
             .padding(.horizontal, 8)
             .padding(.vertical, 14)
         }
@@ -352,6 +354,7 @@ struct CreateView: View {
                     .buttonStyle(.glass)
                     Button { sharingExport = export } label: {
                         Label("Share", systemImage: "square.and.arrow.up")
+                            .foregroundStyle(DepthCheckTheme.primaryButtonInk)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                     }

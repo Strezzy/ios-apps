@@ -14,6 +14,7 @@ import time
 import zipfile
 from pathlib import Path
 from generate_project import generate
+from run_macos_media_checks import TEST_NAME as SPATIAL_TEST_NAME
 from verify_ipa import verify
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,6 +93,105 @@ def package(app):
     return ipa
 
 
+def validate_spatial_video(report, run_native=True):
+    """Run the native check early, or reuse its evidence after simulator tests."""
+    previous_native = report.get("spatial_video_validation", {}).get("macos_host", {})
+    logs = BUILD / "Logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    simulator_log = logs / "simulator-tests.log"
+    # The first invocation precedes simulator tests. Ignore any log from a
+    # previous local build until the current simulator execution has completed.
+    transcript = simulator_log.read_text(errors="replace") if not run_native and simulator_log.exists() else ""
+    # These lines come from the unchanged spatial XCTest and XCTest's own
+    # completion message. Ambiguous or absent observations are never a pass.
+    capabilities = re.findall(r"\[DepthCheckTests\] VTIsStereoMVHEVCEncodeSupported = (true|false)", transcript)
+    outcomes = re.findall(r"Test Case '[^'\n]*\b" + re.escape(SPATIAL_TEST_NAME)
+                          + r"\b[^'\n]*' (passed|failed|skipped)\b", transcript)
+    simulator = {
+        "encoder_available": (capabilities[0] == "true") if capabilities and len(set(capabilities)) == 1 else None,
+        "test": SPATIAL_TEST_NAME,
+        "status": "not run" if run_native else (outcomes[0] if len(outcomes) == 1 else ("not observed" if not outcomes else "ambiguous")),
+        "observed_completions": len(outcomes),
+        "log": "Build/Logs/simulator-tests.log",
+    }
+    validation = {"status": "not validated", "validated_platforms": [], "simulator": simulator,
+                  "physical_iphone": "Not performed"}
+    report["spatial_video_validation"] = validation
+    host_supported = report.get("macos_host_capabilities", {}).get("stereo_mv_hevc_encoder") is True
+    native = (dict(previous_native) if host_supported and not run_native
+              else {"status": "not run", "encoder_available": host_supported})
+    validation["macos_host"] = native
+    native_passed = False
+    if host_supported and run_native:
+        native["status"] = "in progress"
+        native["log"] = "Build/Logs/macos-native-media.log"
+        result_path = BUILD / "HostChecks/native-mvhevc-result.json"
+        manifest_path = BUILD / "HostChecks/build-manifest.json"
+        artifacts = ((result_path, logs / "macos-native-mvhevc-result.json", "result"),
+                     (manifest_path, logs / "macos-native-build-manifest.json", "build_manifest"))
+        for source, destination, _ in artifacts:
+            # Do not report a stale result if tool discovery fails before the
+            # harness recreates its generated bundle.
+            source.unlink(missing_ok=True)
+            destination.unlink(missing_ok=True)
+        try:
+            native["exit_code"] = run([sys.executable, ROOT / "scripts/run_macos_media_checks.py"],
+                                      name="macos-native-media", check=False)
+        except Exception as error:
+            native["runner_error"] = str(error)
+        finally:
+            # Logs is already uploaded by the workflow even on failed builds.
+            # Embed the same evidence in the release's BUILD-REPORT.json.
+            for source, destination, key in artifacts:
+                if source.is_file():
+                    shutil.copy2(source, destination)
+                    try:
+                        native[key] = json.loads(source.read_text())
+                    except (OSError, ValueError) as error:
+                        native[key + "_error"] = str(error)
+    if host_supported:
+        # Re-evaluate the exact stored result on the later invocation. Missing
+        # or invalid evidence still blocks the build, without another compile
+        # or test run and without converting a simulator skip into a pass.
+        result = native.get("result", {})
+        manifest = native.get("build_manifest", {})
+        native_passed = (native.get("exit_code") == 0 and isinstance(result, dict)
+                         and result.get("status") == "passed" and result.get("test") == SPATIAL_TEST_NAME
+                         and result.get("native_mvhevc_supported") is True and result.get("completed") is True
+                         and result.get("execution_count") == 1 and result.get("test_case_count") == 1
+                         and result.get("skip_count") == 0 and result.get("failure_count") == 0
+                         and isinstance(manifest, dict) and bool(manifest.get("sources")))
+        native["status"] = "passed" if native_passed else "failed"
+        if not native_passed:
+            native["reason"] = "The capable macOS host did not complete exactly one unskipped, passing native MV-HEVC test."
+    else:
+        native["reason"] = "VideoToolbox reports no stereo MV-HEVC encoder on this macOS host."
+
+    if simulator["status"] == "passed":
+        validation["validated_platforms"].append("iOS Simulator")
+    if native_passed:
+        validation["validated_platforms"].append("macOS host")
+    if host_supported and not native_passed:
+        validation["status"] = "failed"
+    elif validation["validated_platforms"]:
+        validation["status"] = "passed"
+    else:
+        if not host_supported and simulator["encoder_available"] is False:
+            validation["limitation"] = (
+                "Neither the iOS simulator nor the macOS build host exposed a stereo MV-HEVC encoder. "
+                "Native spatial video encoding was not validated. A compatible physical device or test host is required. "
+                "Passing side-by-side, photo, model, or geometry tests does not validate MV-HEVC video."
+            )
+        else:
+            validation["limitation"] = (
+                "No successful execution of the native spatial-video test was recorded. "
+                "MV-HEVC video remains unvalidated; other format tests do not establish its correctness."
+            )
+    print("Spatial video validation: " + json.dumps({key: validation.get(key) for key in
+          ("status", "validated_platforms", "limitation")}), flush=True)
+    return not host_supported or native_passed
+
+
 def main():
     if sys.platform != "darwin":
         raise SystemExit("Depth Check must compile on macOS using Xcode 26 or later. Run the included GitHub Actions workflow.")
@@ -123,6 +223,11 @@ print(String(decoding: data, as: UTF8.self))
             ["xcrun", "swift", "-target", "arm64-apple-macosx26.0", "-e", capability_probe], capture=True))
         if run(["xcrun", "--sdk", "iphoneos", "metal", "--version"], name="metal-check", check=False):
             run(["xcodebuild", "-downloadComponent", "metalToolchain"], name="metal-download")
+        # Surface native harness/compiler/encoder errors before downloading
+        # models or waiting for the simulator's first-boot migration.
+        if report["macos_host_capabilities"].get("stereo_mv_hevc_encoder") is True:
+            if not validate_spatial_video(report):
+                raise RuntimeError("Native macOS spatial-video validation failed; see Build/Logs/macos-native-media.log")
         run([sys.executable, ROOT / "scripts/prepare_models.py"], name="prepare-models")
         report["project"] = generate()
         common = ["xcodebuild", "-project", ROOT / "DepthCheck.xcodeproj", "-scheme", "DepthCheck",
@@ -143,10 +248,21 @@ print(String(decoding: data, as: UTF8.self))
         results = BUILD / "TestResults.xcresult"
         if results.exists():
             shutil.rmtree(results)
-        run(sim + ["-parallel-testing-enabled", "NO", "-test-timeouts-enabled", "YES",
-                   "-default-test-execution-time-allowance", "180",
-                   "-maximum-test-execution-time-allowance", "300",
-                   "-resultBundlePath", results, "test-without-building"], name="simulator-tests")
+        simulator_test_exit = run(sim + ["-parallel-testing-enabled", "NO", "-test-timeouts-enabled", "YES",
+                                        "-default-test-execution-time-allowance", "180",
+                                        "-maximum-test-execution-time-allowance", "300",
+                                        "-resultBundlePath", results, "test-without-building"],
+                                  name="simulator-tests", check=False)
+        # Combine the current simulator outcome with the already completed
+        # native check. Do not compile or run the native harness a second time.
+        native_spatial_passed = validate_spatial_video(report, run_native=False)
+        failures = []
+        if simulator_test_exit:
+            failures.append(f"Simulator tests failed with exit {simulator_test_exit}; see Build/Logs/simulator-tests.log")
+        if not native_spatial_passed:
+            failures.append("Native macOS spatial-video validation failed; see Build/Logs/macos-native-media.log")
+        if failures:
+            raise RuntimeError("; ".join(failures))
         run(["xcrun", "simctl", "install", udid, simulator_app])
         run(["xcrun", "simctl", "launch", "--terminate-running-process", udid, BUNDLE], name="simulator-launch")
         time.sleep(3)

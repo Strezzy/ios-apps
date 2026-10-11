@@ -87,6 +87,7 @@ struct ExportsView: View {
                     .foregroundStyle(.secondary)
                 Button { store.selectedTab = .create } label: {
                     Label("Create something", systemImage: "plus")
+                        .foregroundStyle(DepthCheckTheme.primaryButtonInk)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
@@ -180,6 +181,7 @@ private struct ExportCard: View {
                     HStack(spacing: 10) {
                         Button(action: onShare) {
                             Label("Share", systemImage: "square.and.arrow.up")
+                                .foregroundStyle(DepthCheckTheme.primaryButtonInk)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 7)
                         }

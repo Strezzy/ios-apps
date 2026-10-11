@@ -23,6 +23,8 @@ The device IPA requires iOS 26 or later. SideStore signs it for your device; Liv
 
 Both depth models are bundled. The app uploads no media, makes no inference-server calls, and needs no model download after installation. Photos and Files may download an original from the user's iCloud account when that file is not yet local.
 
+For a particular camera RAW file or original video, choose that file from **Files**. Photos is asked to avoid transcoding when possible, but may supply a compatible representation. Depth Check preserves the dimensions and timing of the file it receives.
+
 ## Resolution and timing
 
 | Source 3840 × 2160 | Export dimensions | Video timing |
@@ -69,6 +71,8 @@ python3 scripts/build_ios.py
 ```
 
 The script verifies model download hashes, compiles both Core ML packages, generates the Xcode project, builds and runs focused XCTest cases, launches the app in an iPhone simulator, captures a screenshot, builds the actual arm64 iPhone executable, signs it ad hoc, and verifies the IPA structure, platform, entry point, compiled models and Metal shaders. The GitHub workflow publishes successful builds and adds their verified metadata to the existing app source.
+
+When the Mac exposes an MV-HEVC encoder, the same spatial-video test also runs natively against the production Swift and Metal code. It must verify both eye layers, spatial metadata, audio, and exact frame durations before packaging can proceed. The build report distinguishes native Mac, simulator, and physical-device coverage.
 
 The workflow requires repository Contents write permission for its requested release and catalog update. No paid Apple Developer membership or distribution certificate is used by CI. SideStore provides the user's device provisioning later.
 
