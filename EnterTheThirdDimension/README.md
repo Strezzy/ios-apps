@@ -47,18 +47,29 @@ produces a brief hint without moving the player into a wall or over a gap.
 
 ## Presentation and runtime
 
-- Original smooth water forms with translucent shading, bright reflections,
-  surface motion, and elastic deformation: a girl, frog, and fox.
+- Sculpted water girl, frog, and fox forms with pearly reflections, translucent
+  scene refraction, thickness absorption, subtle caustic filaments, and moving
+  internal bubbles. The girl has shaped cheeks, layered bangs and flowing
+  locks; the frog has crouched haunches and toes; the fox has four paws, a
+  muzzle, ears, and a brush tail.
+- Expressive chibi inhabitants with layered irises, corneal highlights,
+  blinking eyelids, distinct hairstyles, detailed outfits, and gentle
+  breathing, head, hair, and clothing motion.
 - An opening sequence showing the raindrop falling from a tree and learning
   a human shape through contact. Floating drop-to-creature morphs accompany
-  dimensional shifts and changes between remembered forms.
+  dimensional shifts and changes between remembered forms, with tapering
+  light ribbons and a closer camera during the transformation.
 - A real XYZ scene, depth-buffered geometry, an animated orthographic camera,
-  and a player with depth. The existing wall and hidden-bridge puzzles remain.
-- A smooth rainforest with curved roots, broad leaves, ferns, mossy ledges,
-  flowers, glowing mushrooms, moonlight, and drifting fireflies. Cute chibi
-  people and forest creatures replace the earlier pixel inhabitants.
-- Original GLSL ripple, restrained chromatic separation, and glow in the same
-  WebGL context as the scene. See [graphics and licensing](docs/GRAPHICS-LICENSE.md).
+  and a player with depth. The wall and hidden-bridge puzzles remain.
+- A layered rainforest with curved trunks and roots, moving broad leaves,
+  moss, ferns, flowers, luminous mushrooms, lanterns, and a warm earth path.
+- Soft dynamic cast shadows for the world, inhabitants, and the current
+  deformed water shape; per-fragment materials distinguish skin, hair,
+  fabric, wet foliage, bark, stone, and the ground.
+- Quarter-resolution Gaussian bloom, restrained light shafts, smoother edges,
+  and a ripple centered on the transforming character. Rendering uses up to
+  2× device pixel ratio in full effects and 1.25× in reduced effects, with
+  spatial scenery culling. See [graphics and licensing](docs/GRAPHICS-LICENSE.md).
 - Offline bundled HTML/CSS/JavaScript in a native UIKit/WKWebView host. No
   accounts, analytics, remote assets, runtime downloads, or game dependencies.
 - Fixed 120 Hz simulation, coyote time, jump buffering, variable jump height,
@@ -80,8 +91,8 @@ The build generates a normal Xcode project from `Support/build_project.py`,
 compiles with Apple's Foundation/UIKit/WebKit headers, launches the actual
 bundled app in the simulator, and requires a successful JavaScript/WebGL
 readiness report before packaging the arm64 device application. That report
-must also prove that the water shader initialized and actually drew the girl
-without reporting a graphics error; a background-only frame is insufficient.
+must also prove that the current water material, dynamic shadows, bloom,
+and edge smoothing initialized and rendered without a graphics error.
 
 Outputs are under `Build/`: `EnterTheThirdDimension.ipa`, a source archive,
 checksums, and native build evidence. The GitHub workflow publishes them and
@@ -91,7 +102,7 @@ The current distribution package is ad-hoc signed for a sideloading workflow.
 For App Store distribution, build/archive with the appropriate Apple team,
 bundle registration and distribution signing. That submission is separate
 from this GitHub release. The stable bundle identifier remains
-`com.billy.moonhop`; app version is **2.1**, build **3**, deployment target
+`com.billy.moonhop`; app version is **2.2**, build **4**, deployment target
 **iOS 16.0**.
 
 ## Source map
@@ -101,6 +112,7 @@ from this GitHub release. The stable bundle identifier remains
 - `Resources/Game/game.js`: gameplay, collisions, input, progress, and audio.
 - `Resources/Game/render.js`: world renderer, camera, geometry and postprocessing.
 - `Resources/Game/rainforest.js`: rainforest geometry and original chibi inhabitants.
+- `Resources/Game/visuals.js`: original material lighting, shadows, and finishing shaders.
 - `Resources/Game/water.js`: smooth water character and its original material.
 - `Resources/Game/art.js`: legacy pixel sprite definitions, retained for compatibility.
 - `Resources/Game/index.html`, `style.css`: interface and touch controls.

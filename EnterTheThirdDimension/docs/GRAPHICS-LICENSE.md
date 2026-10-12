@@ -18,6 +18,13 @@ other inhabitants retain a thin depth silhouette during the player's power.
 Legacy sprite grids in `Resources/Game/art.js` remain in the source but do not
 draw the current rainforest or its characters.
 
+Version 2.2 adds original material-lighting and finishing code in
+`Resources/Game/visuals.js`: packed depth shadows, procedural material
+variation, bloom, light shafts, and edge smoothing. The rainforest and water
+models have been sculpted and their animation expanded in the existing
+original geometry files. This adds no third-party graphics dependency or
+asset license to the distribution.
+
 No source code, generated shader code, artwork, or presets from
 `shader-effects-inc/shaders` are included. No shaders.com premium content is
 used. The graphics code has no third-party rendering-engine dependency and
@@ -95,6 +102,15 @@ WebGL is inherently faster. A future WebGPU path should feature-detect
 `navigator.gpu` and successfully request an adapter in the actual bundled
 WKWebView build, using the shipping resource-loading configuration. Safari
 support alone is not a substitute for testing that host.
+
+The 2.2 renderer uses the standard WebGL 1 packed depth/stencil renderbuffer
+attachment for more reliable separation of thin character layers. The
+[WebGL specification](https://registry.khronos.org/webgl/specs/latest/1.0/)
+defines `DEPTH_STENCIL` and its matching attachment as a required complete
+combination with an RGBA8 color texture. Runtime diagnostics record the
+actual allocated depth precision. Shadow depth is independently encoded into
+an RGBA8 color texture using explicit high-precision arithmetic and sampling;
+no depth-texture or floating-point-target extension is required.
 
 ## Attribution for this build
 

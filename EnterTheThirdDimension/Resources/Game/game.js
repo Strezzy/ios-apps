@@ -19,7 +19,7 @@
   let jumpBuffer=0,coyote=PHYS.coyote,respawnTimer=0,toastTimer=0,dialogueTimer=0,ambientTimer=0,saveTimer=0;
   let collected=new Set(),particles=[],seenDialogues=new Set(),lastObjective='',lastShardCount=-1;
   const player={x:445,y:0,z:40,vx:0,vy:0,vz:0,grounded:true,facing:1,walk:0};
-  let intro=null,pausedFrom='playing',cameraHeight=248,cameraY=45;
+  let intro=null,pausedFrom='playing',cameraHeight=214,cameraY=45;
   const jelly={squash:1,squashVelocity:0,lean:0,leanVelocity:0,impact:0};
   const ramp=(t,a,b)=>ease(clamp((t-a)/(b-a),0,1));
   const keys=new Set(),padTouches=new Map(),jumpTouches=new Set(),errors=[];
@@ -120,14 +120,14 @@
   }
   function beginIntro(returnAt){
     mode='intro';intro={elapsed:0,duration:12.4,stage:'',returnAt:{...returnAt},returnCreature:creature};creature='girl';
-    resetPlayer(W.spawn);cameraX=108;cameraZ=0;cameraHeight=160;cameraY=42;
+    resetPlayer(W.spawn);cameraX=108;cameraZ=0;cameraHeight=152;cameraY=42;
     document.body.classList.add('cinematic');$('controls').classList.add('hidden');$('introOverlay').classList.remove('hidden');$('toast').classList.remove('show');toastTimer=0;
     updateIntro(0);
   }
   function endIntro(){
     if(!intro)return;
     const returnAt=intro.returnAt;creature=intro.returnCreature;intro=null;introSeen=true;mode='playing';resetPlayer(returnAt);
-    cameraX=Math.max(175,player.x+80);cameraZ=0;cameraHeight=248;cameraY=45;
+    cameraX=Math.max(140,player.x+58);cameraZ=0;cameraHeight=214;cameraY=45;
     clearInputs();document.body.classList.remove('cinematic');$('introOverlay').classList.add('hidden');$('controls').classList.remove('hidden');syncDimensionUI();updateHUD();
     showToast('Move with the left pad. Hold jump to spring higher.',4.5);persist();
   }
@@ -142,7 +142,7 @@
       if(stage==='becoming')sound('become');
       if(stage==='firstSteps'){tone(740,.3,.013);burst(player.x,5,0,settings.reduced?3:9,'#d2ffff',25);}
     }
-    const pull=ramp(t,10.8,12.4);cameraX=108+67*pull;cameraHeight=160+88*pull;cameraY=42+3*pull;
+    const pull=ramp(t,10.8,12.4);cameraX=108+32*pull;cameraHeight=152+62*pull;cameraY=42+3*pull;
     if(t>=intro.duration)endIntro();
   }
   function waterState(){
@@ -177,12 +177,12 @@
     if(continuing&&saved&&!saved.completed){checkpointIndex=clamp(Math.floor(Number(saved.checkpointIndex)||0),-1,W.checkpoints.length-1);hasPrism=!!saved.hasPrism;hasSpark=!!saved.hasSpark;beaconLit=!!saved.beaconLit;collected=new Set((Array.isArray(saved.collected)?saved.collected:[]).filter(i=>Number.isInteger(i)&&i>=0&&i<W.shards.length));deaths=Math.max(0,Number(saved.deaths)||0);jumps=Math.max(0,Number(saved.jumps)||0);shifts=Math.max(0,Number(saved.shifts)||0);elapsed=Math.max(0,Number(saved.elapsed)||0);}
     if(continuing&&saved&&!saved.completed){unlockedForms=new Set(['girl',...(Array.isArray(saved.unlockedForms)?saved.unlockedForms:[]).filter(f=>Object.hasOwn(FORMS,f))]);creature=unlockedForms.has(saved.creature)?saved.creature:'girl';formChanges=Math.max(0,Number(saved.formChanges)||0);}
     dimension=2;dimensionBlend=0;transition=null;pulse=0;gateOpen=beaconLit?1:0;particles=[];clearInputs();resetPlayer(checkpointIndex>=0?W.checkpoints[checkpointIndex]:W.spawn);
-    cameraX=Math.max(175,player.x+80);cameraZ=0;cameraHeight=248;cameraY=45;mode='playing';intro=null;fatal=null;lastTime=0;accumulator=0;toastTimer=0;dialogueTimer=0;ambientTimer=2;saveTimer=0;lastObjective='';lastShardCount=-1;document.body.classList.remove('shifting','cinematic');hideOverlays();$('introOverlay').classList.add('hidden');$('dialogue').classList.add('hidden');$('hud').classList.remove('hidden');$('controls').classList.remove('hidden');syncDimensionUI();updateHUD();unlockAudio();
+    cameraX=Math.max(140,player.x+58);cameraZ=0;cameraHeight=214;cameraY=45;mode='playing';intro=null;fatal=null;lastTime=0;accumulator=0;toastTimer=0;dialogueTimer=0;ambientTimer=2;saveTimer=0;lastObjective='';lastShardCount=-1;document.body.classList.remove('shifting','cinematic');hideOverlays();$('introOverlay').classList.add('hidden');$('dialogue').classList.add('hidden');$('hud').classList.remove('hidden');$('controls').classList.remove('hidden');syncDimensionUI();updateHUD();unlockAudio();
     if(!continuing||!introSeen)beginIntro(checkpointIndex>=0?W.checkpoints[checkpointIndex]:W.spawn);
     else showToast(hasPrism?'Your progress is saved at the lantern.':'Move with the left pad. Hold jump to spring higher.',4.5);
     persist();
   }
-  function home(){mode='title';intro=null;creature='girl';clearInputs();hideOverlays();$('title').classList.remove('hidden');$('introOverlay').classList.add('hidden');$('hud').classList.add('hidden');$('controls').classList.add('hidden');$('dialogue').classList.add('hidden');$('toast').classList.remove('show');transition=null;document.body.classList.remove('shifting','in3d','cinematic');resetPlayer({x:330,y:0,z:40});cameraX=200;cameraZ=0;cameraHeight=170;cameraY=32;hasPrism=false;collected=new Set();beaconLit=false;gateOpen=0;$('play').innerHTML=(saved&&!saved.completed?'Continue the story':'Begin the story')+' <span aria-hidden="true">↗</span>';}
+  function home(){mode='title';intro=null;creature='girl';clearInputs();hideOverlays();$('title').classList.remove('hidden');$('introOverlay').classList.add('hidden');$('hud').classList.add('hidden');$('controls').classList.add('hidden');$('dialogue').classList.add('hidden');$('toast').classList.remove('show');transition=null;document.body.classList.remove('shifting','in3d','cinematic');resetPlayer({x:330,y:0,z:40});cameraX=200;cameraZ=0;cameraHeight=155;cameraY=32;hasPrism=false;collected=new Set();beaconLit=false;gateOpen=0;$('play').innerHTML=(saved&&!saved.completed?'Continue the story':'Begin the story')+' <span aria-hidden="true">↗</span>';}
   function pause(){
     if(mode!=='playing'&&mode!=='respawning'&&mode!=='intro')return;
     pausedFrom=mode==='intro'?'intro':'playing';
@@ -294,9 +294,9 @@
     if(mode==='intro')updateIntro(dt);
     if(mode==='playing')simulate(dt);
     if(!intro&&!transition)updateJelly(dt);
-    if(mode==='respawning'){respawnTimer-=dt;if(respawnTimer<=0){resetPlayer(checkpointIndex>=0?W.checkpoints[checkpointIndex]:W.spawn);dimension=2;dimensionBlend=0;transition=null;pulse=0;mode='playing';document.body.classList.remove('shifting');syncDimensionUI();cameraX=Math.max(175,player.x+80);cameraZ=0;}}
+    if(mode==='respawning'){respawnTimer-=dt;if(respawnTimer<=0){resetPlayer(checkpointIndex>=0?W.checkpoints[checkpointIndex]:W.spawn);dimension=2;dimensionBlend=0;transition=null;pulse=0;mode='playing';document.body.classList.remove('shifting');syncDimensionUI();cameraX=Math.max(140,player.x+58);cameraZ=0;}}
     gateOpen=approach(gateOpen,beaconLit?1:0,dt*.62);
-    if(mode!=='title'&&!intro){const targetX=clamp(player.x+80,175,W.width-155);cameraX+=(targetX-cameraX)*(1-Math.exp(-dt*4.6));cameraZ+=(player.z-cameraZ)*(1-Math.exp(-dt*3.3));cameraHeight=248+40*dimensionBlend;cameraY=45+dimensionBlend*4;}
+    if(mode!=='title'&&!intro){const targetX=clamp(player.x+58,140,W.width-140);cameraX+=(targetX-cameraX)*(1-Math.exp(-dt*4.6));cameraZ+=(player.z-cameraZ)*(1-Math.exp(-dt*3.3));cameraHeight=214+18*dimensionBlend-(transition?16*Math.sin(Math.PI*clamp(transition.elapsed/transition.duration,0,1)):0);cameraY=45+dimensionBlend*4;}
     for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=110*dt;}particles=particles.filter(p=>p.life>0);
     toastTimer=Math.max(0,toastTimer-dt);if(!toastTimer)$('toast').classList.remove('show');dialogueTimer=Math.max(0,dialogueTimer-dt);if(!dialogueTimer)$('dialogue').classList.add('hidden');
     if(mode==='playing'&&!transition){ambientTimer-=dt;if(ambientTimer<=0){ambientTimer=5.5;const notes=dimension===3?[220,330,440,554]:[196,294,392,494];notes.forEach((f,i)=>tone(f,2,.006,i*.28));}}
@@ -307,7 +307,7 @@
   function onLost(){nativePause();$('errorTitle').textContent='Rebuilding the world…';$('errorText').textContent='Your progress is safe. The graphics renderer is recovering.';$('retry').classList.add('hidden');$('rendererError').classList.remove('hidden');}
   function onRestored(){$('rendererError').classList.add('hidden');$('retry').classList.remove('hidden');lastTime=0;accumulator=0;renderDirty=true;if(mode==='paused')showToast('The world is ready. Continue when you are.',3.5);}
   function getState(){
-    return{version:'2.1 (3)',ready:!!renderer&&renderer.frames>0&&!renderer.contextLost&&!fatal,mode,pausedFrom,dimension,dimensionBlend,transitioning:!!transition,transitionProgress:transition?transition.elapsed/transition.duration:0,transitionDuration:transition?transition.duration:0,transitionPhase:transition?transition.phase:'none',transitionKind:transition?transition.kind:'none',water:waterState(),jelly:{...jelly},cinematic:cinematicState(),introSeen,creature,unlockedForms:[...unlockedForms],formChanges,player:{...player,width:FORMS[creature].halfWidth*2,height:FORMS[creature].height,depth:.6+dimensionBlend*8.4},camera:{x:cameraX,z:cameraZ,height:cameraHeight,y:cameraY,yaw:dimensionBlend*.72,elevation:dimensionBlend*.49},elapsed,deaths,jumps,shifts,hasPrism,hasSpark,beaconLit,gateOpen,checkpointIndex,checkpoint:checkpointIndex>=0?{...W.checkpoints[checkpointIndex]}:{...W.spawn},collected:[...collected],totalShards:W.shards.length,foldSafety:foldSafety(),input:{...readInput(),jumpHeld:heldJump(),touches:padTouches.size+jumpTouches.size},physics:formPhysics(),world:{platforms:W.platforms.map(x=>({...x})),obstacles:W.obstacles.map(x=>({...x})),creatures:(W.creatures||[]).map(n=>({...n})),npcs:W.npcs.map(n=>({id:n.id,x:n.x,y:n.y,z:n.z,depth:n.depth})),prism:{...W.prism},spark:{...W.spark},beacon:{...W.beacon},finish:{...W.finish}},renderer:renderer?renderer.getState():null,errors:[...errors],settings:{...settings},objective:lastObjective,playerScreen:renderer?renderer.project(player.x,player.y+FORMS[creature].height/2,player.z):null};
+    return{version:'2.2 (4)',ready:!!renderer&&renderer.frames>0&&!renderer.contextLost&&!fatal,mode,pausedFrom,dimension,dimensionBlend,transitioning:!!transition,transitionProgress:transition?transition.elapsed/transition.duration:0,transitionDuration:transition?transition.duration:0,transitionPhase:transition?transition.phase:'none',transitionKind:transition?transition.kind:'none',water:waterState(),jelly:{...jelly},cinematic:cinematicState(),introSeen,creature,unlockedForms:[...unlockedForms],formChanges,player:{...player,width:FORMS[creature].halfWidth*2,height:FORMS[creature].height,depth:.6+dimensionBlend*8.4},camera:{x:cameraX,z:cameraZ,height:cameraHeight,y:cameraY,yaw:dimensionBlend*.72,elevation:dimensionBlend*.49},elapsed,deaths,jumps,shifts,hasPrism,hasSpark,beaconLit,gateOpen,checkpointIndex,checkpoint:checkpointIndex>=0?{...W.checkpoints[checkpointIndex]}:{...W.spawn},collected:[...collected],totalShards:W.shards.length,foldSafety:foldSafety(),input:{...readInput(),jumpHeld:heldJump(),touches:padTouches.size+jumpTouches.size},physics:formPhysics(),world:{platforms:W.platforms.map(x=>({...x})),obstacles:W.obstacles.map(x=>({...x})),creatures:(W.creatures||[]).map(n=>({...n})),npcs:W.npcs.map(n=>({id:n.id,x:n.x,y:n.y,z:n.z,depth:n.depth})),prism:{...W.prism},spark:{...W.spark},beacon:{...W.beacon},finish:{...W.finish}},renderer:renderer?renderer.getState():null,errors:[...errors],settings:{...settings},objective:lastObjective,playerScreen:renderer?renderer.project(player.x,player.y+FORMS[creature].height/2,player.z):null};
   }
   window.ThirdDimension=Object.freeze({get ready(){return!!renderer&&renderer.frames>0&&!renderer.contextLost&&!fatal;},get errors(){return [...errors];},getState,nativePause});window.Moonhop=Object.freeze({nativePause,getState});
   window.addEventListener('error',e=>{const msg=e.message||'Unknown script error';if(!errors.includes(msg))errors.push(msg);});window.addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));

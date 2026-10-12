@@ -68,7 +68,7 @@ def simulator_device():
 def metadata(app, platform):
     info = plistlib.loads((app / "Info.plist").read_bytes())
     expected = {"CFBundleIdentifier": BUNDLE, "CFBundleExecutable": "ThirdDimension",
-                "CFBundleShortVersionString": "2.1", "CFBundleVersion": "3",
+                "CFBundleShortVersionString": "2.2", "CFBundleVersion": "4",
                 "CFBundleSupportedPlatforms": [platform]}
     for key, value in expected.items():
         require(info.get(key) == value, f"Built bundle has incorrect {key}: {info.get(key)!r}")
@@ -81,15 +81,25 @@ def validate_native_readiness(result):
     require(result.get("ready") is True, "The native host did not observe game readiness")
     require(result.get("errors") == [], "The bundled game raised a startup JavaScript error")
     require(result.get("bundleIdentifier") == BUNDLE, "Readiness report came from the wrong app")
-    require(result.get("version") == "2.1" and result.get("build") == "3", "Readiness report has the wrong app version")
+    require(result.get("version") == "2.2" and result.get("build") == "4", "Readiness report has the wrong app version")
     require(result.get("bundledEntry") == "index.html", "The native host did not load the bundled game entry")
     require(result.get("nativeViewWidth", 0) > result.get("nativeViewHeight", 0) > 0, "Native view did not launch in landscape")
     state = result.get("state")
     require(isinstance(state, dict), "The initialized game returned no state")
+    require(state.get("version") == "2.2 (4)", "The native host loaded the wrong game version")
     renderer = state.get("renderer")
     require(isinstance(renderer, dict), "The initialized game returned no renderer state")
     require("webgl" in str(renderer.get("api", "")).lower(), "The renderer did not report a WebGL context")
     require(renderer.get("artStyle") == "smooth mystical rainforest", "The current rainforest renderer did not initialize")
+    require(renderer.get("visualVersion") == "2.2", "The current visual pipeline did not initialize")
+    require(renderer.get("errors") == [], "The world renderer reported a graphics error")
+    shadows = renderer.get("shadows", {})
+    require(shadows.get("enabled") is True and shadows.get("ready") is True
+            and shadows.get("waterCaster") is True, "Dynamic world and water shadows did not render")
+    for effect in ("bloom", "fxaa"):
+        require(renderer.get(effect, {}).get("enabled") is True
+                and renderer.get(effect, {}).get("ready") is True,
+                f"The {effect} finishing pass did not render")
     require(renderer.get("contextLost") is False, "The renderer reports a lost or unknown graphics context")
     frames = renderer.get("frames")
     require(isinstance(frames, (int, float)) and frames > 0, "No frame was rendered before native readiness")
@@ -138,7 +148,8 @@ def smoke_launch(app, device, runtime):
             "native_process_alive": True, "landscape_view": True,
             "bundled_javascript_ready": True, "webgl_frame_rendered": True,
             "water_material_initialized": True, "water_character_rendered": True,
-            "rainforest_renderer": "smooth mystical rainforest",
+            "rainforest_renderer": "smooth mystical rainforest", "visual_version": "2.2",
+            "dynamic_shadows_rendered": True, "bloom_rendered": True, "fxaa_rendered": True,
             "readiness_evidence": "Native-Launch.json", "screenshot": "Simulator-Launch.png"}
 
 
@@ -182,7 +193,7 @@ def main():
     if sys.platform != "darwin":
         raise SystemExit("Run build-macos.sh on macOS with Xcode, or use the third-dimension GitHub Actions workflow.")
     BUILD.mkdir(exist_ok=True)
-    report = {"status": "in progress", "app": "Enter the Third Dimension", "version": "2.1", "build": "3",
+    report = {"status": "in progress", "app": "Enter the Third Dimension", "version": "2.2", "build": "4",
               "source_revision": os.environ.get("GITHUB_SHA"), "native_headers": "Apple SDK only",
               "physical_iphone_validation": "Not performed", "simulator_validation": "Not run"}
     try:

@@ -82,7 +82,7 @@ def verify(path, resource_root=None):
         info = plistlib.loads(archive.read(prefix + "Info.plist"))
         for key, expected in {"CFBundleIdentifier": BUNDLE, "CFBundleExecutable": EXECUTABLE,
                               "CFBundleDisplayName": "Enter the Third Dimension",
-                              "CFBundleShortVersionString": "2.1", "CFBundleVersion": "3",
+                              "CFBundleShortVersionString": "2.2", "CFBundleVersion": "4",
                               "MinimumOSVersion": "16.0", "CFBundleSupportedPlatforms": ["iPhoneOS"]}.items():
             require(info.get(key) == expected, f"Unexpected {key}: {info.get(key)!r}")
         landscape = {"UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"}
@@ -106,6 +106,7 @@ def verify(path, resource_root=None):
         expected_game = {prefix + "Game/" + p.relative_to(source_game).as_posix() for p in files}
         actual_game = {n for n in names if n.startswith(prefix + "Game/") and not n.endswith("/")}
         require(actual_game == expected_game, "Packaged Game directory differs from the source file set")
+        require((source_game / "visuals.js").is_file(), "The current rainforest lighting shaders are missing")
         resources = []
         for file in files:
             relative = "Game/" + file.relative_to(source_game).as_posix()
@@ -116,8 +117,9 @@ def verify(path, resource_root=None):
         require("connect-src 'none'" in html and "viewport-fit=cover" in html, "Offline CSP or safe-area viewport is missing")
         require("water.js" in html, "The bundled entry does not load the raindrop renderer")
         require("rainforest.js" in html, "The bundled entry does not load the rainforest renderer")
+        require("visuals.js" in html, "The bundled entry does not load the current lighting shaders")
         result.update({"bundle_identifier": BUNDLE, "display_name": info["CFBundleDisplayName"],
-                       "version": "2.1", "build": "3", "zip_integrity": "passed",
+                       "version": "2.2", "build": "4", "zip_integrity": "passed",
                        "executable_permissions": "passed", "resource_byte_equality": "passed",
                        "game_resources": resources, "privacy_manifest": "present, no collection",
                        "ipa_bytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),

@@ -1,27 +1,29 @@
 {
   "game": "Enter the Third Dimension",
-  "version": "2.1 (3)",
+  "version": "2.2 (4)",
   "chapter": "The Folded Forest",
-  "reportCreatedAt": "2026-10-12T08:23:37.447Z",
+  "reportCreatedAt": "2026-10-12T22:35:47.693Z",
   "completed": true,
+  "targetCheckout": "/workspace/scratch/0aaece9faa7f/ios-apps-visual-v22",
   "sourceFiles": "Resources/Game",
   "sourceHashes": {
-    "index.html": "09a120821ae1d9d1ee1429eb76c2c1f9cd64bd31c10af66005362689ce420abe",
-    "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
-    "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b",
     "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
-    "rainforest.js": "f82dbe87a7b686c0d3ae08b0e9df3c2e47368311c430fcad7b42da7a51c3adbf",
-    "water.js": "81215465ebda50cb2f22d2f5c06197f623cf63ca7cf69586cc915c2ecdeab1d6",
-    "render.js": "9ad4e118376bcd1e2319c50147eba8612030a65c270ebcb054f2dbf952ee9f33",
-    "game.js": "72298b2067ad3e1e021f4ee8280fe689072b9e524544b6c7d47ad54cd3a5bdac"
+    "game.js": "604f0132a6b3f2a52dda967d3f30249da7496e8a0ba904d8eeabfc06e535508b",
+    "index.html": "e9645946475bd6c4b3ba30b022baf02ef6252530ec81ac90822f9c6230f6e0de",
+    "rainforest.js": "ff375b36e64f4e7559ea5cd4bcf0616fe5d695df26f3f7bfb73a5c37bbc0a93c",
+    "render.js": "2d605bbe3acd7f88ff6305fe5977807ade2e12d2cc26dd9522a3e35e8d91e127",
+    "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+    "visuals.js": "710c7de2ccbfcadb75417037b94ded152ffb93eab4eb9c7b85f48fb84f250844",
+    "water.js": "906be9300fd1eb89eb455133d24ac032d5750527484dc964d68bc68814c6b6e3",
+    "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b"
   },
   "summary": {
-    "totalChecks": 99,
-    "passed": 99,
+    "totalChecks": 105,
+    "passed": 105,
     "failed": 0,
     "fullChapter": {
       "mode": "complete",
-      "x": 1830.060416666618,
+      "x": 1830.0187499999513,
       "deaths": 0,
       "jumps": 4,
       "shifts": 6,
@@ -40,6 +42,197 @@
       "webgl": 0,
       "failedRequests": 0,
       "externalRequests": 0
+    }
+  },
+  "renderingEvidence": {
+    "fullQuality": {
+      "version": "2.2",
+      "quality": "full",
+      "renderRatio": 2,
+      "sceneDepthBits": 24,
+      "depthFormat": "DEPTH_STENCIL",
+      "sceneResolution": [
+        1748,
+        804
+      ],
+      "shadows": {
+        "enabled": true,
+        "ready": true,
+        "resolution": [
+          1536,
+          1536
+        ],
+        "packedDepth": true,
+        "depthBits": 24,
+        "waterCaster": true,
+        "filter": "nine-tap PCF",
+        "worldTriangles": 227557
+      },
+      "bloom": {
+        "enabled": true,
+        "ready": true,
+        "passes": 3,
+        "resolution": [
+          437,
+          201
+        ]
+      },
+      "fxaa": {
+        "enabled": true,
+        "ready": true
+      },
+      "shafts": {
+        "enabled": true,
+        "ready": true
+      },
+      "water": {
+        "initialized": true,
+        "prepares": 11,
+        "draws": 11,
+        "shadowDraws": 11,
+        "meshBounds": {
+          "min": [
+            321.158935546875,
+            2.5935137271881104,
+            35.082523345947266
+          ],
+          "max": [
+            339.0715637207031,
+            38.30302810668945,
+            44.59780502319336
+          ],
+          "width": 17.912628173828125,
+          "height": 35.70951437950134,
+          "depth": 9.515281677246094
+        },
+        "errors": []
+      }
+    },
+    "reducedQuality": {
+      "version": "2.2",
+      "quality": "reduced",
+      "renderRatio": 1.25,
+      "sceneDepthBits": 24,
+      "depthFormat": "DEPTH_STENCIL",
+      "sceneResolution": [
+        1093,
+        503
+      ],
+      "shadows": {
+        "enabled": true,
+        "ready": true,
+        "resolution": [
+          768,
+          768
+        ],
+        "packedDepth": true,
+        "depthBits": 24,
+        "waterCaster": true,
+        "filter": "nine-tap PCF",
+        "worldTriangles": 273010
+      },
+      "bloom": {
+        "enabled": true,
+        "ready": true,
+        "passes": 3,
+        "resolution": [
+          274,
+          126
+        ]
+      },
+      "fxaa": {
+        "enabled": true,
+        "ready": true
+      },
+      "shafts": {
+        "enabled": false,
+        "ready": true
+      },
+      "water": {
+        "initialized": true,
+        "prepares": 901,
+        "draws": 903,
+        "shadowDraws": 903,
+        "meshBounds": {
+          "min": [
+            415.58990478515625,
+            0.17413365840911865,
+            -6.6319756507873535
+          ],
+          "max": [
+            433.8731689453125,
+            34.914188385009766,
+            6.219192981719971
+          ],
+          "width": 18.28326416015625,
+          "height": 34.74005472660065,
+          "depth": 12.851168632507324
+        },
+        "errors": []
+      }
+    },
+    "contextRestoration": {
+      "version": "2.2",
+      "quality": "reduced",
+      "renderRatio": 1.25,
+      "sceneDepthBits": 24,
+      "depthFormat": "DEPTH_STENCIL",
+      "sceneResolution": [
+        1093,
+        503
+      ],
+      "shadows": {
+        "enabled": true,
+        "ready": true,
+        "resolution": [
+          768,
+          768
+        ],
+        "packedDepth": true,
+        "depthBits": 24,
+        "waterCaster": true,
+        "filter": "nine-tap PCF",
+        "worldTriangles": 228206
+      },
+      "bloom": {
+        "enabled": true,
+        "ready": true,
+        "passes": 3,
+        "resolution": [
+          274,
+          126
+        ]
+      },
+      "fxaa": {
+        "enabled": true,
+        "ready": true
+      },
+      "shafts": {
+        "enabled": false,
+        "ready": true
+      },
+      "water": {
+        "initialized": true,
+        "prepares": 1,
+        "draws": 1,
+        "shadowDraws": 1,
+        "meshBounds": {
+          "min": [
+            1512.271484375,
+            0.17586258053779602,
+            -0.46314531564712524
+          ],
+          "max": [
+            1530.3814697265625,
+            35.32620620727539,
+            0.43238940834999084
+          ],
+          "width": 18.1099853515625,
+          "height": 35.150343626737595,
+          "depth": 0.8955347239971161
+        },
+        "errors": []
+      }
     }
   },
   "environment": {
@@ -67,100 +260,269 @@
     "screenshots": [
       {
         "name": "01-title.png",
-        "description": "Final title, smooth rainforest and translucent heroine"
+        "description": "Visual-fidelity title, rainforest lighting and refractive heroine",
+        "sha256": "6018a87bce3df72346dc0b2276c44c04ddfd4c40e4acfe7cfcf60a45a1aec79a",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "02-leaf.png",
-        "description": "Expressive droplet hanging from its leaf"
+        "description": "Expressive droplet hanging from its leaf",
+        "sha256": "be8c1aa973bb232b41315b544b15a7b81b7ec7483c5a35694f100695178bdc37",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "04-splash.png",
-        "description": "Droplet landing and liquid squash"
+        "description": "Droplet landing and liquid squash",
+        "sha256": "f65825a4d2a60ab5c40f060787db2b8d6b4a127470c4421d93a758f00a9deafb",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "05b-contact.png",
-        "description": "Luma physically touches the droplet during the origin"
+        "description": "Luma physically touches the droplet during the origin",
+        "sha256": "cfb322bb9ed274fba2d5b4487f1b32ba283a95a66ee958287e4b5464bb5a2f21",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "08-becoming.png",
-        "description": "Intermediate liquid-to-human morph"
+        "description": "Intermediate liquid-to-human morph",
+        "sha256": "207ea9168606b2f94b69dc9448ffa6299618cadb53a0e9a61fe84137ac0052f2",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "09-first-steps.png",
-        "description": "Newly formed water girl"
+        "description": "Newly formed water girl",
+        "sha256": "a961c34b1774969cc8aefe5ec64123235f85a1772c4176628b368ccddfe663a2",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "14-float.png",
-        "description": "Dimension power begins by floating with the world still flat"
+        "description": "Dimension power begins by floating with the world still flat",
+        "sha256": "17e21a661f0cf3b7417e5a57a8ab33908b77635bd81494cc912444992332c383",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "15-converged-drop.png",
-        "description": "Heroine gathered into a droplet"
+        "description": "Heroine gathered into a droplet",
+        "sha256": "89fc86034150161a408dabdb9812c3afe97401228cb6898e34f779f810990bf6",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "16-unfolding.png",
-        "description": "Camera and world reveal actual depth during the morph"
+        "description": "Camera and world reveal actual depth during the morph",
+        "sha256": "5720c6ea75de5a725e47df4b8b6c02f7ea298fa1685ff479aeb96267e159baf0",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "18-full-3d.png",
-        "description": "Fully dimensional heroine with the relocated hint above her"
+        "description": "Fully dimensional heroine with the relocated hint above her",
+        "sha256": "1b53d7da5445ec509f7e3d3edf83cec2bf45f257391b0a180f439c2fa12b34b1",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "18-full-3d-detail.png",
-        "description": "Detailed reflective, translucent water heroine"
+        "description": "Detailed refractive water heroine under the new lighting",
+        "sha256": "feded5bf62b060d61c0a1d6864f1afbcebbb60fcdd44d24a0c2c7b369718214d",
+        "pixels": [
+          400,
+          320
+        ]
       },
       {
         "name": "23-girl-2d.png",
-        "description": "Girl form on the normal platforming plane"
+        "description": "Girl form on the normal platforming plane",
+        "sha256": "1d9cdec3671bde021037cd05645be32eb5c026022d98d59a588b0baadd3c303d",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "24-girl-3d.png",
-        "description": "Girl form with world depth"
+        "description": "Girl form with world depth",
+        "sha256": "8fe91c6719d876f199130ed3e3ac9f306c168dd69a3712bdbd86a205e01289e8",
+        "pixels": [
+          1748,
+          804
+        ]
+      },
+      {
+        "name": "24-girl-3d-detail.png",
+        "description": "Expressive water girl detail at the saved forest checkpoint",
+        "sha256": "24b4467e491b5481dfa9bc2768a584a7b4e4fd3e06d1ecfcaf0d3720272a1ffd",
+        "pixels": [
+          400,
+          320
+        ]
       },
       {
         "name": "25-frog-3d.png",
-        "description": "Copied water frog in the dimensional forest"
+        "description": "Copied water frog in the dimensional forest",
+        "sha256": "bfba7e300ffdb6adfe5547c7fdad7a4fdd323699823610ef1b1905f38bc9b6bf",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "25-frog-3d-detail.png",
-        "description": "Reflective water frog detail"
+        "description": "Reflective water frog detail",
+        "sha256": "dd6f43ca3f099b8e236732587349969da8a2767614dccad9051a0d823a895871",
+        "pixels": [
+          400,
+          320
+        ]
       },
       {
         "name": "26-fox-3d.png",
-        "description": "Copied water fox in the dimensional forest"
+        "description": "Copied water fox in the dimensional forest",
+        "sha256": "a5973883e2cdd499010dc3a25d966813d93a08140d0426ccfafd08366a38351c",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "26-fox-3d-detail.png",
-        "description": "Reflective water fox detail"
+        "description": "Reflective water fox detail",
+        "sha256": "a348cb521e67011ae7f1be676818ce3f51222660e40196710a2850ffc5e20e7c",
+        "pixels": [
+          400,
+          320
+        ]
       },
       {
         "name": "27-fox-2d.png",
-        "description": "Fox returned safely to the platforming plane"
+        "description": "Fox returned safely to the platforming plane",
+        "sha256": "df7382f5e0a0db7e83a50ccce2e94464d7a56af2742ec987ecd6f98269a12196",
+        "pixels": [
+          1748,
+          804
+        ]
       },
       {
         "name": "28-girl-returned.png",
-        "description": "Original girl restored after cycling all learned forms"
+        "description": "Original girl restored after cycling all learned forms",
+        "sha256": "636b2a050ea88ce8666c4efd82be42ebbdef6c7b5ae5f2c54a61e8ce58162a28",
+        "pixels": [
+          1748,
+          804
+        ]
       }
     ],
+    "captureObservations": {
+      "visual-report.json": {
+        "javaScriptErrors": 0,
+        "failedRequests": 0,
+        "externalRequests": 0,
+        "toolingStylesheetWarnings": 39,
+        "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+      },
+      "forms-visual-report.json": {
+        "javaScriptErrors": 0,
+        "failedRequests": 0,
+        "externalRequests": 0,
+        "toolingStylesheetWarnings": 12,
+        "warning": "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+      }
+    },
     "repositoryScreenshots": {
       "05b-contact.png": "docs/screenshots/First-Touch.png",
       "18-full-3d.png": "docs/screenshots/Rainforest-3D.png"
     },
-    "animationSamples": [
-      "rain-origin.mp4",
-      "rain-dimension-fold.mp4",
-      "rain-dimension-unfold.mp4",
-      "rain-copy-fox.mp4"
-    ],
-    "userInterfaceReview": "The release owner visually reviewed and accepted the final origin contact, full-3D heroine/hint, water frog and water fox frames. Contact is visible, all three water shapes read clearly, and the hint and controls remain unobstructed.",
+    "animationSamples": [],
+    "userInterfaceReview": {
+      "accepted": true,
+      "reviewer": "release owner",
+      "scope": "Final frozen-source visual evidence",
+      "sourceHashes": {
+        "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+        "game.js": "604f0132a6b3f2a52dda967d3f30249da7496e8a0ba904d8eeabfc06e535508b",
+        "index.html": "e9645946475bd6c4b3ba30b022baf02ef6252530ec81ac90822f9c6230f6e0de",
+        "rainforest.js": "ff375b36e64f4e7559ea5cd4bcf0616fe5d695df26f3f7bfb73a5c37bbc0a93c",
+        "render.js": "2d605bbe3acd7f88ff6305fe5977807ade2e12d2cc26dd9522a3e35e8d91e127",
+        "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+        "visuals.js": "710c7de2ccbfcadb75417037b94ded152ffb93eab4eb9c7b85f48fb84f250844",
+        "water.js": "906be9300fd1eb89eb455133d24ac032d5750527484dc964d68bc68814c6b6e3",
+        "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b"
+      },
+      "reviewedScreenshots": [
+        {
+          "name": "05b-contact.png",
+          "sha256": "cfb322bb9ed274fba2d5b4487f1b32ba283a95a66ee958287e4b5464bb5a2f21",
+          "reviewedAt": "2026-10-12T22:29:12.767250+00:00",
+          "result": "Approved and copied into docs/screenshots/First-Touch.png"
+        },
+        {
+          "name": "18-full-3d.png",
+          "sha256": "1b53d7da5445ec509f7e3d3edf83cec2bf45f257391b0a180f439c2fa12b34b1",
+          "reviewedAt": "2026-10-12T22:30:17.174741+00:00",
+          "result": "Approved and copied into docs/screenshots/Rainforest-3D.png"
+        },
+        {
+          "name": "24-girl-3d-detail.png",
+          "sha256": "24b4467e491b5481dfa9bc2768a584a7b4e4fd3e06d1ecfcaf0d3720272a1ffd",
+          "reviewedAt": "2026-10-12T22:34:38.008669+00:00",
+          "result": "Approved by the release owner: readable creature silhouette, translucent water highlights, expressive eyes and grounded matching shadow."
+        },
+        {
+          "name": "25-frog-3d-detail.png",
+          "sha256": "dd6f43ca3f099b8e236732587349969da8a2767614dccad9051a0d823a895871",
+          "reviewedAt": "2026-10-12T22:34:38.008911+00:00",
+          "result": "Approved by the release owner: readable creature silhouette, translucent water highlights, expressive eyes and grounded matching shadow."
+        },
+        {
+          "name": "26-fox-3d-detail.png",
+          "sha256": "a348cb521e67011ae7f1be676818ce3f51222660e40196710a2850ffc5e20e7c",
+          "reviewedAt": "2026-10-12T22:34:38.009101+00:00",
+          "result": "Approved by the release owner: readable creature silhouette, translucent water highlights, expressive eyes and grounded matching shadow."
+        }
+      ],
+      "note": "The release owner approved both final frozen-source repository previews and the final girl, frog and fox detail captures. The QA agent also inspected the final frog and fox detail captures. All reviewed forms retain readable silhouettes, translucent highlights, expressive eyes and grounded shadows."
+    },
+    "baselineComparison": {
+      "version": "2.1 (3)",
+      "manifest": "qa_setup/v22/baseline-v21/manifest.json",
+      "currentComparison": "qa_setup/v22/comparisons/manifest.json",
+      "method": "Pairs preserve the original captured pixels; only comparison labels and margins are added."
+    },
     "formCaptureMethod": "The creature screenshots restore the local checkpoint save created by the successful shipping-input full-route test, then use normal Form and Dimension buttons."
   },
   "suites": {
     "cinematics": {
-      "startedAt": "2026-10-12T08:15:07.072Z",
-      "finishedAt": "2026-10-12T08:18:07.668Z",
-      "total": 38,
-      "passed": 38,
+      "startedAt": "2026-10-12T22:21:42.833Z",
+      "finishedAt": "2026-10-12T22:28:40.040Z",
+      "total": 42,
+      "passed": 42,
       "failed": 0,
       "method": {
         "engine": "Playwright WebKit 26.5 for Linux",
@@ -178,7 +540,7 @@
           "name": "Rain build renders title and exposes ready only after a frame",
           "pass": true,
           "detail": {
-            "version": "2.1 (3)",
+            "version": "2.2 (4)",
             "renderer": {
               "api": "webgl1",
               "contextLost": false,
@@ -186,26 +548,67 @@
               "restorations": 0,
               "errors": [],
               "artStyle": "smooth mystical rainforest",
+              "visualVersion": "2.2",
               "sceneResolution": [
-                1311,
-                603
+                1748,
+                804
               ],
               "pixelResolution": [
-                1311,
-                603
+                1748,
+                804
               ],
               "canvasResolution": [
-                1311,
-                603
+                1748,
+                804
               ],
-              "staticTriangles": 229410,
-              "dynamicTriangles": 9674,
+              "renderRatio": 2,
+              "quality": "full",
+              "sceneDepthBits": 24,
+              "depthFormat": "DEPTH_STENCIL",
+              "staticTriangles": 404408,
+              "dynamicTriangles": 20230,
+              "visibleWorldTriangles": 124394,
+              "staticBatches": 85,
+              "visibleBatches": 10,
+              "shadows": {
+                "enabled": true,
+                "ready": true,
+                "resolution": [
+                  1536,
+                  1536
+                ],
+                "packedDepth": true,
+                "depthBits": 24,
+                "waterCaster": true,
+                "filter": "nine-tap PCF",
+                "worldTriangles": 227557
+              },
+              "bloom": {
+                "enabled": true,
+                "ready": true,
+                "passes": 3,
+                "resolution": [
+                  437,
+                  201
+                ]
+              },
+              "fxaa": {
+                "enabled": true,
+                "ready": true
+              },
+              "shafts": {
+                "enabled": true,
+                "ready": true
+              },
               "postEffects": [
-                "original GLSL ripple",
-                "restrained chromatic separation",
-                "soft luminous bloom",
+                "soft dynamic cast shadows",
+                "per-fragment material lighting",
+                "quarter-resolution Gaussian bloom",
+                "FXAA edge smoothing",
+                "restrained light shafts",
+                "hero-centered liquid ripple",
                 "smooth refractive water pass",
-                "procedural moss and forest haze"
+                "procedural rainforest surfaces"
               ],
               "camera": "orthographic XYZ",
               "heroDepth": [
@@ -214,37 +617,60 @@
               ],
               "npcDepth": 0.6,
               "water": {
+                "visualGeneration": "2.2",
                 "initialized": true,
                 "draws": 11,
+                "prepares": 11,
+                "shadowDraws": 11,
                 "errors": [],
                 "smooth": true,
-                "material": "original refractive water with Fresnel reflection and pearly specular light",
+                "material": "clear pearly water with thickness absorption, Fresnel reflection, GGX highlights and restrained chromatic refraction",
+                "materialFeatures": [
+                  "independent scene refraction",
+                  "directional warm key and cool fill",
+                  "soft pearlescent edges",
+                  "internal caustic filaments and drifting bubbles",
+                  "distinct face, hair and petal-hem finish"
+                ],
+                "modelFeatures": [
+                  "sculpted chibi cheeks, sockets and nose",
+                  "layered curved bangs and separate flowing locks",
+                  "rounded hands and short planted feet",
+                  "frog crouched haunches and separate web toes",
+                  "quadruped fox with cheek muzzle, nose, ears and brush tail"
+                ],
+                "eyeFeatures": [
+                  "layered radial iris and deep pupil",
+                  "pale sclera and two corneal catchlights",
+                  "soft upper lids and synchronized blinks",
+                  "gentle gaze and expressive brows"
+                ],
                 "backgroundSampling": "separate opaque scene texture",
                 "surfaceResolution": [
-                  1311,
-                  603
+                  1748,
+                  804
                 ],
-                "vertices": 4158,
-                "triangles": 8016,
+                "vertices": 7408,
+                "triangles": 14272,
                 "form": 1,
                 "creature": "girl",
-                "worldDepth": 8.186286926269531,
+                "worldDepth": 9.515281677246094,
                 "meshBounds": {
                   "min": [
-                    322.4289855957031,
-                    1.9029523134231567,
-                    35.59151077270508
+                    321.158935546875,
+                    2.5935137271881104,
+                    35.082523345947266
                   ],
                   "max": [
-                    337.7134094238281,
-                    37.15764617919922,
-                    43.77779769897461
+                    339.0715637207031,
+                    38.30302810668945,
+                    44.59780502319336
                   ],
-                  "width": 15.284423828125,
-                  "height": 35.25469386577606,
-                  "depth": 8.186286926269531
+                  "width": 17.912628173828125,
+                  "height": 35.70951437950134,
+                  "depth": 9.515281677246094
                 },
-                "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+                "animation": "volume-preserving spring response, planted-foot walk, frog hop/tuck, diagonal fox trot, head turn and delayed liquid-hair/tail follow-through"
               }
             },
             "errors": []
@@ -256,13 +682,147 @@
           "detail": {
             "artStyle": "smooth mystical rainforest",
             "sceneResolution": [
-              1311,
-              603
+              1748,
+              804
             ],
             "waterResolution": [
-              1311,
-              603
+              1748,
+              804
             ]
+          }
+        },
+        {
+          "name": "Full quality renders real depth shadows including the deformed water caster",
+          "pass": true,
+          "detail": {
+            "version": "2.2",
+            "quality": "full",
+            "renderRatio": 2,
+            "sceneDepthBits": 24,
+            "depthFormat": "DEPTH_STENCIL",
+            "sceneResolution": [
+              1748,
+              804
+            ],
+            "shadows": {
+              "enabled": true,
+              "ready": true,
+              "resolution": [
+                1536,
+                1536
+              ],
+              "packedDepth": true,
+              "depthBits": 24,
+              "waterCaster": true,
+              "filter": "nine-tap PCF",
+              "worldTriangles": 227557
+            },
+            "bloom": {
+              "enabled": true,
+              "ready": true,
+              "passes": 3,
+              "resolution": [
+                437,
+                201
+              ]
+            },
+            "fxaa": {
+              "enabled": true,
+              "ready": true
+            },
+            "shafts": {
+              "enabled": true,
+              "ready": true
+            },
+            "water": {
+              "initialized": true,
+              "prepares": 11,
+              "draws": 11,
+              "shadowDraws": 11,
+              "meshBounds": {
+                "min": [
+                  321.158935546875,
+                  2.5935137271881104,
+                  35.082523345947266
+                ],
+                "max": [
+                  339.0715637207031,
+                  38.30302810668945,
+                  44.59780502319336
+                ],
+                "width": 17.912628173828125,
+                "height": 35.70951437950134,
+                "depth": 9.515281677246094
+              },
+              "errors": []
+            }
+          }
+        },
+        {
+          "name": "Bloom uses quarter-resolution drawn targets with FXAA and light shafts ready",
+          "pass": true,
+          "detail": {
+            "version": "2.2",
+            "quality": "full",
+            "renderRatio": 2,
+            "sceneDepthBits": 24,
+            "depthFormat": "DEPTH_STENCIL",
+            "sceneResolution": [
+              1748,
+              804
+            ],
+            "shadows": {
+              "enabled": true,
+              "ready": true,
+              "resolution": [
+                1536,
+                1536
+              ],
+              "packedDepth": true,
+              "depthBits": 24,
+              "waterCaster": true,
+              "filter": "nine-tap PCF",
+              "worldTriangles": 227557
+            },
+            "bloom": {
+              "enabled": true,
+              "ready": true,
+              "passes": 3,
+              "resolution": [
+                437,
+                201
+              ]
+            },
+            "fxaa": {
+              "enabled": true,
+              "ready": true
+            },
+            "shafts": {
+              "enabled": true,
+              "ready": true
+            },
+            "water": {
+              "initialized": true,
+              "prepares": 11,
+              "draws": 11,
+              "shadowDraws": 11,
+              "meshBounds": {
+                "min": [
+                  321.158935546875,
+                  2.5935137271881104,
+                  35.082523345947266
+                ],
+                "max": [
+                  339.0715637207031,
+                  38.30302810668945,
+                  44.59780502319336
+                ],
+                "width": 17.912628173828125,
+                "height": 35.70951437950134,
+                "depth": 9.515281677246094
+              },
+              "errors": []
+            }
           }
         },
         {
@@ -303,15 +863,15 @@
             "cinematic": {
               "active": true,
               "stage": "leaf",
-              "elapsed": 0.5416666666666672,
+              "elapsed": 0.5250000000000006,
               "duration": 12.4,
-              "progress": 0.04368279569892477
+              "progress": 0.0423387096774194
             },
             "water": {
               "creature": "girl",
               "form": 0,
               "lift": 86,
-              "squash": 1.025189871605304,
+              "squash": 1.0296352179166053,
               "lean": 0,
               "wobble": 0.045,
               "ripple": 0,
@@ -331,9 +891,9 @@
           "detail": {
             "active": true,
             "stage": "leaf",
-            "elapsed": 0.7,
+            "elapsed": 0.6833333333333333,
             "duration": 12.4,
-            "progress": 0.0564516129032258
+            "progress": 0.05510752688172043
           }
         },
         {
@@ -353,7 +913,7 @@
               "lift": 0,
               "squash": 1,
               "lean": 0,
-              "wobble": 0.01699991068766241,
+              "wobble": 0.01690354668235057,
               "ripple": 0,
               "look": 1,
               "intro": false
@@ -396,78 +956,78 @@
             "morphSamples": [
               {
                 "stage": "reaching",
-                "elapsed": 5.708333333333407,
-                "form": 0.17784173283439206
+                "elapsed": 5.675000000000072,
+                "form": 0.15323452435144008
               },
               {
                 "stage": "reaching",
-                "elapsed": 5.900000000000083,
-                "form": 0.3362403277196902
+                "elapsed": 5.8833333333334155,
+                "form": 0.321743454879621
               },
               {
                 "stage": "reaching",
-                "elapsed": 6.108333333333427,
-                "form": 0.5160999637553664
+                "elapsed": 6.075000000000092,
+                "form": 0.48826411015028254
               },
               {
                 "stage": "reaching",
-                "elapsed": 6.300000000000103,
-                "form": 0.6572598998635144
+                "elapsed": 6.283333333333435,
+                "form": 0.6466835246717565
               },
               {
                 "stage": "reaching",
-                "elapsed": 6.5083333333334465,
-                "form": 0.7491966106981162
+                "elapsed": 6.4750000000001116,
+                "form": 0.7402713928084091
               },
               {
                 "stage": "melting",
-                "elapsed": 6.700000000000123,
-                "form": 0.7230696296295431
+                "elapsed": 6.683333333333455,
+                "form": 0.7339368998627523
               },
               {
                 "stage": "melting",
-                "elapsed": 6.908333333333466,
-                "form": 0.48026578875151826
+                "elapsed": 6.8750000000001315,
+                "form": 0.5283970370368509
               },
               {
                 "stage": "melting",
-                "elapsed": 7.100000000000143,
-                "form": 0.19703703703684378
+                "elapsed": 7.083333333333475,
+                "form": 0.21991418381324504
               },
               {
                 "stage": "becoming",
-                "elapsed": 7.708333333333506,
-                "form": 0.08889350923108635
+                "elapsed": 7.675000000000171,
+                "form": 0.07407407407414734
               },
               {
                 "stage": "becoming",
-                "elapsed": 7.900000000000182,
-                "form": 0.1937827677473785
+                "elapsed": 7.883333333333515,
+                "form": 0.18349501408903268
               },
               {
                 "stage": "becoming",
-                "elapsed": 8.108333333333514,
-                "form": 0.33607681755843094
+                "elapsed": 8.075000000000182,
+                "form": 0.31190680894836
               },
               {
                 "stage": "becoming",
-                "elapsed": 8.30000000000017,
-                "form": 0.4807734452706168
+                "elapsed": 8.283333333333504,
+                "form": 0.4679682295287371
               },
               {
                 "stage": "becoming",
-                "elapsed": 8.508333333333491,
-                "form": 0.6393635666045336
+                "elapsed": 8.47500000000016,
+                "form": 0.614474283113456
               },
               {
                 "stage": "becoming",
-                "elapsed": 8.700000000000147,
-                "form": 0.7742375967228997
+                "elapsed": 8.683333333333481,
+                "form": 0.7632305681835481
               },
               {
                 "stage": "becoming",
-                "elapsed": 8.908333333333468,
-                "form": 0.8951781735039028
+                "elapsed": 8.875000000000137,
+                "form": 0.8782009137039437
               }
             ]
           }
@@ -515,9 +1075,9 @@
           "detail": {
             "active": true,
             "stage": "leaf",
-            "elapsed": 0.09166666666666666,
+            "elapsed": 0.10833333333333332,
             "duration": 12.4,
-            "progress": 0.007392473118279569
+            "progress": 0.008736559139784945
           }
         },
         {
@@ -537,7 +1097,7 @@
               "lift": 0,
               "squash": 1,
               "lean": 0,
-              "wobble": -0.009542190347599941,
+              "wobble": -0.008040044060658256,
               "ripple": 0,
               "look": 1,
               "intro": false
@@ -904,12 +1464,79 @@
               "intro": false
             },
             "camera": {
-              "x": 433.26037787853437,
+              "x": 411.2603778785308,
               "z": 0,
-              "height": 248,
+              "height": 209.70349012040998,
               "y": 45,
               "yaw": 0,
               "elevation": 0
+            }
+          }
+        },
+        {
+          "name": "Lighting keeps rendering the current lifted water mesh during the transformation",
+          "pass": true,
+          "detail": {
+            "version": "2.2",
+            "quality": "full",
+            "renderRatio": 2,
+            "sceneDepthBits": 24,
+            "depthFormat": "DEPTH_STENCIL",
+            "sceneResolution": [
+              1748,
+              804
+            ],
+            "shadows": {
+              "enabled": true,
+              "ready": true,
+              "resolution": [
+                1536,
+                1536
+              ],
+              "packedDepth": true,
+              "depthBits": 24,
+              "waterCaster": true,
+              "filter": "nine-tap PCF",
+              "worldTriangles": 273099
+            },
+            "bloom": {
+              "enabled": true,
+              "ready": true,
+              "passes": 3,
+              "resolution": [
+                437,
+                201
+              ]
+            },
+            "fxaa": {
+              "enabled": true,
+              "ready": true
+            },
+            "shafts": {
+              "enabled": true,
+              "ready": true
+            },
+            "water": {
+              "initialized": true,
+              "prepares": 428,
+              "draws": 428,
+              "shadowDraws": 428,
+              "meshBounds": {
+                "min": [
+                  345.1316833496094,
+                  8.973126411437988,
+                  -0.4551284611225128
+                ],
+                "max": [
+                  363.0056457519531,
+                  45.033992767333984,
+                  0.4189598262310028
+                ],
+                "width": 17.87396240234375,
+                "height": 36.060866355895996,
+                "depth": 0.8740882873535156
+              },
+              "errors": []
             }
           }
         },
@@ -980,14 +1607,14 @@
               "touches": 0
             },
             "camera": {
-              "x": 433.65640187181464,
+              "x": 411.65640187181305,
               "z": 0,
-              "height": 248,
+              "height": 206.70745721919067,
               "y": 45,
               "yaw": 0,
               "elevation": 0
             },
-            "elapsed": 6.958333333333469
+            "elapsed": 6.941666666666801
           }
         },
         {
@@ -1000,7 +1627,7 @@
               "lift": 0,
               "squash": 0.9911429614113303,
               "lean": 0,
-              "wobble": -0.024987964996760346,
+              "wobble": -0.025849725861795618,
               "ripple": 0.4316666666666667,
               "look": 1,
               "intro": false
@@ -1022,30 +1649,71 @@
             "renderer": {
               "api": "webgl1",
               "contextLost": false,
-              "frames": 578,
+              "frames": 579,
               "restorations": 0,
               "errors": [],
               "artStyle": "smooth mystical rainforest",
+              "visualVersion": "2.2",
               "sceneResolution": [
-                1311,
-                603
+                1748,
+                804
               ],
               "pixelResolution": [
-                1311,
-                603
+                1748,
+                804
               ],
               "canvasResolution": [
-                1311,
-                603
+                1748,
+                804
               ],
-              "staticTriangles": 229410,
-              "dynamicTriangles": 9882,
+              "renderRatio": 2,
+              "quality": "full",
+              "sceneDepthBits": 24,
+              "depthFormat": "DEPTH_STENCIL",
+              "staticTriangles": 404408,
+              "dynamicTriangles": 42316,
+              "visibleWorldTriangles": 149202,
+              "staticBatches": 85,
+              "visibleBatches": 13,
+              "shadows": {
+                "enabled": true,
+                "ready": true,
+                "resolution": [
+                  1536,
+                  1536
+                ],
+                "packedDepth": true,
+                "depthBits": 24,
+                "waterCaster": true,
+                "filter": "nine-tap PCF",
+                "worldTriangles": 273099
+              },
+              "bloom": {
+                "enabled": true,
+                "ready": true,
+                "passes": 3,
+                "resolution": [
+                  437,
+                  201
+                ]
+              },
+              "fxaa": {
+                "enabled": true,
+                "ready": true
+              },
+              "shafts": {
+                "enabled": true,
+                "ready": true
+              },
               "postEffects": [
-                "original GLSL ripple",
-                "restrained chromatic separation",
-                "soft luminous bloom",
+                "soft dynamic cast shadows",
+                "per-fragment material lighting",
+                "quarter-resolution Gaussian bloom",
+                "FXAA edge smoothing",
+                "restrained light shafts",
+                "hero-centered liquid ripple",
                 "smooth refractive water pass",
-                "procedural moss and forest haze"
+                "procedural rainforest surfaces"
               ],
               "camera": "orthographic XYZ",
               "heroDepth": [
@@ -1054,37 +1722,60 @@
               ],
               "npcDepth": 0.6,
               "water": {
+                "visualGeneration": "2.2",
                 "initialized": true,
-                "draws": 578,
+                "draws": 579,
+                "prepares": 577,
+                "shadowDraws": 579,
                 "errors": [],
                 "smooth": true,
-                "material": "original refractive water with Fresnel reflection and pearly specular light",
+                "material": "clear pearly water with thickness absorption, Fresnel reflection, GGX highlights and restrained chromatic refraction",
+                "materialFeatures": [
+                  "independent scene refraction",
+                  "directional warm key and cool fill",
+                  "soft pearlescent edges",
+                  "internal caustic filaments and drifting bubbles",
+                  "distinct face, hair and petal-hem finish"
+                ],
+                "modelFeatures": [
+                  "sculpted chibi cheeks, sockets and nose",
+                  "layered curved bangs and separate flowing locks",
+                  "rounded hands and short planted feet",
+                  "frog crouched haunches and separate web toes",
+                  "quadruped fox with cheek muzzle, nose, ears and brush tail"
+                ],
+                "eyeFeatures": [
+                  "layered radial iris and deep pupil",
+                  "pale sclera and two corneal catchlights",
+                  "soft upper lids and synchronized blinks",
+                  "gentle gaze and expressive brows"
+                ],
                 "backgroundSampling": "separate opaque scene texture",
                 "surfaceResolution": [
-                  1311,
-                  603
+                  1748,
+                  804
                 ],
-                "vertices": 4158,
-                "triangles": 8016,
+                "vertices": 7408,
+                "triangles": 14272,
                 "form": 1,
                 "creature": "girl",
-                "worldDepth": 11.014439582824707,
+                "worldDepth": 12.735145568847656,
                 "meshBounds": {
                   "min": [
-                    345.99786376953125,
-                    -0.5200379490852356,
-                    -5.930724143981934
+                    344.80548095703125,
+                    0.17530816793441772,
+                    -6.610046863555908
                   ],
                   "max": [
-                    361.5768737792969,
-                    34.05166244506836,
-                    5.083715438842773
+                    362.94482421875,
+                    35.26129913330078,
+                    6.125098705291748
                   ],
-                  "width": 15.579010009765625,
-                  "height": 34.571700394153595,
-                  "depth": 11.014439582824707
+                  "width": 18.13934326171875,
+                  "height": 35.08599096536636,
+                  "depth": 12.735145568847656
                 },
-                "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+                "animation": "volume-preserving spring response, planted-foot walk, frog hop/tuck, diagonal fox trot, head turn and delayed liquid-hair/tail follow-through"
               }
             }
           }
@@ -1095,14 +1786,14 @@
           "detail": {
             "hint": {
               "x": 257,
-              "y": 81.67938995361328,
+              "y": 83.28385925292969,
               "width": 359.984375,
               "height": 39.046875
             },
-            "heroTop": 180.468841834149,
+            "heroTop": 175.36845303410342,
             "playerScreen": {
-              "x": 353.04836173634976,
-              "y": 206.98967516748235
+              "x": 361.4435393596068,
+              "y": 220.26521356590092
             }
           }
         },
@@ -1374,13 +2065,13 @@
             "player": {
               "x": 373.37083333333345,
               "y": 0,
-              "z": 41.37083333333335,
+              "z": 43.570833333333354,
               "vx": 0,
               "vy": 0,
               "vz": 0,
               "grounded": true,
               "facing": 1,
-              "walk": 3.8696141975308675,
+              "walk": 3.8940586419753123,
               "width": 16,
               "height": 32,
               "depth": 9
@@ -1403,9 +2094,9 @@
               "creature": "girl",
               "form": 1,
               "lift": 0,
-              "squash": 1.010532064375302,
+              "squash": 1.0157178383550873,
               "lean": -0.0003608736855525252,
-              "wobble": 0.023229366181825972,
+              "wobble": 0.03793446672006663,
               "ripple": 0,
               "look": 1,
               "intro": false
@@ -1421,9 +2112,9 @@
               "creature": "girl",
               "form": 1,
               "lift": 0,
-              "squash": 0.9628628101660482,
+              "squash": 0.9628789979755114,
               "lean": 0,
-              "wobble": -0.0963612199321131,
+              "wobble": -0.09717499101697366,
               "ripple": 0.35833333333333345,
               "look": 1,
               "intro": false
@@ -1437,7 +2128,7 @@
               "vz": 0,
               "grounded": true,
               "facing": 1,
-              "walk": 4.439290123456797,
+              "walk": 4.463734567901242,
               "width": 16,
               "height": 32,
               "depth": 0.6
@@ -1459,12 +2150,12 @@
             "duration": 1,
             "water": {
               "creature": "girl",
-              "form": 0.877888581946594,
-              "lift": 1.1360613788156904,
+              "form": 0.8347279461461246,
+              "lift": 1.3352274369350836,
               "squash": 1,
               "lean": 0,
               "wobble": 0,
-              "ripple": 0.2840153447039226,
+              "ripple": 0.3338068592337709,
               "look": 1,
               "intro": false
             }
@@ -1479,12 +2170,79 @@
               "creature": "girl",
               "form": 1,
               "lift": 0,
-              "squash": 0.9857573164429724,
+              "squash": 0.9857765809114335,
               "lean": 0,
-              "wobble": -0.008341111676706358,
+              "wobble": -0.008095788293353104,
               "ripple": 0.2300000000000002,
               "look": 1,
               "intro": false
+            }
+          }
+        },
+        {
+          "name": "Reduced quality reallocates smaller targets and retains ready shadows, water and antialiasing",
+          "pass": true,
+          "detail": {
+            "version": "2.2",
+            "quality": "reduced",
+            "renderRatio": 1.25,
+            "sceneDepthBits": 24,
+            "depthFormat": "DEPTH_STENCIL",
+            "sceneResolution": [
+              1093,
+              503
+            ],
+            "shadows": {
+              "enabled": true,
+              "ready": true,
+              "resolution": [
+                768,
+                768
+              ],
+              "packedDepth": true,
+              "depthBits": 24,
+              "waterCaster": true,
+              "filter": "nine-tap PCF",
+              "worldTriangles": 273010
+            },
+            "bloom": {
+              "enabled": true,
+              "ready": true,
+              "passes": 3,
+              "resolution": [
+                274,
+                126
+              ]
+            },
+            "fxaa": {
+              "enabled": true,
+              "ready": true
+            },
+            "shafts": {
+              "enabled": false,
+              "ready": true
+            },
+            "water": {
+              "initialized": true,
+              "prepares": 901,
+              "draws": 903,
+              "shadowDraws": 903,
+              "meshBounds": {
+                "min": [
+                  415.58990478515625,
+                  0.17413365840911865,
+                  -6.6319756507873535
+                ],
+                "max": [
+                  433.8731689453125,
+                  34.914188385009766,
+                  6.219192981719971
+                ],
+                "width": 18.28326416015625,
+                "height": 34.74005472660065,
+                "depth": 12.851168632507324
+              },
+              "errors": []
             }
           }
         },
@@ -1505,14 +2263,15 @@
           "name": "Source bundle stayed stable during cinematic validation",
           "pass": true,
           "detail": {
-            "index.html": "09a120821ae1d9d1ee1429eb76c2c1f9cd64bd31c10af66005362689ce420abe",
-            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
-            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b",
             "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
-            "rainforest.js": "f82dbe87a7b686c0d3ae08b0e9df3c2e47368311c430fcad7b42da7a51c3adbf",
-            "water.js": "81215465ebda50cb2f22d2f5c06197f623cf63ca7cf69586cc915c2ecdeab1d6",
-            "render.js": "9ad4e118376bcd1e2319c50147eba8612030a65c270ebcb054f2dbf952ee9f33",
-            "game.js": "72298b2067ad3e1e021f4ee8280fe689072b9e524544b6c7d47ad54cd3a5bdac"
+            "game.js": "604f0132a6b3f2a52dda967d3f30249da7496e8a0ba904d8eeabfc06e535508b",
+            "index.html": "e9645946475bd6c4b3ba30b022baf02ef6252530ec81ac90822f9c6230f6e0de",
+            "rainforest.js": "ff375b36e64f4e7559ea5cd4bcf0616fe5d695df26f3f7bfb73a5c37bbc0a93c",
+            "render.js": "2d605bbe3acd7f88ff6305fe5977807ade2e12d2cc26dd9522a3e35e8d91e127",
+            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+            "visuals.js": "710c7de2ccbfcadb75417037b94ded152ffb93eab4eb9c7b85f48fb84f250844",
+            "water.js": "906be9300fd1eb89eb455133d24ac032d5750527484dc964d68bc68814c6b6e3",
+            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b"
           }
         }
       ],
@@ -1524,10 +2283,10 @@
       }
     },
     "route": {
-      "startedAt": "2026-10-12T08:15:07.198Z",
-      "finishedAt": "2026-10-12T08:19:05.758Z",
-      "total": 54,
-      "passed": 54,
+      "startedAt": "2026-10-12T22:21:42.863Z",
+      "finishedAt": "2026-10-12T22:30:00.327Z",
+      "total": 55,
+      "passed": 55,
       "failed": 0,
       "method": {
         "engine": "Playwright WebKit 26.5 for Linux",
@@ -1617,7 +2376,7 @@
           "name": "Prism unlocks dimensional power through route pickup",
           "pass": true,
           "detail": {
-            "x": 284.352083333333,
+            "x": 286.55208333333303,
             "hasPrism": true
           }
         },
@@ -1636,9 +2395,9 @@
             "blend": 0.037314102596458475,
             "depth": 0.9134384618102511,
             "camera": {
-              "x": 433.98986435583686,
+              "x": 411.99129283695703,
               "z": 0,
-              "height": 249.49256410385834,
+              "height": 198.78831186116741,
               "y": 45.14925641038583,
               "yaw": 0.026866153869450102,
               "elevation": 0.018283910272264652
@@ -1666,7 +2425,7 @@
           "pass": true,
           "detail": {
             "blend": 0.037314102596458475,
-            "elapsed": 4.9583333333333695,
+            "elapsed": 4.975000000000037,
             "input": {
               "x": 0,
               "z": 0,
@@ -1688,8 +2447,8 @@
           "name": "Actual depth movement bypasses the flat wall",
           "pass": true,
           "detail": {
-            "x": 374.4708333333335,
-            "z": 40.27083333333335,
+            "x": 375.5708333333335,
+            "z": 42.47083333333335,
             "y": 0
           }
         },
@@ -1706,8 +2465,8 @@
           "pass": true,
           "detail": {
             "dimension": 3,
-            "x": 374.4708333333335,
-            "z": 40.27083333333335,
+            "x": 375.5708333333335,
+            "z": 42.47083333333335,
             "shifts": 1
           }
         },
@@ -1721,7 +2480,7 @@
               "jumpHeld": false,
               "touches": 1
             },
-            "z": 45.59583333333335
+            "z": 49.262500000000024
           }
         },
         {
@@ -1738,15 +2497,15 @@
           "name": "Fold becomes safe past the wall",
           "pass": true,
           "detail": {
-            "x": 425.7416666666676,
-            "z": 47.66250000000002
+            "x": 424.64166666666756,
+            "z": 51.329166666666694
           }
         },
         {
           "name": "Safe fold projects smoothly back onto supported 2D ground",
           "pass": true,
           "detail": {
-            "x": 425.7416666666676,
+            "x": 424.64166666666756,
             "y": 0,
             "z": 0
           }
@@ -1804,7 +2563,7 @@
           "name": "Far bank supplies safe fold support",
           "pass": true,
           "detail": {
-            "x": 1053.6541666666772,
+            "x": 1052.5541666666772,
             "z": -62.27083333333338,
             "foldSafety": {
               "safe": true,
@@ -1880,26 +2639,67 @@
               "restorations": 1,
               "errors": [],
               "artStyle": "smooth mystical rainforest",
+              "visualVersion": "2.2",
               "sceneResolution": [
-                1311,
-                603
+                1093,
+                503
               ],
               "pixelResolution": [
-                1311,
-                603
+                1093,
+                503
               ],
               "canvasResolution": [
-                1311,
-                603
+                1093,
+                503
               ],
-              "staticTriangles": 229410,
-              "dynamicTriangles": 3956,
+              "renderRatio": 1.25,
+              "quality": "reduced",
+              "sceneDepthBits": 24,
+              "depthFormat": "DEPTH_STENCIL",
+              "staticTriangles": 404408,
+              "dynamicTriangles": 17098,
+              "visibleWorldTriangles": 179979,
+              "staticBatches": 85,
+              "visibleBatches": 20,
+              "shadows": {
+                "enabled": true,
+                "ready": true,
+                "resolution": [
+                  768,
+                  768
+                ],
+                "packedDepth": true,
+                "depthBits": 24,
+                "waterCaster": true,
+                "filter": "nine-tap PCF",
+                "worldTriangles": 228206
+              },
+              "bloom": {
+                "enabled": true,
+                "ready": true,
+                "passes": 3,
+                "resolution": [
+                  274,
+                  126
+                ]
+              },
+              "fxaa": {
+                "enabled": true,
+                "ready": true
+              },
+              "shafts": {
+                "enabled": false,
+                "ready": true
+              },
               "postEffects": [
-                "original GLSL ripple",
-                "restrained chromatic separation",
-                "soft luminous bloom",
+                "soft dynamic cast shadows",
+                "per-fragment material lighting",
+                "quarter-resolution Gaussian bloom",
+                "FXAA edge smoothing",
+                "restrained light shafts",
+                "hero-centered liquid ripple",
                 "smooth refractive water pass",
-                "procedural moss and forest haze"
+                "procedural rainforest surfaces"
               ],
               "camera": "orthographic XYZ",
               "heroDepth": [
@@ -1908,40 +2708,130 @@
               ],
               "npcDepth": 0.6,
               "water": {
+                "visualGeneration": "2.2",
                 "initialized": true,
                 "draws": 1,
+                "prepares": 1,
+                "shadowDraws": 1,
                 "errors": [],
                 "smooth": true,
-                "material": "original refractive water with Fresnel reflection and pearly specular light",
+                "material": "clear pearly water with thickness absorption, Fresnel reflection, GGX highlights and restrained chromatic refraction",
+                "materialFeatures": [
+                  "independent scene refraction",
+                  "directional warm key and cool fill",
+                  "soft pearlescent edges",
+                  "internal caustic filaments and drifting bubbles",
+                  "distinct face, hair and petal-hem finish"
+                ],
+                "modelFeatures": [
+                  "sculpted chibi cheeks, sockets and nose",
+                  "layered curved bangs and separate flowing locks",
+                  "rounded hands and short planted feet",
+                  "frog crouched haunches and separate web toes",
+                  "quadruped fox with cheek muzzle, nose, ears and brush tail"
+                ],
+                "eyeFeatures": [
+                  "layered radial iris and deep pupil",
+                  "pale sclera and two corneal catchlights",
+                  "soft upper lids and synchronized blinks",
+                  "gentle gaze and expressive brows"
+                ],
                 "backgroundSampling": "separate opaque scene texture",
                 "surfaceResolution": [
-                  1311,
-                  603
+                  1093,
+                  503
                 ],
-                "vertices": 4158,
-                "triangles": 8016,
+                "vertices": 7408,
+                "triangles": 14272,
                 "form": 1,
                 "creature": "girl",
-                "worldDepth": 0.7711092233657837,
+                "worldDepth": 0.8955347239971161,
                 "meshBounds": {
                   "min": [
-                    1511.4102783203125,
-                    -0.5163661241531372,
-                    -0.4153560698032379
+                    1512.271484375,
+                    0.17586258053779602,
+                    -0.46314531564712524
                   ],
                   "max": [
-                    1526.83544921875,
-                    34.04155349731445,
-                    0.3557531535625458
+                    1530.3814697265625,
+                    35.32620620727539,
+                    0.43238940834999084
                   ],
-                  "width": 15.4251708984375,
-                  "height": 34.55791962146759,
-                  "depth": 0.7711092233657837
+                  "width": 18.1099853515625,
+                  "height": 35.150343626737595,
+                  "depth": 0.8955347239971161
                 },
-                "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+                "animation": "volume-preserving spring response, planted-foot walk, frog hop/tuck, diagonal fox trot, head turn and delayed liquid-hair/tail follow-through"
               }
             },
             "errors": []
+          }
+        },
+        {
+          "name": "Restored context rebuilds the shadow map, water caster, bloom and antialiasing targets",
+          "pass": true,
+          "detail": {
+            "version": "2.2",
+            "quality": "reduced",
+            "renderRatio": 1.25,
+            "sceneDepthBits": 24,
+            "depthFormat": "DEPTH_STENCIL",
+            "sceneResolution": [
+              1093,
+              503
+            ],
+            "shadows": {
+              "enabled": true,
+              "ready": true,
+              "resolution": [
+                768,
+                768
+              ],
+              "packedDepth": true,
+              "depthBits": 24,
+              "waterCaster": true,
+              "filter": "nine-tap PCF",
+              "worldTriangles": 228206
+            },
+            "bloom": {
+              "enabled": true,
+              "ready": true,
+              "passes": 3,
+              "resolution": [
+                274,
+                126
+              ]
+            },
+            "fxaa": {
+              "enabled": true,
+              "ready": true
+            },
+            "shafts": {
+              "enabled": false,
+              "ready": true
+            },
+            "water": {
+              "initialized": true,
+              "prepares": 1,
+              "draws": 1,
+              "shadowDraws": 1,
+              "meshBounds": {
+                "min": [
+                  1512.271484375,
+                  0.17586258053779602,
+                  -0.46314531564712524
+                ],
+                "max": [
+                  1530.3814697265625,
+                  35.32620620727539,
+                  0.43238940834999084
+                ],
+                "width": 18.1099853515625,
+                "height": 35.150343626737595,
+                "depth": 0.8955347239971161
+              },
+              "errors": []
+            }
           }
         },
         {
@@ -1949,7 +2839,7 @@
           "pass": true,
           "detail": {
             "mode": "paused",
-            "x": 1519.0520833333094,
+            "x": 1521.2520833333092,
             "beaconLit": true
           }
         },
@@ -1974,12 +2864,12 @@
             "dimension": 2,
             "water": {
               "creature": "girl",
-              "form": 0.0869111626545459,
-              "lift": 3.5276850573934198,
+              "form": 0.04763387881515757,
+              "lift": 3.6434552996847036,
               "squash": 1,
               "lean": 0,
               "wobble": 0,
-              "ripple": 0.8819212643483549,
+              "ripple": 0.9108638249211759,
               "look": 1,
               "intro": false
             }
@@ -2009,7 +2899,7 @@
               "vz": 0,
               "grounded": true,
               "facing": 1,
-              "walk": 20.21570987654278,
+              "walk": 20.261026234567463,
               "width": 20,
               "height": 19,
               "depth": 0.6
@@ -2035,9 +2925,9 @@
               "creature": "frog",
               "form": 1,
               "lift": 0,
-              "squash": 0.9938549677120543,
+              "squash": 0.9993128684900259,
               "lean": 0,
-              "wobble": -0.0006434566553926777,
+              "wobble": 0.003279044883411289,
               "ripple": 0,
               "look": 1,
               "intro": false
@@ -2045,18 +2935,18 @@
             "renderedCreature": "frog",
             "meshBounds": {
               "min": [
-                1763.250244140625,
-                -1.2844740152359009,
-                -0.3431471586227417
+                1762.7318115234375,
+                -0.37947168946266174,
+                -0.3606169521808624
               ],
               "max": [
-                1786.461181640625,
-                16.302387237548828,
-                0.4026716649532318
+                1786.940673828125,
+                16.787076950073242,
+                0.5027826428413391
               ],
-              "width": 23.2109375,
-              "height": 17.58686125278473,
-              "depth": 0.7458188235759735
+              "width": 24.2088623046875,
+              "height": 17.166548639535904,
+              "depth": 0.8633995950222015
             }
           }
         },
@@ -2091,7 +2981,7 @@
               "vz": 0,
               "grounded": true,
               "facing": 1,
-              "walk": 20.21570987654278,
+              "walk": 20.261026234567463,
               "width": 20,
               "height": 19,
               "depth": 0.6
@@ -2142,7 +3032,7 @@
               "vz": 0,
               "grounded": true,
               "facing": 1,
-              "walk": 20.21570987654278,
+              "walk": 20.261026234567463,
               "width": 22,
               "height": 23,
               "depth": 0.6
@@ -2168,9 +3058,9 @@
               "creature": "fox",
               "form": 1,
               "lift": 0,
-              "squash": 0.9938549677120543,
+              "squash": 0.9979224620193771,
               "lean": 0,
-              "wobble": 0.0003398893799865413,
+              "wobble": 0.003447592355220462,
               "ripple": 0,
               "look": 1,
               "intro": false
@@ -2178,18 +3068,18 @@
             "renderedCreature": "fox",
             "meshBounds": {
               "min": [
-                1760.4376220703125,
-                -0.2883783280849457,
-                -0.3437461256980896
+                1754.551513671875,
+                0.06449154019355774,
+                -0.3484887182712555
               ],
               "max": [
-                1785.8101806640625,
-                27.941619873046875,
-                0.3847527801990509
+                1789.820556640625,
+                23.856605529785156,
+                0.3484887182712555
               ],
-              "width": 25.37255859375,
-              "height": 28.22999820113182,
-              "depth": 0.7284989058971405
+              "width": 35.26904296875,
+              "height": 23.7921139895916,
+              "depth": 0.696977436542511
             }
           }
         },
@@ -2227,12 +3117,12 @@
             "dimension": 2,
             "water": {
               "creature": "fox",
-              "form": 0.04763387881515757,
-              "lift": 3.6434552996847036,
+              "form": 0.0869111626545459,
+              "lift": 3.5276850573934198,
               "squash": 1,
               "lean": 0,
               "wobble": 0,
-              "ripple": 0.9108638249211759,
+              "ripple": 0.8819212643483549,
               "look": -1,
               "intro": false
             }
@@ -2254,7 +3144,7 @@
           "detail": {
             "creature": "girl",
             "player": {
-              "x": 1769.389583333289,
+              "x": 1766.5895833332888,
               "y": 0,
               "z": 0,
               "vx": 0,
@@ -2262,7 +3152,7 @@
               "vz": 0,
               "grounded": true,
               "facing": -1,
-              "walk": 20.93805555555511,
+              "walk": 20.952260802468686,
               "width": 16,
               "height": 32,
               "depth": 0.6
@@ -2288,9 +3178,9 @@
               "creature": "girl",
               "form": 1,
               "lift": 0,
-              "squash": 0.9959758108759643,
+              "squash": 0.9972948570857197,
               "lean": 0,
-              "wobble": -0.000050722334697762825,
+              "wobble": 0.0007203937555725067,
               "ripple": 0,
               "look": -1,
               "intro": false
@@ -2298,18 +3188,18 @@
             "renderedCreature": "girl",
             "meshBounds": {
               "min": [
-                1761.42724609375,
-                -0.5902330875396729,
-                -0.41422465443611145
+                1757.46923828125,
+                0.17640355229377747,
+                -0.4674666225910187
               ],
               "max": [
-                1777.2899169921875,
-                34.15003967285156,
-                0.3548460006713867
+                1775.922607421875,
+                35.48520278930664,
+                0.45344123244285583
               ],
-              "width": 15.8626708984375,
-              "height": 34.740272760391235,
-              "depth": 0.7690706551074982
+              "width": 18.453369140625,
+              "height": 35.30879923701286,
+              "depth": 0.9209078550338745
             }
           }
         },
@@ -2325,7 +3215,7 @@
             "creature": "girl",
             "beaconLit": true,
             "player": {
-              "x": 1769.389583333289,
+              "x": 1766.5895833332888,
               "y": 0,
               "z": 0,
               "vx": 0,
@@ -2333,7 +3223,7 @@
               "vz": 0,
               "grounded": true,
               "facing": -1,
-              "walk": 20.93805555555511,
+              "walk": 20.952260802468686,
               "width": 16,
               "height": 32,
               "depth": 0.6
@@ -2363,7 +3253,7 @@
             "deaths": 0,
             "jumps": 4,
             "shifts": 6,
-            "elapsed": 36.10833333333193,
+            "elapsed": 36.09166666666526,
             "creature": "girl",
             "unlockedForms": [
               "girl",
@@ -2379,7 +3269,7 @@
           "pass": true,
           "detail": {
             "mode": "complete",
-            "x": 1830.060416666618,
+            "x": 1830.0187499999513,
             "deaths": 0,
             "jumps": 4,
             "shifts": 6,
@@ -2446,51 +3336,75 @@
           "name": "Water resources survive context restoration and chapter completion",
           "pass": true,
           "detail": {
+            "visualGeneration": "2.2",
             "initialized": true,
-            "draws": 498,
+            "draws": 501,
+            "prepares": 500,
+            "shadowDraws": 501,
             "errors": [],
             "smooth": true,
-            "material": "original refractive water with Fresnel reflection and pearly specular light",
+            "material": "clear pearly water with thickness absorption, Fresnel reflection, GGX highlights and restrained chromatic refraction",
+            "materialFeatures": [
+              "independent scene refraction",
+              "directional warm key and cool fill",
+              "soft pearlescent edges",
+              "internal caustic filaments and drifting bubbles",
+              "distinct face, hair and petal-hem finish"
+            ],
+            "modelFeatures": [
+              "sculpted chibi cheeks, sockets and nose",
+              "layered curved bangs and separate flowing locks",
+              "rounded hands and short planted feet",
+              "frog crouched haunches and separate web toes",
+              "quadruped fox with cheek muzzle, nose, ears and brush tail"
+            ],
+            "eyeFeatures": [
+              "layered radial iris and deep pupil",
+              "pale sclera and two corneal catchlights",
+              "soft upper lids and synchronized blinks",
+              "gentle gaze and expressive brows"
+            ],
             "backgroundSampling": "separate opaque scene texture",
             "surfaceResolution": [
-              1311,
-              603
+              1093,
+              503
             ],
-            "vertices": 4158,
-            "triangles": 8016,
+            "vertices": 7408,
+            "triangles": 14272,
             "form": 1,
             "creature": "girl",
-            "worldDepth": 0.7684686183929443,
+            "worldDepth": 0.880936473608017,
             "meshBounds": {
               "min": [
-                1821.98828125,
-                -0.43203648924827576,
-                -0.4138908386230469
+                1820.97021484375,
+                0.17706388235092163,
+                -0.4576393663883209
               ],
               "max": [
-                1837.9317626953125,
-                34.36278533935547,
-                0.35457777976989746
+                1839.060546875,
+                35.56412887573242,
+                0.42329710721969604
               ],
-              "width": 15.9434814453125,
-              "height": 34.794821828603745,
-              "depth": 0.7684686183929443
+              "width": 18.09033203125,
+              "height": 35.3870649933815,
+              "depth": 0.880936473608017
             },
-            "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+            "animation": "volume-preserving spring response, planted-foot walk, frog hop/tuck, diagonal fox trot, head turn and delayed liquid-hair/tail follow-through"
           }
         },
         {
-          "name": "All eight shipping game files remained stable during route validation",
+          "name": "All shipping game source files remained stable during route validation",
           "pass": true,
           "detail": {
-            "index.html": "09a120821ae1d9d1ee1429eb76c2c1f9cd64bd31c10af66005362689ce420abe",
-            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
-            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b",
             "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
-            "rainforest.js": "f82dbe87a7b686c0d3ae08b0e9df3c2e47368311c430fcad7b42da7a51c3adbf",
-            "water.js": "81215465ebda50cb2f22d2f5c06197f623cf63ca7cf69586cc915c2ecdeab1d6",
-            "render.js": "9ad4e118376bcd1e2319c50147eba8612030a65c270ebcb054f2dbf952ee9f33",
-            "game.js": "72298b2067ad3e1e021f4ee8280fe689072b9e524544b6c7d47ad54cd3a5bdac"
+            "game.js": "604f0132a6b3f2a52dda967d3f30249da7496e8a0ba904d8eeabfc06e535508b",
+            "index.html": "e9645946475bd6c4b3ba30b022baf02ef6252530ec81ac90822f9c6230f6e0de",
+            "rainforest.js": "ff375b36e64f4e7559ea5cd4bcf0616fe5d695df26f3f7bfb73a5c37bbc0a93c",
+            "render.js": "2d605bbe3acd7f88ff6305fe5977807ade2e12d2cc26dd9522a3e35e8d91e127",
+            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+            "visuals.js": "710c7de2ccbfcadb75417037b94ded152ffb93eab4eb9c7b85f48fb84f250844",
+            "water.js": "906be9300fd1eb89eb455133d24ac032d5750527484dc964d68bc68814c6b6e3",
+            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b"
           }
         }
       ],
@@ -2502,17 +3416,18 @@
       }
     },
     "migration": {
-      "startedAt": null,
-      "finishedAt": "2026-10-12T08:15:27.704Z",
-      "total": 7,
-      "passed": 7,
+      "startedAt": "2026-10-12T22:21:42.867Z",
+      "finishedAt": "2026-10-12T22:22:27.669Z",
+      "total": 8,
+      "passed": 8,
       "failed": 0,
       "method": "Historical localStorage fixture is seeded before reload; subsequent progression uses shipping UI only.",
       "checks": [
         {
-          "name": "Prior2.0 save displays continue with its prior sound preference",
+          "name": "Prior 2.0 save displays continue with its prior sound preference",
           "pass": true,
           "detail": {
+            "version": "2.2 (4)",
             "mode": "title",
             "settings": {
               "sound": false,
@@ -2625,6 +3540,21 @@
             "externalRequests": [],
             "requestFailures": []
           }
+        },
+        {
+          "name": "Shipping source bundle remains stable during save migration",
+          "pass": true,
+          "detail": {
+            "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+            "game.js": "604f0132a6b3f2a52dda967d3f30249da7496e8a0ba904d8eeabfc06e535508b",
+            "index.html": "e9645946475bd6c4b3ba30b022baf02ef6252530ec81ac90822f9c6230f6e0de",
+            "rainforest.js": "ff375b36e64f4e7559ea5cd4bcf0616fe5d695df26f3f7bfb73a5c37bbc0a93c",
+            "render.js": "2d605bbe3acd7f88ff6305fe5977807ade2e12d2cc26dd9522a3e35e8d91e127",
+            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+            "visuals.js": "710c7de2ccbfcadb75417037b94ded152ffb93eab4eb9c7b85f48fb84f250844",
+            "water.js": "906be9300fd1eb89eb455133d24ac032d5750527484dc964d68bc68814c6b6e3",
+            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b"
+          }
         }
       ],
       "observations": {
@@ -2634,5 +3564,131 @@
         "requestFailures": []
       }
     }
+  },
+  "nativeResourceAudit": {
+    "scope": "Read-only source and native packaging declarations for 2.2 (4)",
+    "startedAt": "2026-10-12T22:21:42.628128+00:00",
+    "targetProject": "/workspace/scratch/0aaece9faa7f/ios-apps-visual-v22/EnterTheThirdDimension",
+    "method": "Parse the exact checkout resources and build declarations. This does not compile, install, sign or launch an iOS binary.",
+    "checks": [
+      {
+        "name": "Every referenced entry resource resolves locally inside the shipping Game folder",
+        "pass": true,
+        "detail": {
+          "scripts": [
+            "world.js",
+            "art.js",
+            "rainforest.js",
+            "visuals.js",
+            "water.js",
+            "render.js",
+            "game.js"
+          ],
+          "stylesheets": [
+            "style.css"
+          ]
+        }
+      },
+      {
+        "name": "New visual programs and smooth geometry load before the renderer and game",
+        "pass": true,
+        "detail": [
+          "world.js",
+          "art.js",
+          "rainforest.js",
+          "visuals.js",
+          "water.js",
+          "render.js",
+          "game.js"
+        ]
+      },
+      {
+        "name": "Offline content policy and landscape safe-area viewport remain enabled",
+        "pass": true,
+        "detail": null
+      },
+      {
+        "name": "Native Info.plist declares the intended 2.2 build 4 identity",
+        "pass": true,
+        "detail": {
+          "CFBundleIdentifier": "com.billy.moonhop",
+          "CFBundleShortVersionString": "2.2",
+          "CFBundleVersion": "4"
+        }
+      },
+      {
+        "name": "iPhone and iPad retain landscape-only orientation support",
+        "pass": true,
+        "detail": {
+          "UISupportedInterfaceOrientations": [
+            "UIInterfaceOrientationLandscapeLeft",
+            "UIInterfaceOrientationLandscapeRight"
+          ],
+          "UISupportedInterfaceOrientations~ipad": [
+            "UIInterfaceOrientationLandscapeLeft",
+            "UIInterfaceOrientationLandscapeRight"
+          ]
+        }
+      },
+      {
+        "name": "Xcode copies the complete Game folder including visuals.js",
+        "pass": true,
+        "detail": {
+          "gameResourceCount": 9
+        }
+      },
+      {
+        "name": "Generated Xcode project uses matching version and build values",
+        "pass": true,
+        "detail": null
+      },
+      {
+        "name": "IPA verifier compares every packaged game byte against the source",
+        "pass": true,
+        "detail": {
+          "gameResourceCount": 9,
+          "newResource": "visuals.js"
+        }
+      },
+      {
+        "name": "Privacy manifest retains no tracking or collected data declarations",
+        "pass": true,
+        "detail": {
+          "NSPrivacyTracking": false,
+          "NSPrivacyTrackingDomains": [],
+          "NSPrivacyCollectedDataTypes": [],
+          "NSPrivacyAccessedAPITypes": []
+        }
+      },
+      {
+        "name": "Successful native host remains byte-identical to the preceding release checkout",
+        "pass": true,
+        "detail": {
+          "currentSha256": "1bf3fb82e9eebf24e3c2a19fe4285af98c26470265b225ec2125fb532b4941b1",
+          "baselineSha256": "1bf3fb82e9eebf24e3c2a19fe4285af98c26470265b225ec2125fb532b4941b1"
+        }
+      }
+    ],
+    "sourceHashes": {
+      "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+      "game.js": "604f0132a6b3f2a52dda967d3f30249da7496e8a0ba904d8eeabfc06e535508b",
+      "index.html": "e9645946475bd6c4b3ba30b022baf02ef6252530ec81ac90822f9c6230f6e0de",
+      "rainforest.js": "ff375b36e64f4e7559ea5cd4bcf0616fe5d695df26f3f7bfb73a5c37bbc0a93c",
+      "render.js": "2d605bbe3acd7f88ff6305fe5977807ade2e12d2cc26dd9522a3e35e8d91e127",
+      "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+      "visuals.js": "710c7de2ccbfcadb75417037b94ded152ffb93eab4eb9c7b85f48fb84f250844",
+      "water.js": "906be9300fd1eb89eb455133d24ac032d5750527484dc964d68bc68814c6b6e3",
+      "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b"
+    },
+    "nativeSourceHashes": {
+      "Sources/main.m": "1bf3fb82e9eebf24e3c2a19fe4285af98c26470265b225ec2125fb532b4941b1",
+      "Resources/Info.plist": "887a3d34e14587f64a2adaec5d899a7778eeceb01231f7ace45df4c338c683b1",
+      "Resources/PrivacyInfo.xcprivacy": "521eb6ef8430773e5c010e1838fe9dd8fa5d62b7b76d1cea8d7d8daadcb144e2",
+      "Support/build_project.py": "a684e1b2742f1686b4bc0784ee0294decb3b2e3802149320d9abccde2c4ddf4b",
+      "Support/verify_ipa.py": "15a7106909fa26341a1b991c4d1b33a172aad02f3b4508d6b1d5b0c37d8b30c0",
+      "Support/build_ios.py": "03aa5e9577b6f693ff5b5cb6f73f95eaabfbf8fa0e6b78baf83643db389a10dc"
+    },
+    "finishedAt": "2026-10-12T22:21:42.635831+00:00",
+    "completed": true
   }
 }

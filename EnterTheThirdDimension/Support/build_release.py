@@ -11,7 +11,7 @@ from verify_ipa import verify, require
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "Build"
 REPO = "Strezzy/ios-apps"
-TAG = "enter-third-dimension-2.1-build3"
+TAG = "enter-third-dimension-2.2-build4"
 NAMES = ["EnterTheThirdDimension.ipa", "EnterTheThirdDimension-Source.zip",
          "BUILD-REPORT.json", "SHA256SUMS.txt", "Native-Launch.json", "Simulator-Launch.png"]
 
@@ -47,6 +47,9 @@ def main():
             "Native WebGL startup did not pass")
     require(report.get("simulator_validation", {}).get("water_character_rendered") is True,
             "The native raindrop character rendering check did not pass")
+    for effect in ("dynamic_shadows_rendered", "bloom_rendered", "fxaa_rendered"):
+        require(report.get("simulator_validation", {}).get(effect) is True,
+                "Native visual quality validation did not pass: " + effect)
     verify(BUILD / "EnterTheThirdDimension.ipa")
     for name in NAMES:
         require((BUILD / name).is_file(), "Missing release asset: " + name)
@@ -61,7 +64,7 @@ def main():
     if created:
         command(["gh", "release", "create", TAG, *[BUILD / name for name in NAMES],
                  "--repo", REPO, "--target", revision,
-                 "--title", "Enter the Third Dimension 2.1 (3)", "--notes-file", notes])
+                 "--title", "Enter the Third Dimension 2.2 (4)", "--notes-file", notes])
         release = api(f"releases/tags/{TAG}")
     else:
         require(not release.get("draft") and not release.get("prerelease"),
@@ -95,6 +98,9 @@ def main():
             "Published build evidence does not prove native graphics startup")
     require(actual_report.get("simulator_validation", {}).get("water_character_rendered") is True,
             "Published build evidence does not prove native raindrop rendering")
+    for effect in ("dynamic_shadows_rendered", "bloom_rendered", "fxaa_rendered"):
+        require(actual_report.get("simulator_validation", {}).get(effect) is True,
+                "Published evidence does not prove the visual pipeline: " + effect)
     checksums = {}
     for line in (published / "SHA256SUMS.txt").read_text().splitlines():
         value, name = line.split(None, 1)
