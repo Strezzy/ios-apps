@@ -79,7 +79,7 @@
       "subtitle": "Generate and edit images with AI",
       "localizedDescription": "Create images from a text description, or add reference pictures and describe the edits you want. Download a model before using it offline, then save and export images from the gallery. Image generation in this release still needs testing on a real iPhone.",
       "category": "photo-video",
-      "tintColor": "#CA8BFF",
+      "tintColor": "#FF8C45",
       "bundleIdentifier": "com.billy.prism",
       "developerName": "Strezzy",
       "versions": [
