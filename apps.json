@@ -151,6 +151,17 @@
       "versions": [
         {
           "version": "1.0",
+          "buildVersion": "8",
+          "buildNumber": "8",
+          "date": "2026-10-12T00:17:45Z",
+          "localizedDescription": "Convert photos and videos to 3D on your iPhone. Fixes side-by-side exports stalling near the end, improves depth stability, and simplifies the interface. Keeps original pixel dimensions and video timing.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa",
+          "size": 228724052,
+          "minOSVersion": "26.0",
+          "sha256": "49a407569cff86ac0c6491d3322ffad5a11c649520b1d6ececd2eca9b356d83b"
+        },
+        {
+          "version": "1.0",
           "buildVersion": "5",
           "buildNumber": "5",
           "date": "2026-10-11T23:02:50Z",
@@ -180,10 +191,10 @@
         }
       },
       "version": "1.0",
-      "versionDate": "2026-10-11T23:02:50Z",
-      "versionDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-5/DepthCheck.ipa",
-      "size": 228712902
+      "versionDate": "2026-10-12T00:17:45Z",
+      "versionDescription": "Convert photos and videos to 3D on your iPhone. Fixes side-by-side exports stalling near the end, improves depth stability, and simplifies the interface. Keeps original pixel dimensions and video timing.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa",
+      "size": 228724052
     }
   ],
   "news": []
