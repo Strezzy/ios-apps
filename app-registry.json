@@ -30,5 +30,13 @@
     "icon": "DepthCheck.png",
     "category": "photo-video",
     "tintColor": "#4DE8DD"
+  },
+  "com.billy.moonhop": {
+    "name": "Enter the Third Dimension",
+    "subtitle": "A pixel adventure between 2D and 3D",
+    "localizedDescription": "Explore a pixel-art world and shift from a 2D side-scroller into 3D. Walk around flat obstacles, find hidden paths, collect shards, and bring a lost light back to the village. Includes the first story chapter, landscape touch controls, checkpoints, and offline play.",
+    "icon": "ThirdDimension.png",
+    "category": "games",
+    "tintColor": "#9AF6D7"
   }
 }

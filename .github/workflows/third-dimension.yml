@@ -1,0 +1,87 @@
+name: Build and publish Enter the Third Dimension
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'EnterTheThirdDimension/**'
+      - '.github/workflows/third-dimension.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: enter-third-dimension-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Build the app and prove native WebGL startup
+        run: python3 EnterTheThirdDimension/Support/build_ios.py
+      - name: Store the verified iPhone build and source
+        uses: actions/upload-artifact@v7
+        with:
+          name: EnterTheThirdDimension-iPhone
+          path: |
+            EnterTheThirdDimension/Build/EnterTheThirdDimension.ipa
+            EnterTheThirdDimension/Build/EnterTheThirdDimension-Source.zip
+            EnterTheThirdDimension/Build/BUILD-REPORT.json
+            EnterTheThirdDimension/Build/SHA256SUMS.txt
+            EnterTheThirdDimension/Build/Native-Launch.json
+            EnterTheThirdDimension/Build/Simulator-Launch.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish or verify the immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 EnterTheThirdDimension/Support/build_release.py
+      - name: Add the verified release to Strezzy's Apps
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: enter-third-dimension-2.0-build2
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git rebase origin/main
+          release_date="$(python3 -c 'import json; print(json.load(open("EnterTheThirdDimension/Build/PUBLICATION.json"))["published_at"])')"
+          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local EnterTheThirdDimension/Build/Published/EnterTheThirdDimension.ipa --date "$release_date" --notes "Enter the Third Dimension: shift a pixel platforming world between 2D and real 3D, explore its depth, and find your way forward. Landscape touch controls and offline play."
+          git add apps.json README.md
+          if git diff --cached --quiet; then
+            echo "The catalog already matches this verified release."
+            exit 0
+          fi
+          git commit -m "Add verified Enter the Third Dimension 2.0 release"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              git fetch origin main
+              git rebase origin/main
+            fi
+          done
+          echo "Catalog push remained busy after three attempts; the published IPA is intact."
+          exit 1
+      - name: Preserve native build evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: EnterTheThirdDimension-Build-Evidence
+          path: |
+            EnterTheThirdDimension/Build/Logs
+            EnterTheThirdDimension/Build/BUILD-REPORT.json
+            EnterTheThirdDimension/Build/Native-Launch.json
+            EnterTheThirdDimension/Build/Simulator-Launch.png
+            EnterTheThirdDimension/Build/PUBLICATION.json
+          if-no-files-found: ignore
+          retention-days: 14

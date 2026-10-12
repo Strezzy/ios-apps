@@ -1,0 +1,863 @@
+{
+  "game": "Enter the Third Dimension",
+  "status": "passed within tested browser scope",
+  "finishedAt": "2026-10-12T07:06:02.741Z",
+  "method": {
+    "engine": "Playwright WebKit 26.5 for Linux",
+    "host": "exact local game files, unmodified",
+    "input": "real keyboard events plus DOM touch PointerEvents using the shipping handlers",
+    "clock": "Playwright clock drives normal requestAnimationFrame and 120 Hz game simulation",
+    "device": "874 \u00d7 402 viewport, DPR 2, touch/mobile browser context, simulated landscape safe insets 62/62/21 px",
+    "limitations": [
+      "Not a physical iPhone, iOS Simulator, or WKWebView runtime.",
+      "Synthetic touch checks do not measure device latency or hardware gesture recognition.",
+      "Software graphics configuration; WebKit masked renderer string is not evidence of Apple hardware."
+    ]
+  },
+  "summary": {
+    "passedAssertions": 61,
+    "resolvedHarnessAssertions": 1,
+    "unresolvedFailures": [],
+    "chapterResult": {
+      "mode": "complete",
+      "x": 1830.0937499999523,
+      "deaths": 0,
+      "jumps": 3,
+      "dimensionalShifts": 6,
+      "shards": 10,
+      "totalShards": 12
+    },
+    "finalCleanRuntime": {
+      "pageErrors": [],
+      "consoleErrors": [],
+      "externalRequests": [],
+      "requestFailures": []
+    },
+    "graphics": "Actual WebGL1 shader pipeline rendered the game; WebGL1/2 triangle readback verified separately. Real WEBGL_lose_context loss/restoration was exercised in the game."
+  },
+  "checks": [
+    {
+      "suite": "Full chapter",
+      "name": "Exact bundle starts and native ready API follows rendered frames",
+      "status": "passed",
+      "detail": {
+        "mode": "title",
+        "ready": true,
+        "frames": 10,
+        "errors": []
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Start creates a grounded 2D player with locked prism power",
+      "status": "passed",
+      "detail": {
+        "x": 72,
+        "y": 0,
+        "z": 0,
+        "depth": 0.6
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Simultaneous touch movement and jump operate independently",
+      "status": "passed",
+      "detail": {
+        "x": 1,
+        "z": 0,
+        "jumpHeld": true,
+        "touches": 2
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Jump cancellation retains movement finger",
+      "status": "passed",
+      "detail": {
+        "x": 1,
+        "z": 0,
+        "jumpHeld": false,
+        "touches": 1
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Movement cancellation releases all input and returns to ground",
+      "status": "passed",
+      "detail": {
+        "x": 0,
+        "z": 0,
+        "jumpHeld": false,
+        "touches": 0
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Prism unlocks dimensional power through route pickup",
+      "status": "passed",
+      "detail": {
+        "x": 286.55208333333303,
+        "hasPrism": true
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "2D paper wall physically blocks forward movement",
+      "status": "passed",
+      "detail": {
+        "x": 354,
+        "z": 0
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Dimension transition rotates camera and extrudes hero while keeping NPCs flat",
+      "status": "passed",
+      "detail": {
+        "blend": 0.1507715735275271,
+        "depth": 1.8664812176312275,
+        "camera": {
+          "x": 433.16635150942994,
+          "z": 0,
+          "yaw": 0.10855553293981951,
+          "elevation": 0.07387807102848827
+        },
+        "npcDepths": [
+          0.6,
+          0.6,
+          0.6
+        ]
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Transition clears held touches and ignores new movement/jump touches",
+      "status": "passed",
+      "detail": {
+        "x": 0,
+        "z": 0,
+        "jumpHeld": false,
+        "touches": 0
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Native interruption freezes a mid-shift transition and all input",
+      "status": "passed",
+      "detail": {
+        "blend": 0.1507715735275271,
+        "elapsed": 3.9666666666666552,
+        "input": {
+          "x": 0,
+          "z": 0,
+          "jumpHeld": false,
+          "touches": 0
+        }
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Resume completes interrupted transition without retained input",
+      "status": "passed",
+      "detail": {
+        "dimension": 3,
+        "blend": 1,
+        "depth": 9
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Actual depth movement bypasses the flat wall",
+      "status": "passed",
+      "detail": {
+        "x": 376.6708333333335,
+        "z": 40.27083333333335,
+        "y": 0
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Folding through the projected paper wall is rejected",
+      "status": "passed",
+      "detail": {
+        "safe": false,
+        "reason": "Step clear of the paper wall before folding back."
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Rejected fold leaves player and dimension stable",
+      "status": "passed",
+      "detail": {
+        "dimension": 3,
+        "x": 376.6708333333335,
+        "z": 40.27083333333335,
+        "shifts": 1
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Unfolded touch stick moves genuine world Z",
+      "status": "passed",
+      "detail": {
+        "input": {
+          "x": 0,
+          "z": 0.6666666666666669,
+          "jumpHeld": false,
+          "touches": 1
+        },
+        "z": 45.59583333333335
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Lost pointer capture clears analog depth input",
+      "status": "passed",
+      "detail": {
+        "x": 0,
+        "z": 0,
+        "jumpHeld": false,
+        "touches": 0
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Fold becomes safe past the wall",
+      "status": "passed",
+      "detail": {
+        "x": 425.7416666666676,
+        "z": 47.66250000000002
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Safe fold projects smoothly back onto supported 2D ground",
+      "status": "passed",
+      "detail": {
+        "x": 425.7416666666676,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "First route checkpoint saves after clearing the wall",
+      "status": "passed",
+      "detail": {
+        "checkpointIndex": 0,
+        "checkpoint": {
+          "x": 492,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Depth route reaches hidden bridge and collects its spark",
+      "status": "passed",
+      "detail": {
+        "x": 846.1833333333423,
+        "y": 0,
+        "z": -64.47083333333337,
+        "hasSpark": true
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Fold over the absent 2D road is rejected",
+      "status": "passed",
+      "detail": {
+        "safe": false,
+        "reason": "Return to the main path before folding back."
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Unsafe bridge fold cannot strand the player",
+      "status": "passed",
+      "detail": {
+        "dimension": 3,
+        "grounded": true
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Far bank supplies safe fold support",
+      "status": "passed",
+      "detail": {
+        "x": 1053.6541666666772,
+        "z": -64.47083333333337,
+        "foldSafety": {
+          "safe": true,
+          "reason": ""
+        }
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Far bank checkpoint and spark survive returning to 2D",
+      "status": "passed",
+      "detail": {
+        "checkpointIndex": 1,
+        "hasSpark": true
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Held jump lands above the rising stairs",
+      "status": "passed",
+      "detail": {
+        "x": 1200,
+        "y": 21,
+        "jumps": 2
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Spark lights the beacon and unlocks the paper gate",
+      "status": "passed",
+      "detail": {
+        "beaconLit": true,
+        "hasSpark": false,
+        "gateOpen": 0.242833333333333
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Pause freezes position/time and reduced effects switch is functional",
+      "status": "passed",
+      "detail": {
+        "reduced": true,
+        "elapsed": 19.974999999999508
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Reduced-effects transition completes in the shorter interval",
+      "status": "passed",
+      "detail": {
+        "blend": 1,
+        "transitioning": false
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Real WebGL loss pauses game and shows recovery UI",
+      "status": "passed",
+      "detail": {
+        "mode": "paused",
+        "ready": false,
+        "contextLost": true
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Resume is held while the graphics context is unavailable",
+      "status": "passed",
+      "detail": "paused"
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Renderer rebuilds its resources and draws after actual context restore",
+      "status": "passed",
+      "detail": {
+        "ready": true,
+        "renderer": {
+          "api": "webgl1",
+          "contextLost": false,
+          "frames": 1460,
+          "restorations": 1,
+          "errors": [],
+          "pixelResolution": [
+            609,
+            280
+          ],
+          "canvasResolution": [
+            1311,
+            603
+          ],
+          "staticTriangles": 22632,
+          "dynamicTriangles": 3048,
+          "postEffects": [
+            "original GLSL ripple",
+            "chromatic separation",
+            "pixel glow"
+          ],
+          "camera": "orthographic XYZ",
+          "heroDepth": [
+            0.6,
+            9
+          ],
+          "npcDepth": 0.6
+        },
+        "errors": []
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Context recovery retains progress and waits paused for the player",
+      "status": "passed",
+      "detail": {
+        "mode": "paused",
+        "x": 1521.2520833333092,
+        "beaconLit": true
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Full chapter is completable by actual movement and jumps",
+      "status": "passed",
+      "detail": {
+        "mode": "complete",
+        "x": 1830.0937499999523,
+        "deaths": 0,
+        "jumps": 3,
+        "shifts": 6,
+        "collected": 10
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "Completion card and buttons fit landscape safe area",
+      "status": "passed",
+      "detail": {
+        "completeOverlay": {
+          "x": 0,
+          "y": 0,
+          "width": 874,
+          "height": 402,
+          "bottom": 402,
+          "right": 874
+        },
+        "replay": {
+          "x": 279,
+          "y": 270.578125,
+          "width": 316,
+          "height": 45,
+          "bottom": 315.578125,
+          "right": 595
+        },
+        "home": {
+          "x": 383.96875,
+          "y": 315.578125,
+          "width": 106.046875,
+          "height": 37,
+          "bottom": 352.578125,
+          "right": 490.015625
+        },
+        "results": {
+          "x": 279,
+          "y": 230.78125,
+          "width": 316,
+          "height": 19.796875,
+          "bottom": 250.578125,
+          "right": 595
+        },
+        "card": {
+          "x": 252,
+          "y": 30.40625,
+          "width": 370,
+          "height": 341.171875,
+          "bottom": 371.578125
+        }
+      }
+    },
+    {
+      "suite": "Full chapter",
+      "name": "No graphics, script, network, or source loading errors",
+      "status": "resolved harness artifact",
+      "detail": "Seven CSP warnings match seven screenshots. Screenshot-free final runtime has zero console errors. See harnessArtifacts."
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Updated exact file bundle starts with WebGL and no game errors",
+      "status": "passed",
+      "detail": {
+        "frames": 11,
+        "errors": {
+          "pageErrors": [],
+          "consoleErrors": [
+            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+          ],
+          "externalRequests": [],
+          "requestFailures": []
+        }
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Latest source reaches the broken-road approach in 2D",
+      "status": "passed",
+      "detail": {
+        "x": 680.9416666666729,
+        "z": 0,
+        "dimension": 2,
+        "triangles": 2872
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Bridge reveal adds live geometry only after unfolding",
+      "status": "passed",
+      "detail": {
+        "flatTriangles": 2872,
+        "unfoldedTriangles": 3796
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Reduced-effects setting suppresses its power pulse",
+      "status": "passed",
+      "detail": {
+        "reduced": true,
+        "selectorMatches": true,
+        "pulse": "none"
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Reduced-effects shift suppresses both transition overlay animations",
+      "status": "passed",
+      "detail": {
+        "transitioning": true,
+        "veil": "none",
+        "ring": "none"
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Updated graphics-loss path remains paused with retry hidden while recovering",
+      "status": "passed",
+      "detail": {
+        "contextLost": true,
+        "mode": "paused"
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Updated resources recover and reenable the retry control",
+      "status": "passed",
+      "detail": {
+        "ready": true,
+        "restorations": 1
+      }
+    },
+    {
+      "suite": "Latest renderer and CSS changes",
+      "name": "Updated gameplay has no script, graphics or external source requests",
+      "status": "passed",
+      "detail": {
+        "gameErrors": [],
+        "rendererErrors": [],
+        "observations": {
+          "pageErrors": [],
+          "consoleErrors": [
+            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
+            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
+          ],
+          "externalRequests": [],
+          "requestFailures": []
+        }
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Final bundle starts and reports ready after multiple rendered frames",
+      "status": "passed",
+      "detail": {
+        "ready": true,
+        "frames": 11
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Paused world stops redrawing and retains frozen simulation/input",
+      "status": "passed",
+      "detail": {
+        "framesBefore": 31,
+        "framesAfter": 31,
+        "elapsed": 0.2833333333333334,
+        "input": {
+          "x": 0,
+          "z": 0,
+          "jumpHeld": false,
+          "touches": 0
+        }
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Effects change redraws paused world once",
+      "status": "passed",
+      "detail": {
+        "framesBefore": 31,
+        "framesAfter": 32,
+        "reduced": true
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Real context loss remains paused and reports not ready",
+      "status": "passed",
+      "detail": {
+        "mode": "paused",
+        "contextLost": true,
+        "ready": false
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Restoration redraws paused world and retains progress",
+      "status": "passed",
+      "detail": {
+        "framesBefore": 32,
+        "framesAfter": 33,
+        "restorations": 1,
+        "x": 82.07083333333333
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Resume resumes rendering without latched movement",
+      "status": "passed",
+      "detail": {
+        "frames": 44,
+        "input": {
+          "x": 0,
+          "z": 0,
+          "jumpHeld": false,
+          "touches": 0
+        },
+        "x": 82.07083333333333
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Screenshot-free runtime has zero console/JS/GL/network errors",
+      "status": "passed",
+      "detail": {
+        "glError": 0,
+        "gameErrors": [],
+        "rendererErrors": [],
+        "pageErrors": [],
+        "consoleErrors": [],
+        "externalRequests": [],
+        "requestFailures": []
+      }
+    },
+    {
+      "suite": "Final runtime and paused redraw changes",
+      "name": "Final source files remained stable during verification",
+      "status": "passed",
+      "detail": {
+        "index.html": "6d7d39e62a3104275e978c76e189c3ab99a3ce3ce45132f0c64a4ae1bc34ea53",
+        "style.css": "1fd2d1d9d53c1acb2dc70b7707e8e3144eacc42ec8426a4d20843db3620988d9",
+        "world.js": "30b810d82adf956ee0a0191cc65161afcff24458f7946cef310fad209dabdff0",
+        "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+        "render.js": "71d210775cadadf1ef2d614bdb851562cba746ed8005160570066305cf907d98",
+        "game.js": "3de628a7118b8e1ae81dc37e6a1fdcc6fef936439c1066e8e6a28d8f7068c82a"
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Cached renderer starts and reports ready after rendered frames",
+      "status": "passed",
+      "detail": {
+        "frames": 11,
+        "ready": true,
+        "renderer": {
+          "api": "webgl1",
+          "contextLost": false,
+          "frames": 11,
+          "restorations": 0,
+          "errors": [],
+          "pixelResolution": [
+            609,
+            280
+          ],
+          "canvasResolution": [
+            1311,
+            603
+          ],
+          "staticTriangles": 22632,
+          "dynamicTriangles": 3820,
+          "postEffects": [
+            "original GLSL ripple",
+            "chromatic separation",
+            "pixel glow"
+          ],
+          "camera": "orthographic XYZ",
+          "heroDepth": [
+            0.6,
+            9
+          ],
+          "npcDepth": 0.6
+        }
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Native errors getter is read-only and initially empty",
+      "status": "passed",
+      "detail": {
+        "frozen": true,
+        "errors": [],
+        "getter": true,
+        "setter": false
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Normal movement reaches prism and unlocks dimensional power",
+      "status": "passed",
+      "detail": {
+        "x": 294.8708333333331,
+        "hasPrism": true,
+        "dimension": 2
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Cached hero renders during an intermediate dimensional transition",
+      "status": "passed",
+      "detail": {
+        "blend": 0.1507715735275271,
+        "depth": 1.8664812176312275,
+        "frames": 143
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Native pause freezes transition and rendering without retained input",
+      "status": "passed",
+      "detail": {
+        "mode": "paused",
+        "blend": 0.1507715735275271,
+        "frames": 144,
+        "input": {
+          "x": 0,
+          "z": 0,
+          "jumpHeld": false,
+          "touches": 0
+        }
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Resume completes cached hero extrusion into 3D",
+      "status": "passed",
+      "detail": {
+        "dimension": 3,
+        "blend": 1,
+        "depth": 9,
+        "frames": 206
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Real context loss pauses cached renderer and clears ready",
+      "status": "passed",
+      "detail": {
+        "mode": "paused",
+        "contextLost": true,
+        "ready": false
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Context restoration draws cached 3D mesh and retains state",
+      "status": "passed",
+      "detail": {
+        "framesBefore": 206,
+        "framesAfter": 207,
+        "restorations": 1,
+        "x": 294.8708333333331,
+        "dimension": 3,
+        "depth": 9
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Recovered game resumes normal rendering",
+      "status": "passed",
+      "detail": {
+        "mode": "playing",
+        "frames": 217
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Final optimized bundle has zero runtime, graphics, and request errors",
+      "status": "passed",
+      "detail": {
+        "glError": 0,
+        "nativeGetterErrors": [],
+        "gameErrors": [],
+        "rendererErrors": [],
+        "pageErrors": [],
+        "consoleErrors": [],
+        "externalRequests": [],
+        "requestFailures": []
+      }
+    },
+    {
+      "suite": "Final cached renderer smoke",
+      "name": "Final optimized source remains unchanged throughout smoke",
+      "status": "passed",
+      "detail": {
+        "index.html": "6d7d39e62a3104275e978c76e189c3ab99a3ce3ce45132f0c64a4ae1bc34ea53",
+        "style.css": "1fd2d1d9d53c1acb2dc70b7707e8e3144eacc42ec8426a4d20843db3620988d9",
+        "world.js": "30b810d82adf956ee0a0191cc65161afcff24458f7946cef310fad209dabdff0",
+        "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+        "render.js": "635f0644dff6886f32992d7bda06793144388acca7a557cf02ed0c1728f789b2",
+        "game.js": "77eba0d0346d8629cf3c6ca349df72c4dcbc606a3f14562228e4e59b37a05cec"
+      }
+    }
+  ],
+  "harnessArtifacts": [
+    {
+      "name": "Screenshot CSP warning",
+      "evidence": "Playwright 1.62.1 coreBundle.js inPagePrepareForScreenshots temporarily appends <style>body {}</style> when WebKit shouldToggleStyleSheetToSyncAnimations is true. Strict shipped style-src correctly rejects this. Exactly one warning appeared per screenshot, zero before screenshots. Setting caret: initial did not remove this animation-sync injection. Screenshot-free final runtime reports zero console/JS/GL/request errors.",
+      "resolution": "Kept raw warnings in original reports. No CSP weakening or game code change was made for the harness."
+    },
+    {
+      "name": "First paused-clock title capture black",
+      "evidence": "Initial full-title.png captured before compositor presentation under a paused Playwright clock. Real-time fresh session waited for multiple rendered frames and produced visual-title-real-clock.png with full world scene.",
+      "resolution": "Use the real-time image for title visual QA."
+    },
+    {
+      "name": "Discarded mixed-clock route attempt",
+      "evidence": "visual-followup.cjs installed fake clock after requestAnimationFrame was already registered in real time, so that attempted route did not advance.",
+      "resolution": "Only its real-time title and genuine start tap are used as evidence. All route evidence is from full-game-qa.cjs and delta-checks.cjs, which install their clock before navigation."
+    }
+  ],
+  "limitations": [
+    "Not a physical iPhone, iOS Simulator, or WKWebView runtime.",
+    "Synthetic touch checks do not measure device latency or hardware gesture recognition.",
+    "Software graphics configuration; WebKit masked renderer string is not evidence of Apple hardware.",
+    "No physical audio/listening test, touch latency measurement, iOS signing/install verification, or performance/battery benchmark was performed by this QA agent.",
+    "All screenshots are internal QA and not intended for publication."
+  ],
+  "source_sha256": {
+    "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+    "game.js": "77eba0d0346d8629cf3c6ca349df72c4dcbc606a3f14562228e4e59b37a05cec",
+    "index.html": "6d7d39e62a3104275e978c76e189c3ab99a3ce3ce45132f0c64a4ae1bc34ea53",
+    "render.js": "635f0644dff6886f32992d7bda06793144388acca7a557cf02ed0c1728f789b2",
+    "style.css": "1fd2d1d9d53c1acb2dc70b7707e8e3144eacc42ec8426a4d20843db3620988d9",
+    "world.js": "30b810d82adf956ee0a0191cc65161afcff24458f7946cef310fad209dabdff0"
+  },
+  "visual_inspection": [
+    "Fresh real-time WebKit session shows title over a fully rendered forest, paper wall and hero; genuine Playwright tap starts gameplay.",
+    "Pixel-art hero and sage visible in side view; large separated touch controls fit simulated safe areas.",
+    "Hero is visibly extruded beside the thin paper wall; rotated terrain has genuine depth; unfolded stick and return control readable.",
+    "Latest bridge reveal fix leaves a clear open gap in 2D, with no misleading bridge boards.",
+    "Latest source reveals the bridge in its real depth position. Hero and Pip are not occluded by foreground trees.",
+    "Player stands on the depth bridge after collecting spark; clear warning explains why return to 2D is unsafe.",
+    "Completion text and both buttons fit the landscape viewport. Card bottom371.58px and Return to title bottom352.58px within402px viewport, with21px bottom inset."
+  ],
+  "native_build_evidence": "The GitHub release separately includes BUILD-REPORT.json and Native-Launch.json from its actual macOS/Xcode run."
+}
