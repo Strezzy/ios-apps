@@ -33,10 +33,10 @@
   },
   "com.billy.moonhop": {
     "name": "Enter the Third Dimension",
-    "subtitle": "A pixel adventure between 2D and 3D",
-    "localizedDescription": "Explore a pixel-art world and shift from a 2D side-scroller into 3D. Walk around flat obstacles, find hidden paths, collect shards, and bring a lost light back to the village. Includes the first story chapter, landscape touch controls, checkpoints, and offline play.",
-    "icon": "ThirdDimension.png",
+    "subtitle": "Become the creatures of a magical rainforest",
+    "localizedDescription": "Play as a living raindrop in a mystical rainforest. Touch creatures to learn their forms, become a translucent girl, frog or fox, and shift between 2D and 3D to explore hidden paths. Includes an animated origin story, a playable first chapter, simple landscape touch controls, checkpoints, and offline play.",
+    "icon": "ThirdDimension-Rain.png",
     "category": "games",
-    "tintColor": "#9AF6D7"
+    "tintColor": "#7FE6E3"
   }
 }

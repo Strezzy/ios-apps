@@ -1,5 +1,5 @@
 /* Original, dependency-free WebGL renderer and GLSL effects.
- * A real XYZ world, an animated orthographic camera, and extruded pixel meshes.
+ * A real XYZ world, an animated orthographic camera, and a smooth water heroine.
  * The post-process is decorative; movement and occlusion use actual 3D geometry.
  */
 (() => {
@@ -10,12 +10,12 @@
   const rgb=c=>typeof c==='string'?[parseInt(c.slice(1,3),16)/255,parseInt(c.slice(3,5),16)/255,parseInt(c.slice(5,7),16)/255]:c;
   const tint=(c,n)=>rgb(c).map(v=>clamp(v*n,0,1));
   const mul=(a,b)=>{const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return o;};
-  function matrix(target,aspect,dim){
+  function matrix(target,aspect,dim,height){
     const yaw=dim*.72,el=dim*.49,sy=Math.sin(yaw),cy=Math.cos(yaw),se=Math.sin(el),ce=Math.cos(el);
     const right=[cy,0,-sy],up=[-sy*se,ce,-cy*se],back=[sy*ce,se,cy*ce];
     const eye=target.map((v,i)=>v+back[i]*900),dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
     const view=new Float32Array([right[0],up[0],back[0],0,right[1],up[1],back[1],0,right[2],up[2],back[2],0,-dot(right,eye),-dot(up,eye),-dot(back,eye),1]);
-    const h=lerp(248,288,dim),w=h*aspect;
+    const h=height||lerp(248,288,dim),w=h*aspect;
     const proj=new Float32Array([2/w,0,0,0,0,2/h,0,0,0,0,-2/2199,0,0,0,-2201/2199,1]);
     return mul(proj,view);
   }
@@ -60,31 +60,56 @@
   const sceneVS=`
     attribute vec3 aPosition; attribute vec3 aColor; attribute vec3 aNormal; attribute float aGlow;
     uniform mat4 uMatrix; uniform vec3 uTarget; uniform float uDimension;
-    varying vec3 vColor; varying float vFog; varying float vGlow;
+    varying vec3 vColor; varying vec3 vWorld; varying float vGround; varying float vFog; varying float vGlow;
     void main(){
       vec3 light=normalize(vec3(-.38,.8,.65));
       float lambert=max(0.0,dot(aNormal,light));
-      float shade=mix(.94,.57+lambert*.5,uDimension);
+      float shade=.61+lambert*.43;
       shade+=max(0.0,aNormal.y)*.06;
       vColor=aColor*mix(shade,1.15,clamp(aGlow,0.,1.)); vGlow=aGlow;
+      vWorld=aPosition;
+      vGround=smoothstep(.58,.92,aNormal.y)*step(aColor.r+.038,aColor.g)*step(aColor.b-.02,aColor.g)*(1.-clamp(aGlow,0.,1.));
       vFog=clamp((-aPosition.z-110.)/680.,0.,.74);
       gl_Position=uMatrix*vec4(aPosition,1.0);
     }`;
-  const sceneFS=`precision mediump float; varying vec3 vColor; varying float vFog; varying float vGlow;
-    void main(){vec3 color=mix(vColor,vec3(.15,.22,.32),vFog);gl_FragColor=vec4(color,1.);}`;
+  const sceneFS=`precision highp float; varying vec3 vColor; varying vec3 vWorld; varying float vGround; varying float vFog; varying float vGlow;uniform float uTime;
+    float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+    float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+1.),f.x),f.y);}
+    void main(){
+      vec3 surface=vColor;
+      if(vGround>.01){
+        vec2 mossUV=vWorld.xz;
+        float broad=noise(mossUV*.034),grain=noise(mossUV*.74),fibers=noise(mossUV*2.1);
+        float moss=.73+broad*.32+grain*.10+fibers*.035;
+        vec3 lush=surface*moss;
+        float loam=smoothstep(.73,.9,noise(mossUV*.045+37.));
+        lush=mix(lush,vec3(.19,.29,.22),loam*.26);
+        float damp=smoothstep(.62,.85,noise(mossUV*.023-58.));
+        lush+=vec3(.018,.040,.042)*damp*(.75+.25*sin(vWorld.x*.12+vWorld.z*.19+uTime*.23));
+        surface=mix(surface,lush,vGround);
+      }
+      float groundMist=exp(-max(0.,vWorld.y)*.025)*smoothstep(65.,270.,-vWorld.z)*.16;
+      float fog=clamp(vFog+groundMist,0.,.82);
+      vec3 color=mix(surface,vec3(.075,.23,.235),fog);
+      float moonbeam=pow(.5+.5*sin((vWorld.x-vWorld.y*.35)*.024+vWorld.z*.009+uTime*.009),20.);
+      color+=vec3(.026,.049,.037)*moonbeam*smoothstep(20.,130.,vWorld.y)*smoothstep(30.,160.,-vWorld.z)*(1.-vGlow);
+      gl_FragColor=vec4(color,1.);
+    }`;
   const screenVS=`attribute vec2 aPosition; varying vec2 vUV; void main(){vUV=aPosition*.5+.5;gl_Position=vec4(aPosition,0.,1.);}`;
+  const copyFS=`precision mediump float; varying vec2 vUV; uniform sampler2D uScene;void main(){gl_FragColor=texture2D(uScene,vUV);}`;
   const skyFS=`precision mediump float; varying vec2 vUV; uniform float uTime; uniform float uDimension; uniform vec2 uResolution;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     void main(){
-      vec2 uv=vUV;vec3 bottom=vec3(.16,.27,.35),top=vec3(.038,.063,.15);
+      vec2 uv=vUV;vec3 bottom=vec3(.105,.26,.245),top=vec3(.042,.055,.13);
       vec3 col=mix(bottom,top,smoothstep(.05,1.,uv.y));
       float band=.69+.10*sin(uv.x*5.1+uTime*.035)+.04*sin(uv.x*13.-uTime*.019);
       float aurora=exp(-abs(uv.y-band)*22.)*(.48+.28*sin(uv.x*21.+uTime*.06));
       col+=vec3(.075,.235,.185)*aurora*(.65+uDimension*.45);
       float band2=band+.055;col+=vec3(.13,.08,.24)*exp(-abs(uv.y-band2)*35.)*.7;
-      vec2 grid=floor(uv*uResolution/3.);float star=step(.992,hash(grid));
-      float twinkle=.6+.4*sin(uTime*.8+hash(grid+4.)*6.28);
-      col+=star*twinkle*smoothstep(.48,.7,uv.y)*vec3(.38,.46,.48);
+      float rays=pow(.5+.5*sin((uv.x-uv.y*.27)*27.+uTime*.027),16.);
+      col+=vec3(.09,.16,.11)*rays*smoothstep(.12,.85,uv.y)*.4;
+      float mist=exp(-abs(uv.y-.31-.035*sin(uv.x*12.+uTime*.045))*12.);
+      col+=vec3(.026,.065,.06)*mist;
       vec2 m=(uv-vec2(.77,.78))*vec2(uResolution.x/uResolution.y,1.);
       float moon=1.-smoothstep(.048,.05,length(m));float cut=1.-smoothstep(.043,.046,length(m-vec2(.019,.007)));
       col+=max(0.,moon-cut)*vec3(.60,.64,.47);col+=exp(-length(m)*32.)*vec3(.05,.065,.06);
@@ -106,7 +131,6 @@
       glow+=max(texture2D(uScene,uv-texel*vec2(0.,2.)).rgb-.68,0.);
       col+=glow*(.11+.12*uPulse)*(1.-uReduced*.65);
       col+=vec3(.025,.06,.052)*uPulse;
-      float scan=mod(floor(vUV.y*uResolution.y),2.);col*=1.-scan*.013;
       gl_FragColor=vec4(col,1.);
     }`;
   class Renderer {
@@ -125,27 +149,32 @@
       const o={p};for(const n of ['aPosition','aColor','aNormal','aGlow'])o[n]=gl.getAttribLocation(p,n);for(const n of ['uMatrix','uTarget','uTime','uResolution','uDimension','uPulse','uScene','uReduced'])o[n]=gl.getUniformLocation(p,n);return o;
     }
     init(){
-      this.cacheDynamicMeshes();
-      const gl=this.gl;this.scene=this.program(sceneVS,sceneFS);this.sky=this.program(screenVS,skyFS);this.post=this.program(screenVS,postFS);
+      const gl=this.gl;this.scene=this.program(sceneVS,sceneFS);this.sky=this.program(screenVS,skyFS);this.post=this.program(screenVS,postFS);this.copy=this.program(screenVS,copyFS);
+      if(!window.TD_WaterRenderer)throw new Error('The water character renderer is missing.');
+      if(!window.TD_RAINFOREST)throw new Error('The rainforest scenery renderer is missing.');
+      this.water=new window.TD_WaterRenderer(gl);
       this.quad=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.quad);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
       this.staticBuffer=gl.createBuffer();this.dynamicBuffer=gl.createBuffer();
       const geometry=this.buildWorld().data();this.staticCount=geometry.length/10;gl.bindBuffer(gl.ARRAY_BUFFER,this.staticBuffer);gl.bufferData(gl.ARRAY_BUFFER,geometry,gl.STATIC_DRAW);
-      this.texture=gl.createTexture();this.fbo=gl.createFramebuffer();this.depth=gl.createRenderbuffer();this.fboW=0;this.fboH=0;this.resize();
+      this.texture=gl.createTexture();this.fbo=gl.createFramebuffer();this.depth=gl.createRenderbuffer();
+      this.compositeTexture=gl.createTexture();this.compositeFbo=gl.createFramebuffer();this.compositeDepth=this.depth;
+      this.fboW=0;this.fboH=0;this.compositeW=0;this.compositeH=0;this.resize();
       gl.disable(gl.CULL_FACE);gl.disable(gl.BLEND);gl.clearColor(.06,.1,.18,1);
-    }
-    cacheDynamicMeshes(){
-      if(this.heroMeshes)return;
-      // Both facings retain the sprite builder's exact surface ordering. CPU
-      // meshes survive a WebGL context restore and are reused by every frame.
-      this.heroMeshes=this.art.sprites.hero.map(frame=>[-1,1].map(face=>{const m=new Mesh();m.sprite(frame,0,0,0,1,face);return m.data();}));
     }
     resize(){
       const gl=this.gl,cssW=Math.max(1,this.canvas.clientWidth||innerWidth),cssH=Math.max(1,this.canvas.clientHeight||innerHeight);
       const ratio=Math.min(devicePixelRatio||1,1.5);this.canvas.width=Math.round(cssW*ratio);this.canvas.height=Math.round(cssH*ratio);
-      this.aspect=cssW/cssH;const h=280,w=Math.min(1400,Math.round(h*this.aspect));
-      if(w===this.fboW&&h===this.fboH)return;this.fboW=w;this.fboH=h;
-      gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-      gl.bindRenderbuffer(gl.RENDERBUFFER,this.depth);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,w,h);gl.bindFramebuffer(gl.FRAMEBUFFER,this.fbo);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,this.texture,0);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,this.depth);if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('The game framebuffer is incomplete.');gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+      this.aspect=cssW/cssH;const h=this.canvas.height,w=this.canvas.width;
+      const allocate=(texture,depth,fbo,width,height,filter)=>{
+        gl.bindTexture(gl.TEXTURE_2D,texture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,width,height,0,gl.RGBA,gl.UNSIGNED_BYTE,null);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,filter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,filter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+        gl.bindRenderbuffer(gl.RENDERBUFFER,depth);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,width,height);gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,texture,0);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('The game framebuffer is incomplete.');
+      };
+      if(w!==this.fboW||h!==this.fboH){this.fboW=w;this.fboH=h;allocate(this.texture,this.depth,this.fbo,w,h,gl.NEAREST);}
+      // The entire rainforest and water girl are smooth. These two independent
+      // color targets share the same depth renderbuffer, retaining world
+      // occlusion without copying depth or relying on optional GL extensions.
+      if(this.canvas.width!==this.compositeW||this.canvas.height!==this.compositeH){this.compositeW=this.canvas.width;this.compositeH=this.canvas.height;allocate(this.compositeTexture,this.compositeDepth,this.compositeFbo,this.compositeW,this.compositeH,gl.LINEAR);}
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);
     }
     paper(m,o,lift=0){
       const x=o.x,y=o.y+lift,z=o.z,c=o.kind==='gate'?'#84989c':'#798991';
@@ -165,12 +194,19 @@
     }
     buildWorld(){
       const m=new Mesh(),world=this.world;
+      if(window.TD_RAINFOREST){window.TD_RAINFOREST.buildWorld(m,world);return m;}
       // Distant islands and stepped silhouettes hold their real positions during the turn.
       for(let i=-4;i<30;i++){
         const x=i*126,z=-530-hash(i+64)*130,w=95+hash(i+7)*90,h=45+hash(i+18)*150;
         m.box(x,-65,z,w,h,45,'#263951');m.box(x+13,h-69,z+8,w-25,12,35,'#2c435a');
       }
       for(let i=-3;i<23;i++){const x=i*117+hash(i)*20,z=-195-hash(i+5)*150;this.tree(m,x,-10,z,.8+hash(i+5)*.62,i+50);}
+      // The overhanging leaf is the opening story's physical birthplace. It
+      // remains scenery, clear of the road and all collision geometry.
+      m.box(-9,0,-10,11,132,12,'#29494e');m.box(-5,94,-5,55,6,7,'#355654');m.box(43,97,-4,28,4,6,'#446e62');
+      m.box(58,99,-6,20,3,10,'#72afa0');m.box(64,97,-4,17,3,7,'#8bc7aa');m.box(71,96,-1,8,2,4,'#a1d8b7');
+      m.box(-23,126,-18,72,17,33,'#315f63');m.box(13,115,-14,48,15,27,'#3a756e');m.box(39,108,-9,24,10,17,'#468b79');
+      m.box(3,129,-17,42,3,29,'#498879');m.box(27,117,-13,29,2,23,'#71b292');
       for(const p of world.platforms){
         if(p.kind==='bridge'){
           // This off-plane path unfolds with the perspective, so its projected
@@ -204,6 +240,7 @@
       return m;
     }
     dynamic(state){
+      if(window.TD_RAINFOREST)return this.rainforestDynamic(state);
       const m=new Mesh(),p=state.player,t=state.time,d=state.dimensionBlend;
       if(d>.03){
         const b=this.world.platforms.find(b=>b.kind==='bridge');
@@ -214,11 +251,12 @@
       // A physical ground-plane shadow and a dashed seam make depth readable.
       if(p.grounded){m.box(p.x-9,p.y+.18,p.z-5,18,.25,10,'#344e5a');}
       if(d>.02){for(let i=-9;i<22;i++){const x=Math.floor(state.cameraX/22)*22+i*22;const supported=this.world.platforms.some(b=>x>=b.x&&x<=b.x+b.w&&0>=b.z&&0<=b.z+b.d&&b.kind==='earth');if(supported)m.box(x,.27,-.65,9,.3,1.3,tint('#9bcfc2',.55+d*.27),.25);}}
-      const frame=!p.grounded?4:(Math.abs(p.vx)+Math.abs(p.vz)>10?Math.floor(p.walk*9)%4:0);
-      const stretch=1+Math.sin(state.transitionProgress*Math.PI)*.13*(state.transitioning?1:0);
-      const thickness=lerp(.6,9,d);
-      m.append(this.heroMeshes[frame][p.facing>0?1:0],p.x,p.y,p.z,stretch,thickness);
-      if(d>.01){m.box(p.x-7,p.y+27*stretch,p.z-thickness/2-.6,14,1,1,'#b4ffe0',.6);}
+      // The protagonist is intentionally omitted from the pixel pass. Her
+      // smooth liquid surface is drawn after the world color is captured.
+      if(state.cinematic&&state.cinematic.active){
+        const ct=state.cinematic.elapsed||0,walk=clamp((ct-3.2)/2.1,0,1),x=154-walk*42;
+        if(ct>3.2){const frames=this.art.sprites.child,frame=walk<1?Math.floor(ct*7)%frames.length:0;m.sprite(frames[frame],x,0,4,.6,-1,.94);}
+      }
       for(let i=0;i<this.world.shards.length;i++){
         if(state.collected.includes(i))continue;const c=this.world.shards[i];if(Math.abs(c.x-state.cameraX)>600)continue;
         const visible=Math.abs(c.z)<8?1:(.28+.72*d);m.diamond(c.x,c.y+Math.sin(t*2.4+i)*2,c.z,4.2,tint('#ffe0a2',visible),t*.8+i);
@@ -239,6 +277,19 @@
       for(const part of state.particles){const alpha=clamp(part.life/part.max,0,1);m.box(part.x,part.y,part.z,part.size*alpha,part.size*alpha,part.size*alpha,part.color,.65);}
       return m.data();
     }
+    rainforestDynamic(state){
+      const m=new Mesh(),r=window.TD_RAINFOREST,p=state.player,t=state.time,d=state.dimensionBlend;
+      r.dynamic(m,this.world,state);
+      for(let i=0;i<this.world.shards.length;i++){
+        if(state.collected.includes(i))continue;const c=this.world.shards[i];if(Math.abs(c.x-state.cameraX)>600)continue;
+        r.orb(m,c.x,c.y+Math.sin(t*2.4+i)*2,c.z,3.4,tint('#ffe0ae',Math.abs(c.z)<8?1:.28+.72*d),.8);
+      }
+      if(!state.hasPrism){const c=this.world.prism;r.orb(m,c.x,c.y+Math.sin(t*1.8)*3,c.z,7.5,'#baa2ed',.85);}
+      if(!state.hasSpark&&!state.beaconLit){const c=this.world.spark;r.orb(m,c.x,c.y+Math.sin(t*2.2)*2,c.z,5.6,'#ffd397',.95);}
+      if(state.hasSpark&&!state.beaconLit)r.orb(m,p.x-p.facing*15,p.y+34+(state.water?.lift||0)+Math.sin(t*3)*3,p.z-3,3.5,'#ffcf86',.9);
+      for(const part of state.particles){const alpha=clamp(part.life/part.max,0,1);if(alpha>.03)r.orb(m,part.x,part.y,part.z,Math.max(.12,part.size*alpha*.55),part.color,.7);}
+      return m.data();
+    }
     screen(program){
       const gl=this.gl;gl.useProgram(program.p);gl.bindBuffer(gl.ARRAY_BUFFER,this.quad);for(let i=0;i<4;i++)gl.disableVertexAttribArray(i);gl.enableVertexAttribArray(program.aPosition);gl.vertexAttribPointer(program.aPosition,2,gl.FLOAT,false,8,0);
     }
@@ -251,17 +302,20 @@
       gl.bindFramebuffer(gl.FRAMEBUFFER,this.fbo);gl.viewport(0,0,this.fboW,this.fboH);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.disable(gl.DEPTH_TEST);
       this.screen(this.sky);gl.uniform1f(this.sky.uTime,state.time);gl.uniform1f(this.sky.uDimension,state.dimensionBlend);gl.uniform2f(this.sky.uResolution,this.fboW,this.fboH);gl.drawArrays(gl.TRIANGLES,0,6);
       gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.useProgram(this.scene.p);
-      const target=[state.cameraX,45+state.dimensionBlend*4,state.cameraZ*.45];
-      this.lastMatrix=matrix(target,this.aspect,state.dimensionBlend);
-      gl.uniformMatrix4fv(this.scene.uMatrix,false,this.lastMatrix);gl.uniform3fv(this.scene.uTarget,target);gl.uniform1f(this.scene.uDimension,state.dimensionBlend);
+      const target=[state.cameraX,state.cameraY===undefined?45+state.dimensionBlend*4:state.cameraY,state.cameraZ*.45];
+      this.lastMatrix=matrix(target,this.aspect,state.dimensionBlend,state.cameraHeight);
+      gl.uniformMatrix4fv(this.scene.uMatrix,false,this.lastMatrix);gl.uniform3fv(this.scene.uTarget,target);gl.uniform1f(this.scene.uDimension,state.dimensionBlend);gl.uniform1f(this.scene.uTime,state.time);
       this.bindScene(this.staticBuffer);gl.drawArrays(gl.TRIANGLES,0,this.staticCount);
       const dyn=this.dynamic(state);gl.bindBuffer(gl.ARRAY_BUFFER,this.dynamicBuffer);gl.bufferData(gl.ARRAY_BUFFER,dyn,gl.DYNAMIC_DRAW);this.bindScene(this.dynamicBuffer);gl.drawArrays(gl.TRIANGLES,0,dyn.length/10);this.dynamicCount=dyn.length/10;
-      gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.disable(gl.DEPTH_TEST);this.screen(this.post);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.post.uScene,0);gl.uniform2f(this.post.uResolution,this.fboW,this.fboH);gl.uniform1f(this.post.uTime,state.time);gl.uniform1f(this.post.uPulse,state.pulse);gl.uniform1f(this.post.uDimension,state.dimensionBlend);gl.uniform1f(this.post.uReduced,state.reduced?1:0);gl.drawArrays(gl.TRIANGLES,0,6);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,this.compositeFbo);gl.viewport(0,0,this.compositeW,this.compositeH);gl.clear(gl.COLOR_BUFFER_BIT);gl.disable(gl.DEPTH_TEST);
+      this.screen(this.copy);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.texture);gl.uniform1i(this.copy.uScene,0);gl.drawArrays(gl.TRIANGLES,0,6);
+      this.water.draw(state,this.lastMatrix,this.texture,this.compositeW,this.compositeH,this.fboW,this.fboH);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,this.canvas.width,this.canvas.height);gl.disable(gl.DEPTH_TEST);this.screen(this.post);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,this.compositeTexture);gl.uniform1i(this.post.uScene,0);gl.uniform2f(this.post.uResolution,this.compositeW,this.compositeH);gl.uniform1f(this.post.uTime,state.time);gl.uniform1f(this.post.uPulse,state.pulse);gl.uniform1f(this.post.uDimension,state.dimensionBlend);gl.uniform1f(this.post.uReduced,state.reduced?1:0);gl.drawArrays(gl.TRIANGLES,0,6);
       this.frames++;if(this.frames===1){const error=gl.getError();if(error!==gl.NO_ERROR)throw new Error('WebGL first-frame error '+error);}
       return true;
     }
     project(x,y,z){if(!this.lastMatrix)return null;const m=this.lastMatrix,v=[x,y,z,1],p=[];for(let r=0;r<4;r++)p[r]=m[r]*v[0]+m[4+r]*v[1]+m[8+r]*v[2]+m[12+r];return{x:(p[0]/p[3]*.5+.5)*this.canvas.clientWidth,y:(1-(p[1]/p[3]*.5+.5))*this.canvas.clientHeight};}
-    getState(){return{api:'webgl1',contextLost:this.contextLost,frames:this.frames,restorations:this.restorations,errors:[...this.errors],pixelResolution:[this.fboW,this.fboH],canvasResolution:[this.canvas.width,this.canvas.height],staticTriangles:this.staticCount/3,dynamicTriangles:(this.dynamicCount||0)/3,postEffects:['original GLSL ripple','chromatic separation','pixel glow'],camera:'orthographic XYZ',heroDepth:[.6,9],npcDepth:.6};}
+    getState(){return{api:'webgl1',contextLost:this.contextLost,frames:this.frames,restorations:this.restorations,errors:[...this.errors],artStyle:'smooth mystical rainforest',sceneResolution:[this.fboW,this.fboH],pixelResolution:[this.fboW,this.fboH],canvasResolution:[this.canvas.width,this.canvas.height],staticTriangles:this.staticCount/3,dynamicTriangles:(this.dynamicCount||0)/3,postEffects:['original GLSL ripple','restrained chromatic separation','soft luminous bloom','smooth refractive water pass','procedural moss and forest haze'],camera:'orthographic XYZ',heroDepth:[.77,11.0],npcDepth:.6,water:this.water?this.water.getState():null};}
   }
   window.TD_Renderer=Renderer;
 })();

@@ -10,9 +10,9 @@
 </head>
 <body>
   <main id="app" aria-label="Enter the Third Dimension, a dimensional platform adventure">
-    <canvas id="world" aria-label="Pixel art game world. Use the touch controls or a keyboard to play."></canvas>
+    <canvas id="world" aria-label="A mystical rainforest and a living raindrop. Use touch controls or a keyboard to play."></canvas>
     <div class="vignette" aria-hidden="true"></div>
-    <div id="shiftVeil" aria-hidden="true"><div class="shift-ring"></div><span>ANOTHER SIDE OF EVERYTHING</span></div>
+    <div id="shiftVeil" aria-hidden="true"><div class="shift-ring"></div><span id="shiftCaption">REMEMBERING THE RAIN</span></div>
     <header id="hud" class="hidden">
       <div class="chapter-mark"><span class="mini-prism" aria-hidden="true">◇</span><div><small>CHAPTER I</small><strong>The Folded Forest</strong></div></div>
       <div id="objective"><span id="objectiveText">Find the prism</span><span id="shards" aria-label="Prism shards">✦ 0 / 12</span></div>
@@ -20,14 +20,19 @@
     </header>
     <div id="title" class="overlay title-screen">
       <div class="title-content">
-        <div class="eyebrow"><span></span> A SMALL WORLD. ANOTHER SIDE.</div>
+        <div class="eyebrow"><span></span> THE RAIN REMEMBERS</div>
         <h1>ENTER THE<br><em>THIRD</em><br>DIMENSION<span class="title-dot">.</span></h1>
-        <p>A paper world. A power that changes everything.</p>
+        <p>A little rain. A world of lives to discover.</p>
         <button id="play" class="primary">Begin the story <span aria-hidden="true">↗</span></button>
         <div class="title-bottom"><span>CHAPTER I · THE FOLDED FOREST</span><span class="tiny-line"></span><span>HEADPHONES WELCOME</span></div>
       </div>
-      <div class="title-scene-label"><span class="crosshair" aria-hidden="true">+</span><span>THERE IS MORE<br>THAN MEETS THE EYE.</span></div>
-      <div class="version">AN ORIGINAL PIXEL ADVENTURE · 2.0</div>
+      <div class="title-scene-label"><span class="crosshair" aria-hidden="true">◌</span><span>EVERY SHAPE<br>BEGINS WITH A DROP.</span></div>
+      <div class="version">THE RAINDROP UPDATE · 2.1</div>
+    </div>
+    <div id="introOverlay" class="hidden" aria-label="Opening story">
+      <div class="intro-heading"><span></span> A DROP OF LIFE</div>
+      <button id="skipIntro" aria-label="Skip opening and begin playing">Skip intro <span aria-hidden="true">↗</span></button>
+      <div class="intro-caption-wrap"><span class="intro-line" aria-hidden="true"></span><p id="introCaption" role="status" aria-live="polite"></p></div>
     </div>
     <div id="dialogue" class="hidden" role="status"><div class="dialogue-dot" aria-hidden="true"></div><div><strong id="speaker"></strong><p id="dialogueText"></p></div></div>
     <div id="toast" role="status" aria-live="polite"></div>
@@ -38,13 +43,13 @@
           <div class="stick-ring" aria-hidden="true"><span class="north">⌃</span><span class="south">⌄</span><span class="west">‹</span><span class="east">›</span></div><div id="stick" aria-hidden="true"></div>
         </div><span id="moveLabel" class="control-label">MOVE</span>
       </div>
-      <div id="rightControls"><div class="power-wrap"><button id="power" aria-label="Enter the third dimension" disabled><svg viewBox="0 0 40 40" aria-hidden="true"><path class="cube-face" d="M20 5 34 13 34 28 20 36 6 28 6 13Z"/><path class="cube-lines" d="M6 13 20 21 34 13M20 21V36M20 5V21"/></svg><span id="powerText">FIND PRISM</span></button><span id="powerLabel" class="control-label">DIMENSION</span></div><div class="jump-wrap"><button id="jump" aria-label="Jump. Hold for a higher jump."><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M8 20 18 10 28 20M18 11V29"/></svg></button><span class="control-label">JUMP</span></div></div>
+      <div id="rightControls"><div class="form-wrap"><button id="formButton" aria-label="Touch a creature to remember its shape" disabled><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M18 16c-4 0-5 5-8 7-2 2-1 6 2 6 3 0 4-2 6-2s3 2 6 2c3 0 4-4 2-6-3-2-4-7-8-7Z"/><ellipse cx="8" cy="14" rx="2.5" ry="3.5"/><ellipse cx="14" cy="8" rx="2.5" ry="3.5"/><ellipse cx="22" cy="8" rx="2.5" ry="3.5"/><ellipse cx="28" cy="14" rx="2.5" ry="3.5"/></svg><span id="formText">GIRL</span><span id="formCount">1/3</span></button><span class="control-label">FORM</span></div><div class="power-wrap"><button id="power" aria-label="Enter the third dimension" disabled><svg viewBox="0 0 40 40" aria-hidden="true"><path class="cube-face" d="M20 3C18 10 8 16 8 24a12 12 0 0 0 24 0C32 16 22 10 20 3Z"/><path class="cube-lines" d="M14 23c-1 5 2 8 6 8M20 14l7 10-7 7-7-7Z"/></svg><span id="powerText">FIND PRISM</span></button><span id="powerLabel" class="control-label">DIMENSION</span></div><div class="jump-wrap"><button id="jump" aria-label="Jump. Hold for a higher jump."><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M8 20 18 10 28 20M18 11V29"/></svg></button><span class="control-label">JUMP</span></div></div>
     </div>
     <div id="pauseOverlay" class="overlay modal hidden"><div class="modal-card"><div class="eyebrow">TAKE A BREATH</div><h2>A moment<br>between worlds.</h2><p>The forest will wait for you.</p><button id="resume" class="primary">Continue <span aria-hidden="true">→</span></button><div class="settings-row"><button id="sound" class="secondary" aria-pressed="true">Sound on</button><button id="effects" class="secondary" aria-pressed="false">Full effects</button></div><button id="restart" class="text-button">Restart chapter</button><p class="key-help">← → / A D move · Space jump · E shift<br>In 3D: ↑ ↓ / W S explore depth · Esc pause</p></div></div>
     <div id="completeOverlay" class="overlay modal hidden"><div class="modal-card completion"><div class="eyebrow">CHAPTER I COMPLETE</div><div class="ending-prism" aria-hidden="true">◇</div><h2>You found<br>another way.</h2><p>The lantern is lit. Beyond the gate, something casts a shadow no paper could make.</p><div id="results"></div><button id="replay" class="primary">Explore again <span aria-hidden="true">↗</span></button><button id="home" class="text-button">Return to title</button></div></div>
     <div id="rendererError" class="overlay modal hidden" role="alert"><div class="modal-card"><div class="eyebrow">A MOMENT BETWEEN WORLDS</div><h2 id="errorTitle">The world needs a fresh start.</h2><p id="errorText">The graphics renderer could not start. Reload to try again.</p><button id="retry" class="primary">Reload game <span aria-hidden="true">↻</span></button></div></div>
     <div id="rotate" class="overlay"><div class="rotate-phone" aria-hidden="true">↻</div><h2>A wider world awaits.</h2><p>Turn your iPhone sideways to play.</p></div>
   </main>
-  <script src="world.js"></script><script src="art.js"></script><script src="render.js"></script><script src="game.js"></script>
+  <script src="world.js"></script><script src="art.js"></script><script src="rainforest.js"></script><script src="water.js"></script><script src="render.js"></script><script src="game.js"></script>
 </body>
 </html>

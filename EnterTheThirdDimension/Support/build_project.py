@@ -24,9 +24,9 @@ def pbx(value, indent=0):
 
 def generate():
     BUILD.mkdir(exist_ok=True)
-    icon = ROOT / "Resources/AppIcon1024.png"
+    icon = ROOT / "Resources/RaindropIcon1024.png"
     if not icon.is_file():
-        raise ValueError("Resources/AppIcon1024.png is required")
+        raise ValueError("Resources/RaindropIcon1024.png is required")
     png = icon.read_bytes()
     if png[:8] != b"\x89PNG\r\n\x1a\n" or int.from_bytes(png[16:20], "big") != 1024 or int.from_bytes(png[20:24], "big") != 1024:
         raise ValueError("The app icon must be a 1024×1024 PNG")
@@ -77,8 +77,8 @@ def generate():
         'INFOPLIST_FILE':'../Resources/Info.plist', 'GENERATE_INFOPLIST_FILE':'NO',
         'IPHONEOS_DEPLOYMENT_TARGET':'16.0', 'TARGETED_DEVICE_FAMILY':'1,2',
         'SDKROOT':'iphoneos', 'SUPPORTED_PLATFORMS':'iphoneos iphonesimulator',
-        'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon', 'CURRENT_PROJECT_VERSION':'2',
-        'MARKETING_VERSION':'2.0', 'CLANG_ENABLE_OBJC_ARC':'YES', 'CLANG_ENABLE_MODULES':'YES',
+        'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon', 'CURRENT_PROJECT_VERSION':'3',
+        'MARKETING_VERSION':'2.1', 'CLANG_ENABLE_OBJC_ARC':'YES', 'CLANG_ENABLE_MODULES':'YES',
         'GCC_C_LANGUAGE_STANDARD':'gnu17', 'CODE_SIGN_STYLE':'Automatic',
         'SUPPORTS_MACCATALYST':'NO', 'SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD':'NO',
         'OTHER_LDFLAGS':['$(inherited)','-Wl,-no_fixup_chains'],

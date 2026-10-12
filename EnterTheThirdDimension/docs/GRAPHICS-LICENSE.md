@@ -5,11 +5,18 @@ Reviewed on October 12, 2026 for **Enter the Third Dimension**.
 ## What this build uses
 
 The game uses an original WebGL renderer, original GLSL transformation effects,
-and original character and environment art. The courier continues the original
-Moonhop character: amber hood, teal coat, coral scarf, satchel, and boots.
-The sprite grids in `Resources/Game/art.js` are generated entirely from local,
-deterministic pixel drawing instructions. Their palette entries are opaque RGB
-colors; a dot marks an empty cell.
+and original character and environment art. Version 2.1 replaces the pixel
+courier with a smooth water girl. The character and optical material in
+`Resources/Game/water.js` are original code. Her translucent, reflective appearance
+and elastic animation use procedural graphics rather than any imported shader
+library, character model, or fluid simulation dependency.
+
+The rainforest and other inhabitants also use smooth original geometry from
+`Resources/Game/rainforest.js`: curved roots, broad leaves, ferns, rounded
+platforms, flowers, glowing mushrooms, and chibi people, frogs, and foxes. The
+other inhabitants retain a thin depth silhouette during the player's power.
+Legacy sprite grids in `Resources/Game/art.js` remain in the source but do not
+draw the current rainforest or its characters.
 
 No source code, generated shader code, artwork, or presets from
 `shader-effects-inc/shaders` are included. No shaders.com premium content is

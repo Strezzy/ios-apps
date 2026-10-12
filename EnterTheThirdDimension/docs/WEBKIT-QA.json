@@ -1,863 +1,2638 @@
 {
   "game": "Enter the Third Dimension",
-  "status": "passed within tested browser scope",
-  "finishedAt": "2026-10-12T07:06:02.741Z",
-  "method": {
-    "engine": "Playwright WebKit 26.5 for Linux",
-    "host": "exact local game files, unmodified",
-    "input": "real keyboard events plus DOM touch PointerEvents using the shipping handlers",
-    "clock": "Playwright clock drives normal requestAnimationFrame and 120 Hz game simulation",
-    "device": "874 \u00d7 402 viewport, DPR 2, touch/mobile browser context, simulated landscape safe insets 62/62/21 px",
-    "limitations": [
-      "Not a physical iPhone, iOS Simulator, or WKWebView runtime.",
-      "Synthetic touch checks do not measure device latency or hardware gesture recognition.",
-      "Software graphics configuration; WebKit masked renderer string is not evidence of Apple hardware."
-    ]
+  "version": "2.1 (3)",
+  "chapter": "The Folded Forest",
+  "reportCreatedAt": "2026-10-12T08:23:37.447Z",
+  "completed": true,
+  "sourceFiles": "Resources/Game",
+  "sourceHashes": {
+    "index.html": "09a120821ae1d9d1ee1429eb76c2c1f9cd64bd31c10af66005362689ce420abe",
+    "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+    "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b",
+    "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+    "rainforest.js": "f82dbe87a7b686c0d3ae08b0e9df3c2e47368311c430fcad7b42da7a51c3adbf",
+    "water.js": "81215465ebda50cb2f22d2f5c06197f623cf63ca7cf69586cc915c2ecdeab1d6",
+    "render.js": "9ad4e118376bcd1e2319c50147eba8612030a65c270ebcb054f2dbf952ee9f33",
+    "game.js": "72298b2067ad3e1e021f4ee8280fe689072b9e524544b6c7d47ad54cd3a5bdac"
   },
   "summary": {
-    "passedAssertions": 61,
-    "resolvedHarnessAssertions": 1,
-    "unresolvedFailures": [],
-    "chapterResult": {
+    "totalChecks": 99,
+    "passed": 99,
+    "failed": 0,
+    "fullChapter": {
       "mode": "complete",
-      "x": 1830.0937499999523,
+      "x": 1830.060416666618,
       "deaths": 0,
-      "jumps": 3,
-      "dimensionalShifts": 6,
-      "shards": 10,
-      "totalShards": 12
+      "jumps": 4,
+      "shifts": 6,
+      "collected": 10,
+      "formChanges": 3,
+      "unlockedForms": [
+        "girl",
+        "frog",
+        "fox"
+      ]
     },
-    "finalCleanRuntime": {
-      "pageErrors": [],
-      "consoleErrors": [],
-      "externalRequests": [],
-      "requestFailures": []
-    },
-    "graphics": "Actual WebGL1 shader pipeline rendered the game; WebGL1/2 triangle readback verified separately. Real WEBGL_lose_context loss/restoration was exercised in the game."
+    "nativeRuntime": "Not exercised by these browser suites; native Apple SDK build and iOS Simulator checks are reported separately by the build workflow.",
+    "screenshotFreeRuntimeErrors": {
+      "javaScript": 0,
+      "console": 0,
+      "webgl": 0,
+      "failedRequests": 0,
+      "externalRequests": 0
+    }
   },
-  "checks": [
-    {
-      "suite": "Full chapter",
-      "name": "Exact bundle starts and native ready API follows rendered frames",
-      "status": "passed",
-      "detail": {
-        "mode": "title",
-        "ready": true,
-        "frames": 10,
-        "errors": []
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Start creates a grounded 2D player with locked prism power",
-      "status": "passed",
-      "detail": {
-        "x": 72,
-        "y": 0,
-        "z": 0,
-        "depth": 0.6
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Simultaneous touch movement and jump operate independently",
-      "status": "passed",
-      "detail": {
-        "x": 1,
-        "z": 0,
-        "jumpHeld": true,
-        "touches": 2
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Jump cancellation retains movement finger",
-      "status": "passed",
-      "detail": {
-        "x": 1,
-        "z": 0,
-        "jumpHeld": false,
-        "touches": 1
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Movement cancellation releases all input and returns to ground",
-      "status": "passed",
-      "detail": {
-        "x": 0,
-        "z": 0,
-        "jumpHeld": false,
-        "touches": 0
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Prism unlocks dimensional power through route pickup",
-      "status": "passed",
-      "detail": {
-        "x": 286.55208333333303,
-        "hasPrism": true
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "2D paper wall physically blocks forward movement",
-      "status": "passed",
-      "detail": {
-        "x": 354,
-        "z": 0
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Dimension transition rotates camera and extrudes hero while keeping NPCs flat",
-      "status": "passed",
-      "detail": {
-        "blend": 0.1507715735275271,
-        "depth": 1.8664812176312275,
-        "camera": {
-          "x": 433.16635150942994,
-          "z": 0,
-          "yaw": 0.10855553293981951,
-          "elevation": 0.07387807102848827
-        },
-        "npcDepths": [
-          0.6,
-          0.6,
-          0.6
-        ]
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Transition clears held touches and ignores new movement/jump touches",
-      "status": "passed",
-      "detail": {
-        "x": 0,
-        "z": 0,
-        "jumpHeld": false,
-        "touches": 0
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Native interruption freezes a mid-shift transition and all input",
-      "status": "passed",
-      "detail": {
-        "blend": 0.1507715735275271,
-        "elapsed": 3.9666666666666552,
-        "input": {
-          "x": 0,
-          "z": 0,
-          "jumpHeld": false,
-          "touches": 0
-        }
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Resume completes interrupted transition without retained input",
-      "status": "passed",
-      "detail": {
-        "dimension": 3,
-        "blend": 1,
-        "depth": 9
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Actual depth movement bypasses the flat wall",
-      "status": "passed",
-      "detail": {
-        "x": 376.6708333333335,
-        "z": 40.27083333333335,
-        "y": 0
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Folding through the projected paper wall is rejected",
-      "status": "passed",
-      "detail": {
-        "safe": false,
-        "reason": "Step clear of the paper wall before folding back."
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Rejected fold leaves player and dimension stable",
-      "status": "passed",
-      "detail": {
-        "dimension": 3,
-        "x": 376.6708333333335,
-        "z": 40.27083333333335,
-        "shifts": 1
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Unfolded touch stick moves genuine world Z",
-      "status": "passed",
-      "detail": {
-        "input": {
-          "x": 0,
-          "z": 0.6666666666666669,
-          "jumpHeld": false,
-          "touches": 1
-        },
-        "z": 45.59583333333335
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Lost pointer capture clears analog depth input",
-      "status": "passed",
-      "detail": {
-        "x": 0,
-        "z": 0,
-        "jumpHeld": false,
-        "touches": 0
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Fold becomes safe past the wall",
-      "status": "passed",
-      "detail": {
-        "x": 425.7416666666676,
-        "z": 47.66250000000002
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Safe fold projects smoothly back onto supported 2D ground",
-      "status": "passed",
-      "detail": {
-        "x": 425.7416666666676,
-        "y": 0,
-        "z": 0
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "First route checkpoint saves after clearing the wall",
-      "status": "passed",
-      "detail": {
-        "checkpointIndex": 0,
-        "checkpoint": {
-          "x": 492,
-          "y": 0,
-          "z": 0
-        }
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Depth route reaches hidden bridge and collects its spark",
-      "status": "passed",
-      "detail": {
-        "x": 846.1833333333423,
-        "y": 0,
-        "z": -64.47083333333337,
-        "hasSpark": true
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Fold over the absent 2D road is rejected",
-      "status": "passed",
-      "detail": {
-        "safe": false,
-        "reason": "Return to the main path before folding back."
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Unsafe bridge fold cannot strand the player",
-      "status": "passed",
-      "detail": {
-        "dimension": 3,
-        "grounded": true
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Far bank supplies safe fold support",
-      "status": "passed",
-      "detail": {
-        "x": 1053.6541666666772,
-        "z": -64.47083333333337,
-        "foldSafety": {
-          "safe": true,
-          "reason": ""
-        }
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Far bank checkpoint and spark survive returning to 2D",
-      "status": "passed",
-      "detail": {
-        "checkpointIndex": 1,
-        "hasSpark": true
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Held jump lands above the rising stairs",
-      "status": "passed",
-      "detail": {
-        "x": 1200,
-        "y": 21,
-        "jumps": 2
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Spark lights the beacon and unlocks the paper gate",
-      "status": "passed",
-      "detail": {
-        "beaconLit": true,
-        "hasSpark": false,
-        "gateOpen": 0.242833333333333
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Pause freezes position/time and reduced effects switch is functional",
-      "status": "passed",
-      "detail": {
-        "reduced": true,
-        "elapsed": 19.974999999999508
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Reduced-effects transition completes in the shorter interval",
-      "status": "passed",
-      "detail": {
-        "blend": 1,
-        "transitioning": false
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Real WebGL loss pauses game and shows recovery UI",
-      "status": "passed",
-      "detail": {
-        "mode": "paused",
-        "ready": false,
-        "contextLost": true
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Resume is held while the graphics context is unavailable",
-      "status": "passed",
-      "detail": "paused"
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Renderer rebuilds its resources and draws after actual context restore",
-      "status": "passed",
-      "detail": {
-        "ready": true,
-        "renderer": {
-          "api": "webgl1",
-          "contextLost": false,
-          "frames": 1460,
-          "restorations": 1,
-          "errors": [],
-          "pixelResolution": [
-            609,
-            280
-          ],
-          "canvasResolution": [
-            1311,
-            603
-          ],
-          "staticTriangles": 22632,
-          "dynamicTriangles": 3048,
-          "postEffects": [
-            "original GLSL ripple",
-            "chromatic separation",
-            "pixel glow"
-          ],
-          "camera": "orthographic XYZ",
-          "heroDepth": [
-            0.6,
-            9
-          ],
-          "npcDepth": 0.6
-        },
-        "errors": []
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Context recovery retains progress and waits paused for the player",
-      "status": "passed",
-      "detail": {
-        "mode": "paused",
-        "x": 1521.2520833333092,
-        "beaconLit": true
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Full chapter is completable by actual movement and jumps",
-      "status": "passed",
-      "detail": {
-        "mode": "complete",
-        "x": 1830.0937499999523,
-        "deaths": 0,
-        "jumps": 3,
-        "shifts": 6,
-        "collected": 10
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "Completion card and buttons fit landscape safe area",
-      "status": "passed",
-      "detail": {
-        "completeOverlay": {
-          "x": 0,
-          "y": 0,
-          "width": 874,
-          "height": 402,
-          "bottom": 402,
-          "right": 874
-        },
-        "replay": {
-          "x": 279,
-          "y": 270.578125,
-          "width": 316,
-          "height": 45,
-          "bottom": 315.578125,
-          "right": 595
-        },
-        "home": {
-          "x": 383.96875,
-          "y": 315.578125,
-          "width": 106.046875,
-          "height": 37,
-          "bottom": 352.578125,
-          "right": 490.015625
-        },
-        "results": {
-          "x": 279,
-          "y": 230.78125,
-          "width": 316,
-          "height": 19.796875,
-          "bottom": 250.578125,
-          "right": 595
-        },
-        "card": {
-          "x": 252,
-          "y": 30.40625,
-          "width": 370,
-          "height": 341.171875,
-          "bottom": 371.578125
-        }
-      }
-    },
-    {
-      "suite": "Full chapter",
-      "name": "No graphics, script, network, or source loading errors",
-      "status": "resolved harness artifact",
-      "detail": "Seven CSP warnings match seven screenshots. Screenshot-free final runtime has zero console errors. See harnessArtifacts."
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Updated exact file bundle starts with WebGL and no game errors",
-      "status": "passed",
-      "detail": {
-        "frames": 11,
-        "errors": {
-          "pageErrors": [],
-          "consoleErrors": [
-            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
-            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
-            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
-          ],
-          "externalRequests": [],
-          "requestFailures": []
-        }
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Latest source reaches the broken-road approach in 2D",
-      "status": "passed",
-      "detail": {
-        "x": 680.9416666666729,
-        "z": 0,
-        "dimension": 2,
-        "triangles": 2872
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Bridge reveal adds live geometry only after unfolding",
-      "status": "passed",
-      "detail": {
-        "flatTriangles": 2872,
-        "unfoldedTriangles": 3796
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Reduced-effects setting suppresses its power pulse",
-      "status": "passed",
-      "detail": {
-        "reduced": true,
-        "selectorMatches": true,
-        "pulse": "none"
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Reduced-effects shift suppresses both transition overlay animations",
-      "status": "passed",
-      "detail": {
-        "transitioning": true,
-        "veil": "none",
-        "ring": "none"
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Updated graphics-loss path remains paused with retry hidden while recovering",
-      "status": "passed",
-      "detail": {
-        "contextLost": true,
-        "mode": "paused"
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Updated resources recover and reenable the retry control",
-      "status": "passed",
-      "detail": {
-        "ready": true,
-        "restorations": 1
-      }
-    },
-    {
-      "suite": "Latest renderer and CSS changes",
-      "name": "Updated gameplay has no script, graphics or external source requests",
-      "status": "passed",
-      "detail": {
-        "gameErrors": [],
-        "rendererErrors": [],
-        "observations": {
-          "pageErrors": [],
-          "consoleErrors": [
-            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
-            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy.",
-            "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy."
-          ],
-          "externalRequests": [],
-          "requestFailures": []
-        }
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Final bundle starts and reports ready after multiple rendered frames",
-      "status": "passed",
-      "detail": {
-        "ready": true,
-        "frames": 11
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Paused world stops redrawing and retains frozen simulation/input",
-      "status": "passed",
-      "detail": {
-        "framesBefore": 31,
-        "framesAfter": 31,
-        "elapsed": 0.2833333333333334,
-        "input": {
-          "x": 0,
-          "z": 0,
-          "jumpHeld": false,
-          "touches": 0
-        }
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Effects change redraws paused world once",
-      "status": "passed",
-      "detail": {
-        "framesBefore": 31,
-        "framesAfter": 32,
-        "reduced": true
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Real context loss remains paused and reports not ready",
-      "status": "passed",
-      "detail": {
-        "mode": "paused",
-        "contextLost": true,
-        "ready": false
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Restoration redraws paused world and retains progress",
-      "status": "passed",
-      "detail": {
-        "framesBefore": 32,
-        "framesAfter": 33,
-        "restorations": 1,
-        "x": 82.07083333333333
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Resume resumes rendering without latched movement",
-      "status": "passed",
-      "detail": {
-        "frames": 44,
-        "input": {
-          "x": 0,
-          "z": 0,
-          "jumpHeld": false,
-          "touches": 0
-        },
-        "x": 82.07083333333333
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Screenshot-free runtime has zero console/JS/GL/network errors",
-      "status": "passed",
-      "detail": {
-        "glError": 0,
-        "gameErrors": [],
-        "rendererErrors": [],
-        "pageErrors": [],
-        "consoleErrors": [],
-        "externalRequests": [],
-        "requestFailures": []
-      }
-    },
-    {
-      "suite": "Final runtime and paused redraw changes",
-      "name": "Final source files remained stable during verification",
-      "status": "passed",
-      "detail": {
-        "index.html": "6d7d39e62a3104275e978c76e189c3ab99a3ce3ce45132f0c64a4ae1bc34ea53",
-        "style.css": "1fd2d1d9d53c1acb2dc70b7707e8e3144eacc42ec8426a4d20843db3620988d9",
-        "world.js": "30b810d82adf956ee0a0191cc65161afcff24458f7946cef310fad209dabdff0",
-        "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
-        "render.js": "71d210775cadadf1ef2d614bdb851562cba746ed8005160570066305cf907d98",
-        "game.js": "3de628a7118b8e1ae81dc37e6a1fdcc6fef936439c1066e8e6a28d8f7068c82a"
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Cached renderer starts and reports ready after rendered frames",
-      "status": "passed",
-      "detail": {
-        "frames": 11,
-        "ready": true,
-        "renderer": {
-          "api": "webgl1",
-          "contextLost": false,
-          "frames": 11,
-          "restorations": 0,
-          "errors": [],
-          "pixelResolution": [
-            609,
-            280
-          ],
-          "canvasResolution": [
-            1311,
-            603
-          ],
-          "staticTriangles": 22632,
-          "dynamicTriangles": 3820,
-          "postEffects": [
-            "original GLSL ripple",
-            "chromatic separation",
-            "pixel glow"
-          ],
-          "camera": "orthographic XYZ",
-          "heroDepth": [
-            0.6,
-            9
-          ],
-          "npcDepth": 0.6
-        }
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Native errors getter is read-only and initially empty",
-      "status": "passed",
-      "detail": {
-        "frozen": true,
-        "errors": [],
-        "getter": true,
-        "setter": false
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Normal movement reaches prism and unlocks dimensional power",
-      "status": "passed",
-      "detail": {
-        "x": 294.8708333333331,
-        "hasPrism": true,
-        "dimension": 2
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Cached hero renders during an intermediate dimensional transition",
-      "status": "passed",
-      "detail": {
-        "blend": 0.1507715735275271,
-        "depth": 1.8664812176312275,
-        "frames": 143
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Native pause freezes transition and rendering without retained input",
-      "status": "passed",
-      "detail": {
-        "mode": "paused",
-        "blend": 0.1507715735275271,
-        "frames": 144,
-        "input": {
-          "x": 0,
-          "z": 0,
-          "jumpHeld": false,
-          "touches": 0
-        }
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Resume completes cached hero extrusion into 3D",
-      "status": "passed",
-      "detail": {
-        "dimension": 3,
-        "blend": 1,
-        "depth": 9,
-        "frames": 206
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Real context loss pauses cached renderer and clears ready",
-      "status": "passed",
-      "detail": {
-        "mode": "paused",
-        "contextLost": true,
-        "ready": false
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Context restoration draws cached 3D mesh and retains state",
-      "status": "passed",
-      "detail": {
-        "framesBefore": 206,
-        "framesAfter": 207,
-        "restorations": 1,
-        "x": 294.8708333333331,
-        "dimension": 3,
-        "depth": 9
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Recovered game resumes normal rendering",
-      "status": "passed",
-      "detail": {
-        "mode": "playing",
-        "frames": 217
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Final optimized bundle has zero runtime, graphics, and request errors",
-      "status": "passed",
-      "detail": {
-        "glError": 0,
-        "nativeGetterErrors": [],
-        "gameErrors": [],
-        "rendererErrors": [],
-        "pageErrors": [],
-        "consoleErrors": [],
-        "externalRequests": [],
-        "requestFailures": []
-      }
-    },
-    {
-      "suite": "Final cached renderer smoke",
-      "name": "Final optimized source remains unchanged throughout smoke",
-      "status": "passed",
-      "detail": {
-        "index.html": "6d7d39e62a3104275e978c76e189c3ab99a3ce3ce45132f0c64a4ae1bc34ea53",
-        "style.css": "1fd2d1d9d53c1acb2dc70b7707e8e3144eacc42ec8426a4d20843db3620988d9",
-        "world.js": "30b810d82adf956ee0a0191cc65161afcff24458f7946cef310fad209dabdff0",
-        "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
-        "render.js": "635f0644dff6886f32992d7bda06793144388acca7a557cf02ed0c1728f789b2",
-        "game.js": "77eba0d0346d8629cf3c6ca349df72c4dcbc606a3f14562228e4e59b37a05cec"
-      }
-    }
-  ],
-  "harnessArtifacts": [
-    {
-      "name": "Screenshot CSP warning",
-      "evidence": "Playwright 1.62.1 coreBundle.js inPagePrepareForScreenshots temporarily appends <style>body {}</style> when WebKit shouldToggleStyleSheetToSyncAnimations is true. Strict shipped style-src correctly rejects this. Exactly one warning appeared per screenshot, zero before screenshots. Setting caret: initial did not remove this animation-sync injection. Screenshot-free final runtime reports zero console/JS/GL/request errors.",
-      "resolution": "Kept raw warnings in original reports. No CSP weakening or game code change was made for the harness."
-    },
-    {
-      "name": "First paused-clock title capture black",
-      "evidence": "Initial full-title.png captured before compositor presentation under a paused Playwright clock. Real-time fresh session waited for multiple rendered frames and produced visual-title-real-clock.png with full world scene.",
-      "resolution": "Use the real-time image for title visual QA."
-    },
-    {
-      "name": "Discarded mixed-clock route attempt",
-      "evidence": "visual-followup.cjs installed fake clock after requestAnimationFrame was already registered in real time, so that attempted route did not advance.",
-      "resolution": "Only its real-time title and genuine start tap are used as evidence. All route evidence is from full-game-qa.cjs and delta-checks.cjs, which install their clock before navigation."
-    }
-  ],
+  "environment": {
+    "engine": "Playwright WebKit 26.5 for Linux",
+    "source": "Exact local shipping game files",
+    "input": "Shipping keyboard and DOM touch handlers; no game state mutation",
+    "clock": "Playwright clock drives normal requestAnimationFrame and fixed 120 Hz simulation",
+    "viewport": "874 × 402, DPR 2, touch/mobile browser context, simulated safe insets 62/62/21",
+    "limitations": [
+      "Not physical iPhone hardware or native WKWebView.",
+      "Does not measure hardware touch latency, battery usage, or device frame rate."
+    ]
+  },
   "limitations": [
-    "Not a physical iPhone, iOS Simulator, or WKWebView runtime.",
-    "Synthetic touch checks do not measure device latency or hardware gesture recognition.",
-    "Software graphics configuration; WebKit masked renderer string is not evidence of Apple hardware.",
-    "No physical audio/listening test, touch latency measurement, iOS signing/install verification, or performance/battery benchmark was performed by this QA agent.",
-    "All screenshots are internal QA and not intended for publication."
+    "Browser validation used Playwright WebKit 26.5 for Linux with software graphics, not physical iPhone hardware.",
+    "The touch checks dispatch PointerEvents through the shipping handlers; they do not measure physical touch latency or iOS gesture recognition.",
+    "A controlled browser clock drives normal requestAnimationFrame and fixed 120 Hz gameplay. Route elapsed time and screenshot sequence frame rates are not device performance measurements.",
+    "The save-migration suite seeds an authentic prior-version localStorage shape to exercise the update path; installation persistence on physical hardware is a separate check.",
+    "Native signing, installation and WKWebView startup are outside this browser report and must be read from the native build workflow.",
+    "Visual capture is separate from the clean runtime checks. Playwright screenshot preparation can inject an empty inline stylesheet that the shipping CSP rejects; that tooling-only warning is not counted as a game runtime error. No application CSP exception was added."
   ],
-  "source_sha256": {
-    "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
-    "game.js": "77eba0d0346d8629cf3c6ca349df72c4dcbc606a3f14562228e4e59b37a05cec",
-    "index.html": "6d7d39e62a3104275e978c76e189c3ab99a3ce3ce45132f0c64a4ae1bc34ea53",
-    "render.js": "635f0644dff6886f32992d7bda06793144388acca7a557cf02ed0c1728f789b2",
-    "style.css": "1fd2d1d9d53c1acb2dc70b7707e8e3144eacc42ec8426a4d20843db3620988d9",
-    "world.js": "30b810d82adf956ee0a0191cc65161afcff24458f7946cef310fad209dabdff0"
+  "visualEvidence": {
+    "method": "Actual shipping renderer and UI at 874 × 402 CSS pixels, DPR 2, with simulated landscape safe insets 62/62/21.",
+    "directory": "QA capture filenames; selected frames are also copied into the repository preview directory by the release owner.",
+    "screenshots": [
+      {
+        "name": "01-title.png",
+        "description": "Final title, smooth rainforest and translucent heroine"
+      },
+      {
+        "name": "02-leaf.png",
+        "description": "Expressive droplet hanging from its leaf"
+      },
+      {
+        "name": "04-splash.png",
+        "description": "Droplet landing and liquid squash"
+      },
+      {
+        "name": "05b-contact.png",
+        "description": "Luma physically touches the droplet during the origin"
+      },
+      {
+        "name": "08-becoming.png",
+        "description": "Intermediate liquid-to-human morph"
+      },
+      {
+        "name": "09-first-steps.png",
+        "description": "Newly formed water girl"
+      },
+      {
+        "name": "14-float.png",
+        "description": "Dimension power begins by floating with the world still flat"
+      },
+      {
+        "name": "15-converged-drop.png",
+        "description": "Heroine gathered into a droplet"
+      },
+      {
+        "name": "16-unfolding.png",
+        "description": "Camera and world reveal actual depth during the morph"
+      },
+      {
+        "name": "18-full-3d.png",
+        "description": "Fully dimensional heroine with the relocated hint above her"
+      },
+      {
+        "name": "18-full-3d-detail.png",
+        "description": "Detailed reflective, translucent water heroine"
+      },
+      {
+        "name": "23-girl-2d.png",
+        "description": "Girl form on the normal platforming plane"
+      },
+      {
+        "name": "24-girl-3d.png",
+        "description": "Girl form with world depth"
+      },
+      {
+        "name": "25-frog-3d.png",
+        "description": "Copied water frog in the dimensional forest"
+      },
+      {
+        "name": "25-frog-3d-detail.png",
+        "description": "Reflective water frog detail"
+      },
+      {
+        "name": "26-fox-3d.png",
+        "description": "Copied water fox in the dimensional forest"
+      },
+      {
+        "name": "26-fox-3d-detail.png",
+        "description": "Reflective water fox detail"
+      },
+      {
+        "name": "27-fox-2d.png",
+        "description": "Fox returned safely to the platforming plane"
+      },
+      {
+        "name": "28-girl-returned.png",
+        "description": "Original girl restored after cycling all learned forms"
+      }
+    ],
+    "repositoryScreenshots": {
+      "05b-contact.png": "docs/screenshots/First-Touch.png",
+      "18-full-3d.png": "docs/screenshots/Rainforest-3D.png"
+    },
+    "animationSamples": [
+      "rain-origin.mp4",
+      "rain-dimension-fold.mp4",
+      "rain-dimension-unfold.mp4",
+      "rain-copy-fox.mp4"
+    ],
+    "userInterfaceReview": "The release owner visually reviewed and accepted the final origin contact, full-3D heroine/hint, water frog and water fox frames. Contact is visible, all three water shapes read clearly, and the hint and controls remain unobstructed.",
+    "formCaptureMethod": "The creature screenshots restore the local checkpoint save created by the successful shipping-input full-route test, then use normal Form and Dimension buttons."
   },
-  "visual_inspection": [
-    "Fresh real-time WebKit session shows title over a fully rendered forest, paper wall and hero; genuine Playwright tap starts gameplay.",
-    "Pixel-art hero and sage visible in side view; large separated touch controls fit simulated safe areas.",
-    "Hero is visibly extruded beside the thin paper wall; rotated terrain has genuine depth; unfolded stick and return control readable.",
-    "Latest bridge reveal fix leaves a clear open gap in 2D, with no misleading bridge boards.",
-    "Latest source reveals the bridge in its real depth position. Hero and Pip are not occluded by foreground trees.",
-    "Player stands on the depth bridge after collecting spark; clear warning explains why return to 2D is unsafe.",
-    "Completion text and both buttons fit the landscape viewport. Card bottom371.58px and Return to title bottom352.58px within402px viewport, with21px bottom inset."
-  ],
-  "native_build_evidence": "The GitHub release separately includes BUILD-REPORT.json and Native-Launch.json from its actual macOS/Xcode run."
+  "suites": {
+    "cinematics": {
+      "startedAt": "2026-10-12T08:15:07.072Z",
+      "finishedAt": "2026-10-12T08:18:07.668Z",
+      "total": 38,
+      "passed": 38,
+      "failed": 0,
+      "method": {
+        "engine": "Playwright WebKit 26.5 for Linux",
+        "source": "Exact local shipping game files",
+        "input": "Shipping keyboard and DOM touch handlers; no game state mutation",
+        "clock": "Playwright clock drives normal requestAnimationFrame and fixed 120 Hz simulation",
+        "viewport": "874 × 402, DPR 2, touch/mobile browser context, simulated safe insets 62/62/21",
+        "limitations": [
+          "Not physical iPhone hardware or native WKWebView.",
+          "Does not measure hardware touch latency, battery usage, or device frame rate."
+        ]
+      },
+      "checks": [
+        {
+          "name": "Rain build renders title and exposes ready only after a frame",
+          "pass": true,
+          "detail": {
+            "version": "2.1 (3)",
+            "renderer": {
+              "api": "webgl1",
+              "contextLost": false,
+              "frames": 11,
+              "restorations": 0,
+              "errors": [],
+              "artStyle": "smooth mystical rainforest",
+              "sceneResolution": [
+                1311,
+                603
+              ],
+              "pixelResolution": [
+                1311,
+                603
+              ],
+              "canvasResolution": [
+                1311,
+                603
+              ],
+              "staticTriangles": 229410,
+              "dynamicTriangles": 9674,
+              "postEffects": [
+                "original GLSL ripple",
+                "restrained chromatic separation",
+                "soft luminous bloom",
+                "smooth refractive water pass",
+                "procedural moss and forest haze"
+              ],
+              "camera": "orthographic XYZ",
+              "heroDepth": [
+                0.77,
+                11
+              ],
+              "npcDepth": 0.6,
+              "water": {
+                "initialized": true,
+                "draws": 11,
+                "errors": [],
+                "smooth": true,
+                "material": "original refractive water with Fresnel reflection and pearly specular light",
+                "backgroundSampling": "separate opaque scene texture",
+                "surfaceResolution": [
+                  1311,
+                  603
+                ],
+                "vertices": 4158,
+                "triangles": 8016,
+                "form": 1,
+                "creature": "girl",
+                "worldDepth": 8.186286926269531,
+                "meshBounds": {
+                  "min": [
+                    322.4289855957031,
+                    1.9029523134231567,
+                    35.59151077270508
+                  ],
+                  "max": [
+                    337.7134094238281,
+                    37.15764617919922,
+                    43.77779769897461
+                  ],
+                  "width": 15.284423828125,
+                  "height": 35.25469386577606,
+                  "depth": 8.186286926269531
+                },
+                "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+              }
+            },
+            "errors": []
+          }
+        },
+        {
+          "name": "Entire world and water render above phone CSS resolution without pixel scaling",
+          "pass": true,
+          "detail": {
+            "artStyle": "smooth mystical rainforest",
+            "sceneResolution": [
+              1311,
+              603
+            ],
+            "waterResolution": [
+              1311,
+              603
+            ]
+          }
+        },
+        {
+          "name": "New chapter begins with an active rain origin cinematic",
+          "pass": true,
+          "detail": {
+            "active": true,
+            "stage": "leaf",
+            "elapsed": 0.075,
+            "duration": 12.4,
+            "progress": 0.006048387096774193
+          }
+        },
+        {
+          "name": "Intro has a usable visible skip button",
+          "pass": true,
+          "detail": {
+            "x": 629.53125,
+            "y": 15,
+            "width": 102.46875,
+            "height": 44
+          }
+        },
+        {
+          "name": "Movement and jump inputs cannot move or latch during intro",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Native interruption freezes the intro clock and water pose",
+          "pass": true,
+          "detail": {
+            "cinematic": {
+              "active": true,
+              "stage": "leaf",
+              "elapsed": 0.5416666666666672,
+              "duration": 12.4,
+              "progress": 0.04368279569892477
+            },
+            "water": {
+              "creature": "girl",
+              "form": 0,
+              "lift": 86,
+              "squash": 1.025189871605304,
+              "lean": 0,
+              "wobble": 0.045,
+              "ripple": 0,
+              "look": 1,
+              "intro": true
+            }
+          }
+        },
+        {
+          "name": "Paused intro exposes resume and hides its skip button",
+          "pass": true,
+          "detail": null
+        },
+        {
+          "name": "Resume returns to the unfinished intro without skipping it",
+          "pass": true,
+          "detail": {
+            "active": true,
+            "stage": "leaf",
+            "elapsed": 0.7,
+            "duration": 12.4,
+            "progress": 0.0564516129032258
+          }
+        },
+        {
+          "name": "Natural intro completion yields a grounded human water form in 2D",
+          "pass": true,
+          "detail": {
+            "cinematic": {
+              "active": false,
+              "stage": "complete",
+              "elapsed": 12.4,
+              "duration": 12.4,
+              "progress": 1
+            },
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 1,
+              "lean": 0,
+              "wobble": 0.01699991068766241,
+              "ripple": 0,
+              "look": 1,
+              "intro": false
+            },
+            "player": {
+              "x": 72,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 0,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Origin animation exposes hanging, falling, splashing, observing and forming stages",
+          "pass": true,
+          "detail": [
+            "leaf",
+            "falling",
+            "splash",
+            "watching",
+            "reaching",
+            "melting",
+            "becoming",
+            "firstSteps",
+            "waking"
+          ]
+        },
+        {
+          "name": "Human shape is reached through intermediate morphs rather than a hard replacement",
+          "pass": true,
+          "detail": {
+            "morphSamples": [
+              {
+                "stage": "reaching",
+                "elapsed": 5.708333333333407,
+                "form": 0.17784173283439206
+              },
+              {
+                "stage": "reaching",
+                "elapsed": 5.900000000000083,
+                "form": 0.3362403277196902
+              },
+              {
+                "stage": "reaching",
+                "elapsed": 6.108333333333427,
+                "form": 0.5160999637553664
+              },
+              {
+                "stage": "reaching",
+                "elapsed": 6.300000000000103,
+                "form": 0.6572598998635144
+              },
+              {
+                "stage": "reaching",
+                "elapsed": 6.5083333333334465,
+                "form": 0.7491966106981162
+              },
+              {
+                "stage": "melting",
+                "elapsed": 6.700000000000123,
+                "form": 0.7230696296295431
+              },
+              {
+                "stage": "melting",
+                "elapsed": 6.908333333333466,
+                "form": 0.48026578875151826
+              },
+              {
+                "stage": "melting",
+                "elapsed": 7.100000000000143,
+                "form": 0.19703703703684378
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 7.708333333333506,
+                "form": 0.08889350923108635
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 7.900000000000182,
+                "form": 0.1937827677473785
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 8.108333333333514,
+                "form": 0.33607681755843094
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 8.30000000000017,
+                "form": 0.4807734452706168
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 8.508333333333491,
+                "form": 0.6393635666045336
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 8.700000000000147,
+                "form": 0.7742375967228997
+              },
+              {
+                "stage": "becoming",
+                "elapsed": 8.908333333333468,
+                "form": 0.8951781735039028
+              }
+            ]
+          }
+        },
+        {
+          "name": "Finishing the intro releases clean movement controls",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Completed intro is remembered in local saved progress",
+          "pass": true,
+          "detail": {
+            "version": 2,
+            "introSeen": true,
+            "sound": true,
+            "reduced": false,
+            "progress": {
+              "checkpointIndex": -1,
+              "hasPrism": false,
+              "hasSpark": false,
+              "beaconLit": false,
+              "collected": [],
+              "deaths": 0,
+              "jumps": 0,
+              "shifts": 0,
+              "elapsed": 0,
+              "creature": "girl",
+              "unlockedForms": [
+                "girl"
+              ],
+              "formChanges": 0,
+              "completed": false
+            }
+          }
+        },
+        {
+          "name": "Restart chapter intentionally replays the rain origin",
+          "pass": true,
+          "detail": {
+            "active": true,
+            "stage": "leaf",
+            "elapsed": 0.09166666666666666,
+            "duration": 12.4,
+            "progress": 0.007392473118279569
+          }
+        },
+        {
+          "name": "Skip reaches normal grounded gameplay with a complete water girl",
+          "pass": true,
+          "detail": {
+            "cinematic": {
+              "active": false,
+              "stage": "complete",
+              "elapsed": 12.4,
+              "duration": 12.4,
+              "progress": 1
+            },
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 1,
+              "lean": 0,
+              "wobble": -0.009542190347599941,
+              "ripple": 0,
+              "look": 1,
+              "intro": false
+            },
+            "player": {
+              "x": 72,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 0,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Continue after reload remembers seen intro and resumes gameplay directly",
+          "pass": true,
+          "detail": {
+            "mode": "playing",
+            "cinematic": {
+              "active": false,
+              "stage": "complete",
+              "elapsed": 12.4,
+              "duration": 12.4,
+              "progress": 1
+            }
+          }
+        },
+        {
+          "name": "Water spring diagnostics remain finite through takeoff and landing",
+          "pass": true,
+          "detail": [
+            {
+              "squash": 1.1436413008232411,
+              "squashVelocity": 1.4012354196734647,
+              "lean": 0.008510920908649671,
+              "leanVelocity": 0.25892742076234304,
+              "impact": 0
+            },
+            {
+              "squash": 1.184253480540669,
+              "squashVelocity": -0.20093959444950116,
+              "lean": 0.05162643699591839,
+              "leanVelocity": 0.7088756079388272,
+              "impact": 0
+            },
+            {
+              "squash": 1.126373035553458,
+              "squashVelocity": -0.9363905461985368,
+              "lean": 0.11197993487485164,
+              "leanVelocity": 0.6566199502506997,
+              "impact": 0
+            },
+            {
+              "squash": 1.056414923441926,
+              "squashVelocity": -0.8621052246083188,
+              "lean": 0.14868282960512783,
+              "leanVelocity": 0.3437280252436684,
+              "impact": 0
+            },
+            {
+              "squash": 0.9994448665986535,
+              "squashVelocity": -0.5390430663248157,
+              "lean": 0.1620178932582875,
+              "leanVelocity": 0.030185735645252735,
+              "impact": 0
+            },
+            {
+              "squash": 0.9673566480344881,
+              "squashVelocity": -0.36475493511283474,
+              "lean": 0.14294473851146067,
+              "leanVelocity": -0.5546635055051686,
+              "impact": 0
+            },
+            {
+              "squash": 0.9430079097268802,
+              "squashVelocity": -0.20367801832774046,
+              "lean": 0.07290956404955805,
+              "leanVelocity": -0.9264784461546808,
+              "impact": 0
+            },
+            {
+              "squash": 0.935974538726126,
+              "squashVelocity": -0.0009442605408249791,
+              "lean": 0.0071950440369604254,
+              "leanVelocity": -0.6199885278217652,
+              "impact": 0
+            },
+            {
+              "squash": 0.9395315167197019,
+              "squashVelocity": 0.06914669347281807,
+              "lean": -0.022403905253090724,
+              "leanVelocity": -0.2212439130755107,
+              "impact": 0
+            },
+            {
+              "squash": 0.8392011422342236,
+              "squashVelocity": -0.07016663101981258,
+              "lean": -0.02578941500314837,
+              "leanVelocity": 0.07460838699367152,
+              "impact": 0.8350000000000002
+            },
+            {
+              "squash": 0.8986061373713394,
+              "squashVelocity": 1.1867059533130493,
+              "lean": -0.01568491217362581,
+              "leanVelocity": 0.1602983221707204,
+              "impact": 0.6700000000000004
+            },
+            {
+              "squash": 0.9896972115320147,
+              "squashVelocity": 0.8506610511172858,
+              "lean": -0.0033660305583367895,
+              "leanVelocity": 0.124439574031238,
+              "impact": 0.48666666666666725
+            },
+            {
+              "squash": 1.0254658941250288,
+              "squashVelocity": 0.11177808923424104,
+              "lean": 0.0034737986685506447,
+              "leanVelocity": 0.047332004683290185,
+              "impact": 0.3033333333333341
+            },
+            {
+              "squash": 1.0176993046323202,
+              "squashVelocity": -0.21529932861966714,
+              "lean": 0.004677391593572647,
+              "leanVelocity": -0.004686805170824126,
+              "impact": 0.1383333333333341
+            },
+            {
+              "squash": 0.9988577216398618,
+              "squashVelocity": -0.1933804277547545,
+              "lean": 0.0030131364354691456,
+              "leanVelocity": -0.0272317792122691,
+              "impact": 0
+            },
+            {
+              "squash": 0.9899702730203807,
+              "squashVelocity": -0.05802122135535967,
+              "lean": 0.0010050507192371876,
+              "leanVelocity": -0.024183276960799274,
+              "impact": 0
+            },
+            {
+              "squash": 0.9901171348727718,
+              "squashVelocity": 0.03599908267699785,
+              "lean": -0.0004326531106300617,
+              "leanVelocity": -0.01116080170018763,
+              "impact": 0
+            },
+            {
+              "squash": 0.9938686275845925,
+              "squashVelocity": 0.0424717639700728,
+              "lean": -0.0008190507351521954,
+              "leanVelocity": -0.00013721652549282374,
+              "impact": 0
+            },
+            {
+              "squash": 0.9960211080684614,
+              "squashVelocity": 0.016610467769758913,
+              "lean": -0.0006101769836441193,
+              "leanVelocity": 0.0043524416954938945,
+              "impact": 0
+            },
+            {
+              "squash": 0.9962803664808367,
+              "squashVelocity": -0.005224320037387707,
+              "lean": -0.00021872449859642584,
+              "leanVelocity": 0.0044094785419033925,
+              "impact": 0
+            },
+            {
+              "squash": 0.9956417719367088,
+              "squashVelocity": -0.009252075162699795,
+              "lean": 0.000035772534537815536,
+              "leanVelocity": 0.002472171622966434,
+              "impact": 0
+            },
+            {
+              "squash": 0.9950664947234814,
+              "squashVelocity": -0.004356836585178969,
+              "lean": 0.0001399273634879308,
+              "leanVelocity": 0.00036628922491473506,
+              "impact": 0
+            },
+            {
+              "squash": 0.9949489201829087,
+              "squashVelocity": 0.0005342508822995301,
+              "lean": 0.00011374475745205736,
+              "leanVelocity": -0.0006986244976904398,
+              "impact": 0
+            },
+            {
+              "squash": 0.9950614567833812,
+              "squashVelocity": 0.0018569741816362416,
+              "lean": 0.000052661145031423404,
+              "leanVelocity": -0.0008158756462803568,
+              "impact": 0
+            },
+            {
+              "squash": 0.9951889424508847,
+              "squashVelocity": 0.001077218694689686,
+              "lean": -0.000001639862456379129,
+              "leanVelocity": -0.00048141242028255617,
+              "impact": 0
+            },
+            {
+              "squash": 0.9952267640783304,
+              "squashVelocity": 0.00009785907327429562,
+              "lean": -0.000022725969252656366,
+              "leanVelocity": -0.00013303331149930808,
+              "impact": 0
+            },
+            {
+              "squash": 0.9952089599738597,
+              "squashVelocity": -0.00035681253062384415,
+              "lean": -0.000021900979337967805,
+              "leanVelocity": 0.00009661752431684915,
+              "impact": 0
+            }
+          ]
+        },
+        {
+          "name": "Jump and landing produce a visible squash and lean response",
+          "pass": true,
+          "detail": {
+            "squash": [
+              1.1436413008232411,
+              1.184253480540669,
+              1.126373035553458,
+              1.056414923441926,
+              0.9994448665986535,
+              0.9673566480344881,
+              0.9430079097268802,
+              0.935974538726126,
+              0.9395315167197019,
+              0.8392011422342236,
+              0.8986061373713394,
+              0.9896972115320147,
+              1.0254658941250288,
+              1.0176993046323202,
+              0.9988577216398618,
+              0.9899702730203807,
+              0.9901171348727718,
+              0.9938686275845925,
+              0.9960211080684614,
+              0.9962803664808367,
+              0.9956417719367088,
+              0.9950664947234814,
+              0.9949489201829087,
+              0.9950614567833812,
+              0.9951889424508847,
+              0.9952267640783304,
+              0.9952089599738597
+            ],
+            "lean": [
+              0.008510920908649671,
+              0.05162643699591839,
+              0.11197993487485164,
+              0.14868282960512783,
+              0.1620178932582875,
+              0.14294473851146067,
+              0.07290956404955805,
+              0.0071950440369604254,
+              -0.022403905253090724,
+              -0.02578941500314837,
+              -0.01568491217362581,
+              -0.0033660305583367895,
+              0.0034737986685506447,
+              0.004677391593572647,
+              0.0030131364354691456,
+              0.0010050507192371876,
+              -0.0004326531106300617,
+              -0.0008190507351521954,
+              -0.0006101769836441193,
+              -0.00021872449859642584,
+              0.000035772534537815536,
+              0.0001399273634879308,
+              0.00011374475745205736,
+              0.000052661145031423404,
+              -0.000001639862456379129,
+              -0.000022725969252656366,
+              -0.000021900979337967805
+            ]
+          }
+        },
+        {
+          "name": "Jelly spring settles without changing the solid grounded collider",
+          "pass": true,
+          "detail": {
+            "jelly": {
+              "squash": 0.9951800772600988,
+              "squashVelocity": -1.849767552652888e-8,
+              "lean": 3.6683104074777308e-9,
+              "leanVelocity": 1.7408728788410975e-8,
+              "impact": 0
+            },
+            "player": {
+              "x": 120.88124999999982,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 0.5431250000000004,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Prism pickup still unlocks the rain creature dimension power",
+          "pass": true,
+          "detail": {
+            "x": 286.55208333333303,
+            "hasPrism": true
+          }
+        },
+        {
+          "name": "2D paper collision still blocks the new smooth girl",
+          "pass": true,
+          "detail": {
+            "player": {
+              "x": 354,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 3.1947067901234556,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Dimensional power starts by floating while the camera holds the flat world",
+          "pass": true,
+          "detail": {
+            "phase": "rising",
+            "progress": 0.08653846153846152,
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 8.792262886891214,
+              "squash": 1.0241237751078573,
+              "lean": 0,
+              "wobble": 0.029538505422181435,
+              "ripple": 0.2685318674743767,
+              "look": 1,
+              "intro": false
+            },
+            "camera": {
+              "x": 433.26037787853437,
+              "z": 0,
+              "height": 248,
+              "y": 45,
+              "yaw": 0,
+              "elevation": 0
+            }
+          }
+        },
+        {
+          "name": "Dimension cinematic ignores new movement and jump inputs",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Native pause freezes the morph and delayed camera together",
+          "pass": true,
+          "detail": {
+            "mode": "paused",
+            "dimension": 3,
+            "dimensionBlend": 0,
+            "transitioning": true,
+            "transitionProgress": 0.15064102564102577,
+            "transitionDuration": 2.6,
+            "transitionPhase": "rising",
+            "cinematic": {
+              "active": false,
+              "stage": "complete",
+              "elapsed": 12.4,
+              "duration": 12.4,
+              "progress": 1
+            },
+            "water": {
+              "creature": "girl",
+              "form": 0.9137002489108398,
+              "lift": 18.64148647039736,
+              "squash": 1.01220373983059,
+              "lean": 0,
+              "wobble": 0.050136231618064166,
+              "ripple": 0.4557839238005833,
+              "look": 1,
+              "intro": false
+            },
+            "jelly": {
+              "squash": 1,
+              "squashVelocity": 0,
+              "lean": 0,
+              "leanVelocity": 0,
+              "impact": 0
+            },
+            "player": {
+              "x": 354,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 3.1947067901234556,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            },
+            "input": {
+              "x": 0,
+              "z": 0,
+              "jumpHeld": false,
+              "touches": 0
+            },
+            "camera": {
+              "x": 433.65640187181464,
+              "z": 0,
+              "height": 248,
+              "y": 45,
+              "yaw": 0,
+              "elevation": 0
+            },
+            "elapsed": 6.958333333333469
+          }
+        },
+        {
+          "name": "Full unfold settles as a three dimensional water girl and restores controls",
+          "pass": true,
+          "detail": {
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 0.9911429614113303,
+              "lean": 0,
+              "wobble": -0.024987964996760346,
+              "ripple": 0.4316666666666667,
+              "look": 1,
+              "intro": false
+            },
+            "player": {
+              "x": 354,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 3.1947067901234556,
+              "width": 16,
+              "height": 32,
+              "depth": 9
+            },
+            "renderer": {
+              "api": "webgl1",
+              "contextLost": false,
+              "frames": 578,
+              "restorations": 0,
+              "errors": [],
+              "artStyle": "smooth mystical rainforest",
+              "sceneResolution": [
+                1311,
+                603
+              ],
+              "pixelResolution": [
+                1311,
+                603
+              ],
+              "canvasResolution": [
+                1311,
+                603
+              ],
+              "staticTriangles": 229410,
+              "dynamicTriangles": 9882,
+              "postEffects": [
+                "original GLSL ripple",
+                "restrained chromatic separation",
+                "soft luminous bloom",
+                "smooth refractive water pass",
+                "procedural moss and forest haze"
+              ],
+              "camera": "orthographic XYZ",
+              "heroDepth": [
+                0.77,
+                11
+              ],
+              "npcDepth": 0.6,
+              "water": {
+                "initialized": true,
+                "draws": 578,
+                "errors": [],
+                "smooth": true,
+                "material": "original refractive water with Fresnel reflection and pearly specular light",
+                "backgroundSampling": "separate opaque scene texture",
+                "surfaceResolution": [
+                  1311,
+                  603
+                ],
+                "vertices": 4158,
+                "triangles": 8016,
+                "form": 1,
+                "creature": "girl",
+                "worldDepth": 11.014439582824707,
+                "meshBounds": {
+                  "min": [
+                    345.99786376953125,
+                    -0.5200379490852356,
+                    -5.930724143981934
+                  ],
+                  "max": [
+                    361.5768737792969,
+                    34.05166244506836,
+                    5.083715438842773
+                  ],
+                  "width": 15.579010009765625,
+                  "height": 34.571700394153595,
+                  "depth": 11.014439582824707
+                },
+                "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+              }
+            }
+          }
+        },
+        {
+          "name": "Transformation hint sits above the settled heroine",
+          "pass": true,
+          "detail": {
+            "hint": {
+              "x": 257,
+              "y": 81.67938995361328,
+              "width": 359.984375,
+              "height": 39.046875
+            },
+            "heroTop": 180.468841834149,
+            "playerScreen": {
+              "x": 353.04836173634976,
+              "y": 206.98967516748235
+            }
+          }
+        },
+        {
+          "name": "Full unfold converges to a drop before reforming",
+          "pass": true,
+          "detail": [
+            {
+              "p": 0.15064102564102577,
+              "form": 0.9137002489108398,
+              "blend": 0,
+              "lift": 18.64148647039736
+            },
+            {
+              "p": 0.1730769230769233,
+              "form": 0.8312088791235324,
+              "blend": 0,
+              "lift": 20.911327947200746
+            },
+            {
+              "p": 0.20512820512820534,
+              "form": 0.6829497055918976,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.2339743589743591,
+              "form": 0.5322602871014704,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.266025641025641,
+              "form": 0.3621829773133399,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.29807692307692296,
+              "form": 0.20672068702716873,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.3269230769230767,
+              "form": 0.09417646943685543,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.35897435897435864,
+              "form": 0.01606938951462611,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.3878205128205124,
+              "form": 0.03343340223003562,
+              "blend": 0,
+              "lift": 22
+            },
+            {
+              "p": 0.4198717948717943,
+              "form": 0.16172993244045697,
+              "blend": 0.004111971708887289,
+              "lift": 22
+            },
+            {
+              "p": 0.45192307692307626,
+              "form": 0.2567343816904327,
+              "blend": 0.026912683376481304,
+              "lift": 22
+            },
+            {
+              "p": 0.48076923076923,
+              "form": 0.29739748938702165,
+              "blend": 0.06259401882463464,
+              "lift": 22
+            },
+            {
+              "p": 0.5128205128205119,
+              "form": 0.28421117903936544,
+              "blend": 0.11664796912838946,
+              "lift": 22
+            },
+            {
+              "p": 0.5416666666666656,
+              "form": 0.22198540931486815,
+              "blend": 0.17614590617807804,
+              "lift": 22
+            },
+            {
+              "p": 0.5737179487179476,
+              "form": 0.10996740157126948,
+              "blend": 0.251872399182417,
+              "lift": 22
+            },
+            {
+              "p": 0.6057692307692295,
+              "form": 0.0014552510260913577,
+              "blend": 0.3351572916395325,
+              "lift": 22
+            },
+            {
+              "p": 0.6346153846153832,
+              "form": 0.048455926057977994,
+              "blend": 0.41438265126096796,
+              "lift": 22
+            },
+            {
+              "p": 0.6666666666666652,
+              "form": 0.16352264872974287,
+              "blend": 0.5047169189380502,
+              "lift": 22
+            },
+            {
+              "p": 0.6955128205128189,
+              "form": 0.3057029885256599,
+              "blend": 0.585975403086446,
+              "lift": 22
+            },
+            {
+              "p": 0.7275641025641009,
+              "form": 0.48594839026308284,
+              "blend": 0.6737783500479183,
+              "lift": 22
+            },
+            {
+              "p": 0.7596153846153828,
+              "form": 0.6679022763796854,
+              "blend": 0.7564008209799598,
+              "lift": 22
+            },
+            {
+              "p": 0.7884615384615367,
+              "form": 0.8145417604052616,
+              "blend": 0.8241382626915412,
+              "lift": 22
+            },
+            {
+              "p": 0.8205128205128186,
+              "form": 0.9378092080970883,
+              "blend": 0.8896062454273551,
+              "lift": 21.353192063251353
+            },
+            {
+              "p": 0.8493589743589723,
+              "form": 0.9951120439354275,
+              "blend": 0.9375933345913221,
+              "lift": 18.641486470397595
+            },
+            {
+              "p": 0.8814102564102543,
+              "form": 1,
+              "blend": 0.9763261331953317,
+              "lift": 14.031974499106868
+            },
+            {
+              "p": 0.9134615384615362,
+              "form": 1,
+              "blend": 0.9971395802877031,
+              "lift": 8.792262886891583
+            },
+            {
+              "p": 0.94230769230769,
+              "form": 1,
+              "blend": 1,
+              "lift": 4.435736231224718
+            },
+            {
+              "p": 0.9743589743589719,
+              "form": 1,
+              "blend": 1,
+              "lift": 0.9920935956440753
+            }
+          ]
+        },
+        {
+          "name": "Camera unfolds after initial morph and reaches intermediate real depth",
+          "pass": true,
+          "detail": [
+            {
+              "p": 0.4198717948717943,
+              "blend": 0.004111971708887289
+            },
+            {
+              "p": 0.45192307692307626,
+              "blend": 0.026912683376481304
+            },
+            {
+              "p": 0.48076923076923,
+              "blend": 0.06259401882463464
+            },
+            {
+              "p": 0.5128205128205119,
+              "blend": 0.11664796912838946
+            },
+            {
+              "p": 0.5416666666666656,
+              "blend": 0.17614590617807804
+            },
+            {
+              "p": 0.5737179487179476,
+              "blend": 0.251872399182417
+            },
+            {
+              "p": 0.6057692307692295,
+              "blend": 0.3351572916395325
+            },
+            {
+              "p": 0.6346153846153832,
+              "blend": 0.41438265126096796
+            },
+            {
+              "p": 0.6666666666666652,
+              "blend": 0.5047169189380502
+            },
+            {
+              "p": 0.6955128205128189,
+              "blend": 0.585975403086446
+            },
+            {
+              "p": 0.7275641025641009,
+              "blend": 0.6737783500479183
+            },
+            {
+              "p": 0.7596153846153828,
+              "blend": 0.7564008209799598
+            },
+            {
+              "p": 0.7884615384615367,
+              "blend": 0.8241382626915412
+            },
+            {
+              "p": 0.8205128205128186,
+              "blend": 0.8896062454273551
+            },
+            {
+              "p": 0.8493589743589723,
+              "blend": 0.9375933345913221
+            },
+            {
+              "p": 0.8814102564102543,
+              "blend": 0.9763261331953317
+            },
+            {
+              "p": 0.9134615384615362,
+              "blend": 0.9971395802877031
+            }
+          ]
+        },
+        {
+          "name": "Paper people remain flat while heroine gains volume",
+          "pass": true,
+          "detail": {
+            "playerDepth": 9,
+            "npcDepths": [
+              0.6,
+              0.6,
+              0.6,
+              0.6
+            ]
+          }
+        },
+        {
+          "name": "Actual world depth lets the water girl walk around the paper wall",
+          "pass": true,
+          "detail": {
+            "player": {
+              "x": 373.37083333333345,
+              "y": 0,
+              "z": 41.37083333333335,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 3.8696141975308675,
+              "width": 16,
+              "height": 32,
+              "depth": 9
+            }
+          }
+        },
+        {
+          "name": "Morphing cannot fold through the projected paper wall",
+          "pass": true,
+          "detail": {
+            "safe": false,
+            "reason": "Step clear of the paper wall before folding back."
+          }
+        },
+        {
+          "name": "Rejected fold starts no float or morph",
+          "pass": true,
+          "detail": {
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 1.010532064375302,
+              "lean": -0.0003608736855525252,
+              "wobble": 0.023229366181825972,
+              "ripple": 0,
+              "look": 1,
+              "intro": false
+            },
+            "transitioning": false
+          }
+        },
+        {
+          "name": "Reverse sequence converges to a drop and lands safely on the 2D plane",
+          "pass": true,
+          "detail": {
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 0.9628628101660482,
+              "lean": 0,
+              "wobble": -0.0963612199321131,
+              "ripple": 0.35833333333333345,
+              "look": 1,
+              "intro": false
+            },
+            "player": {
+              "x": 424.64166666666756,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 4.439290123456797,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Reduced-effects choice remains available with the new material",
+          "pass": true,
+          "detail": {
+            "sound": true,
+            "reduced": true
+          }
+        },
+        {
+          "name": "Reduced shift uses the shorter duration and gentler float",
+          "pass": true,
+          "detail": {
+            "duration": 1,
+            "water": {
+              "creature": "girl",
+              "form": 0.877888581946594,
+              "lift": 1.1360613788156904,
+              "squash": 1,
+              "lean": 0,
+              "wobble": 0,
+              "ripple": 0.2840153447039226,
+              "look": 1,
+              "intro": false
+            }
+          }
+        },
+        {
+          "name": "Reduced-effects shift still reaches the complete playable 3D girl",
+          "pass": true,
+          "detail": {
+            "dimension": 3,
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 0.9857573164429724,
+              "lean": 0,
+              "wobble": -0.008341111676706358,
+              "ripple": 0.2300000000000002,
+              "look": 1,
+              "intro": false
+            }
+          }
+        },
+        {
+          "name": "Clean rain gameplay has zero script, console, GL or external request errors",
+          "pass": true,
+          "detail": {
+            "glError": 0,
+            "pageErrors": [],
+            "consoleErrors": [],
+            "externalRequests": [],
+            "requestFailures": [],
+            "rendererErrors": [],
+            "gameErrors": []
+          }
+        },
+        {
+          "name": "Source bundle stayed stable during cinematic validation",
+          "pass": true,
+          "detail": {
+            "index.html": "09a120821ae1d9d1ee1429eb76c2c1f9cd64bd31c10af66005362689ce420abe",
+            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b",
+            "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+            "rainforest.js": "f82dbe87a7b686c0d3ae08b0e9df3c2e47368311c430fcad7b42da7a51c3adbf",
+            "water.js": "81215465ebda50cb2f22d2f5c06197f623cf63ca7cf69586cc915c2ecdeab1d6",
+            "render.js": "9ad4e118376bcd1e2319c50147eba8612030a65c270ebcb054f2dbf952ee9f33",
+            "game.js": "72298b2067ad3e1e021f4ee8280fe689072b9e524544b6c7d47ad54cd3a5bdac"
+          }
+        }
+      ],
+      "observations": {
+        "pageErrors": [],
+        "consoleErrors": [],
+        "externalRequests": [],
+        "requestFailures": []
+      }
+    },
+    "route": {
+      "startedAt": "2026-10-12T08:15:07.198Z",
+      "finishedAt": "2026-10-12T08:19:05.758Z",
+      "total": 54,
+      "passed": 54,
+      "failed": 0,
+      "method": {
+        "engine": "Playwright WebKit 26.5 for Linux",
+        "host": "exact local game files, unmodified",
+        "input": "real keyboard events plus DOM touch PointerEvents using the shipping handlers",
+        "clock": "Playwright clock drives normal requestAnimationFrame and 120 Hz game simulation",
+        "device": "874 × 402 viewport, DPR 2, touch/mobile browser context, simulated landscape safe insets 62/62/21 px",
+        "limitations": [
+          "Not a physical iPhone, iOS Simulator, or WKWebView runtime.",
+          "Synthetic touch checks do not measure device latency or hardware gesture recognition.",
+          "Software graphics configuration; WebKit masked renderer string is not evidence of Apple hardware."
+        ]
+      },
+      "checks": [
+        {
+          "name": "Exact bundle starts and native ready API follows rendered frames",
+          "pass": true,
+          "detail": {
+            "mode": "title",
+            "ready": true,
+            "frames": 10,
+            "errors": []
+          }
+        },
+        {
+          "name": "New route starts with rain origin cinematic",
+          "pass": true,
+          "detail": {
+            "active": true,
+            "stage": "leaf",
+            "elapsed": 0.14166666666666666,
+            "duration": 12.4,
+            "progress": 0.011424731182795697
+          }
+        },
+        {
+          "name": "Start creates a grounded 2D player with locked prism power",
+          "pass": true,
+          "detail": {
+            "x": 72,
+            "y": 0,
+            "z": 0,
+            "depth": 0.6
+          }
+        },
+        {
+          "name": "A new raindrop begins with only its observed girl form",
+          "pass": true,
+          "detail": {
+            "creature": "girl",
+            "unlockedForms": [
+              "girl"
+            ]
+          }
+        },
+        {
+          "name": "Simultaneous touch movement and jump operate independently",
+          "pass": true,
+          "detail": {
+            "x": 1,
+            "z": 0,
+            "jumpHeld": true,
+            "touches": 2
+          }
+        },
+        {
+          "name": "Jump cancellation retains movement finger",
+          "pass": true,
+          "detail": {
+            "x": 1,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 1
+          }
+        },
+        {
+          "name": "Movement cancellation releases all input and returns to ground",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Prism unlocks dimensional power through route pickup",
+          "pass": true,
+          "detail": {
+            "x": 284.352083333333,
+            "hasPrism": true
+          }
+        },
+        {
+          "name": "2D paper wall physically blocks forward movement",
+          "pass": true,
+          "detail": {
+            "x": 354,
+            "z": 0
+          }
+        },
+        {
+          "name": "Dimension transition rotates camera and extrudes hero while keeping NPCs flat",
+          "pass": true,
+          "detail": {
+            "blend": 0.037314102596458475,
+            "depth": 0.9134384618102511,
+            "camera": {
+              "x": 433.98986435583686,
+              "z": 0,
+              "height": 249.49256410385834,
+              "y": 45.14925641038583,
+              "yaw": 0.026866153869450102,
+              "elevation": 0.018283910272264652
+            },
+            "npcDepths": [
+              0.6,
+              0.6,
+              0.6,
+              0.6
+            ]
+          }
+        },
+        {
+          "name": "Transition clears held touches and ignores new movement/jump touches",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Native interruption freezes a mid-shift transition and all input",
+          "pass": true,
+          "detail": {
+            "blend": 0.037314102596458475,
+            "elapsed": 4.9583333333333695,
+            "input": {
+              "x": 0,
+              "z": 0,
+              "jumpHeld": false,
+              "touches": 0
+            }
+          }
+        },
+        {
+          "name": "Resume completes interrupted transition without retained input",
+          "pass": true,
+          "detail": {
+            "dimension": 3,
+            "blend": 1,
+            "depth": 9
+          }
+        },
+        {
+          "name": "Actual depth movement bypasses the flat wall",
+          "pass": true,
+          "detail": {
+            "x": 374.4708333333335,
+            "z": 40.27083333333335,
+            "y": 0
+          }
+        },
+        {
+          "name": "Folding through the projected paper wall is rejected",
+          "pass": true,
+          "detail": {
+            "safe": false,
+            "reason": "Step clear of the paper wall before folding back."
+          }
+        },
+        {
+          "name": "Rejected fold leaves player and dimension stable",
+          "pass": true,
+          "detail": {
+            "dimension": 3,
+            "x": 374.4708333333335,
+            "z": 40.27083333333335,
+            "shifts": 1
+          }
+        },
+        {
+          "name": "Unfolded touch stick moves genuine world Z",
+          "pass": true,
+          "detail": {
+            "input": {
+              "x": 0,
+              "z": 0.6666666666666669,
+              "jumpHeld": false,
+              "touches": 1
+            },
+            "z": 45.59583333333335
+          }
+        },
+        {
+          "name": "Lost pointer capture clears analog depth input",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Fold becomes safe past the wall",
+          "pass": true,
+          "detail": {
+            "x": 425.7416666666676,
+            "z": 47.66250000000002
+          }
+        },
+        {
+          "name": "Safe fold projects smoothly back onto supported 2D ground",
+          "pass": true,
+          "detail": {
+            "x": 425.7416666666676,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "name": "First route checkpoint saves after clearing the wall",
+          "pass": true,
+          "detail": {
+            "checkpointIndex": 0,
+            "checkpoint": {
+              "x": 492,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "name": "Contact with the roadside frog adds its form without changing the player",
+          "pass": true,
+          "detail": {
+            "creature": "girl",
+            "unlockedForms": [
+              "girl",
+              "frog"
+            ]
+          }
+        },
+        {
+          "name": "Depth route reaches hidden bridge and collects its spark",
+          "pass": true,
+          "detail": {
+            "x": 846.1833333333423,
+            "y": 0,
+            "z": -62.27083333333338,
+            "hasSpark": true
+          }
+        },
+        {
+          "name": "Fold over the absent 2D road is rejected",
+          "pass": true,
+          "detail": {
+            "safe": false,
+            "reason": "Return to the main path before folding back."
+          }
+        },
+        {
+          "name": "Unsafe bridge fold cannot strand the player",
+          "pass": true,
+          "detail": {
+            "dimension": 3,
+            "grounded": true
+          }
+        },
+        {
+          "name": "Far bank supplies safe fold support",
+          "pass": true,
+          "detail": {
+            "x": 1053.6541666666772,
+            "z": -62.27083333333338,
+            "foldSafety": {
+              "safe": true,
+              "reason": ""
+            }
+          }
+        },
+        {
+          "name": "Far bank checkpoint and spark survive returning to 2D",
+          "pass": true,
+          "detail": {
+            "checkpointIndex": 1,
+            "hasSpark": true
+          }
+        },
+        {
+          "name": "Held jump lands above the rising stairs",
+          "pass": true,
+          "detail": {
+            "x": 1200,
+            "y": 21,
+            "jumps": 2
+          }
+        },
+        {
+          "name": "Spark lights the beacon and unlocks the paper gate",
+          "pass": true,
+          "detail": {
+            "beaconLit": true,
+            "hasSpark": false,
+            "gateOpen": 0.23766666666666636
+          }
+        },
+        {
+          "name": "Pause freezes position/time and reduced effects switch is functional",
+          "pass": true,
+          "detail": {
+            "reduced": true,
+            "elapsed": 26.89166666666578
+          }
+        },
+        {
+          "name": "Reduced-effects rain transition completes in the shorter interval",
+          "pass": true,
+          "detail": {
+            "blend": 1,
+            "transitioning": false
+          }
+        },
+        {
+          "name": "Real WebGL loss pauses game and shows recovery UI",
+          "pass": true,
+          "detail": {
+            "mode": "paused",
+            "ready": false,
+            "contextLost": true
+          }
+        },
+        {
+          "name": "Resume is held while the graphics context is unavailable",
+          "pass": true,
+          "detail": "paused"
+        },
+        {
+          "name": "Renderer rebuilds its resources and draws after actual context restore",
+          "pass": true,
+          "detail": {
+            "ready": true,
+            "renderer": {
+              "api": "webgl1",
+              "contextLost": false,
+              "frames": 1861,
+              "restorations": 1,
+              "errors": [],
+              "artStyle": "smooth mystical rainforest",
+              "sceneResolution": [
+                1311,
+                603
+              ],
+              "pixelResolution": [
+                1311,
+                603
+              ],
+              "canvasResolution": [
+                1311,
+                603
+              ],
+              "staticTriangles": 229410,
+              "dynamicTriangles": 3956,
+              "postEffects": [
+                "original GLSL ripple",
+                "restrained chromatic separation",
+                "soft luminous bloom",
+                "smooth refractive water pass",
+                "procedural moss and forest haze"
+              ],
+              "camera": "orthographic XYZ",
+              "heroDepth": [
+                0.77,
+                11
+              ],
+              "npcDepth": 0.6,
+              "water": {
+                "initialized": true,
+                "draws": 1,
+                "errors": [],
+                "smooth": true,
+                "material": "original refractive water with Fresnel reflection and pearly specular light",
+                "backgroundSampling": "separate opaque scene texture",
+                "surfaceResolution": [
+                  1311,
+                  603
+                ],
+                "vertices": 4158,
+                "triangles": 8016,
+                "form": 1,
+                "creature": "girl",
+                "worldDepth": 0.7711092233657837,
+                "meshBounds": {
+                  "min": [
+                    1511.4102783203125,
+                    -0.5163661241531372,
+                    -0.4153560698032379
+                  ],
+                  "max": [
+                    1526.83544921875,
+                    34.04155349731445,
+                    0.3557531535625458
+                  ],
+                  "width": 15.4251708984375,
+                  "height": 34.55791962146759,
+                  "depth": 0.7711092233657837
+                },
+                "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+              }
+            },
+            "errors": []
+          }
+        },
+        {
+          "name": "Context recovery retains progress and waits paused for the player",
+          "pass": true,
+          "detail": {
+            "mode": "paused",
+            "x": 1519.0520833333094,
+            "beaconLit": true
+          }
+        },
+        {
+          "name": "Touching the two living animals unlocks frog and fox forms",
+          "pass": true,
+          "detail": {
+            "creature": "girl",
+            "unlockedForms": [
+              "girl",
+              "frog",
+              "fox"
+            ]
+          }
+        },
+        {
+          "name": "Creature morph 0 gathers into water without turning the world",
+          "pass": true,
+          "detail": {
+            "kind": "form",
+            "duration": 0.8,
+            "dimension": 2,
+            "water": {
+              "creature": "girl",
+              "form": 0.0869111626545459,
+              "lift": 3.5276850573934198,
+              "squash": 1,
+              "lean": 0,
+              "wobble": 0,
+              "ripple": 0.8819212643483549,
+              "look": 1,
+              "intro": false
+            }
+          }
+        },
+        {
+          "name": "Creature morph 0 holds movement and jump input",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Creature morph 0 settles safely as its learned form",
+          "pass": true,
+          "detail": {
+            "creature": "frog",
+            "player": {
+              "x": 1774.9229166666228,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 20.21570987654278,
+              "width": 20,
+              "height": 19,
+              "depth": 0.6
+            },
+            "physics": {
+              "speed": 118,
+              "acceleration": 1250,
+              "airAcceleration": 930,
+              "brake": 1600,
+              "gravity": 930,
+              "jump": 408,
+              "release": 150,
+              "maxFall": 510,
+              "coyote": 0.12,
+              "buffer": 0.15,
+              "halfWidth": 10,
+              "height": 19,
+              "halfDepth": 4,
+              "name": "Frog",
+              "hint": "Higher, springier jumps."
+            },
+            "water": {
+              "creature": "frog",
+              "form": 1,
+              "lift": 0,
+              "squash": 0.9938549677120543,
+              "lean": 0,
+              "wobble": -0.0006434566553926777,
+              "ripple": 0,
+              "look": 1,
+              "intro": false
+            },
+            "renderedCreature": "frog",
+            "meshBounds": {
+              "min": [
+                1763.250244140625,
+                -1.2844740152359009,
+                -0.3431471586227417
+              ],
+              "max": [
+                1786.461181640625,
+                16.302387237548828,
+                0.4026716649532318
+              ],
+              "width": 23.2109375,
+              "height": 17.58686125278473,
+              "depth": 0.7458188235759735
+            }
+          }
+        },
+        {
+          "name": "Copied frog form performs a higher real jump",
+          "pass": true,
+          "detail": {
+            "peak": 87.65625,
+            "physics": {
+              "speed": 118,
+              "acceleration": 1250,
+              "airAcceleration": 930,
+              "brake": 1600,
+              "gravity": 930,
+              "jump": 408,
+              "release": 150,
+              "maxFall": 510,
+              "coyote": 0.12,
+              "buffer": 0.15,
+              "halfWidth": 10,
+              "height": 19,
+              "halfDepth": 4,
+              "name": "Frog",
+              "hint": "Higher, springier jumps."
+            },
+            "player": {
+              "x": 1774.9229166666228,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 20.21570987654278,
+              "width": 20,
+              "height": 19,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Creature morph 1 gathers into water without turning the world",
+          "pass": true,
+          "detail": {
+            "kind": "form",
+            "duration": 0.8,
+            "dimension": 2,
+            "water": {
+              "creature": "frog",
+              "form": 0.06600566905921679,
+              "lift": 3.5874909661307535,
+              "squash": 1,
+              "lean": 0,
+              "wobble": 0,
+              "ripple": 0.8968727415326884,
+              "look": 1,
+              "intro": false
+            }
+          }
+        },
+        {
+          "name": "Creature morph 1 holds movement and jump input",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Creature morph 1 settles safely as its learned form",
+          "pass": true,
+          "detail": {
+            "creature": "fox",
+            "player": {
+              "x": 1774.9229166666228,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 20.21570987654278,
+              "width": 22,
+              "height": 23,
+              "depth": 0.6
+            },
+            "physics": {
+              "speed": 168,
+              "acceleration": 1250,
+              "airAcceleration": 930,
+              "brake": 1600,
+              "gravity": 930,
+              "jump": 330,
+              "release": 125,
+              "maxFall": 510,
+              "coyote": 0.12,
+              "buffer": 0.15,
+              "halfWidth": 11,
+              "height": 23,
+              "halfDepth": 4,
+              "name": "Fox",
+              "hint": "A quicker way through the forest."
+            },
+            "water": {
+              "creature": "fox",
+              "form": 1,
+              "lift": 0,
+              "squash": 0.9938549677120543,
+              "lean": 0,
+              "wobble": 0.0003398893799865413,
+              "ripple": 0,
+              "look": 1,
+              "intro": false
+            },
+            "renderedCreature": "fox",
+            "meshBounds": {
+              "min": [
+                1760.4376220703125,
+                -0.2883783280849457,
+                -0.3437461256980896
+              ],
+              "max": [
+                1785.8101806640625,
+                27.941619873046875,
+                0.3847527801990509
+              ],
+              "width": 25.37255859375,
+              "height": 28.22999820113182,
+              "depth": 0.7284989058971405
+            }
+          }
+        },
+        {
+          "name": "Copied fox form reaches its faster real running speed",
+          "pass": true,
+          "detail": {
+            "vx": 168,
+            "height": 23,
+            "physics": {
+              "speed": 168,
+              "acceleration": 1250,
+              "airAcceleration": 930,
+              "brake": 1600,
+              "gravity": 930,
+              "jump": 330,
+              "release": 125,
+              "maxFall": 510,
+              "coyote": 0.12,
+              "buffer": 0.15,
+              "halfWidth": 11,
+              "height": 23,
+              "halfDepth": 4,
+              "name": "Fox",
+              "hint": "A quicker way through the forest."
+            }
+          }
+        },
+        {
+          "name": "Creature morph 2 gathers into water without turning the world",
+          "pass": true,
+          "detail": {
+            "kind": "form",
+            "duration": 0.8,
+            "dimension": 2,
+            "water": {
+              "creature": "fox",
+              "form": 0.04763387881515757,
+              "lift": 3.6434552996847036,
+              "squash": 1,
+              "lean": 0,
+              "wobble": 0,
+              "ripple": 0.9108638249211759,
+              "look": -1,
+              "intro": false
+            }
+          }
+        },
+        {
+          "name": "Creature morph 2 holds movement and jump input",
+          "pass": true,
+          "detail": {
+            "x": 0,
+            "z": 0,
+            "jumpHeld": false,
+            "touches": 0
+          }
+        },
+        {
+          "name": "Creature morph 2 settles safely as its learned form",
+          "pass": true,
+          "detail": {
+            "creature": "girl",
+            "player": {
+              "x": 1769.389583333289,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": -1,
+              "walk": 20.93805555555511,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            },
+            "physics": {
+              "speed": 132,
+              "acceleration": 1250,
+              "airAcceleration": 930,
+              "brake": 1600,
+              "gravity": 930,
+              "jump": 342,
+              "release": 125,
+              "maxFall": 510,
+              "coyote": 0.12,
+              "buffer": 0.15,
+              "halfWidth": 8,
+              "height": 32,
+              "halfDepth": 4,
+              "name": "Girl",
+              "hint": "A shape made for exploring."
+            },
+            "water": {
+              "creature": "girl",
+              "form": 1,
+              "lift": 0,
+              "squash": 0.9959758108759643,
+              "lean": 0,
+              "wobble": -0.000050722334697762825,
+              "ripple": 0,
+              "look": -1,
+              "intro": false
+            },
+            "renderedCreature": "girl",
+            "meshBounds": {
+              "min": [
+                1761.42724609375,
+                -0.5902330875396729,
+                -0.41422465443611145
+              ],
+              "max": [
+                1777.2899169921875,
+                34.15003967285156,
+                0.3548460006713867
+              ],
+              "width": 15.8626708984375,
+              "height": 34.740272760391235,
+              "depth": 0.7690706551074982
+            }
+          }
+        },
+        {
+          "name": "Cycling learned forms returns to the original girl and retains progress",
+          "pass": true,
+          "detail": {
+            "formSequence": [
+              "frog",
+              "fox",
+              "girl"
+            ],
+            "creature": "girl",
+            "beaconLit": true,
+            "player": {
+              "x": 1769.389583333289,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": -1,
+              "walk": 20.93805555555511,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            }
+          }
+        },
+        {
+          "name": "Discovered creature forms are persisted with local chapter progress",
+          "pass": true,
+          "detail": {
+            "checkpointIndex": 2,
+            "hasPrism": true,
+            "hasSpark": false,
+            "beaconLit": true,
+            "collected": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              10,
+              11
+            ],
+            "deaths": 0,
+            "jumps": 4,
+            "shifts": 6,
+            "elapsed": 36.10833333333193,
+            "creature": "girl",
+            "unlockedForms": [
+              "girl",
+              "frog",
+              "fox"
+            ],
+            "formChanges": 3,
+            "completed": false
+          }
+        },
+        {
+          "name": "Full chapter is completable by actual movement and jumps",
+          "pass": true,
+          "detail": {
+            "mode": "complete",
+            "x": 1830.060416666618,
+            "deaths": 0,
+            "jumps": 4,
+            "shifts": 6,
+            "collected": 10
+          }
+        },
+        {
+          "name": "Completion card and buttons fit landscape safe area",
+          "pass": true,
+          "detail": {
+            "completeOverlay": {
+              "x": 0,
+              "y": 0,
+              "width": 874,
+              "height": 402,
+              "bottom": 402,
+              "right": 874
+            },
+            "replay": {
+              "x": 279,
+              "y": 270.578125,
+              "width": 316,
+              "height": 45,
+              "bottom": 315.578125,
+              "right": 595
+            },
+            "home": {
+              "x": 383.96875,
+              "y": 315.578125,
+              "width": 106.046875,
+              "height": 37,
+              "bottom": 352.578125,
+              "right": 490.015625
+            },
+            "results": {
+              "x": 279,
+              "y": 230.78125,
+              "width": 316,
+              "height": 19.796875,
+              "bottom": 250.578125,
+              "right": 595
+            },
+            "card": {
+              "x": 252,
+              "y": 30.40625,
+              "width": 370,
+              "height": 341.171875,
+              "bottom": 371.578125
+            }
+          }
+        },
+        {
+          "name": "No graphics, script, network, or source loading errors",
+          "pass": true,
+          "detail": {
+            "glError": 0,
+            "pageErrors": [],
+            "consoleErrors": [],
+            "externalRequests": [],
+            "requestFailures": []
+          }
+        },
+        {
+          "name": "Water resources survive context restoration and chapter completion",
+          "pass": true,
+          "detail": {
+            "initialized": true,
+            "draws": 498,
+            "errors": [],
+            "smooth": true,
+            "material": "original refractive water with Fresnel reflection and pearly specular light",
+            "backgroundSampling": "separate opaque scene texture",
+            "surfaceResolution": [
+              1311,
+              603
+            ],
+            "vertices": 4158,
+            "triangles": 8016,
+            "form": 1,
+            "creature": "girl",
+            "worldDepth": 0.7684686183929443,
+            "meshBounds": {
+              "min": [
+                1821.98828125,
+                -0.43203648924827576,
+                -0.4138908386230469
+              ],
+              "max": [
+                1837.9317626953125,
+                34.36278533935547,
+                0.35457777976989746
+              ],
+              "width": 15.9434814453125,
+              "height": 34.794821828603745,
+              "depth": 0.7684686183929443
+            },
+            "animation": "connected liquid surface, volume-preserving squash, walking limbs and trailing water hair"
+          }
+        },
+        {
+          "name": "All eight shipping game files remained stable during route validation",
+          "pass": true,
+          "detail": {
+            "index.html": "09a120821ae1d9d1ee1429eb76c2c1f9cd64bd31c10af66005362689ce420abe",
+            "style.css": "927139e7ba4c2163baf41cca8badf37d5369226b0b82dcf2cc2e7e748028f611",
+            "world.js": "a87686e129d27effd7619d6e9cdeb0e1ba2273211eaacaa52078a04ffd0b0a1b",
+            "art.js": "490bc53f8f407049228b8c7b51abb9042b1a71bc2131149b07d71220098f57bb",
+            "rainforest.js": "f82dbe87a7b686c0d3ae08b0e9df3c2e47368311c430fcad7b42da7a51c3adbf",
+            "water.js": "81215465ebda50cb2f22d2f5c06197f623cf63ca7cf69586cc915c2ecdeab1d6",
+            "render.js": "9ad4e118376bcd1e2319c50147eba8612030a65c270ebcb054f2dbf952ee9f33",
+            "game.js": "72298b2067ad3e1e021f4ee8280fe689072b9e524544b6c7d47ad54cd3a5bdac"
+          }
+        }
+      ],
+      "observations": {
+        "pageErrors": [],
+        "consoleErrors": [],
+        "externalRequests": [],
+        "requestFailures": []
+      }
+    },
+    "migration": {
+      "startedAt": null,
+      "finishedAt": "2026-10-12T08:15:27.704Z",
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "method": "Historical localStorage fixture is seeded before reload; subsequent progression uses shipping UI only.",
+      "checks": [
+        {
+          "name": "Prior2.0 save displays continue with its prior sound preference",
+          "pass": true,
+          "detail": {
+            "mode": "title",
+            "settings": {
+              "sound": false,
+              "reduced": false
+            }
+          }
+        },
+        {
+          "name": "First continue after upgrading shows the unseen rain origin",
+          "pass": true,
+          "detail": {
+            "active": true,
+            "stage": "leaf",
+            "elapsed": 0.14166666666666666,
+            "duration": 12.4,
+            "progress": 0.011424731182795697
+          }
+        },
+        {
+          "name": "Existing save origin can pause without consuming or erasing the spark",
+          "pass": true,
+          "detail": {
+            "mode": "paused",
+            "hasSpark": true,
+            "checkpointIndex": 1
+          }
+        },
+        {
+          "name": "Skipping migrated intro restores the existing checkpoint and quest state",
+          "pass": true,
+          "detail": {
+            "player": {
+              "x": 1040,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 0,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            },
+            "checkpoint": {
+              "x": 1040,
+              "y": 0,
+              "z": 0
+            },
+            "hasPrism": true,
+            "hasSpark": true
+          }
+        },
+        {
+          "name": "Migration retains deaths, jumps, shifts and collected shards",
+          "pass": true,
+          "detail": {
+            "deaths": 2,
+            "jumps": 4,
+            "shifts": 3,
+            "collected": [
+              0,
+              1,
+              2,
+              3
+            ]
+          }
+        },
+        {
+          "name": "Second continue remembers intro seen and goes directly to the checkpoint",
+          "pass": true,
+          "detail": {
+            "mode": "playing",
+            "cinematic": {
+              "active": false,
+              "stage": "complete",
+              "elapsed": 12.4,
+              "duration": 12.4,
+              "progress": 1
+            },
+            "player": {
+              "x": 1040,
+              "y": 0,
+              "z": 0,
+              "vx": 0,
+              "vy": 0,
+              "vz": 0,
+              "grounded": true,
+              "facing": 1,
+              "walk": 0,
+              "width": 16,
+              "height": 32,
+              "depth": 0.6
+            },
+            "checkpoint": {
+              "x": 1040,
+              "y": 0,
+              "z": 0
+            }
+          }
+        },
+        {
+          "name": "Save migration introduces no runtime or rendering errors",
+          "pass": true,
+          "detail": {
+            "glError": 0,
+            "pageErrors": [],
+            "consoleErrors": [],
+            "externalRequests": [],
+            "requestFailures": []
+          }
+        }
+      ],
+      "observations": {
+        "pageErrors": [],
+        "consoleErrors": [],
+        "externalRequests": [],
+        "requestFailures": []
+      }
+    }
+  }
 }

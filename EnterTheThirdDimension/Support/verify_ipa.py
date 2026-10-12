@@ -82,7 +82,7 @@ def verify(path, resource_root=None):
         info = plistlib.loads(archive.read(prefix + "Info.plist"))
         for key, expected in {"CFBundleIdentifier": BUNDLE, "CFBundleExecutable": EXECUTABLE,
                               "CFBundleDisplayName": "Enter the Third Dimension",
-                              "CFBundleShortVersionString": "2.0", "CFBundleVersion": "2",
+                              "CFBundleShortVersionString": "2.1", "CFBundleVersion": "3",
                               "MinimumOSVersion": "16.0", "CFBundleSupportedPlatforms": ["iPhoneOS"]}.items():
             require(info.get(key) == expected, f"Unexpected {key}: {info.get(key)!r}")
         landscape = {"UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"}
@@ -101,6 +101,8 @@ def verify(path, resource_root=None):
         source_game = resource_root / "Game"
         files = sorted(p for p in source_game.rglob("*") if p.is_file())
         require(files and (source_game / "index.html").is_file(), "Source game resources are missing")
+        require((source_game / "water.js").is_file(), "The smooth raindrop character renderer is missing")
+        require((source_game / "rainforest.js").is_file(), "The smooth rainforest and creature geometry is missing")
         expected_game = {prefix + "Game/" + p.relative_to(source_game).as_posix() for p in files}
         actual_game = {n for n in names if n.startswith(prefix + "Game/") and not n.endswith("/")}
         require(actual_game == expected_game, "Packaged Game directory differs from the source file set")
@@ -112,8 +114,10 @@ def verify(path, resource_root=None):
             resources.append({"path": relative, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()})
         html = archive.read(prefix + "Game/index.html").decode()
         require("connect-src 'none'" in html and "viewport-fit=cover" in html, "Offline CSP or safe-area viewport is missing")
+        require("water.js" in html, "The bundled entry does not load the raindrop renderer")
+        require("rainforest.js" in html, "The bundled entry does not load the rainforest renderer")
         result.update({"bundle_identifier": BUNDLE, "display_name": info["CFBundleDisplayName"],
-                       "version": "2.0", "build": "2", "zip_integrity": "passed",
+                       "version": "2.1", "build": "3", "zip_integrity": "passed",
                        "executable_permissions": "passed", "resource_byte_equality": "passed",
                        "game_resources": resources, "privacy_manifest": "present, no collection",
                        "ipa_bytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),

@@ -23,22 +23,28 @@
     {x:1500,y:25,z:0},{x:1730,y:30,z:0}
   ];
   const npcs = [
-    {id:'orin',sprite:'sage',name:'Orin',x:151,y:0,z:0,depth:.6,
+    {id:'luma',form:'girl',appearance:'luma',name:'Luma',x:125,y:0,z:0,depth:.6,
+      lines:['A little drop, a little friend.','You remember the shape of everyone you touch.']},
+    {id:'orin',form:'girl',appearance:'orin',sprite:'sage',name:'Orin',x:151,y:0,z:0,depth:.6,
       lines:['The world has always had another side.','Touch the prism. Then step around what stops you.']},
-    {id:'pip',sprite:'child',name:'Pip',x:613,y:0,z:0,depth:.6,
+    {id:'pip',form:'girl',appearance:'pip',sprite:'child',name:'Pip',x:613,y:0,z:0,depth:.6,
       lines:['Our gate has lost its light.','The spark is behind the broken road. Could you bring it home?']},
-    {id:'keeper',sprite:'sage',name:'The Keeper',x:1480,y:0,z:0,depth:.6,
+    {id:'keeper',form:'girl',appearance:'keeper',sprite:'sage',name:'The Keeper',x:1480,y:0,z:0,depth:.6,
       lines:['You can see the space between things.','Bring the lost spark to this lantern. The gate will remember.']}
+  ];
+  const creatures = [
+    {id:'moss-frog',form:'frog',name:'Moss Frog',x:480,y:0,z:0,depth:.6},
+    {id:'fern-fox',form:'fox',name:'Fern Fox',x:1080,y:0,z:0,depth:.6}
   ];
   window.TD_WORLD = Object.freeze({
     name:'The Folded Forest',chapter:1,width:2048,
     spawn:{x:72,y:0,z:0},
-    platforms,obstacles,shards,npcs,
+    platforms,obstacles,shards,npcs,creatures,
     prism:{x:240,y:20,z:0},
     spark:{x:845,y:18,z:-62},
     beacon:{x:1510,y:0,z:0},
     finish:{x:1830,y:0,z:0},
     checkpoints:[{x:492,y:0,z:0},{x:1040,y:0,z:0},{x:1645,y:0,z:0}],
-    palette:{sky:'#10182e',fog:'#293b56',mint:'#81f2ce',gold:'#ffd58b',violet:'#9784ef',coral:'#f296a0'}
+    palette:{sky:'#0a222b',fog:'#204c51',mint:'#91efc6',gold:'#ffe0ab',violet:'#ad99ee',coral:'#f7a4c6'}
   });
 })();
