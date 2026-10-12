@@ -8,7 +8,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | --- | --- | --- | --- |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Music.png" width="44" alt=""/> **Music** — Offline music player | 0.10 (11) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa) | iOS 16.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Turn text into speech with your voice | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Generate and edit images with AI | 1.1 (2) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/prism-1.1-build2/Prism.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Generate and edit images with AI | 1.2 (3) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/prism-1.2-build3/Prism.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png" width="44" alt=""/> **Depth Check** — Convert photos and videos to 3D | 1.0 (8) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
