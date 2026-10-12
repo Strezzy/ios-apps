@@ -185,6 +185,38 @@
       "versionDescription": "Convert photos and videos to 3D on your iPhone. Fixes side-by-side exports stalling near the end, improves depth stability, and simplifies the interface. Keeps original pixel dimensions and video timing.",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa",
       "size": 228724052
+    },
+    {
+      "name": "Enter the Third Dimension",
+      "subtitle": "A pixel adventure between 2D and 3D",
+      "localizedDescription": "Explore a pixel-art world and shift from a 2D side-scroller into 3D. Walk around flat obstacles, find hidden paths, collect shards, and bring a lost light back to the village. Includes the first story chapter, landscape touch controls, checkpoints, and offline play.",
+      "category": "games",
+      "tintColor": "#9AF6D7",
+      "bundleIdentifier": "com.billy.moonhop",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "2.0",
+          "buildVersion": "2",
+          "buildNumber": "2",
+          "date": "2026-10-12T07:15:58Z",
+          "localizedDescription": "Enter the Third Dimension: shift a pixel platforming world between 2D and real 3D, explore its depth, and find your way forward. Landscape touch controls and offline play.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.0-build2/EnterTheThirdDimension.ipa",
+          "size": 498609,
+          "minOSVersion": "16.0",
+          "sha256": "292eda2aa478051cb71e4bcc32e1d94b42f9b51cd877244c0c2d48b12e92d456"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      },
+      "version": "2.0",
+      "versionDate": "2026-10-12T07:15:58Z",
+      "versionDescription": "Enter the Third Dimension: shift a pixel platforming world between 2D and real 3D, explore its depth, and find your way forward. Landscape touch controls and offline play.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.0-build2/EnterTheThirdDimension.ipa",
+      "size": 498609
     }
   ],
   "news": []

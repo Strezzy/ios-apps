@@ -10,6 +10,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Turn text into speech with your voice | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Generate and edit images with AI | 1.2 (3) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/prism-1.2-build3/Prism.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png" width="44" alt=""/> **Depth Check** — Convert photos and videos to 3D | 1.0 (8) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension.png" width="44" alt=""/> **Enter the Third Dimension** — A pixel adventure between 2D and 3D | 2.0 (2) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.0-build2/EnterTheThirdDimension.ipa) | iOS 16.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -36,6 +37,10 @@ Create images from a text description, or add reference pictures and describe th
 ### Depth Check
 
 Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.
+
+### Enter the Third Dimension
+
+Explore a pixel-art world and shift from a 2D side-scroller into 3D. Walk around flat obstacles, find hidden paths, collect shards, and bring a lost light back to the village. Includes the first story chapter, landscape touch controls, checkpoints, and offline play.
 
 ## Add my apps to LiveContainer
 
