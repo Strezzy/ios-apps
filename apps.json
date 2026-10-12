@@ -84,6 +84,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "1.1",
+          "buildVersion": "2",
+          "buildNumber": "2",
+          "date": "2026-10-12T03:31:39Z",
+          "localizedDescription": "Generate and edit images with AI.\r\n\r\n## What changed\r\n\r\n- **High stays at a 1024-pixel long edge.** Replaced the old fixed memory rejection with a memory plan matched to the new rendering stages.\r\n- **Z-Image Turbo reveal fix.** Diffusion weights are released before the image decoder loads, and decoding uses bounded temporary buffers.\r\n- Both models stream prompt-encoder weights and retain full-image normalization and attention context.\r\n- **Orange throughout.** Warm orange Liquid Glass accents in light and dark mode, with the original prism icon recolored orange.\r\n\r\n## Verification\r\n\r\nThe [native iPhone build](https://github.com/Strezzy/Prism/actions/runs/38198975980) passed with **29 XCTest passes, one unsupported-GPU skip, and zero failures**, plus **114 CPU reference cases**. Cold light and dark launches and a live return to light appearance passed and were reviewed. The downloaded arm64 iPhone IPA passed independent package verification.\r\n\r\nFull model generation on a physical iPhone has not been performed by this build environment. The CI hardware did not support actual MLX GPU execution; the CPU checks do not replace that device test.\r\n\r\n## Update\r\n\r\nRefresh the existing LiveContainer source and install **Prism 1.1 (2)** into your existing Prism app entry. Keep using its existing data container so your downloaded models and gallery carry over.\r\n\r\nThe attachment is an **unsigned iPhone IPA**, for iOS 26 or later.\r\n\r\n**Size:** 8,834,201 bytes\r\n\r\n**SHA-256:** `d2b1e7c5d6fda7f5b5a763a9507f814e98cfea3536ad40885b8440bad42a04fc`\r\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/prism-1.1-build2/Prism.ipa",
+          "size": 8834201,
+          "minOSVersion": "26.0",
+          "sha256": "d2b1e7c5d6fda7f5b5a763a9507f814e98cfea3536ad40885b8440bad42a04fc"
+        },
+        {
           "version": "1.0",
           "buildVersion": "1",
           "buildNumber": "1",
@@ -102,11 +113,11 @@
           "NSPhotoLibraryAddUsageDescription": "Save the images you create in Prism to your photo library."
         }
       },
-      "version": "1.0",
-      "versionDate": "2026-10-11",
-      "versionDescription": "First release with text-to-image generation, reference-image editing, a saved gallery, and image export. Models download separately. Image generation still needs testing on a real iPhone.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa",
-      "size": 7705935
+      "version": "1.1",
+      "versionDate": "2026-10-12T03:31:39Z",
+      "versionDescription": "Generate and edit images with AI.\r\n\r\n## What changed\r\n\r\n- **High stays at a 1024-pixel long edge.** Replaced the old fixed memory rejection with a memory plan matched to the new rendering stages.\r\n- **Z-Image Turbo reveal fix.** Diffusion weights are released before the image decoder loads, and decoding uses bounded temporary buffers.\r\n- Both models stream prompt-encoder weights and retain full-image normalization and attention context.\r\n- **Orange throughout.** Warm orange Liquid Glass accents in light and dark mode, with the original prism icon recolored orange.\r\n\r\n## Verification\r\n\r\nThe [native iPhone build](https://github.com/Strezzy/Prism/actions/runs/38198975980) passed with **29 XCTest passes, one unsupported-GPU skip, and zero failures**, plus **114 CPU reference cases**. Cold light and dark launches and a live return to light appearance passed and were reviewed. The downloaded arm64 iPhone IPA passed independent package verification.\r\n\r\nFull model generation on a physical iPhone has not been performed by this build environment. The CI hardware did not support actual MLX GPU execution; the CPU checks do not replace that device test.\r\n\r\n## Update\r\n\r\nRefresh the existing LiveContainer source and install **Prism 1.1 (2)** into your existing Prism app entry. Keep using its existing data container so your downloaded models and gallery carry over.\r\n\r\nThe attachment is an **unsigned iPhone IPA**, for iOS 26 or later.\r\n\r\n**Size:** 8,834,201 bytes\r\n\r\n**SHA-256:** `d2b1e7c5d6fda7f5b5a763a9507f814e98cfea3536ad40885b8440bad42a04fc`\r\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/prism-1.1-build2/Prism.ipa",
+      "size": 8834201
     },
     {
       "name": "Depth Check",
