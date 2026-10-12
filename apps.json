@@ -196,6 +196,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "2.2",
+          "buildVersion": "4",
+          "buildNumber": "4",
+          "date": "2026-10-12T22:46:20Z",
+          "localizedDescription": "A visual polish update with expressive chibi inhabitants, sculpted reflective water forms, animated rainforest foliage, soft dynamic shadows, richer materials, luminous bloom, and smoother edges. Explore the Folded Forest, remember girl, frog, and fox forms, and unfold the world into 3D. Landscape touch controls, checkpoints, and offline play.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.2-build4/EnterTheThirdDimension.ipa",
+          "size": 3407046,
+          "minOSVersion": "16.0",
+          "sha256": "9792d829566e2b1fc62a27c9dc6070e06532a38a45fa18ae742702d6ee450c59"
+        },
+        {
           "version": "2.1",
           "buildVersion": "3",
           "buildNumber": "3",
@@ -223,11 +234,11 @@
         "entitlements": [],
         "privacy": {}
       },
-      "version": "2.1",
-      "versionDate": "2026-10-12T08:32:37Z",
-      "versionDescription": "Explore a smooth mystical rainforest as a reflective, translucent raindrop. Learn girl, frog, and fox forms by touching its inhabitants, and transform through a floating drop when entering 3D. Includes an opening story, elastic water animation, depth puzzles, landscape touch controls, checkpoints, and offline play.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.1-build3/EnterTheThirdDimension.ipa",
-      "size": 3391144
+      "version": "2.2",
+      "versionDate": "2026-10-12T22:46:20Z",
+      "versionDescription": "A visual polish update with expressive chibi inhabitants, sculpted reflective water forms, animated rainforest foliage, soft dynamic shadows, richer materials, luminous bloom, and smoother edges. Explore the Folded Forest, remember girl, frog, and fox forms, and unfold the world into 3D. Landscape touch controls, checkpoints, and offline play.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.2-build4/EnterTheThirdDimension.ipa",
+      "size": 3407046
     }
   ],
   "news": []
