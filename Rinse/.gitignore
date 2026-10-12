@@ -1,0 +1,8 @@
+Build/
+Assets.xcassets/
+Rinse.xcodeproj/
+App/Info.plist
+Share/Info.plist
+PrivacyInfo.xcprivacy
+__pycache__/
+.DS_Store

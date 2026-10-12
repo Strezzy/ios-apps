@@ -1,0 +1,90 @@
+name: Rinse
+options:
+  bundleIdPrefix: com.billy
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    CODE_SIGNING_ALLOWED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  Rinse:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes: [Info.plist]
+      - path: Core
+      - path: Assets.xcassets
+      - path: PrivacyInfo.xcprivacy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rinse
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Rinse
+        UILaunchScreen: {}
+        UIRequiredDeviceCapabilities: [arm64]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSPhotoLibraryAddUsageDescription: Save the cleaned copies you select to your photo library. Your original photos are never changed.
+        LSSupportsOpeningDocumentsInPlace: true
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Photos and videos
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [public.jpeg, public.png, public.heic, public.heif, public.mpeg-4, com.apple.quicktime-movie]
+    dependencies:
+      - target: RinseShare
+        embed: true
+  RinseShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Share
+        excludes: [Info.plist]
+      - path: Core
+      - path: App/Importers.swift
+      - path: PrivacyInfo.xcprivacy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rinse.share
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+    info:
+      path: Share/Info.plist
+      properties:
+        CFBundleDisplayName: Clean with Rinse
+        NSPhotoLibraryAddUsageDescription: Save the clean photos you choose to your library.
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsImageWithMaxCount: 10
+  RinseTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rinse.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Rinse
+schemes:
+  Rinse:
+    build:
+      targets:
+        Rinse: all
+    test:
+      targets:
+        - name: RinseTests
+          parallelizable: false
+      gatherCoverageData: false
