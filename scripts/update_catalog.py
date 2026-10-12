@@ -97,6 +97,11 @@ def version_key(version):
 
 
 def update(catalog, registry, paths, tag, date, notes):
+    catalog["apps"] = [app for app in catalog["apps"] if app["bundleIdentifier"] in registry]
+    for app in catalog["apps"]:
+        metadata = registry[app["bundleIdentifier"]]
+        app.update({key: value for key, value in metadata.items() if key != "icon"})
+        app["iconURL"] = f"{RAW}/assets/{metadata['icon']}"
     seen = set()
     for path in paths:
         info, permissions = inspect_ipa(path)
@@ -144,59 +149,22 @@ def api(path):
 
 
 def render_readme(catalog):
-    source = f"{RAW}/apps.json"
-    text = """# Strezzy’s iPhone Apps
-
-Your apps, together in one place. Local music, voice creation, image creation, and a little moonlit adventure.
-
-## Add to LiveContainer
-
-In **LiveContainer → Sources → +**, paste:
-
-```text
-SOURCE_URL
-```
-
-Refresh this source to see new versions, then tap Install for the app you want.
-For an existing app, update its existing entry and keep its current data container.
-Export important creations before changing installations; an in-place update on your phone has not been validated for every app.
-
-## Downloads
-
-| App | Version | Download | Requires |
-| --- | --- | --- | --- |
-""".replace("SOURCE_URL", source)
+    downloads = ["| App | Version | Download | Requires |",
+                 "| --- | --- | --- | --- |"]
     for app in catalog["apps"]:
         version = app["versions"][0]
-        text += (f"| <img src=\"{app['iconURL']}\" width=\"44\" alt=\"\"/> **{app['name']}** — {app['subtitle']} "
-                 f"| {version['version']} ({version['buildVersion']}) | [Download IPA]({version['downloadURL']}) "
-                 f"| iOS {version['minOSVersion']}+ |\n")
-    text += """
-IPAs are device builds for a signing/sideloading installer or LiveContainer. They are not App Store packages.
-VoiceGlass and Prism download model weights separately, then process locally. Physical-iPhone model inference has not yet been validated for these builds.
-
-## Publish an update
-
-1. Build the app and increase its version or build number. Keep the same bundle identifier.
-2. [Create a release](https://github.com/Strezzy/ios-apps/releases/new) with a **new tag** and upload one or more `.ipa` files. Write the release notes and publish it as a regular release.
-3. **Update app catalog** runs automatically. It reads the IPA’s actual bundle ID, version, minimum iOS, permissions, file size, and SHA-256; updates `apps.json`; and refreshes this page.
-4. Refresh the source in LiveContainer. The source URL stays the same.
-
-Draft and prerelease uploads do not enter the catalog. Keep published release assets in place so previous versions remain downloadable. Adding an asset after publication requires rerunning the catalog workflow. Do not replace an existing version’s IPA with different bytes; bump its build number instead.
-
-The workflow also has a manual **Run workflow** option with a release tag. A failure leaves the current published catalog unchanged; check the Actions log, correct the release, and run it again.
-
-## Add a future app
-
-Add its exact bundle ID, name, description, and category to `app-registry.json`, and add its PNG icon to `assets/`. Publish its IPA in a new release; the catalog will add it automatically.
-
-The app catalog and compiled downloads are public. VoiceGlass and Prism’s development repositories remain private. This repository does not store voice recordings, photos, generated work, or model weights.
-
-## Catalog format
-
-[AltStore Classic source documentation](https://faq.altstore.io/developers/make-a-source). Both `buildVersion` (AltStore) and `buildNumber` (LiveContainer) are included for compatibility. Latest versions come first; exact bundle identifiers stay unchanged across updates.
-"""
-    (ROOT / "README.md").write_text(text)
+        downloads.append(
+            f"| <img src=\"{app['iconURL']}\" width=\"44\" alt=\"\"/> **{app['name']}** — {app['subtitle']} "
+            f"| {version['version']} ({version['buildVersion']}) | [Download IPA]({version['downloadURL']}) "
+            f"| iOS {version['minOSVersion']}+ |")
+    details = "\n\n".join(f"### {app['name']}\n\n{app['localizedDescription']}" for app in catalog["apps"])
+    text = (ROOT / "scripts" / "README.template.md").read_text(encoding="utf-8")
+    replacements = {"{{SOURCE_URL}}": f"{RAW}/apps.json",
+                    "{{APP_DOWNLOADS}}": "\n".join(downloads),
+                    "{{APP_DETAILS}}": details}
+    for placeholder, value in replacements.items():
+        text = text.replace(placeholder, value)
+    (ROOT / "README.md").write_text(text, encoding="utf-8")
 
 
 def main():

@@ -1,49 +1,77 @@
 # Strezzy’s iPhone Apps
 
-Your apps, together in one place. Local music, voice creation, image creation, and a little moonlit adventure.
-
-## Add to LiveContainer
-
-In **LiveContainer → Sources → +**, paste:
-
-```text
-https://raw.githubusercontent.com/Strezzy/ios-apps/main/apps.json
-```
-
-Refresh this source to see new versions, then tap Install for the app you want.
-For an existing app, update its existing entry and keep its current data container.
-Export important creations before changing installations; an in-place update on your phone has not been validated for every app.
+I'm Strezzy. These are passion projects I build for myself and share here for free. This page has my app downloads, a quick explanation of what each one does, and directions for installing and updating them in LiveContainer.
 
 ## Downloads
 
 | App | Version | Download | Requires |
 | --- | --- | --- | --- |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Music.png" width="44" alt=""/> **Music** — Your music. Offline. | 0.10 (11) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa) | iOS 16.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Create with your voice. On your iPhone. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Your imagination. On your iPhone. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonhop.png" width="44" alt=""/> **Moonhop** — A little moonlit adventure. | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Moonhop.ipa) | iOS 16.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Music.png" width="44" alt=""/> **Music** — Offline music player | 0.10 (11) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Music.ipa) | iOS 16.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Turn text into speech with your voice | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Generate and edit images with AI | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/Prism.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png" width="44" alt=""/> **Depth Check** — Convert photos and videos to 3D | 1.0 (8) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa) | iOS 26.0+ |
 
-IPAs are device builds for a signing/sideloading installer or LiveContainer. They are not App Store packages.
-VoiceGlass and Prism download model weights separately, then process locally. Physical-iPhone model inference has not yet been validated for these builds.
+The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
-## Publish an update
+## Yes, they're vibe-coded
 
-1. Build the app and increase its version or build number. Keep the same bundle identifier.
-2. [Create a release](https://github.com/Strezzy/ios-apps/releases/new) with a **new tag** and upload one or more `.ipa` files. Write the release notes and publish it as a regular release.
-3. **Update app catalog** runs automatically. It reads the IPA’s actual bundle ID, version, minimum iOS, permissions, file size, and SHA-256; updates `apps.json`; and refreshes this page.
-4. Refresh the source in LiveContainer. The source URL stays the same.
+**All of my apps are vibe-coded.** I use AI tools to help write the code, while I direct development, give detailed instructions, beta test, and work through bugs and revisions. I spend **$200+ a month** on those tools and **5–8+ hours a day** on development and testing.
 
-Draft and prerelease uploads do not enter the catalog. Keep published release assets in place so previous versions remain downloadable. Adding an asset after publication requires rerunning the catalog workflow. Do not replace an existing version’s IPA with different bytes; bump its build number instead.
+These are personal passion projects, shared for free. Constructive feedback is welcome. If AI-assisted development is a dealbreaker, you're free to pass. If you'd prefer a different process, you're also welcome to contribute the budget and put in the hours. The tools help with the code; the bill and the time are still mine.
 
-The workflow also has a manual **Run workflow** option with a release tag. A failure leaves the current published catalog unchanged; check the Actions log, correct the release, and run it again.
+## What each app does
 
-## Add a future app
+### Music
 
-Add its exact bundle ID, name, description, and category to `app-registry.json`, and add its PNG icon to `assets/`. Publish its IPA in a new release; the catalog will add it automatically.
+Play music stored on your iPhone, browse albums, make playlists, and search your library. Change album artwork and choose optional scrolling animations in Settings.
 
-The app catalog and compiled downloads are public. VoiceGlass and Prism’s development repositories remain private. This repository does not store voice recordings, photos, generated work, or model weights.
+### VoiceGlass
 
-## Catalog format
+Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.
 
-[AltStore Classic source documentation](https://faq.altstore.io/developers/make-a-source). Both `buildVersion` (AltStore) and `buildNumber` (LiveContainer) are included for compatibility. Latest versions come first; exact bundle identifiers stay unchanged across updates.
+### Prism
+
+Create images from a text description, or add reference pictures and describe the edits you want. Download a model before using it offline, then save and export images from the gallery. Image generation in this release still needs testing on a real iPhone.
+
+### Depth Check
+
+Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.
+
+## Add my apps to LiveContainer
+
+You only need to add this source once.
+
+1. Open **LiveContainer → Sources → +**.
+2. Paste the address below and add the source.
+3. Open **Strezzy’s Apps** and tap **Install** beside the app you want.
+
+```text
+https://raw.githubusercontent.com/Strezzy/ios-apps/main/apps.json
+```
+
+You can also download an IPA from the table above and import it through **Apps → + → Install IPA File** in LiveContainer.
+
+## Update an app and keep your data
+
+**Leave the old version installed.** Replacing that existing copy lets LiveContainer reuse its data container, where the app keeps your files and settings. Keep a separate copy of any files you can't replace before updating.
+
+1. Open **Sources** in LiveContainer and tap the circular refresh button (**Refresh All**).
+2. Open **Strezzy’s Apps** and tap **Install** beside the app you want to update. The button can still say **Install** for an update.
+3. When LiveContainer finds the existing app, select that existing entry in the **Installation** prompt. It may appear as a name ending in `.app`. **Install as new** creates a separate copy.
+4. Wait for the installation to finish, then open the app using the same data container as before.
+
+**Updating with a downloaded IPA:** Download the newer IPA, open **Apps → + → Install IPA File**, and select the file. Choose the existing app entry in the installation prompt.
+
+### If the app opens with an empty library
+
+Check which data container is selected. If you use more than one, long-press the app in LiveContainer and choose your previous one under **Containers**. A different container can make the app look empty even when your files are still in the original one. Avoid deleting the app or clearing its data while you're checking.
+
+These steps cover updates to an app already inside LiveContainer. Moving an app from a separate installation into LiveContainer needs its own data transfer.
+
+## Found a problem?
+
+[Open an issue](https://github.com/Strezzy/ios-apps/issues) with the app name, version and build number, your iPhone model, and your iOS version. Tell me what you were doing and what happened. Screenshots help when they show the problem; please keep personal files and voice recordings out of public reports.
+
+---
+
+[Publishing and catalog maintenance](docs/PUBLISHING.md)

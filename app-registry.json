@@ -1,35 +1,27 @@
 {
   "com.billy.glassmusic": {
     "name": "Music",
-    "subtitle": "Your music. Offline.",
-    "localizedDescription": "A native offline music player with songs, albums, playlists, local search, editable artwork, and Liquid Glass controls. Version 0.10 adds all 15 Cask 3 scrolling presets in Settings.",
+    "subtitle": "Offline music player",
+    "localizedDescription": "Play music stored on your iPhone, browse albums, make playlists, and search your library. Change album artwork and choose optional scrolling animations in Settings.",
     "icon": "Music.png",
     "category": "entertainment",
     "tintColor": "#70A6FF"
   },
   "com.billy.voiceglass": {
     "name": "VoiceGlass",
-    "subtitle": "Create with your voice. On your iPhone.",
-    "localizedDescription": "Native on-device voice cloning and text-to-speech, reference recording/import, saved voices and clips, playback and WAV export. Download compatible Core ML models once, then create locally. Built device IPA; physical-iPhone inference validation is still required.",
+    "subtitle": "Turn text into speech with your voice",
+    "localizedDescription": "Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.",
     "icon": "VoiceGlass.png",
     "category": "utilities",
     "tintColor": "#9D8CFF"
   },
   "com.billy.prism": {
     "name": "Prism",
-    "subtitle": "Your imagination. On your iPhone.",
-    "localizedDescription": "Native AI image generation and reference-image editing with Generate, Edit, Gallery and Settings tabs. FLUX.2 Klein and Z-Image Turbo run through MLX and Metal with separately downloaded models. Built device IPA; physical-iPhone inference validation is still required.",
+    "subtitle": "Generate and edit images with AI",
+    "localizedDescription": "Create images from a text description, or add reference pictures and describe the edits you want. Download a model before using it offline, then save and export images from the gallery. Image generation in this release still needs testing on a real iPhone.",
     "icon": "Prism.png",
     "category": "photo-video",
     "tintColor": "#CA8BFF"
-  },
-  "com.billy.moonhop": {
-    "name": "Moonhop",
-    "subtitle": "A little moonlit adventure.",
-    "localizedDescription": "An offline landscape pixel-art platformer with touch controls, jumping, checkpoints, collectibles, and a moonlit world.",
-    "icon": "Moonhop.png",
-    "category": "games",
-    "tintColor": "#AA9CFF"
   },
   "com.billy.depthcheck": {
     "name": "Depth Check",
