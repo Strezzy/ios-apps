@@ -188,13 +188,24 @@
     },
     {
       "name": "Enter the Third Dimension",
-      "subtitle": "A pixel adventure between 2D and 3D",
-      "localizedDescription": "Explore a pixel-art world and shift from a 2D side-scroller into 3D. Walk around flat obstacles, find hidden paths, collect shards, and bring a lost light back to the village. Includes the first story chapter, landscape touch controls, checkpoints, and offline play.",
+      "subtitle": "Become the creatures of a magical rainforest",
+      "localizedDescription": "Play as a living raindrop in a mystical rainforest. Touch creatures to learn their forms, become a translucent girl, frog or fox, and shift between 2D and 3D to explore hidden paths. Includes an animated origin story, a playable first chapter, simple landscape touch controls, checkpoints, and offline play.",
       "category": "games",
-      "tintColor": "#9AF6D7",
+      "tintColor": "#7FE6E3",
       "bundleIdentifier": "com.billy.moonhop",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "2.1",
+          "buildVersion": "3",
+          "buildNumber": "3",
+          "date": "2026-10-12T08:32:37Z",
+          "localizedDescription": "Explore a smooth mystical rainforest as a reflective, translucent raindrop. Learn girl, frog, and fox forms by touching its inhabitants, and transform through a floating drop when entering 3D. Includes an opening story, elastic water animation, depth puzzles, landscape touch controls, checkpoints, and offline play.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.1-build3/EnterTheThirdDimension.ipa",
+          "size": 3391144,
+          "minOSVersion": "16.0",
+          "sha256": "2f2ece5f6827760ad067257d70185d93bfe0e58b449c22d2d138d225e60968b1"
+        },
         {
           "version": "2.0",
           "buildVersion": "2",
@@ -207,16 +218,16 @@
           "sha256": "292eda2aa478051cb71e4bcc32e1d94b42f9b51cd877244c0c2d48b12e92d456"
         }
       ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension.png",
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension-Rain.png",
       "appPermissions": {
         "entitlements": [],
         "privacy": {}
       },
-      "version": "2.0",
-      "versionDate": "2026-10-12T07:15:58Z",
-      "versionDescription": "Enter the Third Dimension: shift a pixel platforming world between 2D and real 3D, explore its depth, and find your way forward. Landscape touch controls and offline play.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.0-build2/EnterTheThirdDimension.ipa",
-      "size": 498609
+      "version": "2.1",
+      "versionDate": "2026-10-12T08:32:37Z",
+      "versionDescription": "Explore a smooth mystical rainforest as a reflective, translucent raindrop. Learn girl, frog, and fox forms by touching its inhabitants, and transform through a floating drop when entering 3D. Includes an opening story, elastic water animation, depth puzzles, landscape touch controls, checkpoints, and offline play.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.1-build3/EnterTheThirdDimension.ipa",
+      "size": 3391144
     }
   ],
   "news": []
