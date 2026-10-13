@@ -17,6 +17,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "0.13",
+          "buildVersion": "14",
+          "buildNumber": "14",
+          "date": "2026-10-13T03:59:42Z",
+          "localizedDescription": "CD-case loading and visual polish: bounded warm-renderer reuse, smoother correct-artwork reveal, higher-density album rendering, improved reflection detail and tilt-safe framing. Native Liquid Glass navigation and album layout are preserved. Passed 26 native renderer checks and the Albums scroll-and-return test. Physical-device performance remains to be measured.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.13-build14/Music.ipa",
+          "size": 3051758,
+          "minOSVersion": "16.0",
+          "sha256": "cd18ba80388ef28165ec9ff1e2c4f51a43bf8fbf0925c62ca06a666f33d91c53"
+        },
+        {
           "version": "0.12",
           "buildVersion": "13",
           "buildNumber": "13",
@@ -57,11 +68,11 @@
           "NSMotionUsageDescription": "Music uses device motion to gently tilt visible CD cases. Motion stays on your device."
         }
       },
-      "version": "0.12",
-      "versionDate": "2026-10-13T02:51:50Z",
-      "versionDescription": "Repairs the native CD renderer startup and playback commands. Clear reflective cases, spinning discs, working Open/Close and tilt controls, and a larger, tighter two-column Albums grid. Validated with native iOS simulator controls and actual rendered frames. Update the existing Music installation and keep its data container. See the release for test evidence and remaining physical-device checks.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.12-build13/Music.ipa",
-      "size": 3046593
+      "version": "0.13",
+      "versionDate": "2026-10-13T03:59:42Z",
+      "versionDescription": "CD-case loading and visual polish: bounded warm-renderer reuse, smoother correct-artwork reveal, higher-density album rendering, improved reflection detail and tilt-safe framing. Native Liquid Glass navigation and album layout are preserved. Passed 26 native renderer checks and the Albums scroll-and-return test. Physical-device performance remains to be measured.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.13-build14/Music.ipa",
+      "size": 3051758
     },
     {
       "name": "VoiceGlass",
