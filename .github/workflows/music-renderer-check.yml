@@ -1,0 +1,122 @@
+name: Diagnose Music CD renderer on iOS
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/music-renderer-check.yml']
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore exact released Music source
+        run: |
+          curl -fL --retry 3 https://github.com/Strezzy/ios-apps/releases/download/music-0.11-build12/Music-Source.zip -o /tmp/Music-Source.zip
+          echo 'e476dcbcd36814e65b45e584c751c847ba0485983d142eecc304e72b6ac735f9  /tmp/Music-Source.zip' | shasum -a 256 -c -
+          unzip -q /tmp/Music-Source.zip -d /tmp/music-check
+          mkdir -p Evidence
+      - name: Build native diagnostic application
+        run: |
+          cat > /tmp/music-check/Probe.m <<'OBJC'
+          #define main GMOriginalMain
+          #import "Music/Sources/main.m"
+          #undef main
+          @interface GMProbeCase : GMCDCaseView @end
+          @implementation GMProbeCase
+          - (void)receiveScriptMessage:(WKScriptMessage *)message {
+              NSLog(@"CD_MESSAGE %@", message.body);
+              [super receiveScriptMessage:message];
+          }
+          - (void)failRenderer { NSLog(@"CD_FAILURE pending=%@",self.pending); [super failRenderer]; }
+          - (void)webView:(WKWebView *)web didFailProvisionalNavigation:(WKNavigation *)nav withError:(NSError *)error {
+              NSLog(@"CD_NAV_ERROR %@",error); [super webView:web didFailProvisionalNavigation:nav withError:error];
+          }
+          - (void)webView:(WKWebView *)web didFinishNavigation:(WKNavigation *)nav {
+              NSLog(@"CD_NAV_FINISHED %@",web.URL); [super webView:web didFinishNavigation:nav];
+              [web evaluateJavaScript:@"JSON.stringify({bridge:typeof MusicCD,ready:document.readyState,canvas:!!document.querySelector('canvas'),ua:navigator.userAgent})" completionHandler:^(id value,NSError *error){NSLog(@"CD_PAGE %@ %@",value,error);}];
+          }
+          @end
+          @interface GMProbeRoot : UIViewController
+          @property(strong) GMProbeCase *cd;
+          @property(strong) NSMutableArray *samples;
+          @property NSInteger ticks;
+          @end
+          @implementation GMProbeRoot
+          - (void)viewDidLoad {
+              [super viewDidLoad]; self.view.backgroundColor=[UIColor darkGrayColor]; self.samples=[NSMutableArray new];
+              self.cd=[[GMProbeCase alloc] initWithFrame:CGRectMake(16,140,370,370) presentation:GMCDCasePresentationPlayer];
+              UIImage *art=[UIImage imageNamed:@"AppIcon1024"];
+              [self.cd configureWithIdentifier:@"probe" title:@"Renderer probe" artist:@"Music" artwork:art];
+              [self.cd setPlaying:YES]; [self.view addSubview:self.cd];
+          }
+          - (void)viewDidAppear:(BOOL)animated {
+              [super viewDidAppear:animated]; [self.cd setActive:YES];
+              [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(sample:) userInfo:nil repeats:YES];
+          }
+          - (void)sample:(NSTimer *)timer {
+              self.ticks++;
+              if(self.ticks==12) [self.cd setCaseOpen:YES animated:YES];
+              if(self.ticks==18) [self.cd setInspectionTiltX:.45 y:-.3];
+              if(self.ticks==24) [self.cd setCaseOpen:NO animated:YES];
+              NSMutableDictionary *sample=[@{@"tick":@(self.ticks),@"eligible":@([self.cd eligibleForRenderer]),@"ownerActive":@(self.cd.ownerActive),@"applicationSuspended":@(GMCDSharedHub().applicationSuspended),@"sceneState":@(self.view.window.windowScene.activationState),@"webView":@(self.cd.webView!=nil),@"bridgeReady":@(self.cd.bridgeReady),@"rendered":@(self.cd.rendered),@"failed":@(self.cd.failedThisActivation),@"encoded":@(self.cd.encodedRevision),@"artRevision":@(self.cd.artworkRevision),@"pending":self.cd.pending?:@{}} mutableCopy];
+              [sample removeObjectForKey:@"pending"];
+              [self.samples addObject:sample];
+              if(self.cd.webView) [self.cd.webView evaluateJavaScript:@"JSON.stringify(window.MusicCD ? window.MusicCD.diagnostics() : {missingBridge:true})" completionHandler:^(id result,NSError *error){ sample[@"javascript"]=result?:error.localizedDescription?:@"none"; NSLog(@"CD_SAMPLE %@",sample); }];
+              else NSLog(@"CD_SAMPLE %@",sample);
+              NSString *path=[NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserDomainMask,YES).firstObject stringByAppendingPathComponent:@"renderer-probe.json"];
+              [[NSJSONSerialization dataWithJSONObject:self.samples options:NSJSONWritingPrettyPrinted error:nil] writeToFile:path atomically:YES];
+              if(self.ticks>=32) [timer invalidate];
+          }
+          @end
+          @interface GMProbeScene : NSObject <UIWindowSceneDelegate>
+          @property(strong) UIWindow *window;
+          @end
+          @implementation GMProbeScene
+          - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
+              self.window=[[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene]; self.window.rootViewController=[GMProbeRoot new]; [self.window makeKeyAndVisible];
+          }
+          @end
+          @interface GMProbeApp : NSObject <UIApplicationDelegate> @end
+          @implementation GMProbeApp
+          - (UISceneConfiguration *)application:(UIApplication *)application configurationForConnectingSceneSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
+              UISceneConfiguration *c=[[UISceneConfiguration alloc] initWithName:@"Probe" sessionRole:session.role];c.delegateClass=GMProbeScene.class;return c;
+          }
+          @end
+          int main(int argc,char **argv) { @autoreleasepool {return UIApplicationMain(argc,argv,nil,NSStringFromClass(GMProbeApp.class));} }
+          OBJC
+          mkdir -p /tmp/RendererProbe.app
+          cp -R /tmp/music-check/Music/Resources/. /tmp/RendererProbe.app/
+          python3 - <<'PY'
+          import plistlib
+          p='/tmp/RendererProbe.app/Info.plist'
+          d=plistlib.load(open(p,'rb')); d['CFBundleIdentifier']='com.billy.music.rendererprobe'; d['CFBundleExecutable']='RendererProbe'; d['CFBundleSupportedPlatforms']=['iPhoneSimulator']; d.pop('UIRequiredDeviceCapabilities',None)
+          d['UIApplicationSceneManifest']={'UIApplicationSupportsMultipleScenes':False,'UISceneConfigurations':{}}
+          plistlib.dump(d,open(p,'wb'))
+          PY
+          xcrun --sdk iphonesimulator clang -arch arm64 -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" -mios-simulator-version-min=26.0 -O1 -fobjc-arc -fblocks -Wno-deprecated-declarations -framework Foundation -framework UIKit -framework AVFoundation -framework AVFAudio -framework AVKit -framework MediaPlayer -framework UniformTypeIdentifiers -framework QuartzCore -framework PhotosUI -framework ImageIO -framework CoreGraphics -framework CoreText -framework WebKit -framework CoreMotion /tmp/music-check/Probe.m -o /tmp/RendererProbe.app/RendererProbe 2>&1 | tee Evidence/compile.log
+          codesign --force --sign - /tmp/RendererProbe.app
+      - name: Run native WebKit and capture live state
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin);print(next(x["udid"] for k,v in d["devices"].items() if "iOS" in k for x in v if "iPhone" in x["name"]))')
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" /tmp/RendererProbe.app
+          xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" com.billy.music.rendererprobe > Evidence/runtime.log 2>&1 &
+          sleep 12
+          xcrun simctl io "$DEVICE" screenshot Evidence/closed.png
+          sleep 7
+          xcrun simctl io "$DEVICE" screenshot Evidence/open.png
+          sleep 16
+          DATA=$(xcrun simctl get_app_container "$DEVICE" com.billy.music.rendererprobe data)
+          cp "$DATA/Documents/renderer-probe.json" Evidence/renderer-probe.json || true
+          cat Evidence/renderer-probe.json || cat Evidence/runtime.log
+      - name: Save actual native diagnosis
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Music-native-renderer-diagnosis
+          path: Evidence
+          retention-days: 14
