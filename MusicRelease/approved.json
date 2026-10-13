@@ -1,0 +1,8 @@
+{
+  "buildRun": 38336868230,
+  "gridRun": 38337455237,
+  "ipaSHA256": "dbb82dee36cec2a7048605553a466c969a1112847a9a54b2b5980d89a108a344",
+  "version": "0.12",
+  "build": "13",
+  "review": "All 16 native renderer/control checks pass. The complete native Albums grid confirms six visible 185-point cases with real geometry, rendered frames, and advancing spin. Actual open, tilted, player, light-grid and dark-grid screenshots reviewed. Physical iPhone and LiveContainer installation validation remains outstanding."
+}
