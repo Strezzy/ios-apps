@@ -570,7 +570,7 @@
 }
 - (void)setLiveMedium:(NSInteger)medium {
     NSInteger next=medium==1 ? 1 : 0;if(next==GMLiveMedium)return;
-    GMLiveMedium=next;[GMMediaStills() clear];[self savePreferences];
+    GMLiveMedium=next;[self savePreferences];
     [[NSNotificationCenter defaultCenter] postNotificationName:GMLiveMediumChanged object:nil userInfo:nil];
     [self.settingsController reloadSettings];[self.compactPlayer refresh];
 }

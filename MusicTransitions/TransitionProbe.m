@@ -260,7 +260,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     [self check:[NSString stringWithFormat:@"%ld_rendered_png_survives_memory_eviction",(long)medium] value:[cold imageForKey:equivalent]!=nil && cold.worker==nil];
     [cold clear];
     [self check:[NSString stringWithFormat:@"%ld_disk_survives_memory_warning",(long)medium] value:[cold imageForKey:equivalent]!=nil];
-    NSString *changed=[cold keyForArtwork:[UIImage imageNamed:@"IconMintPreview"] medium:medium background:reference.backgroundComponents];
+    NSString *changed=[cold keyForArtwork:[UIImage imageNamed:@"IconSignalPreview"] medium:medium background:reference.backgroundComponents];
     [self check:@"changed_art_invalidates_snapshot" value:![changed isEqual:key]];
     [self check:@"legacy_drawn_fallback_removed" value:reference.fallback.subviews.count==1 && reference.fallback.subviews.firstObject==reference.fallback.snapshot];
 }

@@ -450,7 +450,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     dispatch_async(dispatch_get_main_queue(),^{ [hub reconcile]; });
 }
 - (void)mediumChanged:(NSNotification *)note {
-    if(self.medium==GMLiveMedium)return;
+    if(self.presentation==GMCDCasePresentationSnapshot || self.medium==GMLiveMedium)return;
     self.medium=GMLiveMedium;
     self.accessibilityLabel=[NSString stringWithFormat:@"%@ case, %@%@%@",self.medium==1 ? @"Cassette" : @"CD",self.artworkTitle ?: @"Album",self.artworkArtist.length ? @", " : @"",self.artworkArtist ?: @""];
     self.fallback.snapshot.image=nil;self.fallback.snapshotKey=nil;[self.fallback setNeedsLayout];
@@ -591,6 +591,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [self queueMotionState];
 }
 - (void)applyTheme {
+    if(self.presentation==GMCDCasePresentationSnapshot && self.backgroundComponents)return;
     [self.fallback applyTheme];
     CGFloat r=0,g=0,b=0;
     GMReadRGB(GMPageColor(),self.traitCollection,&r,&g,&b);
@@ -901,7 +902,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         // Application Support survives relaunches and ordinary OS cache purges.
         NSURL *support=[[NSFileManager defaultManager] URLsForDirectory:14 inDomains:1].firstObject;
         self.directory=[support URLByAppendingPathComponent:@"RenderedMedia-v3"];
-        [[NSFileManager defaultManager] createDirectoryAtURL:self.directory withIntermediateDirectories:YES attributes:nil error:(NSError **)0];
+        [[NSFileManager defaultManager] createDirectoryAtURL:self.directory withIntermediateDirectories:YES attributes:nil error:0];
     }return self;
 }
 - (NSString *)keyForArtwork:(UIImage *)artwork medium:(NSInteger)medium background:(NSArray *)background {
@@ -987,7 +988,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
                     captured=YES;self.lastCaptureError=nil;[self.failures removeObjectForKey:key];
                     // Commit the file before publishing the image to cells, so any
                     // subsequent tab switch or relaunch can use it immediately.
-                    [data writeToURL:[self.directory URLByAppendingPathComponent:key] options:1 error:(NSError **)0];
+                    [data writeToURL:[self.directory URLByAppendingPathComponent:key] options:1 error:0];
                     [self rememberImage:image key:key];[self.prefetch removeObjectForKey:key];
                     for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) if([[self keyForView:view] isEqual:key]) {
                         view.fallback.snapshotKey=key;view.fallback.snapshot.image=image;[view.fallback setNeedsLayout];
