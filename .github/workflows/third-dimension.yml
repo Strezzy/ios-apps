@@ -45,7 +45,6 @@ jobs:
       - name: Add the verified release to Strezzy's Apps
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: enter-third-dimension-2.2-build4
         shell: bash
         run: |
           set -euo pipefail
@@ -54,13 +53,14 @@ jobs:
           git fetch origin main
           git rebase origin/main
           release_date="$(python3 -c 'import json; print(json.load(open("EnterTheThirdDimension/Build/PUBLICATION.json"))["published_at"])')"
-          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local EnterTheThirdDimension/Build/Published/EnterTheThirdDimension.ipa --date "$release_date" --notes "A visual polish update with expressive chibi inhabitants, sculpted reflective water forms, animated rainforest foliage, soft dynamic shadows, richer materials, luminous bloom, and smoother edges. Explore the Folded Forest, remember girl, frog, and fox forms, and unfold the world into 3D. Landscape touch controls, checkpoints, and offline play."
+          release_tag="$(python3 -c 'import json; print(json.load(open("EnterTheThirdDimension/Build/PUBLICATION.json"))["release_tag"])')"
+          python3 scripts/update_catalog.py --tag "$release_tag" --local EnterTheThirdDimension/Build/Published/EnterTheThirdDimension.ipa --date "$release_date" --notes "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved."
           git add apps.json README.md
           if git diff --cached --quiet; then
             echo "The catalog already matches this verified release."
             exit 0
           fi
-          git commit -m "Add verified Enter the Third Dimension 2.2 release"
+          git commit -m "Add verified $release_tag release"
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then
               exit 0
