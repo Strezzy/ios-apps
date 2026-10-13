@@ -16,6 +16,10 @@ enum PhotoCleaner {
         func inspect(_ dictionary: [String: Any], prefix: String = "") {
             for (key, value) in dictionary {
                 let path = prefix.isEmpty ? key : prefix + "." + key
+                // ColorModel describes RGB/CMYK pixels, not a camera model.
+                // Limit this exception to ImageIO's top-level technical property;
+                // arbitrary nested fields and camera Model tags remain inspected.
+                if prefix.isEmpty && key == (kCGImagePropertyColorModel as String) { continue }
                 if let nested = value as? [String: Any] {
                     if key == "{Exif}" {
                         for field in nested.keys where !allowedExif.contains(field) { paths.insert(path + "." + field) }

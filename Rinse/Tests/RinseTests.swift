@@ -17,7 +17,7 @@ final class RinseTests: XCTestCase {
         let destination = try XCTUnwrap(CGImageDestinationCreateWithURL(url as CFURL, type.identifier as CFString, 1, nil))
         let properties: [CFString: Any] = [kCGImagePropertyOrientation: orientation,
             kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 45.1234, kCGImagePropertyGPSLatitudeRef: "N", kCGImagePropertyGPSLongitude: 123.4567, kCGImagePropertyGPSLongitudeRef: "W"],
-            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "RINSE_PRIVATE_FIXTURE", kCGImagePropertyTIFFArtist: "PRIVATE_OWNER"],
+            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "RINSE_PRIVATE_FIXTURE", kCGImagePropertyTIFFModel: "PRIVATE_CAMERA_MODEL", kCGImagePropertyTIFFArtist: "PRIVATE_OWNER"],
             kCGImagePropertyExifDictionary: [kCGImagePropertyExifDateTimeOriginal: "2026:10:12 12:34:56", kCGImagePropertyExifUserComment: "PRIVATE_COMMENT"]]
         CGImageDestinationAddImage(destination, context.makeImage()!, properties as CFDictionary)
         XCTAssertTrue(CGImageDestinationFinalize(destination))
@@ -34,6 +34,16 @@ final class RinseTests: XCTestCase {
         XCTAssertEqual(try Fingerprint.sha256(input), originalHash)
         let data = try Data(contentsOf: result.output)
         XCTAssertNil(data.range(of: Data("RINSE_PRIVATE_FIXTURE".utf8)))
+        XCTAssertNil(data.range(of: Data("PRIVATE_CAMERA_MODEL".utf8)))
+    }
+    func testColorModelIsTechnicalButCameraModelIsSensitive() throws {
+        let input = try fixturePhoto()
+        let before = try PhotoCleaner.audit(input)
+        XCTAssertFalse(before.fields.contains("ColorModel"))
+        XCTAssertTrue(before.fields.contains("{TIFF}.Model"))
+        let (output, _) = try PhotoCleaner.rebuild(input, options: CleanOptions())
+        let after = try PhotoCleaner.audit(output)
+        XCTAssertTrue(after.fields.isEmpty, "Remaining field names: \(after.fields)")
     }
     func testPNGHasUniqueFingerprintsWithoutPixelChanges() async throws {
         let input = try fixturePhoto(type: .png, orientation: 1)
@@ -154,17 +164,39 @@ final class RinseTests: XCTestCase {
         XCTAssertEqual(writer.status, .completed)
         return url
     }
-    func countFrames(_ url: URL) async throws -> Int {
+    /// Decode actual displayable frames. Compressed sample buffers may also be
+    /// empty timing markers; counting buffer objects is not counting frames.
+    func timeline(_ url: URL) async throws -> [Double] {
         let asset = AVURLAsset(url: url)
         let tracks = try await asset.loadTracks(withMediaType: .video)
         let track = try XCTUnwrap(tracks.first)
         let reader = try AVAssetReader(asset: asset)
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
+        output.alwaysCopiesSampleData = false
         reader.add(output); XCTAssertTrue(reader.startReading())
-        var count = 0
-        while output.copyNextSampleBuffer() != nil { count += 1 }
+        var times: [Double] = []
+        while let sample = output.copyNextSampleBuffer() {
+            guard CMSampleBufferGetNumSamples(sample) > 0,
+                  CMSampleBufferGetImageBuffer(sample) != nil else { continue }
+            let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: false) as? [[String: Any]]
+            if attachments?.first?[kCMSampleAttachmentKey_DoNotDisplay as String] as? Bool == true { continue }
+            let time = CMSampleBufferGetPresentationTimeStamp(sample).seconds
+            XCTAssertTrue(time.isFinite)
+            times.append(time)
+        }
         XCTAssertEqual(reader.status, .completed)
-        return count
+        return times
+    }
+    func assertTimeline(_ input: URL, _ output: URL, frames: Int) async throws {
+        let before = try await timeline(input)
+        let after = try await timeline(output)
+        XCTAssertEqual(before.count, frames, "Source fixture must contain the expected actual frames")
+        XCTAssertEqual(after.count, frames, "Export must retain every actual frame without duplication")
+        for (index, pair) in zip(before, after).enumerated() {
+            XCTAssertEqual(pair.0, Double(index) / 30, accuracy: 0.0001, "Source timestamp at frame \(index)")
+            XCTAssertEqual(pair.1, pair.0, accuracy: 0.0001, "Export timestamp at frame \(index)")
+        }
     }
     func testVideoMetadataAndAllFrames() async throws {
         let input = try await movie(withAudio: false, frames: 90)
@@ -172,14 +204,12 @@ final class RinseTests: XCTestCase {
         XCTAssertFalse(result.before.fields.isEmpty)
         XCTAssertTrue(result.after.fields.isEmpty)
         XCTAssertTrue(result.hashChanged)
-        let count = try await countFrames(result.output)
-        XCTAssertEqual(count, 90)
+        try await assertTimeline(input, result.output, frames: 90)
     }
     func testEarlyAudioEOFKeepsAllVideoFrames() async throws {
         let input = try await movie(withAudio: true, frames: 120)
         let result = try await RinseEngine.clean(input)
-        let count = try await countFrames(result.output)
-        XCTAssertEqual(count, 120)
+        try await assertTimeline(input, result.output, frames: 120)
         let tracks = try await AVURLAsset(url: result.output).loadTracks(withMediaType: .audio)
         XCTAssertEqual(tracks.count, 1)
         XCTAssertTrue(result.after.fields.isEmpty)

@@ -17,6 +17,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+      - name: Preserve source artwork for integrity verification
+        uses: actions/upload-artifact@v7
+        with:
+          name: Rinse-Artwork-Source
+          path: Rinse/Artwork.jpg
+          retention-days: 1
       - name: Prepare XcodeGen
         run: command -v xcodegen || brew install xcodegen
       - name: Build and run native media tests
