@@ -172,7 +172,9 @@
         "_UIImagePNGRepresentation",
         "_UISceneDidActivateNotification",
         "_UISceneWillDeactivateNotification",
-        "_UISheetPresentationControllerDetentIdentifierLarge"
+        "_UISheetPresentationControllerDetentIdentifierLarge",
+        "_UITransitionContextToViewKey",
+        "_UIAccessibilityTraitButton"
       ]
     },
     {
@@ -193,7 +195,8 @@
         "_OBJC_CLASS_$_CALayer",
         "_OBJC_CLASS_$_CAMediaTimingFunction",
         "_OBJC_CLASS_$_CASpringAnimation",
-        "_OBJC_CLASS_$_CATransaction"
+        "_OBJC_CLASS_$_CATransaction",
+        "_CACurrentMediaTime"
       ]
     },
     {
@@ -282,7 +285,8 @@
         "_CGColorSpaceRelease",
         "_CGContextDrawImage",
         "_CGContextRelease",
-        "_CGImageRelease"
+        "_CGImageRelease",
+        "_CGRectInset"
       ]
     },
     {

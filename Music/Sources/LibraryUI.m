@@ -11,14 +11,11 @@
 @property(strong) id nativeAccessory;
 @property(strong) UIVisualEffectView *fallbackAccessory;
 @property NSInteger lastSelectedIndex;
+@property(strong) UIView *caseWarmHost;
+@property(strong) GMPlayerCaseTransition *caseTransition;
 - (void)savePreferences;
+- (void)setLiveMedium:(NSInteger)medium;
 @end
-
-static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
-    view.image = track.artwork ?: [UIImage systemImageNamed:@"music.note"];
-    view.contentMode = track.artwork ? 2 : 1;
-    view.tintColor = GMCurrentAccent(); view.backgroundColor = GMCardColor();
-}
 
 @interface GMAppearanceCell : UITableViewCell
 @property(strong) UISegmentedControl *segments;
@@ -39,6 +36,18 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
 }
 @end
 
+@interface GMMediaStyleCell : GMAppearanceCell @end
+@implementation GMMediaStyleCell
+- (id)initWithStyle:(NSInteger)style reuseIdentifier:(NSString *)identifier {
+    self=[super initWithStyle:style reuseIdentifier:identifier];if(!self)return nil;
+    [self.segments removeFromSuperview];
+    self.segments=[[UISegmentedControl alloc] initWithItems:@[@"Live CD",@"Live Cassette"]];
+    self.segments.accessibilityLabel=@"Live artwork style";
+    self.segments.accessibilityHint=@"Changes cases and artwork throughout Music.";
+    [self.contentView addSubview:self.segments];return self;
+}
+@end
+
 @interface GMSettingsController : GMBrowseTableController <UIColorPickerViewControllerDelegate>
 - (void)reloadSettings;
 @end
@@ -51,14 +60,14 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
 - (void)reloadSettings { [self.table reloadData]; }
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)table { return 4; }
 - (NSInteger)tableView:(UITableView *)table numberOfRowsInSection:(NSInteger)section {
-    if (section == 0) return 5;
+    if (section == 0) return 6;
     if (section == 1) return 2;
     if (section == 2) return 4;
     return 1;
 }
 - (CGFloat)tableView:(UITableView *)table heightForRowAtIndexPath:(NSIndexPath *)path {
     if (path.section == 0 && path.row == 0) return 72;
-    if (path.section == 0 && path.row == 4) return 166;
+    if (path.section == 0 && path.row == 5) return 166;
     return 58;
 }
 - (NSString *)tableView:(UITableView *)table titleForHeaderInSection:(NSInteger)section {
@@ -83,7 +92,12 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
         cell.backgroundColor = GMCardColor(); cell.tintColor = GMCurrentAccent();
         return cell;
     }
-    if (path.section == 0 && path.row == 4) {
+    if (path.section == 0 && path.row == 1) {
+        GMMediaStyleCell *cell=[table dequeueReusableCellWithIdentifier:@"LiveMedium"];
+        if(!cell){cell=[[GMMediaStyleCell alloc] initWithStyle:0 reuseIdentifier:@"LiveMedium"];[cell.segments addTarget:self action:@selector(liveMediumChanged:) forControlEvents:(1UL<<12)];}
+        cell.segments.selectedSegmentIndex=GMLiveMedium;cell.backgroundColor=GMCardColor();cell.tintColor=GMCurrentAccent();return cell;
+    }
+    if (path.section == 0 && path.row == 5) {
         GMScrollStyleCell *cell = [table dequeueReusableCellWithIdentifier:@"ScrollStyle"];
         if (!cell) cell = [[GMScrollStyleCell alloc] initWithStyle:0 reuseIdentifier:@"ScrollStyle"];
         cell.presenter = self; [cell refreshStyle]; [cell applyTheme];
@@ -96,16 +110,16 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     cell.detailTextLabel.textColor = GMSecondaryTextColor();
     cell.detailTextLabel.text = nil; cell.selectionStyle = 0; cell.accessoryType = 0;
     cell.accessoryView = nil; cell.imageView.image = nil;
-    if (path.section == 0 && path.row == 1) {
+    if (path.section == 0 && path.row == 2) {
         cell.textLabel.text=@"Font"; cell.selectionStyle=3; cell.accessoryType=1;
         cell.detailTextLabel.text=GMSharedPersonalization().selectedFontName ?: @"System";
         if (!cell.detailTextLabel.text.length) cell.detailTextLabel.text=@"System";
         cell.imageView.image=[UIImage systemImageNamed:@"textformat"];
-    } else if (path.section == 0 && path.row == 2) {
+    } else if (path.section == 0 && path.row == 3) {
         cell.textLabel.text=@"App Icon"; cell.selectionStyle=3; cell.accessoryType=1;
         cell.detailTextLabel.text=@"6 styles + custom";
         cell.imageView.image=[UIImage systemImageNamed:@"app.badge"];
-    } else if (path.section == 0 && path.row == 3) {
+    } else if (path.section == 0 && path.row == 4) {
         cell.textLabel.text = @"Scrolling Animations";
         UISwitch *toggle = [UISwitch new];
         [toggle setOn:[GMScrollSettings sharedSettings].enabled animated:NO];
@@ -148,10 +162,10 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
 }
 - (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)path {
     [table deselectRowAtIndexPath:path animated:YES];
-    if (path.section == 0 && path.row == 1) {
+    if (path.section == 0 && path.row == 2) {
         GMFontSettingsController *fonts=[GMFontSettingsController new];
         [self.navigationController pushViewController:fonts animated:YES];
-    } else if (path.section == 0 && path.row == 2) {
+    } else if (path.section == 0 && path.row == 3) {
         if (self.presentedViewController) return;
         UINavigationController *navigation=[[UINavigationController alloc] initWithRootViewController:[GMIconPickerController new]];
         navigation.modalPresentationStyle=1;
@@ -163,6 +177,7 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     else if (path.section == 2 && path.row == 0) [self.shell importSongs];
     else if (path.section == 2 && path.row == 1) [self.shell importAlbum];
 }
+- (void)liveMediumChanged:(UISegmentedControl *)control { [self.shell setLiveMedium:control.selectedSegmentIndex]; }
 - (void)appearanceChanged:(UISegmentedControl *)control {
     NSInteger index = control.selectedSegmentIndex;
     NSInteger mode = index == 1 ? 2 : index == 2 ? 1 : index;
@@ -208,7 +223,7 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
 @interface GMCompactPlayerView : UIView
 @property(weak) GMMusicShell *shell;
 @property(strong) UIButton *bodyButton;
-@property(strong) UIImageView *cover;
+@property(strong) GMCDCaseView *cover;
 @property(strong) UILabel *titleLabel;
 @property(strong) UILabel *artistLabel;
 @property(strong) UIButton *playButton;
@@ -227,8 +242,7 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     self.bodyButton.accessibilityLabel = @"Open Now Playing";
     [self.bodyButton addTarget:self action:@selector(openPlayer) forControlEvents:(1UL<<6)];
     [self addSubview:self.bodyButton];
-    self.cover = [[UIImageView alloc] initWithFrame:CGRectZero];
-    self.cover.layer.cornerRadius = 6; self.cover.clipsToBounds = YES;
+    self.cover = [[GMCDCaseView alloc] initWithFrame:CGRectZero presentation:GMCDCasePresentationStatic];
     self.titleLabel = GMLabel(@"Choose a song",14,.4,GMPrimaryTextColor());
     self.artistLabel = GMLabel(@"Music",11,0,GMSecondaryTextColor());
     self.cover.userInteractionEnabled = NO;
@@ -307,7 +321,8 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     GMTrack *track = valid ? engine.tracks[index] : nil;
     self.titleLabel.text = track.title ?: @"Choose a song";
     self.artistLabel.text = track.artist ?: @"Music";
-    GMConfigureArtwork(self.cover,track);
+    [self.cover configureWithIdentifier:GMTrackIdentifier(track) ?: @"empty" title:track.title artist:track.artist artwork:track.artwork];
+    [self.cover applyTheme];
     self.bodyButton.accessibilityValue = [NSString stringWithFormat:@"%@, %@",self.titleLabel.text,self.artistLabel.text];
     BOOL playing = engine.player.isPlaying;
     GMSetButtonImage(self.playButton,GMPlayerSymbol(playing ? @"pause.fill" : @"play.fill",13));
@@ -327,6 +342,7 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     NSURL *documents = [[[NSFileManager defaultManager] URLsForDirectory:9 inDomains:1] firstObject];
     // Keep the existing preference filename so build 3 appearance survives.
     NSDictionary *saved = documents ? [NSDictionary dictionaryWithContentsOfURL:[documents URLByAppendingPathComponent:@"GlassMusicSettings.plist"]] : nil;
+    GMLiveMedium=[saved[@"liveMedium"] integerValue]==1 ? 1 : 0;
     id storedMode = saved[@"appearance"];
     NSInteger mode = [storedMode isKindOfClass:[NSNumber class]] ? [storedMode integerValue] : 0;
     if (mode < 0 || mode > 3) mode = 0;
@@ -452,8 +468,25 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
         if ([browser respondsToSelector:@selector(refreshPlaybackIndicators)]) [browser refreshPlaybackIndicators];
     }
 }
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    if (!self.player.caseTransitionInProgress) [self warmPlayerCase];
+}
+- (void)warmPlayerCase {
+    if (!self.view.window || self.player.caseTransitionInProgress || self.player.view.window) return;
+    if (!self.caseWarmHost) {
+        self.caseWarmHost = [[UIView alloc] initWithFrame:CGRectMake(0,0,300,300)];
+        self.caseWarmHost.userInteractionEnabled = NO;
+        self.caseWarmHost.accessibilityElementsHidden = YES;
+        // Stay above UIKit's quantized visibility cutoff while hidden behind navigation.
+        self.caseWarmHost.alpha = .02;
+        [self.view insertSubview:self.caseWarmHost atIndex:0];
+    }
+    [self.player.cdCaseView moveToHost:self.caseWarmHost frame:self.caseWarmHost.bounds prewarming:YES];
+}
 - (void)presentNowPlaying {
     if (!self.player || self.player.presentingViewController || self.presentedViewController) return;
+    self.player.transitioningDelegate = nil;
     self.player.modalPresentationStyle = 0; // Full screen, including safe areas.
     self.player.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
     Class transitionClass = NSClassFromString(@"UIViewControllerTransition");
@@ -470,6 +503,18 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
             }];
         }
     }
+    [self.player refreshPlayback];
+    [self presentViewController:self.player animated:YES completion:nil];
+}
+- (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect artworkView:(UIView *)sourceArtwork {
+    if (!self.player || self.player.presentingViewController || self.presentedViewController) return;
+    self.caseTransition = [GMPlayerCaseTransition new];
+    self.caseTransition.shell = self; self.caseTransition.sourceRect = sourceRect;
+    self.caseTransition.sourceArtwork=sourceArtwork;
+    self.player.modalPresentationStyle = 0;
+    if ([self.player respondsToSelector:@selector(setPreferredTransition:)]) self.player.preferredTransition = nil;
+    self.player.transitioningDelegate = self.caseTransition;
+    self.player.caseTransitionInProgress = YES;
     [self.player refreshPlayback];
     [self presentViewController:self.player animated:YES completion:nil];
 }
@@ -519,9 +564,15 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     self.accentColor = color ?: GMColor(.98,.18,.32,1); [self applyTheme];
     if (persist) [self savePreferences];
 }
+- (void)setLiveMedium:(NSInteger)medium {
+    NSInteger next=medium==1 ? 1 : 0;if(next==GMLiveMedium)return;
+    GMLiveMedium=next;[GMMediaStills() clear];[self savePreferences];
+    [[NSNotificationCenter defaultCenter] postNotificationName:GMLiveMediumChanged object:nil userInfo:nil];
+    [self.settingsController reloadSettings];[self.compactPlayer refresh];
+}
 - (void)savePreferences {
     NSURL *documents = [[[NSFileManager defaultManager] URLsForDirectory:9 inDomains:1] firstObject];
-    NSDictionary *preferences = @{@"appearance":@(self.appearanceMode), @"accent":@[@(GMAccentComponents[0]),@(GMAccentComponents[1]),@(GMAccentComponents[2])]};
+    NSDictionary *preferences = @{@"liveMedium":@(GMLiveMedium),@"appearance":@(self.appearanceMode), @"accent":@[@(GMAccentComponents[0]),@(GMAccentComponents[1]),@(GMAccentComponents[2])]};
     NSError *error = nil;
     BOOL saved = documents && [preferences writeToURL:[documents URLByAppendingPathComponent:@"GlassMusicSettings.plist"] error:&error];
     if (!saved) [self.player showMessage:@"Couldn't save appearance" message:error.localizedDescription ?: @"Please try choosing it again."];

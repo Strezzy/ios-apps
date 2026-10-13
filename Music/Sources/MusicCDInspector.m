@@ -191,7 +191,7 @@ static NSString *GMCDInspectorCreditsText(void) {
     self.artistLabel.text = album.artist ?: @"Import songs to start a collection";
     [self.caseView configureWithIdentifier:album.identifier title:album.title ?: @"No albums" artist:album.artist ?: @"Music" artwork:album.artwork];
     [self.caseView setCaseOpen:self.caseOpen animated:NO];
-    self.faceArea.accessibilityLabel = album ? [NSString stringWithFormat:@"%@, %@, CD case",album.title,album.artist] : @"No album selected";
+    self.faceArea.accessibilityLabel = album ? [NSString stringWithFormat:@"%@, %@, %@ case",album.title,album.artist,GMLiveMedium==1 ? @"cassette" : @"CD"] : @"No album selected";
     [self updateControls]; [self refreshPlaybackIndicators]; [self updateCaseActivity];
 }
 - (void)updateControls {

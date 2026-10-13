@@ -6,6 +6,7 @@
  * transparent compositing, accessibility, and demand-driven animation.
  */
 import * as THREE from './vendor/three.module.js';
+import { cassetteTrayGeometry, cassetteLidGeometry, cassetteBodyGeometry, cassetteShellGeometry, cassetteReelGeometry, CASSETTE_FRAG, REEL_FRAG } from './cassetteGeometry.js';
 import { CASE, HALF, HINGE, discGeometry, lidGeometry, trayGeometry } from './caseGeometry.js';
 import {
   BACKDROP_FRAG,
@@ -194,6 +195,8 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     onFail?.(reason);
   };
   const grid = control.quality === 'grid';
+  const cassette = control.medium === 'cassette';
+  const halfHeight = cassette ? 50 : HALF;
   const ROOM_SIZE = 256;
   const targetFPS = grid ? 18 : 30;
   const getSpin = () => control.playing && !control.reducedMotion;
@@ -223,7 +226,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute(
     'aria-label',
-    'A clear CD jewel case with its disc spinning inside. Tap the case to open it, or drag it to turn it.',
+    cassette ? 'A clear cassette case with two spinning reels. Tap to open, or drag to turn.' : 'A clear CD jewel case with its disc spinning inside. Tap the case to open it, or drag it to turn it.',
   );
   container.appendChild(canvas);
 
@@ -359,7 +362,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   };
   const backdrop = new THREE.Mesh(
     track(new THREE.PlaneGeometry(8000, 8000)),
-    track(new THREE.ShaderMaterial({ uniforms: shadowOf, vertexShader: BACKDROP_VERT, fragmentShader: BACKDROP_FRAG })),
+    track(new THREE.ShaderMaterial({ uniforms: shadowOf, vertexShader: BACKDROP_VERT, fragmentShader: cassette ? BACKDROP_FRAG.replaceAll('vec2(73.0)','vec2(73.0,50.0)').replace('float r = length(h.xy);','float r = roundBox(h.xy,vec2(64.0,39.0),5.0)+60.0;') : BACKDROP_FRAG })),
   );
   backdrop.position.z = BACKDROP_Z;
   opaque.add(backdrop);
@@ -414,13 +417,13 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     return mesh;
   };
 
-  const hitPlane = track(new THREE.PlaneGeometry(CASE, CASE));
+  const hitPlane = track(new THREE.PlaneGeometry(CASE, halfHeight*2));
   const hitMat = track(new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
 
   function buildCase(art) {
-    const tray = trayGeometry();
-    const lid = lidGeometry();
-    const discGeo = discGeometry();
+    const tray = cassette ? cassetteTrayGeometry() : trayGeometry();
+    const lid = cassette ? cassetteLidGeometry() : lidGeometry();
+    const discGeo = cassette ? cassetteBodyGeometry() : discGeometry();
     for (const g of [tray.rods, tray.sheets, lid.rods, lid.sheets, discGeo]) track(g);
 
     const trayRodMat = rodMaterial();
@@ -435,7 +438,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
           uPrintOut: { value: disc.printOut },
         },
         vertexShader: DISC_VERT,
-        fragmentShader: DISC_FRAG,
+        fragmentShader: cassette ? CASSETTE_FRAG : DISC_FRAG,
       }),
     );
 
@@ -455,6 +458,17 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       depthTray: 0,
       depthLid: 0,
     };
+    item.reels=[];
+    if (cassette) {
+      const shell=cassetteShellGeometry(); track(shell.rods); track(shell.sheets);
+      item.tapeRods=fixed(new THREE.Mesh(shell.rods,trayRodMat),glass);
+      item.tapeSheets=fixed(new THREE.Mesh(shell.sheets,sheetMaterial()),glass);
+      item.tapeSheets.renderOrder=1;
+      const reel=track(cassetteReelGeometry());
+      const material=track(new THREE.ShaderMaterial({vertexShader:DISC_VERT,fragmentShader:REEL_FRAG}));
+      item.reels=[-30,30].map(x=>({x,mesh:fixed(new THREE.Mesh(reel,material),opaque),depth:fixed(new THREE.Mesh(reel,depthOnly),glass)}));
+      for(const r of item.reels) r.depth.renderOrder=-5;
+    }
     item.traySheets.renderOrder = 1;
     item.lidSheets.renderOrder = 1;
     item.discDepth.renderOrder = -5;
@@ -585,8 +599,16 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     item.traySheets.matrix.copy(item.mCase);
     item.lidRods.matrix.copy(item.mLid);
     item.lidSheets.matrix.copy(item.mLid);
-    item.discMesh.matrix.copy(item.mCase).multiply(_m.makeRotationZ(-st.spin));
+    item.discMesh.matrix.copy(item.mCase).multiply(_m.makeRotationZ(cassette ? 0 : -st.spin));
     item.discDepth.matrix.copy(item.discMesh.matrix);
+    if(cassette) {
+      for(const mesh of [item.tapeRods,item.tapeSheets]) { mesh.matrix.copy(item.mCase);mesh.matrixWorld.copy(mesh.matrix);mesh.visible=true; }
+      for(const r of item.reels) {
+        r.mesh.matrix.copy(item.mCase).multiply(_m.makeTranslation(r.x,1,0)).multiply(_h.makeRotationZ(-st.spin*3));
+        r.depth.matrix.copy(r.mesh.matrix);
+        for(const mesh of [r.mesh,r.depth]) {mesh.matrixWorld.copy(mesh.matrix);mesh.visible=true;}
+      }
+    }
     item.hitTray.matrix.copy(item.mCase);
     item.hitLid.matrix.copy(item.mLid).multiply(_m.makeTranslation(0, 0, 4));
     for (const o of [
@@ -621,7 +643,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   const hovering = () => pointer.over && !grab.active && caseAt(pointer.x, pointer.y);
 
   function frame(dt) {
-    st.t += dt;
+    st.t += dt * (st.phase === 'opening' ? (Number(control.entranceSpeed) || 1) : 1);
     const { t } = st;
 
     const want = getSpin() ? SPIN : 0;
@@ -653,6 +675,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     const since = t - st.phaseAt;
     if (st.phase === 'opening' && since >= OPEN_T) {
       st.phase = 'open';
+      control.entranceSpeed=1;
       st.phaseAt = t;
     } else if (st.phase === 'closing' && since >= CLOSE_T) {
       st.phase = 'rest';
@@ -698,7 +721,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     for (const matrix of [item.mCase, item.mLid]) {
       for (let i = 0; i < 8; i++) {
         fitPoint.set(i & 1 ? HALF + 1.25 : -HALF - 1.25,
-          i & 2 ? HALF + 1.25 : -HALF - 1.25, i & 4 ? 7 : -7).applyMatrix4(matrix);
+          i & 2 ? halfHeight + 1.25 : -halfHeight - 1.25, i & 4 ? 7 : -7).applyMatrix4(matrix);
         distance = Math.max(distance,
           fitPoint.z + Math.abs(fitPoint.x) / (tanHalf * camera.aspect * safeX),
           fitPoint.z + Math.abs(fitPoint.y) / (tanHalf * safeY));
@@ -711,7 +734,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     for (const matrix of [item.mCase, item.mLid]) {
       for (let i = 0; i < 8; i++) {
         fitPoint.set(i & 1 ? HALF + 1.25 : -HALF - 1.25,
-          i & 2 ? HALF + 1.25 : -HALF - 1.25, i & 4 ? 7 : -7).applyMatrix4(matrix).project(camera);
+          i & 2 ? halfHeight + 1.25 : -halfHeight - 1.25, i & 4 ? 7 : -7).applyMatrix4(matrix).project(camera);
         fittedExtent = Math.max(fittedExtent, Math.abs(fitPoint.x), Math.abs(fitPoint.y));
       }
     }
@@ -725,7 +748,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     let y1 = -Infinity;
     for (const m of [item.mCase, item.mLid]) {
       for (let i = 0; i < 8; i++) {
-        _c.set(i & 1 ? HALF + 3 : -HALF - 3, i & 2 ? HALF + 3 : -HALF - 3, i & 4 ? 7 : -7);
+        _c.set(i & 1 ? HALF + 3 : -HALF - 3, i & 2 ? halfHeight + 3 : -halfHeight - 3, i & 4 ? 7 : -7);
         _c.applyMatrix4(m).project(camera);
         x0 = Math.min(x0, _c.x);
         x1 = Math.max(x1, _c.x);
@@ -756,7 +779,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     groups.push({ depth: item.depthTray, rods: item.trayRods, sheets: item.traySheets, mat: item.trayRodMat });
     groups.push({ depth: item.depthLid, rods: item.lidRods, sheets: item.lidSheets, mat: item.lidRodMat });
     groups.sort((a, b) => a.depth - b.depth);
-    const glassMeshes = [item.trayRods, item.traySheets, item.lidRods, item.lidSheets];
+    const glassMeshes = [item.trayRods, item.traySheets, item.lidRods, item.lidSheets, ...(cassette ? [item.tapeRods,item.tapeSheets] : [])];
     const w = rtPage.width;
     const h = rtPage.height;
     const rect = caseRect(w, h);
@@ -771,7 +794,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
         renderer.setRenderTarget(into);
         renderer.clear();
         copyMat.uniforms.uTex.value = from.texture;
-        for (const m of glassMeshes) m.visible = m === g.rods || m === g.sheets;
+        for (const m of glassMeshes) m.visible = m === g.rods || m === g.sheets || (cassette && g.rods === item.trayRods && (m === item.tapeRods || m === item.tapeSheets));
         g.mat.uniforms.uBehind.value = from.texture;
         renderer.render(glass, camera);
         from = into;
@@ -951,7 +974,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       if (previousArt && previousArt !== currentArt) previousArt.dispose();
       previousArt = currentArt;
       currentArt = tex;
-      artMix = control.reducedMotion || firstFrame ? 1 : 0;
+      artMix = control.still || control.reducedMotion || firstFrame ? 1 : 0;
       const u = item.discMesh.material.uniforms;
       u.uArt.value = currentArt; u.uArtPrevious.value = previousArt; u.uArtMix.value = artMix;
       if (artMix === 1) { previousArt.dispose(); previousArt = currentArt; u.uArtPrevious.value = currentArt; }
@@ -994,11 +1017,19 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
 
   return {
     update,
+    still: () => {
+      if(firstFrame || artLoading || artMix<1 || failed || disposed) return null;
+      // Draw synchronously before reading the WebGL buffer; no preserved buffer or timer.
+      const pose=showPose(0); pose.yaw=-.2;pose.pitch=-.12;pose.roll=.03;pose.y=0;
+      place(pose);fitPoseInsideArtwork();draw();
+      return canvas.toDataURL('image/png').split(',')[1];
+    },
     setOpen: (on) => { control.open = !!on; toggleOpen(on); },
-    debug: () => ({ quality: grid ? 'grid' : 'hero', roomSize: ROOM_SIZE, pixelRatio: renderer.getPixelRatio(),
+    debug: () => ({ medium: cassette ? 'cassette' : 'cd', reelCount: item?.reels.length || 0, reelSpin: cassette ? st.spin*3 : 0, quality: grid ? 'grid' : 'hero', roomSize: ROOM_SIZE, pixelRatio: renderer.getPixelRatio(),
       msaaSamples: sampleCount, refractionSamples: samples, fittedExtent, fitRatio, firstFrameMs, artworkCompletedAt,
       epoch: control.epoch, artToken: control.artToken, artLoading,
       fpsLimit: targetFPS, playing: !!control.playing, reducedMotion: !!control.reducedMotion, frameCount, active: !!control.active, scheduled: !!raf, disposed, ready: !firstFrame,
+      entranceSpeed: Number(control.entranceSpeed) || 1, openingDuration: OPEN_T / (Number(control.entranceSpeed) || 1),
       open: st.open, phase: st.phase, spin: st.spin, tiltX:lean.x, tiltY:lean.y, artMix, textureCount: renderer.info.memory.textures,
       geometryCount: renderer.info.memory.geometries, width: rtPage.width, height: rtPage.height }),
     dispose() {

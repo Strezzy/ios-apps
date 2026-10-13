@@ -4,6 +4,10 @@
 #ifndef MUSIC_UIKIT_CD_CASE_ADDITIONS
 #define MUSIC_UIKIT_CD_CASE_ADDITIONS
 
+typedef double CFTimeInterval;
+extern CFTimeInterval CACurrentMediaTime(void);
+extern CGRect CGRectInset(CGRect rect, CGFloat dx, CGFloat dy);
+
 @class WKWebView, WKWebViewConfiguration, WKNavigation, WKNavigationAction;
 @class WKUserContentController, WKScriptMessage, WKFrameInfo, WKWebsiteDataStore;
 @class NSURLRequest, CMMotionManager, CMDeviceMotion, CMAttitude, NSOperationQueue;
@@ -27,9 +31,15 @@ extern void NSLog(NSString *format, ...);
 @property(readonly, copy) NSString *absoluteString;
 @end
 @interface NSBundle (GMCDLocalResources)
+- (id)objectForInfoDictionaryKey:(NSString *)key;
 - (NSURL *)URLForResource:(NSString *)name withExtension:(NSString *)extension subdirectory:(NSString *)subpath;
 @end
+@interface NSMutableDictionary (GMMediaStillCache)
+- (void)removeAllObjects;
+- (void)removeObjectForKey:(id)key;
+@end
 @interface NSData (GMCDJSON)
+- (instancetype)initWithBase64EncodedString:(NSString *)string options:(NSUInteger)options;
 - (NSString *)base64EncodedStringWithOptions:(NSUInteger)options;
 @end
 @interface NSArray (GMCDInspectionIndex)
@@ -221,4 +231,30 @@ enum { UIViewAnimationOptionTransitionFlipFromLeft = 1UL << 20,
 + (void)transitionWithView:(UIView *)view duration:(NSTimeInterval)duration options:(UIViewAnimationOptions)options animations:(void (^)(void))animations completion:(void (^)(BOOL finished))completion;
 @end
 
+@protocol UIViewControllerContextTransitioning <NSObject>
+@property(nonatomic, readonly) UIView *containerView;
+@property(nonatomic, readonly) BOOL transitionWasCancelled;
+- (CGRect)finalFrameForViewController:(UIViewController *)controller;
+- (UIView *)viewForKey:(NSString *)key;
+- (void)completeTransition:(BOOL)completed;
+@end
+@protocol UIViewControllerAnimatedTransitioning <NSObject>
+- (NSTimeInterval)transitionDuration:(id<UIViewControllerContextTransitioning>)context;
+- (void)animateTransition:(id<UIViewControllerContextTransitioning>)context;
+@end
+@protocol UIViewControllerTransitioningDelegate <NSObject>
+@optional
+- (id<UIViewControllerAnimatedTransitioning>)animationControllerForPresentedController:(UIViewController *)presented presentingController:(UIViewController *)presenting sourceController:(UIViewController *)source;
+- (id<UIViewControllerAnimatedTransitioning>)animationControllerForDismissedController:(UIViewController *)dismissed;
+@end
+@interface UIViewController (GMPlayerTransition)
+@property(nonatomic, weak) id<UIViewControllerTransitioningDelegate> transitioningDelegate;
+@end
+typedef unsigned long long UIAccessibilityTraits;
+extern const UIAccessibilityTraits UIAccessibilityTraitButton;
+@interface UIView (GMPlayerCoordinates)
+@property(nonatomic) UIAccessibilityTraits accessibilityTraits;
+- (CGRect)convertRect:(CGRect)rect fromView:(UIView *)view;
+@end
+extern NSString *const UITransitionContextToViewKey;
 #endif

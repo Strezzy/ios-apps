@@ -598,3 +598,6 @@ export function discGeometry() {
   g.computeBoundingSphere();
   return g;
 }
+
+// Shared construction primitives; the original CD geometry above is unchanged.
+export { RodBuilder, roundedRect, circle, sheet, mergeSheets };

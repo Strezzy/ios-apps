@@ -1,0 +1,82 @@
+name: Verify Music case transitions
+on:
+  pull_request:
+    paths: ['Music/**', 'MusicTransitions/**', '.github/workflows/music-transitions.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: music-transitions-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Preserve Cask and the original optical shaders
+        run: |
+          shasum -a 256 -c <<'CHECKSUMS'
+          6fcad389e6ce9b28a91fbf201529f9549ad8f42973c96bf68aa0f005d5c978f9  Music/Sources/MusicScrollAnimations.m
+          7b1fa071d2ee6a3e5ab8f3054281d1ea92570bb4f6f8857d32322dde99c2065a  Music/Sources/MusicScrollSettings.m
+          9238bc94054bbc073c0d83e14a8244f35323de351684a1365d3c5ceab4a33a9e  Music/Sources/CDCaseJS/shaders.js
+          866aa3ef722fb755266a9fd72808b1ab6cfcfc437980cf9b87457d81fc009690  Music/Sources/MusicCDInspector.m
+          CHECKSUMS
+      - name: Check the Linux-compatible API declarations
+        run: |
+          mkdir -p /tmp/Music-emptySDK
+          xcrun clang -target arm64-apple-ios16.0 -isysroot /tmp/Music-emptySDK -nostdinc -Oz -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter -c Music/Sources/main.m -o /tmp/Music-compat.o
+      - name: Build the offline renderer and native app
+        run: |
+          set -euo pipefail
+          mkdir -p Evidence
+          npm install --prefix /tmp/music-tools --no-audit --no-fund esbuild@0.25.12
+          MUSIC_ESBUILD_MODULE=/tmp/music-tools/node_modules/esbuild/lib/main.js node Music/Support/build_cd_renderer.mjs > Evidence/renderer-bundle.json
+          bash Music/build-macos.sh 2>&1 | tee Evidence/device-compile.log
+          codesign --verify --deep --strict Music/Build-Mac/Payload/Music.app
+      - name: Build production-code regression probe
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/TransitionProbe.app
+          cp -R Music/Resources/. /tmp/TransitionProbe.app/
+          python3 - <<'PY'
+          import plistlib,wave
+          p='/tmp/TransitionProbe.app/Info.plist'
+          d=plistlib.load(open(p,'rb'));d['CFBundleIdentifier']='com.billy.music.transitionprobe';d['CFBundleExecutable']='Probe';d['CFBundleSupportedPlatforms']=['iPhoneSimulator'];d.pop('UIRequiredDeviceCapabilities',None)
+          d['UIApplicationSceneManifest']={'UIApplicationSupportsMultipleScenes':False,'UISceneConfigurations':{}}
+          plistlib.dump(d,open(p,'wb'))
+          with wave.open('/tmp/TransitionProbe.app/fixture.wav','wb') as w:
+              w.setparams((1,2,8000,0,'NONE','not compressed'));w.writeframes(b'\0\0'*8000*180)
+          PY
+          xcrun --sdk iphonesimulator clang -arch arm64 -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" -mios-simulator-version-min=26.0 -O1 -fobjc-arc -fblocks -Wno-deprecated-declarations -framework Foundation -framework UIKit -framework AVFoundation -framework AVFAudio -framework AVKit -framework MediaPlayer -framework UniformTypeIdentifiers -framework QuartzCore -framework PhotosUI -framework ImageIO -framework CoreGraphics -framework CoreText -framework WebKit -framework CoreMotion MusicTransitions/TransitionProbe.m -o /tmp/TransitionProbe.app/Probe 2>&1 | tee Evidence/probe-compile.log
+          codesign --force --sign - /tmp/TransitionProbe.app
+      - name: Verify static lists, hero handoff, playback and album detail
+        run: |
+          set -euo pipefail
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys;d=json.load(sys.stdin);print(next(x["udid"] for k in sorted(d["devices"],reverse=True) if "iOS-26" in k for x in d["devices"][k] if x["name"]=="iPhone 17 Pro"))')
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" /tmp/TransitionProbe.app
+          xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" com.billy.music.transitionprobe 2>&1 | tee Evidence/runtime.log &
+          DATA=$(xcrun simctl get_app_container "$DEVICE" com.billy.music.transitionprobe data)
+          for attempt in $(seq 1 130); do test ! -f "$DATA/Documents/result.json" || break; sleep 3; done
+          cp "$DATA/Documents/"*.json Evidence/ || true
+          cp "$DATA/Documents/"*.png Evidence/ || true
+          tail -100 Evidence/runtime.log
+          xcrun simctl terminate "$DEVICE" com.billy.music.transitionprobe || true
+          python3 -c 'import json;d=json.load(open("Evidence/result.json"));print(json.dumps(d,indent=2));assert d["passed"]'
+      - name: Save candidate IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: Music-case-transitions-candidate
+          path: Music/Build-Mac/Music.ipa
+      - name: Save verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Music-case-transitions-evidence
+          path: Evidence
+      - name: Stop simulator processes
+        if: always()
+        timeout-minutes: 1
+        run: xcrun simctl shutdown booted || true
