@@ -167,7 +167,7 @@ final class CollectrTests: XCTestCase {
             p.withUnsafeMutableBytes { texture.getBytes($0.baseAddress!,bytesPerRow: 4,from: MTLRegionMake2D(x,y,1,1),mipmapLevel: 0) }
             return p
         }
-        let top = pixel(50,10), bottom = pixel(50,110)
+        let top = pixel(texture.width/2,texture.height/14), bottom = pixel(texture.width/2,texture.height*11/14)
         XCTAssertLessThan(top[0],25); XCTAssertGreaterThan(top[1],220); XCTAssertGreaterThan(top[2],220)
         XCTAssertGreaterThan(bottom[0],220); XCTAssertGreaterThan(bottom[1],90); XCTAssertLessThan(bottom[1],180); XCTAssertLessThan(bottom[2],25)
     }
