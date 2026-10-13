@@ -1,0 +1,8 @@
+{
+  "name": "Collectr",
+  "subtitle": "Turn moments into numbered collector cards",
+  "localizedDescription": "Create gently rounded photo cards with on-device Depth Anything 3, subtle motion and clear protective sleeves. Set a fixed edition size and rarity, collect numbered copies and transfer them between nearby phones. Includes native Liquid Glass and photo-matched ambient colors. Sealing requires confirmation to remove the original from Photos. Nearby edition records are local, without a global scarcity server. Physical iPhone motion and two-phone trading still need device testing.",
+  "icon": "Collectr.png",
+  "category": "photo-video",
+  "tintColor": "#B5C9EA"
+}

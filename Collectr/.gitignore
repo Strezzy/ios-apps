@@ -1,0 +1,6 @@
+Build/
+Resources/Models/
+Assets.xcassets/AppIcon.appiconset/AppIcon.png
+Collectr.xcodeproj/
+App/Info.plist
+__pycache__/

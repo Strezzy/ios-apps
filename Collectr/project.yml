@@ -1,0 +1,69 @@
+name: Collectr
+options:
+  bundleIdPrefix: com.billy
+  deploymentTarget:
+    iOS: '26.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: '0.1.0'
+    CURRENT_PROJECT_VERSION: '1'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGNING_ALLOWED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    MTL_ENABLE_DEBUG_INFO: INCLUDE_SOURCE
+    GENERATE_INFOPLIST_FILE: NO
+targets:
+  Collectr:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+        excludes: [Info.plist]
+      - path: Core
+      - path: Imaging
+      - path: Views
+      - path: Assets.xcassets
+      - path: PrivacyInfo.xcprivacy
+      - path: Resources/Models
+        type: folder
+      - path: Resources/Licenses
+        type: folder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.collectr
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Collectr
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIRequiredDeviceCapabilities: [arm64, metal]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSPhotoLibraryUsageDescription: Choose a photo for a collector card. Before sealing, Collectr asks you to confirm deleting that original from Photos after safely saving your card.
+        NSMotionUsageDescription: Tilt your phone to look into your collector card. Motion stays on this device.
+        NSLocalNetworkUsageDescription: Find nearby collectors and transfer the numbered cards you choose directly between phones.
+        NSBonjourServices: ['_collectr-card._tcp']
+        CADisableMinimumFrameDurationOnPhone: true
+  CollectrTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.collectr.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Collectr
+schemes:
+  Collectr:
+    build:
+      targets:
+        Collectr: all
+    test:
+      targets:
+        - name: CollectrTests
+          parallelizable: false
