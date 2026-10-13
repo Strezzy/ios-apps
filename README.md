@@ -25,7 +25,7 @@ These are personal passion projects, shared for free. Constructive feedback is w
 
 ### Music
 
-Play music stored on your iPhone, browse albums, make playlists, and search your library. Change album artwork and choose optional scrolling animations in Settings.
+Play music stored on your iPhone offline. Browse songs, albums, and playlists; explore interactive clear CD cases with spinning artwork; and customize themes, album art, lyrics, and scrolling animations.
 
 ### VoiceGlass
 
