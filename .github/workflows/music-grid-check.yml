@@ -1,0 +1,71 @@
+name: Verify Music Albums grid
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Build and verify Music']
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  grid:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-26
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore the verified Music project
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BUILD_RUN" ]; then BUILD_RUN=$(gh run list --workflow music.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId'); fi
+          gh run download "$BUILD_RUN" --name Music-0.12-13-Verified --dir /tmp/music-verified
+          (cd /tmp/music-verified && shasum -a 256 -c SHA256SUMS.txt)
+          rm -rf Music
+          unzip -q /tmp/music-verified/Music-Source.zip
+          mkdir -p Grid-Evidence /tmp/MusicGrid.app
+      - name: Build the production Albums screen with test fixtures
+        run: |
+          set -euo pipefail
+          cp -R Music/Resources/. /tmp/MusicGrid.app/
+          python3 - <<'PY'
+          import plistlib
+          p='/tmp/MusicGrid.app/Info.plist'
+          d=plistlib.load(open(p,'rb'));d['CFBundleIdentifier']='com.billy.music.gridprobe';d['CFBundleExecutable']='MusicGrid';d['CFBundleSupportedPlatforms']=['iPhoneSimulator'];d.pop('UIRequiredDeviceCapabilities',None)
+          d['UIApplicationSceneManifest']={'UIApplicationSupportsMultipleScenes':False,'UISceneConfigurations':{}}
+          plistlib.dump(d,open(p,'wb'))
+          PY
+          xcrun --sdk iphonesimulator clang -arch arm64 -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" -mios-simulator-version-min=26.0 -O1 -fobjc-arc -fblocks -Wno-deprecated-declarations -framework Foundation -framework UIKit -framework AVFoundation -framework AVFAudio -framework AVKit -framework MediaPlayer -framework UniformTypeIdentifiers -framework QuartzCore -framework PhotosUI -framework ImageIO -framework CoreGraphics -framework CoreText -framework WebKit -framework CoreMotion MusicChecks/GridProbe.m -o /tmp/MusicGrid.app/MusicGrid 2>&1 | tee Grid-Evidence/compile.log
+          codesign --force --sign - /tmp/MusicGrid.app
+      - name: Check all visible discs and capture the actual grid
+        run: |
+          set -euo pipefail
+          xcrun simctl list devices available -j > Grid-Evidence/devices.json
+          DEVICE=$(python3 -c 'import json;d=json.load(open("Grid-Evidence/devices.json"));print(next(x["udid"] for k in sorted(d["devices"],reverse=True) if "iOS-26" in k for x in d["devices"][k] if x["name"]=="iPhone 17 Pro"))')
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" /tmp/MusicGrid.app
+          xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" com.billy.music.gridprobe > Grid-Evidence/runtime.log 2>&1 &
+          DATA=$(xcrun simctl get_app_container "$DEVICE" com.billy.music.gridprobe data)
+          for attempt in $(seq 1 90); do test ! -f "$DATA/Documents/grid-result.json" || break; sleep 3; done
+          cp "$DATA/Documents/"grid-*.json Grid-Evidence/ || true
+          xcrun simctl io "$DEVICE" screenshot Grid-Evidence/Native-Albums-Light.png
+          xcrun simctl ui "$DEVICE" appearance dark
+          sleep 5
+          xcrun simctl io "$DEVICE" screenshot Grid-Evidence/Native-Albums-Dark.png
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('Grid-Evidence/grid-result.json').read_text());print(json.dumps(result,indent=2))
+          assert result['passed'], 'Some visible cases did not render and spin'
+          assert result['nativeTabCount']==5
+          PY
+      - name: Save full native Albums evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Music-0.12-Grid-Evidence
+          path: Grid-Evidence
+          retention-days: 14
