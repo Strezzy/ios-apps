@@ -341,6 +341,42 @@
       "versionDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa",
       "size": 2319258
+    },
+    {
+      "name": "Collectr",
+      "subtitle": "Turn moments into numbered collector cards",
+      "localizedDescription": "Create gently rounded photo cards with on-device Depth Anything 3, subtle motion and clear protective sleeves. Set a fixed edition size and rarity, collect numbered copies and transfer them between nearby phones. Includes native Liquid Glass and photo-matched ambient colors. Sealing requires confirmation to remove the original from Photos. Nearby edition records are local, without a global scarcity server. Physical iPhone motion and two-phone trading still need device testing.",
+      "category": "photo-video",
+      "tintColor": "#B5C9EA",
+      "bundleIdentifier": "com.billy.collectr",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "buildVersion": "5",
+          "buildNumber": "5",
+          "date": "2026-10-13T09:28:31Z",
+          "localizedDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-5/Collectr.ipa",
+          "size": 183028572,
+          "minOSVersion": "26.0",
+          "sha256": "1b3ed57565e02080aee7512044e05c620984b6bfd7f65f554f525028b08e4fe4"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Collectr.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSLocalNetworkUsageDescription": "Find nearby collectors and transfer the numbered cards you choose directly between phones.",
+          "NSMotionUsageDescription": "Tilt your phone to look into your collector card. Motion stays on this device.",
+          "NSPhotoLibraryUsageDescription": "Choose a photo for a collector card. Before sealing, Collectr asks you to confirm deleting that original from Photos after safely saving your card."
+        }
+      },
+      "version": "0.1.0",
+      "versionDate": "2026-10-13T09:28:31Z",
+      "versionDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-5/Collectr.ipa",
+      "size": 183028572
     }
   ],
   "news": []
