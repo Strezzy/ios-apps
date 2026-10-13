@@ -1,0 +1,216 @@
+--- a/Music/Sources/CDCaseJS/bridge.js
++++ b/Music/Sources/CDCaseJS/bridge.js
+@@ -33,4 +33,8 @@
+     clean.background = next.background.map(v => Math.max(0, Math.min(1, v)));
+   }
++  for (const key of ['epoch','artToken']) {
++    if (typeof next[key] === 'string' && next[key].length <= 100) clean[key] = next[key];
++  }
++  if (typeof next.padding === 'number' && Number.isFinite(next.padding)) clean.padding = Math.max(0, Math.min(12, next.padding));
+   const qualityChanged = clean.quality && state.quality !== clean.quality;
+   Object.assign(state, clean);
+@@ -39,5 +43,5 @@
+     if (!stage) {
+       stage = createStage(container, { ...state }, {
+-        onReady: () => post({ type: 'rendered' }),
++        onReady: (epoch, artToken) => post({ type: 'rendered', epoch, artToken }),
+         onOpen: open => post({ type: 'open', open }),
+         onFail: reportFailure,
+--- a/Music/Sources/CDCaseJS/stage.js
++++ b/Music/Sources/CDCaseJS/stage.js
+@@ -35,5 +35,5 @@
+ const FIT = 0.94;
+ 
+-const MSAA = 0;
++const MSAA = 4;
+ 
+ const STARS = 1.6;
+@@ -195,5 +195,5 @@
+   };
+   const grid = control.quality === 'grid';
+-  const ROOM_SIZE = grid ? 128 : 256;
++  const ROOM_SIZE = 256;
+   const targetFPS = grid ? 18 : 30;
+   const getSpin = () => control.playing && !control.reducedMotion;
+@@ -209,4 +209,11 @@
+   let artMix = 1;
+   let artKey = null;
++  let artLoading = false;
++  let announcedFrame = '';
++  let artworkCompletedAt = 0;
++  const startedAt = performance.now();
++  let firstFrameMs = null;
++  let fittedExtent = 0;
++  let fitRatio = 1;
+   const background = new THREE.Vector3(0.018, 0.018, 0.023);
+   const disc = { artIn: 16.2, printOut: 59.1 };
+@@ -239,5 +246,5 @@
+     fatal('shader-compile: ' + details.slice(0,1800));
+   };
+-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, grid ? 1 : 1.5));
++  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+   renderer.autoClear = false;
+   renderer.setClearColor(0xffffff, 0);
+@@ -252,6 +259,12 @@
+       resolveDepthBuffer: false,
+     });
+-  const rtPage = target(0, true);
+-  const rt = [target(MSAA, true), target(MSAA, true)];
++  // Antialias the actual offscreen geometry, not just the final full-screen
++  // quad. The old grid rendered these surfaces at 1x with zero MSAA samples.
++  const gl = renderer.getContext();
++  const supportedSamples = Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER,
++    hdr ? gl.RGBA16F : gl.RGBA8, gl.SAMPLES) || []);
++  const sampleCount = Math.max(0, ...supportedSamples.filter(n => n <= MSAA));
++  const rtPage = target(sampleCount, true);
++  const rt = [target(sampleCount, true), target(sampleCount, true)];
+   const rtBright = target(0);
+   const rtStarA = target(0);
+@@ -354,5 +367,5 @@
+   glass.add(copyQuad);
+ 
+-  const samples = 1;
++  const samples = 2;
+ 
+   const rodMaterial = () =>
+@@ -479,5 +492,5 @@
+   let item = null;
+   let last = 0;
+-  let view = { w: 1, h: 1, openScale: 1 };
++  let view = { w: 1, h: 1, openScale: 1, baseDistance: 400 };
+ 
+   const setOpenFlag = (on) => {
+@@ -662,6 +675,45 @@
+ 
+     place(showPose(t));
++    fitPoseInsideArtwork();
+     draw();
+-    if (firstFrame && !failed) { firstFrame = false; onReady?.(); }
++    // Announce only a frame with the requested cover. A pooled renderer must
++    // never reveal the previous album while the replacement image is decoding.
++    const frameKey = String(control.epoch || '') + ':' + String(control.artToken || '');
++    if (!artLoading && !failed && (firstFrame || announcedFrame !== frameKey)) {
++      firstFrame = false; announcedFrame = frameKey;
++      if (firstFrameMs === null) firstFrameMs = performance.now() - startedAt;
++      onReady?.(control.epoch, control.artToken);
++    }
++  }
++
++  const fitPoint = new THREE.Vector3();
++  function fitPoseInsideArtwork() {
++    const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
++    const reserve = Math.max(3, Math.min(view.w, view.h) * 0.012);
++    const safeX = 1 - 2 * reserve / Math.max(1, view.w);
++    const safeY = 1 - 2 * reserve / Math.max(1, view.h);
++    let distance = view.baseDistance;
++    // Conservative bounds cover the rounded rails, hinge and sheets. They
++    // also include depth, so perspective foreshortening cannot clip a corner.
++    for (const matrix of [item.mCase, item.mLid]) {
++      for (let i = 0; i < 8; i++) {
++        fitPoint.set(i & 1 ? HALF + 3 : -HALF - 3,
++          i & 2 ? HALF + 3 : -HALF - 3, i & 4 ? 7 : -7).applyMatrix4(matrix);
++        distance = Math.max(distance,
++          fitPoint.z + Math.abs(fitPoint.x) / (tanHalf * camera.aspect * safeX),
++          fitPoint.z + Math.abs(fitPoint.y) / (tanHalf * safeY));
++      }
++    }
++    camera.position.z = distance * 1.002;
++    camera.updateMatrixWorld();
++    fitRatio = view.baseDistance / camera.position.z;
++    fittedExtent = 0;
++    for (const matrix of [item.mCase, item.mLid]) {
++      for (let i = 0; i < 8; i++) {
++        fitPoint.set(i & 1 ? HALF + 3 : -HALF - 3,
++          i & 2 ? HALF + 3 : -HALF - 3, i & 4 ? 7 : -7).applyMatrix4(matrix).project(camera);
++        fittedExtent = Math.max(fittedExtent, Math.abs(fitPoint.x), Math.abs(fitPoint.y));
++      }
++    }
+   }
+ 
+@@ -763,6 +815,7 @@
+     camera.aspect = w / h;
+     const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+-    const fitH = CASE / FIT / 2 / tanHalf;
+-    const fitW = (CASE * 1.065) / 2 / (tanHalf * camera.aspect);
++    const padding = clamp(Number(control.padding) || 0, 0, 12);
++    const fitH = CASE / FIT / 2 / tanHalf * h / Math.max(1, h - padding * 2);
++    const fitW = (CASE * 1.065) / 2 / (tanHalf * camera.aspect) * w / Math.max(1, w - padding * 2);
+     const dist = Math.max(fitH, fitW);
+     camera.position.set(0, 0, dist);
+@@ -772,5 +825,5 @@
+     camera.updateMatrixWorld();
+     const across = 2 * dist * tanHalf * camera.aspect;
+-    view = { w, h, openScale: Math.min(1.04, across / (CASE * 2.25)) };
++    view = { w, h, openScale: Math.min(1.04, across / (CASE * 2.25)), baseDistance: dist };
+     dirty = true;
+     schedule();
+@@ -882,5 +935,5 @@
+     const key = typeof art === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(art) && art.length <= 8 * 1024 * 1024 ? art : defaultArt;
+     if (key === artKey) return;
+-    artKey = key;
++    artKey = key; artLoading = true;
+     const generation = ++artGeneration;
+     let tex;
+@@ -888,6 +941,7 @@
+     catch { try { tex = await new THREE.TextureLoader().loadAsync(defaultArt); } catch { fatal('texture-unavailable'); return; } }
+     if (disposed || failed || generation !== artGeneration) { tex.dispose(); return; }
++    artLoading = false; artworkCompletedAt = performance.now();
+     tex.colorSpace = THREE.SRGBColorSpace;
+-    tex.anisotropy = Math.min(grid ? 2 : 4, renderer.capabilities.getMaxAnisotropy());
++    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+     if (!item) {
+       currentArt = previousArt = tex;
+@@ -898,5 +952,5 @@
+       previousArt = currentArt;
+       currentArt = tex;
+-      artMix = control.reducedMotion ? 1 : 0;
++      artMix = control.reducedMotion || firstFrame ? 1 : 0;
+       const u = item.discMesh.material.uniforms;
+       u.uArt.value = currentArt; u.uArtPrevious.value = previousArt; u.uArtMix.value = artMix;
+@@ -911,5 +965,12 @@
+     const openBefore = control.open;
+     const motionBefore = control.reducedMotion;
++    const changedEpoch = typeof state.epoch === 'string' && state.epoch !== control.epoch;
+     Object.assign(control, state);
++    if (changedEpoch) {
++      firstFrame = true; announcedFrame = '';
++      st.phase = 'rest'; st.phaseAt = st.t; st.open = false; st.closeAfter = false;
++      st.auto = false; st.spinRate = 0;
++      lean.x = lean.y = grab.x = grab.y = grab.vx = grab.vy = 0;
++    }
+     if (Array.isArray(control.background) && control.background.length === 3) {
+       const linear = control.background.map(v => {
+@@ -924,5 +985,5 @@
+       grab.x = grab.y = grab.vx = grab.vy = 0;
+     }
+-    if (openBefore !== control.open || (!motionBefore && control.reducedMotion)) toggleOpen(!!control.open);
++    if (changedEpoch || openBefore !== control.open || (!motionBefore && control.reducedMotion)) toggleOpen(!!control.open);
+     updateArt(control.art);
+     dirty = true;
+@@ -936,4 +997,6 @@
+     setOpen: (on) => { control.open = !!on; toggleOpen(on); },
+     debug: () => ({ quality: grid ? 'grid' : 'hero', roomSize: ROOM_SIZE, pixelRatio: renderer.getPixelRatio(),
++      msaaSamples: sampleCount, refractionSamples: samples, fittedExtent, fitRatio, firstFrameMs, artworkCompletedAt,
++      epoch: control.epoch, artToken: control.artToken, artLoading,
+       fpsLimit: targetFPS, playing: !!control.playing, reducedMotion: !!control.reducedMotion, frameCount, active: !!control.active, scheduled: !!raf, disposed, ready: !firstFrame,
+       open: st.open, phase: st.phase, spin: st.spin, tiltX:lean.x, tiltY:lean.y, artMix, textureCount: renderer.info.memory.textures,
+--- a/Music/Sources/CDCaseJS/shaders.js
++++ b/Music/Sources/CDCaseJS/shaders.js
+@@ -114,7 +114,7 @@
+   void main() {
+     vec4 acc = vec4(0.0);
+-    for (int y = 0; y < 4; y++) {
+-      for (int x = 0; x < 4; x++) {
+-        vec2 st = (gl_FragCoord.xy + (vec2(float(x), float(y)) + 0.5) / 4.0 - 0.5) / uSize;
++    for (int y = 0; y < 2; y++) {
++      for (int x = 0; x < 2; x++) {
++        vec2 st = (gl_FragCoord.xy + (vec2(float(x), float(y)) + 0.5) / 2.0 - 0.5) / uSize;
+         vec3 d = normalize(faceDir(uFace, st));
+         vec3 l = lamps(d);
+@@ -122,5 +122,5 @@
+       }
+     }
+-    gl_FragColor = acc / 16.0;
++    gl_FragColor = acc / 4.0;
+   }
+ `;
