@@ -41,11 +41,11 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     self.shell=[GMMusicShell new]; [self.shell loadViewIfNeeded];
     NSMutableArray *tracks=[NSMutableArray new];
     for(NSInteger i=0;i<18;i++) {
-        GMTrack *t=[GMTrack new]; t.title=[NSString stringWithFormat:@"Song %02ld",(long)i]; t.album=[NSString stringWithFormat:@"Album %02ld",(long)i];
+        GMTrack *t=[GMTrack new]; t.title=[NSString stringWithFormat:@"Song %02ld",(long)i]; t.album=[NSString stringWithFormat:@"Album %02ld",(long)(i==17 ? 0 : i)];
         t.artist=@"Music"; t.albumArtist=t.artist; t.metadataLoaded=YES;
         NSString *file=[self.documents stringByAppendingPathComponent:[NSString stringWithFormat:@"track%ld.wav",(long)i]];
         [[NSFileManager defaultManager] copyItemAtPath:[[NSBundle mainBundle] pathForResource:@"fixture" ofType:@"wav"] toPath:file error:nil];
-        t.url=[NSURL fileURLWithPath:file]; t.artwork=[UIImage imageNamed:i%2?@"IconAuroraPreview":@"IconChromePreview"]; [tracks addObject:t];
+        t.url=[NSURL fileURLWithPath:file]; t.artwork=[UIImage imageNamed:i==17 ? @"IconSignalPreview" : (i%2?@"IconAuroraPreview":@"IconChromePreview")]; [tracks addObject:t];
     }
     self.shell.player.tracks=tracks; [self.shell reloadLibrary];
     self.window=[[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene]; self.window.rootViewController=self.shell; [self.window makeKeyAndVisible];
@@ -296,10 +296,16 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
             [search.table scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:2] atScrollPosition:UITableViewScrollPositionBottom animated:NO];
             After(.5,^{
                 [self capture:@"Cassette-Search.png"];[self.shell setLiveMedium:0];
-                After(.5,^{[self capture:@"CD-Search.png"];[self finish];});
+                After(.5,^{[self capture:@"CD-Search.png"];self.attempts=0;[self waitOffscreenPreparation];});
             });
         });
     });
+}
+- (void)waitOffscreenPreparation {
+    GMMediaStillStore *store=GMMediaStills();
+    BOOL ready=store.prefetch.count==0 && !store.jobKey && store.fingerprintQueue.operationCount==0;
+    if(!ready && ++self.attempts<60){After(.5,^{[self waitOffscreenPreparation];});return;}
+    [self check:@"offscreen_track_specific_artwork_prepared_in_both_styles" value:ready];[self finish];
 }
 - (void)checkRestoredCache {
     CFTimeInterval started=CACurrentMediaTime();

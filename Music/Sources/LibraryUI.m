@@ -434,6 +434,7 @@
     self.albums = GMAlbumsForTracks(self.player.tracks);
     CGFloat r=0,g=0,b=0;GMReadRGB(GMPageColor(),self.view.traitCollection,&r,&g,&b);
     NSArray *background=@[@(r),@(g),@(b)];
+    for(GMTrack *track in self.player.tracks)[GMMediaStills() enqueueArtwork:track.artwork background:background];
     for(GMAlbum *album in self.albums)[GMMediaStills() enqueueArtwork:album.artwork background:background];
     for(GMPlaylist *playlist in self.playlistStore.playlists)if(playlist.artwork)[GMMediaStills() enqueueArtwork:playlist.artwork background:background];
     for (UINavigationController *navigation in self.viewControllers) {

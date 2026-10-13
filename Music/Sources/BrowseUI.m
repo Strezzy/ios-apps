@@ -1040,7 +1040,9 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
         NSMutableArray *indexes = [NSMutableArray array];
         for (NSUInteger i=0; i<self.shell.player.tracks.count; i++) {
             GMTrack *track = self.shell.player.tracks[i];
-            if (!self.artistName || [(track.artist ?: @"Unknown Artist") localizedCaseInsensitiveCompare:self.artistName] == 0) [indexes addObject:@(i)];
+            if (!self.artistName || [(track.artist ?: @"Unknown Artist") localizedCaseInsensitiveCompare:self.artistName] == 0) {
+                [indexes addObject:@(i)];if(!artwork)artwork=track.artwork;
+            }
         }
         self.trackIndexes = indexes; self.title = self.artistName ?: @"Songs";
         detail = GMBrowseSongCount(indexes.count);
