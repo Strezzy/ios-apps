@@ -7,7 +7,6 @@ import os
 import plistlib
 import re
 import shutil
-import stat
 import subprocess
 import sys
 import time
@@ -21,7 +20,8 @@ LOGS = BUILD / "Logs"
 TESTS = ["testJPEGRemovesMetadataAndAppliesOrientation", "testPNGHasUniqueFingerprintsWithoutPixelChanges",
          "testHEICRoundTrip", "testPNGWithoutFingerprintPadding", "testCorruptInputIsRejected",
          "testExtensionPixelLimitIsEnforced", "testCancellationIsNotASuccess", "testCRC32KnownVector",
-         "testVideoMetadataAndAllFrames", "testEarlyAudioEOFKeepsAllVideoFrames"]
+         "testVideoMetadataAndAllFrames", "testEarlyAudioEOFKeepsAllVideoFrames",
+         "testColorModelIsTechnicalButCameraModelIsSensitive"]
 
 def run(args, log=None, capture=False):
     args = list(map(str, args))
@@ -57,6 +57,7 @@ def main():
             raise RuntimeError("App source network audit failed.")
         report["static_network_audit"] = "passed; no listed network APIs or web URLs in shipping Swift code"
         prepare()
+        report["artwork_sha256"] = hashlib.sha256((ROOT / "Artwork.jpg").read_bytes()).hexdigest()
         run(["xcodegen", "generate", "--spec", "project.yml"], log="project")
         report["xcodegen"] = run(["xcodegen", "--version"], capture=True).strip()
         number = os.environ.get("RINSE_BUILD_NUMBER", "1")
@@ -69,7 +70,7 @@ def main():
             if match and int(match.group(1)) >= 26:
                 for device in values:
                     if device.get("isAvailable") and device["name"].startswith("iPhone"):
-                        choices.append(((int(match.group(1)), int(match.group(2) or 0), device["name"]), device))
+                        choices.append(((int(match.group(1)), int(match.group(2) or 0), device["name"] == "iPhone 17 Pro", device["name"]), device))
         if not choices:
             raise RuntimeError("No iOS 26+ iPhone simulator is installed.")
         device = max(choices, key=lambda pair: pair[0])[1]
