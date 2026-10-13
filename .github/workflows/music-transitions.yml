@@ -25,7 +25,9 @@ jobs:
           a9d726e40a6e7362df5cf057b2aa4d27db6b8752ad6ff19a3f8ac5277a7391ab  Music/Sources/MusicCDInspector.m
           CHECKSUMS
       - name: Check the Linux-compatible API declarations
-        run: xcrun clang -target arm64-apple-ios16.0 -nostdinc -Oz -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter -c Music/Sources/main.m -o /tmp/Music-compat.o
+        run: |
+          mkdir -p /tmp/Music-emptySDK
+          xcrun clang -target arm64-apple-ios16.0 -isysroot /tmp/Music-emptySDK -nostdinc -Oz -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter -c Music/Sources/main.m -o /tmp/Music-compat.o
       - name: Build the unchanged offline renderer and native app
         run: |
           set -euo pipefail
