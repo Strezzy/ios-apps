@@ -17,6 +17,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "0.12",
+          "buildVersion": "13",
+          "buildNumber": "13",
+          "date": "2026-10-13T02:51:50Z",
+          "localizedDescription": "Repairs the native CD renderer startup and playback commands. Clear reflective cases, spinning discs, working Open/Close and tilt controls, and a larger, tighter two-column Albums grid. Validated with native iOS simulator controls and actual rendered frames. Update the existing Music installation and keep its data container. See the release for test evidence and remaining physical-device checks.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.12-build13/Music.ipa",
+          "size": 3046593,
+          "minOSVersion": "16.0",
+          "sha256": "dbb82dee36cec2a7048605553a466c969a1112847a9a54b2b5980d89a108a344"
+        },
+        {
           "version": "0.11",
           "buildVersion": "12",
           "buildNumber": "12",
@@ -46,11 +57,11 @@
           "NSMotionUsageDescription": "Music uses device motion to gently tilt visible CD cases. Motion stays on your device."
         }
       },
-      "version": "0.11",
-      "versionDate": "2026-10-13T01:39:55Z",
-      "versionDescription": "Music 0.11 (build 12) adds interactive clear CD cases to the offline music player.\r\n\r\n## What's new\r\n\r\n- Albums keep the two-column layout and display artwork printed on discs inside reflective clear cases.\r\n- Hold an album to open the CD browser. Drag to tilt, open or close the lid, flip through albums, and use the landscape layout for a larger view.\r\n- Now Playing displays the current song's artwork on a spinning CD. Spin follows playback, device motion gently tilts the case, and tapping the case opens or closes it.\r\n- The renderer and its dependencies are bundled in the app and work offline. Native Liquid Glass navigation and controls, Cask scrolling settings, lyrics, themes, and library data are retained.\r\n- Automatic motion respects Reduce Motion. Up to four album-grid cases and one large case render live; other tiles keep a static case presentation.\r\n\r\n## Install or update\r\n\r\nDownload Music.ipa and use your existing LiveContainer or signing/sideloading setup. Replace the existing Music installation and keep the same data container to retain songs, playlists, and settings. The bundle identifier remains com.billy.glassmusic. Minimum iOS version: 16.0; native Liquid Glass requires supported newer iOS versions.\r\n\r\nThis is the same verified IPA delivered for Music 0.11 (12), with an ad-hoc signature for your installer to handle.\r\n\r\n## Verification\r\n\r\nNative compilation, linking, Objective-C startup layout, archive contents, and 227 signature code pages passed verification. Eighteen actual browser WebGL renderer checks passed, including offline loading, spinning/pausing, lid opening, artwork replacement, reduced motion, and failure handling. The attached reports record the results.\r\n\r\nPhysical iPhone testing is still required for WebKit/GPU performance, device-motion calibration, gestures, landscape behavior, and energy use. Browser renderer checks do not substitute for an iPhone run.\r\n\r\nIPA size: 3,069,020 bytes\r\nSHA-256: b633af7a9819447aaa13b608efa27a11a3433cd1f66ac4871375cc1c88fbd50e\r\n\r\n## Credits\r\n\r\nCD-case visuals adapted from [Ann Nguyen's CD Case](https://github.com/annnguyentt/vibe-coding/tree/efba8dfb956cca848422f18e8ede1bdf96033fca/cd-case), built with [TypingMind](https://typingmind.com). Thanks to [Ann Nguyen](https://x.com/ann_nnng) for the use/remix permission and original design. The app and source retain those acknowledgments, the Three.js MIT license, and credit for Alan Zucconi's spectral color function. Existing Cask 3 credits to Ryan Nair and original Cask creator Ryan Petrich are also retained.\r\n\r\nMusic-Source.zip contains the complete source, offline renderer, licenses, provenance, and build scripts. SHA256SUMS.txt covers the attached IPA, source archive, and reports.\r\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.11-build12/Music.ipa",
-      "size": 3069020
+      "version": "0.12",
+      "versionDate": "2026-10-13T02:51:50Z",
+      "versionDescription": "Repairs the native CD renderer startup and playback commands. Clear reflective cases, spinning discs, working Open/Close and tilt controls, and a larger, tighter two-column Albums grid. Validated with native iOS simulator controls and actual rendered frames. Update the existing Music installation and keep its data container. See the release for test evidence and remaining physical-device checks.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.12-build13/Music.ipa",
+      "size": 3046593
     },
     {
       "name": "VoiceGlass",
