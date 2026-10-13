@@ -1,0 +1,117 @@
+name: Build Cozy Canopy and publish iPhone game
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/cozy_pass.py'
+      - 'scripts/cozy_qa.py'
+      - '.github/workflows/cozy-canopy.yml'
+permissions:
+  contents: write
+concurrency:
+  group: enter-third-dimension-build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Apply original Cozy Canopy art revision
+        run: python3 scripts/cozy_pass.py
+      - name: Prepare independent WebKit gameplay verification
+        run: |
+          python3 -m venv "$RUNNER_TEMP/cozy-qa"
+          "$RUNNER_TEMP/cozy-qa/bin/python" -m pip install --disable-pip-version-check playwright==1.57.0
+          "$RUNNER_TEMP/cozy-qa/bin/python" -m playwright install webkit
+      - name: Play the chapter with the actual bundled WebKit renderer
+        timeout-minutes: 12
+        run: "$RUNNER_TEMP/cozy-qa/bin/python scripts/cozy_qa.py"
+      - name: Preserve actual browser captures and checks
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Cozy-Canopy-Visual-QA
+          path: EnterTheThirdDimension/Build/Browser-QA
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Commit the verified original source and gameplay captures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,shutil
+          root=pathlib.Path('EnterTheThirdDimension')
+          for p in (root/'Build/Browser-QA').glob('Cozy-*.png'):
+              shutil.copy2(p,root/'docs/screenshots'/p.name)
+          p=root/'README.md';s=p.read_text()
+          s=s.replace('The following are archived 2.2 frames. Updated 2.3 captures are provided in the build evidence. These are actual frames','These are actual 2.3 frames')
+          s=s.replace('docs/screenshots/First-Touch.png','docs/screenshots/Cozy-First-Touch.png').replace('docs/screenshots/Rainforest-3D.png','docs/screenshots/Cozy-Canopy.png')
+          p.write_text(s)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add EnterTheThirdDimension .github/workflows/third-dimension.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Cozy Canopy 2.3: original cozy art and verified gameplay"
+          fi
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
+      - name: Build and prove actual native iPhone rendering
+        run: GITHUB_SHA="$(git rev-parse HEAD)" python3 EnterTheThirdDimension/Support/build_ios.py
+      - name: Store the verified iPhone build and source
+        uses: actions/upload-artifact@v7
+        with:
+          name: EnterTheThirdDimension-iPhone
+          path: |
+            EnterTheThirdDimension/Build/EnterTheThirdDimension.ipa
+            EnterTheThirdDimension/Build/EnterTheThirdDimension-Source.zip
+            EnterTheThirdDimension/Build/BUILD-REPORT.json
+            EnterTheThirdDimension/Build/SHA256SUMS.txt
+            EnterTheThirdDimension/Build/Native-Launch.json
+            EnterTheThirdDimension/Build/Simulator-Launch.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: GITHUB_SHA="$(git rev-parse HEAD)" python3 EnterTheThirdDimension/Support/build_release.py
+      - name: Update game entry without changing other apps
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git rebase origin/main
+          release_date="$(python3 -c 'import json; print(json.load(open("EnterTheThirdDimension/Build/PUBLICATION.json"))["published_at"])')"
+          python3 scripts/update_catalog.py --tag enter-third-dimension-2.3-build5 --local EnterTheThirdDimension/Build/Published/EnterTheThirdDimension.ipa --date "$release_date" --notes "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved."
+          git add apps.json README.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add verified Enter the Third Dimension 2.3 release"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git rebase origin/main
+          done
+          exit 1
+      - name: Preserve native build evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Cozy-Canopy-Native-Evidence
+          path: |
+            EnterTheThirdDimension/Build/Logs
+            EnterTheThirdDimension/Build/BUILD-REPORT.json
+            EnterTheThirdDimension/Build/Native-Launch.json
+            EnterTheThirdDimension/Build/Simulator-Launch.png
+            EnterTheThirdDimension/Build/PUBLICATION.json
+          if-no-files-found: ignore
+          retention-days: 30
