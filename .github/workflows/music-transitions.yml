@@ -65,6 +65,15 @@ jobs:
           tail -100 Evidence/runtime.log
           xcrun simctl terminate "$DEVICE" com.billy.music.transitionprobe || true
           python3 -c 'import json;d=json.load(open("Evidence/result.json"));print(json.dumps(d,indent=2));assert d["passed"]'
+      - name: Verify cached artwork on a fresh process launch
+        run: |
+          set -euo pipefail
+          DEVICE=$(xcrun simctl list devices booted -j | python3 -c 'import json,sys;print(next(x["udid"] for v in json.load(sys.stdin)["devices"].values() for x in v))')
+          DATA=$(xcrun simctl get_app_container "$DEVICE" com.billy.music.transitionprobe data)
+          xcrun simctl launch --terminate-running-process "$DEVICE" com.billy.music.transitionprobe --cache-relaunch
+          for attempt in $(seq 1 20); do test ! -f "$DATA/Documents/relaunch.json" || break; sleep 1; done
+          cp "$DATA/Documents/relaunch.json" Evidence/
+          python3 -c 'import json;d=json.load(open("Evidence/relaunch.json"));print(json.dumps(d,indent=2));assert d["passed"]'
       - name: Save candidate IPA
         uses: actions/upload-artifact@v7
         with:

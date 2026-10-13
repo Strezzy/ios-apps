@@ -27,133 +27,47 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 #pragma clang diagnostic pop
 }
 
-// Every tile remains a CD case, including during startup, outside the live
-// renderer budget, or after a WebContent process is reclaimed by the system.
-// These ordinary native layers have no timers and retain only bounded artwork.
+// Static artwork is exclusively a frame from the production renderer. There is
+// no second, approximate native case underneath it during startup or reuse.
 @interface GMCDCaseFallbackView : UIView
 @property(nonatomic, strong) UIImageView *snapshot;
 @property(nonatomic, copy) NSString *snapshotKey;
-@property(nonatomic) BOOL cassette;
-@property(nonatomic, strong) UIView *secondHub;
-@property(nonatomic, strong) UIView *caseBody;
-@property(nonatomic, strong) UIView *spine;
-@property(nonatomic, strong) UIView *discRim;
-@property(nonatomic, strong) UIImageView *disc;
-@property(nonatomic, strong) UIView *hubRing;
-@property(nonatomic, strong) UIView *hole;
-@property(nonatomic, strong) CAGradientLayer *reflection;
-@property(nonatomic, strong) CAGradientLayer *discSheen;
 - (void)setArtwork:(UIImage *)artwork;
 - (void)applyTheme;
 @end
 @implementation GMCDCaseFallbackView
 - (instancetype)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
-    if (!self) return nil;
-    self.userInteractionEnabled = NO; self.accessibilityElementsHidden = YES;
-    self.caseBody = [[UIView alloc] initWithFrame:CGRectZero];
-    self.caseBody.layer.cornerRadius = 5; self.caseBody.layer.borderWidth = 1;
-    self.caseBody.layer.shadowOffset = CGSizeMake(0,3); self.caseBody.layer.shadowRadius = 5;
-    self.caseBody.layer.shadowOpacity = .12;
-    [self addSubview:self.caseBody];
-    self.discRim = [[UIView alloc] initWithFrame:CGRectZero];
-    self.discRim.layer.borderWidth = 1; self.discRim.clipsToBounds = YES;
-    [self.caseBody addSubview:self.discRim];
-    self.discSheen = [CAGradientLayer layer];
-    self.discSheen.startPoint = CGPointMake(0,0); self.discSheen.endPoint = CGPointMake(1,1);
-    self.discSheen.locations = @[@0,@.3,@.5,@.7,@1];
-    self.discSheen.colors = @[(__bridge id)GMCDWhite(.90,1).CGColor,
-        (__bridge id)[UIColor colorWithRed:.70 green:.83 blue:.97 alpha:1].CGColor,
-        (__bridge id)GMCDWhite(.97,1).CGColor,
-        (__bridge id)[UIColor colorWithRed:.93 green:.73 blue:.83 alpha:1].CGColor,
-        (__bridge id)GMCDWhite(.70,1).CGColor];
-    [self.discRim.layer addSublayer:self.discSheen];
-    self.disc = [[UIImageView alloc] initWithFrame:CGRectZero];
-    self.disc.contentMode = 2; self.disc.clipsToBounds = YES;
-    [self.discRim addSubview:self.disc];
-    self.hubRing = [[UIView alloc] initWithFrame:CGRectZero];
-    self.hubRing.layer.borderWidth = 1; [self.caseBody addSubview:self.hubRing];
-    self.hole = [[UIView alloc] initWithFrame:CGRectZero];
-    self.hole.layer.borderWidth = 1; [self.caseBody addSubview:self.hole];
-    self.spine = [[UIView alloc] initWithFrame:CGRectZero];
-    self.spine.layer.borderWidth = .6; [self.caseBody addSubview:self.spine];
-    self.reflection = [CAGradientLayer layer];
-    self.reflection.startPoint = CGPointMake(0,0); self.reflection.endPoint = CGPointMake(1,1);
-    self.reflection.locations = @[@0,@.08,@.13,@.45,@.50,@1];
-    [self.caseBody.layer addSublayer:self.reflection];
-    self.secondHub = [[UIView alloc] initWithFrame:CGRectZero];
-    self.secondHub.layer.borderWidth=2;
-    [self.caseBody addSubview:self.secondHub];
-    self.snapshot=[[UIImageView alloc] initWithFrame:self.bounds];self.snapshot.contentMode=1;
-    [self addSubview:self.snapshot];
-    [self applyTheme];
-    return self;
+    self=[super initWithFrame:frame]; if(!self)return nil;
+    self.userInteractionEnabled=NO; self.accessibilityElementsHidden=YES;
+    self.snapshot=[[UIImageView alloc] initWithFrame:self.bounds];
+    self.snapshot.contentMode=1; [self addSubview:self.snapshot]; return self;
 }
-- (void)setArtwork:(UIImage *)artwork {
-    self.disc.image = artwork;
-    self.disc.hidden = artwork == nil;
-}
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    CGFloat side = GMMin(self.bounds.size.width,self.bounds.size.height)*.97;
-    if (side < 1) return;
-    [CATransaction begin]; [CATransaction setDisableActions:YES];
-    CGFloat height=self.cassette ? side*.685 : side;
-    self.snapshot.frame=self.bounds;
-    self.caseBody.hidden=self.snapshot.image != nil;
-    self.caseBody.frame = CGRectMake((self.bounds.size.width-side)/2,(self.bounds.size.height-height)/2,side,height);
-    CGFloat diameter = side*.80, cx = side*.545, cy = side*.50;
-    self.discRim.frame = CGRectMake(cx-diameter/2,cy-diameter/2,diameter,diameter);
-    self.discRim.layer.cornerRadius = diameter/2;
-    self.discSheen.frame = self.discRim.bounds;
-    CGFloat margin = GMMax(1.2,diameter*.018);
-    self.disc.frame = CGRectMake(margin,margin,diameter-2*margin,diameter-2*margin);
-    self.disc.layer.cornerRadius = (diameter-2*margin)/2;
-    CGFloat ring = diameter*.25, hole = diameter*.10;
-    self.hubRing.frame = CGRectMake(cx-ring/2,cy-ring/2,ring,ring);
-    self.hubRing.layer.cornerRadius = ring/2;
-    self.hole.frame = CGRectMake(cx-hole/2,cy-hole/2,hole,hole);
-    self.hole.layer.cornerRadius = hole/2;
-    self.spine.frame = CGRectMake(side*.035,side*.025,side*.068,side*.95);
-    self.spine.layer.cornerRadius = 2;
-    self.secondHub.hidden=!self.cassette;
-    if(self.cassette) {
-        self.discRim.frame=CGRectMake(side*.06,height*.09,side*.88,height*.82);self.discRim.layer.cornerRadius=3;
-        self.disc.frame=self.discRim.bounds;self.disc.layer.cornerRadius=3;
-        CGFloat wheel=side*.21;
-        self.hubRing.frame=CGRectMake(side*.29-wheel/2,height*.5-wheel/2,wheel,wheel);self.hubRing.layer.cornerRadius=wheel/2;
-        self.secondHub.frame=CGRectMake(side*.70-wheel/2,height*.5-wheel/2,wheel,wheel);self.secondHub.layer.cornerRadius=wheel/2;
-        self.secondHub.backgroundColor=self.hubRing.backgroundColor;self.secondHub.layer.borderColor=self.hubRing.layer.borderColor;
-        self.hole.hidden=YES;self.spine.hidden=YES;
-    } else {self.hole.hidden=NO;self.spine.hidden=NO;}
-    self.reflection.frame = self.caseBody.bounds; self.reflection.cornerRadius = 5;
-    [CATransaction commit];
-}
-- (void)applyTheme {
-    BOOL dark = self.traitCollection.userInterfaceStyle == 2;
-    UIColor *page = [GMPageColor() resolvedColorWithTraitCollection:self.traitCollection];
-    self.caseBody.backgroundColor = GMCDWhite(dark ? .34 : .92,dark ? .16 : .27);
-    self.caseBody.layer.borderColor = GMCDWhite(dark ? 1 : .38,dark ? .43 : .40).CGColor;
-    self.caseBody.layer.shadowColor = [UIColor blackColor].CGColor;
-    self.spine.backgroundColor = GMCDWhite(dark ? .03 : .30,.18);
-    self.spine.layer.borderColor = GMCDWhite(dark ? 1 : .4,.32).CGColor;
-    self.discRim.layer.borderColor = GMCDWhite(.55,.65).CGColor;
-    self.hubRing.backgroundColor = GMCDWhite(.82,.68);
-    self.hubRing.layer.borderColor = GMCDWhite(1,.60).CGColor;
-    self.hole.backgroundColor = page;
-    self.hole.layer.borderColor = GMCDWhite(.25,.45).CGColor;
-    self.reflection.colors = @[(__bridge id)GMCDWhite(1,.32).CGColor,
-        (__bridge id)GMCDWhite(1,.02).CGColor,(__bridge id)GMCDWhite(1,.20).CGColor,
-        (__bridge id)GMCDWhite(1,0).CGColor,(__bridge id)GMCDWhite(1,.10).CGColor,
-        (__bridge id)GMCDWhite(1,0).CGColor];
-}
+- (void)setArtwork:(UIImage *)artwork {}
+- (void)applyTheme {}
+- (void)layoutSubviews { [super layoutSubviews]; self.snapshot.frame=self.bounds; }
 @end
+
+// CommonCrypto is part of libSystem on iOS, including the minimal SDK build.
+extern unsigned char *CC_SHA256(const void *, unsigned int, unsigned char *);
+static NSString *GMMediaDigest(NSData *data) {
+    unsigned char digest[32]; CC_SHA256(data.bytes,(unsigned int)data.length,digest);
+    NSString *result=@"";
+    for(int i=0;i<32;i++)result=[result stringByAppendingString:[NSString stringWithFormat:@"%02x",digest[i]]];
+    return result;
+}
 
 @class GMCDMotionHub;
 @interface GMMediaStillStore : NSObject
 @property(nonatomic,strong) NSMutableDictionary *cache;
 @property(nonatomic,strong) NSMutableDictionary *failures;
 @property(nonatomic,strong) NSMutableArray *order;
+@property(nonatomic,strong) NSMapTable *artworkKeys;
+@property(nonatomic,strong) NSURL *directory;
+@property(nonatomic,strong) NSMutableDictionary *prefetch;
+- (UIImage *)imageForKey:(NSString *)key;
+- (void)rememberImage:(UIImage *)image key:(NSString *)key;
+- (void)enqueueArtwork:(UIImage *)artwork background:(NSArray *)background;
+- (NSString *)keyForArtwork:(UIImage *)artwork medium:(NSInteger)medium background:(NSArray *)background;
 @property(nonatomic,strong) GMCDCaseView *worker;
 @property(nonatomic,strong) UIView *host;
 @property(nonatomic,copy) NSString *jobKey;
@@ -540,21 +454,21 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
 }
 - (void)mediumChanged:(NSNotification *)note {
     if(self.medium==GMLiveMedium)return;
-    self.medium=GMLiveMedium;self.fallback.cassette=self.medium==1;
+    self.medium=GMLiveMedium;
     self.accessibilityLabel=[NSString stringWithFormat:@"%@ case, %@%@%@",self.medium==1 ? @"Cassette" : @"CD",self.artworkTitle ?: @"Album",self.artworkArtist.length ? @", " : @"",self.artworkArtist ?: @""];
     self.fallback.snapshot.image=nil;self.fallback.snapshotKey=nil;[self.fallback setNeedsLayout];
     self.rendered=NO;self.webView.alpha=.01;self.fallback.hidden=NO;
     [self.stillView removeFromSuperview];self.stillView=nil;
     self.pending[@"medium"]=self.medium==1 ? @"cassette" : @"cd";
     self.renderTicket=[NSUUID UUID].UUIDString;self.pending[@"epoch"]=self.renderTicket;
-    [self queueMotionState];[self flushPending];[GMMediaStills() request];
+    [self refreshStaticArtwork];[self queueMotionState];[self flushPending];[GMMediaStills() request];
 }
 - (void)refreshStaticArtwork {
     if(self.presentation==GMCDCasePresentationSnapshot)return;
     NSString *key=[GMMediaStills() keyForView:self];
     if(![self.fallback.snapshotKey isEqual:key]) {
-        self.fallback.snapshotKey=key;self.fallback.snapshot.image=GMMediaStills().cache[key];
-        self.fallback.cassette=self.medium==1;[self.fallback setNeedsLayout];
+        self.fallback.snapshotKey=key;self.fallback.snapshot.image=[GMMediaStills() imageForKey:key];
+        [self.fallback setNeedsLayout];
     }
     if(!self.fallback.snapshot.image && self.window) [GMMediaStills() request];
 }
@@ -983,9 +897,51 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
 // One serial still renderer for the whole library. Visible cells receive UIImage
 // results, never WebViews. It yields its slot to a foreground live presentation.
 @implementation GMMediaStillStore
-- (instancetype)init { self=[super init];if(self){self.cache=[NSMutableDictionary new];self.failures=[NSMutableDictionary new];self.order=[NSMutableArray new];}return self; }
+- (instancetype)init {
+    self=[super init];if(self){
+        self.cache=[NSMutableDictionary new];self.failures=[NSMutableDictionary new];self.order=[NSMutableArray new];
+        self.artworkKeys=[NSMapTable weakToStrongObjectsMapTable];self.prefetch=[NSMutableDictionary new];
+        // Application Support survives relaunches and ordinary OS cache purges.
+        NSURL *support=[[NSFileManager defaultManager] URLsForDirectory:14 inDomains:1].firstObject;
+        self.directory=[support URLByAppendingPathComponent:@"RenderedMedia-v3"];
+        [[NSFileManager defaultManager] createDirectoryAtURL:self.directory withIntermediateDirectories:YES attributes:nil error:nil];
+    }return self;
+}
+- (NSString *)keyForArtwork:(UIImage *)artwork medium:(NSInteger)medium background:(NSArray *)background {
+    NSString *art=artwork ? [self.artworkKeys objectForKey:artwork] : @"default";
+    if(!art){art=GMMediaDigest([GMCDEncodedArtwork(artwork,128) dataUsingEncoding:NSUTF8StringEncoding]);[self.artworkKeys setObject:art forKey:artwork];}
+    // Content, medium, lighting and renderer revision, never a pointer or row ID.
+    // Identical covers share one file across songs, albums, playlists and search.
+    NSString *identity=[NSString stringWithFormat:@"v3:%ld:%@:%@",(long)medium,art,background];
+    return GMMediaDigest([identity dataUsingEncoding:NSUTF8StringEncoding]);
+}
 - (NSString *)keyForView:(GMCDCaseView *)view {
-    return [NSString stringWithFormat:@"v2:%ld:%@:%p:%@",(long)view.medium,view.representedIdentifier,view.artwork,view.backgroundComponents];
+    return [self keyForArtwork:view.artwork medium:view.medium background:view.backgroundComponents];
+}
+- (void)rememberImage:(UIImage *)image key:(NSString *)key {
+    self.cache[key]=image;[self.order removeObject:key];[self.order addObject:key];
+    // Evict decoded images only. The rendered PNG remains available on disk.
+    while(self.order.count>64){[self.cache removeObjectForKey:self.order.firstObject];[self.order removeObjectAtIndex:0];}
+}
+- (UIImage *)imageForKey:(NSString *)key {
+    UIImage *image=self.cache[key];
+    if(!image){
+        // Small local PNGs are available during cell configuration, before the
+        // first frame. No asynchronous placeholder-to-thumbnail replacement.
+        NSData *data=[NSData dataWithContentsOfURL:[self.directory URLByAppendingPathComponent:key]];
+        image=data ? [UIImage imageWithData:data] : nil;
+        if(image)[self rememberImage:image key:key];
+    }
+    return image;
+}
+- (void)enqueueArtwork:(UIImage *)artwork background:(NSArray *)background {
+    if(!background)return;
+    for(NSInteger medium=0;medium<2;medium++){
+        NSString *key=[self keyForArtwork:artwork medium:medium background:background];
+        if(self.cache[key] || [[NSFileManager defaultManager] fileExistsAtPath:[self.directory URLByAppendingPathComponent:key].path])continue;
+        self.prefetch[key]=@{@"art":artwork ?: (id)[NSNull null],@"background":background,@"medium":@(medium)};
+    }
+    [self request];
 }
 - (void)clear {
     [self.cache removeAllObjects];[self.failures removeAllObjects];[self.order removeAllObjects];self.jobKey=nil;self.capturing=NO;
@@ -1032,8 +988,10 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
                 UIImage *image=data ? [UIImage imageWithData:data] : nil;
                 if(image){
                     captured=YES;self.lastCaptureError=nil;[self.failures removeObjectForKey:key];
-                    self.cache[key]=image;[self.order addObject:key];
-                    while(self.order.count>32){[self.cache removeObjectForKey:self.order.firstObject];[self.order removeObjectAtIndex:0];}
+                    // Commit the file before publishing the image to cells, so any
+                    // subsequent tab switch or relaunch can use it immediately.
+                    [data writeToURL:[self.directory URLByAppendingPathComponent:key] options:1 error:nil];
+                    [self rememberImage:image key:key];[self.prefetch removeObjectForKey:key];
                     for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) if([[self keyForView:view] isEqual:key]) {
                         view.fallback.snapshotKey=key;view.fallback.snapshot.image=image;[view.fallback setNeedsLayout];
                     }
@@ -1053,24 +1011,40 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         if(!GMCDRectsIntersect(rect,view.window.bounds))continue;
         BOOL hidden=NO;for(UIView *p=view.superview;p;p=p.superview)if(p.hidden || p.alpha<.01)hidden=YES;
         if(hidden)continue;
-        NSString *key=[self keyForView:view];UIImage *cached=self.cache[key];
+        NSString *key=[self keyForView:view];UIImage *cached=[self imageForKey:key];
         if(cached){view.fallback.snapshot.image=cached;view.fallback.snapshotKey=key;[view.fallback setNeedsLayout];continue;}
         if([self.failures[key] integerValue]>=2)continue;
         next=view;break;
     }
-    if(!next)return;
-    if(!self.host || self.host.window!=next.window){
+    NSDictionary *queued=nil;NSString *queuedKey=nil;
+    if(!next)for(NSString *key in self.prefetch){
+        if([self.failures[key] integerValue]>=2)continue;
+        queued=self.prefetch[key];queuedKey=key;break;
+    }
+    UIWindow *window=next.window;
+    if(!window)for(GMCDCaseView *view in GMCDSharedHub().views.allObjects)if(view.window && view.presentation!=GMCDCasePresentationSnapshot){window=view.window;break;}
+    if((!next && !queued) || !window)return;
+    if(!self.host || self.host.window!=window){
         [self.host removeFromSuperview];self.host=[[UIView alloc] initWithFrame:CGRectMake(0,0,240,240)];
         self.host.alpha=.02;self.host.userInteractionEnabled=NO;self.host.accessibilityElementsHidden=YES;
-        [next.window.rootViewController.view insertSubview:self.host atIndex:0];
+        [window.rootViewController.view insertSubview:self.host atIndex:0];
     }
     if(!self.worker)self.worker=[[GMCDCaseView alloc] initWithFrame:self.host.bounds presentation:GMCDCasePresentationSnapshot];
     self.worker.prewarming=YES;
-    [self.worker configureWithIdentifier:next.representedIdentifier title:nil artist:nil artwork:next.artwork];
-    self.worker.backgroundComponents=next.backgroundComponents;
-    self.worker.pending[@"background"]=next.backgroundComponents ?: @[@1,@1,@1];
-    self.jobKey=[self keyForView:next];self.jobStartedAt=CACurrentMediaTime();
+    UIImage *art=next ? next.artwork : (queued[@"art"]==[NSNull null] ? nil : queued[@"art"]);
+    NSInteger medium=next ? next.medium : [queued[@"medium"] integerValue];
+    NSArray *background=next ? next.backgroundComponents : queued[@"background"];
+    self.worker.rendered=NO;
+    self.worker.renderTicket=[NSUUID UUID].UUIDString;
+    self.worker.pending[@"epoch"]=self.worker.renderTicket;
+    self.worker.medium=medium;
+    self.worker.pending[@"medium"]=medium==1 ? @"cassette" : @"cd";
+    [self.worker configureWithIdentifier:next.representedIdentifier ?: queuedKey title:nil artist:nil artwork:art];
+    self.jobKey=next ? [self keyForView:next] : queuedKey;self.jobStartedAt=CACurrentMediaTime();
     [self.worker moveToHost:self.host frame:self.host.bounds prewarming:YES];
+    self.worker.backgroundComponents=background;
+    self.worker.pending[@"background"]=background ?: @[@1,@1,@1];
+    [self.worker flushPending];
     [self request];
 }
 @end

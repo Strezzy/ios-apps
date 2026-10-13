@@ -982,7 +982,7 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 @implementation GMBrowseSongsController
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated]; self.caseOwnerVisible = YES;
-    [self.collectionHeader.caseView setActive:self.albumIdentifier != nil];
+    [self.collectionHeader.caseView setActive:YES];
 }
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated]; self.caseOwnerVisible = NO;
@@ -990,7 +990,7 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 }
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     [super scrollViewDidScroll:scrollView];
-    [self.collectionHeader.caseView setActive:self.caseOwnerVisible && self.albumIdentifier != nil];
+    [self.collectionHeader.caseView setActive:self.caseOwnerVisible];
 }
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -1046,10 +1046,9 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
         detail = GMBrowseSongCount(indexes.count);
     }
     if (!artwork) artwork = GMBrowseTrackImage(GMBrowseTrack(self.shell,self.trackIndexes.firstObject));
-    GMBrowseSetArtwork(self.collectionHeader.cover,artwork,self.playlistIdentifier ? @"music.note.list" : @"music.note");
-    self.collectionHeader.cover.hidden = self.albumIdentifier != nil;
-    self.collectionHeader.caseView.hidden = self.albumIdentifier == nil;
-    if (self.albumIdentifier) [self.collectionHeader.caseView configureWithIdentifier:self.albumIdentifier title:self.title artist:detail artwork:artwork];
+    self.collectionHeader.cover.hidden = YES;
+    self.collectionHeader.caseView.hidden = NO;
+    [self.collectionHeader.caseView configureWithIdentifier:self.albumIdentifier ?: self.playlistIdentifier ?: self.artistName ?: @"collection" title:self.title artist:detail artwork:artwork];
     self.collectionHeader.nameLabel.text = self.title;
     self.collectionHeader.detailLabel.text = detail;
     self.collectionHeader.playButton.enabled = self.trackIndexes.count > 0;
@@ -1394,7 +1393,8 @@ static void GMBrowsePushSongs(GMBrowseTableController *source, NSString *albumId
     GMPlaylist *playlist = self.shell.playlistStore.playlists[path.row];
     NSArray<NSNumber *> *indexes = [self.shell.playlistStore trackIndexesForPlaylist:playlist.identifier tracks:self.shell.player.tracks];
     cell.textLabel.text = playlist.name; cell.detailTextLabel.text = GMBrowseSongCount(indexes.count);
-    GMBrowseSetArtwork(cell.imageView,playlist.artwork ?: GMBrowseTrackImage(GMBrowseTrack(self.shell,indexes.firstObject)),@"music.note.list");
+    cell.rowImage.hidden=YES;cell.rowCase.hidden=NO;
+    [cell.rowCase configureWithIdentifier:playlist.identifier title:playlist.name artist:nil artwork:playlist.artwork ?: GMBrowseTrackImage(GMBrowseTrack(self.shell,indexes.firstObject))];
     [cell configurePlaylistIdentifier:playlist.identifier];
     cell.accessoryType = 1; return cell;
 }
@@ -1493,12 +1493,15 @@ static void GMBrowsePushSongs(GMBrowseTableController *source, NSString *albumId
     } else if (path.section == 1 && path.row >= 0 && path.row < (NSInteger)self.albumMatches.count) {
         GMAlbum *album = self.albumMatches[path.row];
         cell.textLabel.text = album.title; cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ · %@",album.artist,GMBrowseSongCount(album.trackIndexes.count)];
-        GMBrowseSetArtwork(cell.imageView,album.artwork,@"music.note"); cell.accessoryType = 1;
+        cell.rowImage.hidden=YES;cell.rowCase.hidden=NO;
+        [cell.rowCase configureWithIdentifier:album.identifier title:album.title artist:album.artist artwork:album.artwork];cell.accessoryType=1;
     } else if (path.section == 2 && path.row >= 0 && path.row < (NSInteger)self.artistMatches.count) {
         NSString *artist = self.artistMatches[path.row]; NSUInteger count = 0;
-        for (GMTrack *track in self.shell.player.tracks) if ([(track.artist ?: @"Unknown Artist") localizedCaseInsensitiveCompare:artist] == 0) count++;
+        UIImage *artwork=nil;
+        for (GMTrack *track in self.shell.player.tracks) if ([(track.artist ?: @"Unknown Artist") localizedCaseInsensitiveCompare:artist] == 0) {count++;if(!artwork)artwork=track.artwork;}
         cell.textLabel.text = artist; cell.detailTextLabel.text = GMBrowseSongCount(count);
-        GMBrowseSetArtwork(cell.imageView,nil,@"person.fill"); cell.accessoryType = 1;
+        cell.rowImage.hidden=YES;cell.rowCase.hidden=NO;
+        [cell.rowCase configureWithIdentifier:artist title:artist artist:nil artwork:artwork];cell.accessoryType=1;
     }
     return cell;
 }

@@ -7,9 +7,9 @@
     "Resources/CDCase/index.html": "b9c1e1f8c77abff6397fa0c23559d41f2ff88190945921dbdd598425b07ac3c8",
     "Sources/CDCaseJS/bridge.js": "570323dc41b76157a8c372e2db560ce19b2bdd012e4ce07c02ef8cbd5769a8d8",
     "Sources/CDCaseJS/caseGeometry.js": "bb2be87966536b35ed78820eedd923c4c34a7dfc7c86a8d5572817821aa6c1c7",
-    "Sources/CDCaseJS/cassetteGeometry.js": "f11cd412ffc7496bf5836268a69354bb02d489f8b8a37f610e087d8d1f54bf0f",
+    "Sources/CDCaseJS/cassetteGeometry.js": "1fc9e3a99cd718034493aac4e717fbfaafc7b4eb4546c06e17ff423da10d4ae5",
     "Sources/CDCaseJS/shaders.js": "9238bc94054bbc073c0d83e14a8244f35323de351684a1365d3c5ceab4a33a9e",
-    "Sources/CDCaseJS/stage.js": "fa17eba9ab61b665a0c2950d7f5f3a6f064d4ca67ee91e7872211099b78303c5",
+    "Sources/CDCaseJS/stage.js": "ebab320eb5f1381cea459c99ab783693a249ccf8b182a9926839c26f1520c1d1",
     "Sources/CDCaseJS/vendor/LICENSE": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
     "Sources/CDCaseJS/vendor/PROVENANCE.json": "69181964ea0ad9b6091170248637e88e29c80c9fd628af5212fd693a7c6555e5",
     "Sources/CDCaseJS/vendor/three.core.js": "3718df126d69c125362a03340913204470d8c50238605150e57f808840fb7759",
@@ -18,6 +18,6 @@
   },
   "output": {
     "path": "Resources/CDCase/music-cd.js",
-    "sha256": "11da87149d3b5d148cc55099c58a6461447ac9c79fade77777b8160cc0f0609a"
+    "sha256": "6966c3bb1dfa20e59c50c16943066930d63a1a7411d65069f86ba41367f64b7e"
   }
 }

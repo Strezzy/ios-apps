@@ -432,6 +432,10 @@
 }
 - (void)reloadLibrary {
     self.albums = GMAlbumsForTracks(self.player.tracks);
+    CGFloat r=0,g=0,b=0;GMReadRGB(GMPageColor(),self.view.traitCollection,&r,&g,&b);
+    NSArray *background=@[@(r),@(g),@(b)];
+    for(GMAlbum *album in self.albums)[GMMediaStills() enqueueArtwork:album.artwork background:background];
+    for(GMPlaylist *playlist in self.playlistStore.playlists)if(playlist.artwork)[GMMediaStills() enqueueArtwork:playlist.artwork background:background];
     for (UINavigationController *navigation in self.viewControllers) {
         for (GMBrowseTableController *controller in navigation.viewControllers) {
             if ([controller respondsToSelector:@selector(reloadLibrary)]) [controller reloadLibrary];

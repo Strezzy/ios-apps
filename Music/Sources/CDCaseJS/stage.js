@@ -588,11 +588,20 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     const s = lerp(1, view.openScale, p.spread);
     _e.set(p.pitch + lean.x + grab.x, p.yaw + lean.y + grab.y, p.roll);
     _q.setFromEuler(_e);
-    _v.set(HALF * s * p.spread * 0.92, p.y, 0);
+    // Cassette lid folds forward/down around the lower horizontal edge.
+    // Raise the open case to centre the vertical silhouette in the artwork.
+    _v.set(cassette ? 0 : HALF * s * p.spread * 0.92,
+      p.y + (cassette ? halfHeight * s * p.spread * .92 : 0), 0);
     item.mCase.compose(_v, _q, _s.setScalar(s));
-    _h.makeTranslation(HINGE.x, 0, HINGE.z);
-    _hi.makeTranslation(-HINGE.x, 0, -HINGE.z);
-    _m.makeRotationY(-p.lid);
+    if(cassette) {
+      _h.makeTranslation(0, -49, 4);
+      _hi.makeTranslation(0, 49, -4);
+      _m.makeRotationX(p.lid);
+    } else {
+      _h.makeTranslation(HINGE.x, 0, HINGE.z);
+      _hi.makeTranslation(-HINGE.x, 0, -HINGE.z);
+      _m.makeRotationY(-p.lid);
+    }
     item.mLid.copy(item.mCase).multiply(_h).multiply(_m).multiply(_hi);
 
     item.trayRods.matrix.copy(item.mCase);
@@ -1025,7 +1034,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       return canvas.toDataURL('image/png').split(',')[1];
     },
     setOpen: (on) => { control.open = !!on; toggleOpen(on); },
-    debug: () => ({ medium: cassette ? 'cassette' : 'cd', reelCount: item?.reels.length || 0, reelSpin: cassette ? st.spin*3 : 0, quality: grid ? 'grid' : 'hero', roomSize: ROOM_SIZE, pixelRatio: renderer.getPixelRatio(),
+    debug: () => ({ hingeAxis: cassette ? 'x' : 'y', hingeEdge: cassette ? 'bottom' : 'left', lidAngle: item ? showPose(st.t).lid : 0, medium: cassette ? 'cassette' : 'cd', reelCount: item?.reels.length || 0, reelSpin: cassette ? st.spin*3 : 0, quality: grid ? 'grid' : 'hero', roomSize: ROOM_SIZE, pixelRatio: renderer.getPixelRatio(),
       msaaSamples: sampleCount, refractionSamples: samples, fittedExtent, fitRatio, firstFrameMs, artworkCompletedAt,
       epoch: control.epoch, artToken: control.artToken, artLoading,
       fpsLimit: targetFPS, playing: !!control.playing, reducedMotion: !!control.reducedMotion, frameCount, active: !!control.active, scheduled: !!raf, disposed, ready: !firstFrame,
