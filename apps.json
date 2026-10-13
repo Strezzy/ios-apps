@@ -353,6 +353,17 @@
       "versions": [
         {
           "version": "0.1.0",
+          "buildVersion": "8",
+          "buildNumber": "8",
+          "date": "2026-10-13T10:06:23Z",
+          "localizedDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-8/Collectr.ipa",
+          "size": 183034025,
+          "minOSVersion": "26.0",
+          "sha256": "2981ad57fadbaca27225e7cab78c6c7a9bf5917ad6c85b7374b4840e1066ac8d"
+        },
+        {
+          "version": "0.1.0",
           "buildVersion": "5",
           "buildNumber": "5",
           "date": "2026-10-13T09:28:31Z",
@@ -373,10 +384,10 @@
         }
       },
       "version": "0.1.0",
-      "versionDate": "2026-10-13T09:28:31Z",
+      "versionDate": "2026-10-13T10:06:23Z",
       "versionDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-5/Collectr.ipa",
-      "size": 183028572
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-8/Collectr.ipa",
+      "size": 183034025
     }
   ],
   "news": []
