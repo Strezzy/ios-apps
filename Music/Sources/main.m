@@ -131,6 +131,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 @property(strong) GMCDCaseView *cdCaseView;
 @property BOOL artworkOwnerVisible;
 @property BOOL playerCaseOpen;
+@property BOOL caseTransitionInProgress;
 @property(strong) UIScrollView *nowPlayingScroll;
 @property(strong) MPVolumeView *volumeView;
 @property(strong) AVRoutePickerView *routePicker;
@@ -297,7 +298,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     // Keep layout independent of the scale used by the play/pause spring.
     self.artView.bounds = CGRectMake(0,0,artSize,artSize);
     self.artView.center = CGPointMake(w/2,12+artSize/2);
-    self.cdCaseView.frame = self.artView.bounds;
+    if (self.cdCaseView.superview == self.artView) self.cdCaseView.frame = self.artView.bounds;
     self.lyricsView.frame = CGRectMake(inset,12,contentW,artSize);
     CGFloat titleY = artSize+38;
     self.trackTitle.frame = CGRectMake(inset,titleY,contentW,32);
@@ -325,11 +326,15 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 }
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    self.artworkOwnerVisible = YES; [self updateCDCaseActivity];
+    self.artworkOwnerVisible = YES;
+    if (!self.caseTransitionInProgress && self.cdCaseView.superview != self.artView)
+        [self.cdCaseView moveToHost:self.artView frame:self.artView.bounds prewarming:NO];
+    [self updateCDCaseActivity];
 }
 - (void)viewWillDisappear:(BOOL)animated {
     [super viewWillDisappear:animated];
-    self.artworkOwnerVisible = NO; [self.cdCaseView setActive:NO];
+    self.artworkOwnerVisible = NO;
+    if (!self.caseTransitionInProgress) [self.cdCaseView setActive:NO];
 }
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     if (scrollView == self.nowPlayingScroll) [self updateCDCaseActivity];
@@ -647,9 +652,14 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     [self loadTrackAtIndex:indexes[(NSUInteger)position].integerValue autoplay:YES];
 }
 - (void)syncPlaybackControls {
+    // A replacement AVAudioPlayer can already be playing while the button
+    // still shows Pause. Always resync the case, even when its glyph is unchanged.
     BOOL playing = self.player.isPlaying;
+    [self.cdCaseView setPlaying:playing];
     if (self.hasRenderedPlaybackState && self.renderedPlaying == playing) return;
     self.hasRenderedPlaybackState = YES; self.renderedPlaying = playing;
+    self.playerCaseOpen = playing;
+    [self.cdCaseView setCaseOpen:playing animated:YES];
     GMSetButtonImage(self.playButton,GMPlayerSymbol(playing?@"pause.fill":@"play.fill",38));
     self.playButton.accessibilityLabel = playing?@"Pause":@"Play";
     [self updateArtworkPlaybackStateAnimated:YES];
@@ -842,8 +852,9 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 - (void)updateCDCaseActivity {
     BOOL hasTrack = self.selectedIndex >= 0 && self.selectedIndex < (NSInteger)self.tracks.count;
     [self.cdCaseView setPlaying:self.player.isPlaying];
-    [self.cdCaseView setCaseOpen:self.playerCaseOpen animated:NO];
-    [self.cdCaseView setActive:self.artworkOwnerVisible && !self.showingLyrics && hasTrack];
+    if (!self.caseTransitionInProgress) [self.cdCaseView setCaseOpen:self.playerCaseOpen animated:YES];
+    if (!self.caseTransitionInProgress && !self.cdCaseView.prewarming)
+        [self.cdCaseView setActive:self.artworkOwnerVisible && !self.showingLyrics && hasTrack];
 }
 - (void)toggleCDCase {
     if (self.showingLyrics || self.selectedIndex < 0 || self.selectedIndex >= (NSInteger)self.tracks.count) return;
@@ -858,6 +869,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 }
 - (void)updateArtworkPlaybackStateAnimated:(BOOL)animated {
     [self updateCDCaseActivity];
+    if (self.caseTransitionInProgress) return;
     UIViewPropertyAnimator *previous = self.artworkAnimator;
     self.artworkAnimator = nil;
     if (previous.state == UIViewAnimatingStateActive) {
@@ -923,6 +935,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 #import "BrowseUI.m"
 #import "MusicCDInspector.m"
 #import "MusicAlbumImport.m"
+#import "MusicPlayerTransition.m"
 #import "LibraryUI.m"
 #import "MusicEditingUI.m"
 

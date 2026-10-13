@@ -143,6 +143,7 @@ static void GMBrowsePromptName(UIViewController *presenter, NSString *title, NSS
 @property(nonatomic, strong) UIView *foreground;
 @property(nonatomic, strong) GMScrollAnimationView *scrollAnimationView;
 @property(nonatomic, strong) UIImageView *rowImage;
+@property(nonatomic, strong) GMCDCaseView *rowCase;
 @property(nonatomic, strong) UILabel *rowTitle;
 @property(nonatomic, strong) UILabel *rowSubtitle;
 @property(nonatomic, strong) UIImageView *rowAccessory;
@@ -426,13 +427,15 @@ static const CGFloat GMBrowseActionTrayWidth = 132;
     self.scrollAnimationView = [[GMScrollAnimationView alloc] initWithFrame:self.foreground.bounds];
     [self.foreground addSubview:self.scrollAnimationView];
     self.rowImage = [[UIImageView alloc] initWithFrame:CGRectZero];
+    self.rowCase = [[GMCDCaseView alloc] initWithFrame:CGRectZero presentation:GMCDCasePresentationStatic];
+    self.rowCase.userInteractionEnabled = NO; self.rowCase.hidden = YES;
     self.rowTitle = GMLabel(@"",17,0,GMPrimaryTextColor());
     self.rowSubtitle = GMLabel(@"",13,0,GMSecondaryTextColor());
     self.rowAccessory = [[UIImageView alloc] initWithFrame:CGRectZero];
     self.rowAccessory.contentMode = 1;
     self.playbackIndicator = [[GMPlaybackIndicatorView alloc] initWithFrame:CGRectMake(0,0,22,22)];
     UIView *entryContent = self.scrollAnimationView.contentView;
-    [entryContent addSubview:self.rowImage]; [entryContent addSubview:self.rowTitle];
+    [entryContent addSubview:self.rowCase]; [entryContent addSubview:self.rowImage]; [entryContent addSubview:self.rowTitle];
     [entryContent addSubview:self.rowSubtitle]; [entryContent addSubview:self.rowAccessory];
     [entryContent addSubview:self.playbackIndicator];
 
@@ -499,6 +502,7 @@ static const CGFloat GMBrowseActionTrayWidth = 132;
     [self resetActions];
 }
 - (void)resetActions {
+    [self.rowCase prepareForReuse]; self.rowCase.hidden = YES; self.rowImage.hidden = NO;
     [self.scrollAnimationView resetScrollAnimation];
     self.revealPan.enabled = NO;
     [self interruptRevealAnimation];
@@ -696,6 +700,7 @@ static const CGFloat GMBrowseActionTrayWidth = 132;
     self.scrollAnimationView.frame = self.foreground.bounds;
     self.actionTray.frame = CGRectMake(0,0,w,h);
     self.rowImage.frame = CGRectMake(20,(h-48)/2,48,48);
+    self.rowCase.frame = self.rowImage.frame;
     self.rowTitle.frame = CGRectMake(80,(h-44)/2,GMMax(0,w-124),24);
     self.rowSubtitle.frame = CGRectMake(80,(h-44)/2+26,GMMax(0,w-124),18);
     self.rowAccessory.frame = CGRectMake(GMMax(0,w-40),(h-18)/2,18,18);
@@ -785,7 +790,9 @@ static GMBrowseSongCell *GMBrowseCell(UITableView *table, NSString *identifier) 
 static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
     cell.textLabel.text = track.title ?: @"Untitled Song";
     cell.detailTextLabel.text = track.artist ?: @"Unknown Artist";
-    GMBrowseSetArtwork(cell.imageView,GMBrowseTrackImage(track),@"music.note");
+    cell.rowImage.hidden = YES; cell.rowCase.hidden = NO;
+    [cell.rowCase configureWithIdentifier:GMTrackIdentifier(track) title:track.title artist:track.artist artwork:GMBrowseTrackImage(track)];
+    [cell.rowCase applyTheme];
     [cell configureSongIdentifier:GMTrackIdentifier(track) playlistContext:nil];
     cell.usesPlaybackIndicator = YES;
     [cell refreshPlaybackIndicator];
@@ -882,7 +889,10 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 - (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)path {
     [table deselectRowAtIndexPath:path animated:YES];
     if ([self closeRevealedActionsIfNeeded]) return;
-    [self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row];
+    GMBrowseSongCell *cell = (GMBrowseSongCell *)[table cellForRowAtIndexPath:path];
+    CGRect source = [cell.rowCase convertRect:cell.rowCase.bounds toView:self.shell.view.window];
+    if ([self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row])
+        [self.shell presentNowPlayingFromCaseRect:source];
 }
 - (void)playAllSongs {
     [self closeRevealedActionsIfNeeded];
@@ -896,17 +906,31 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 
 @interface GMBrowseCollectionHeader : UIView
 @property(nonatomic, strong) UIImageView *cover;
+@property(nonatomic, strong) GMCDCaseView *caseView;
+@property(nonatomic) BOOL caseOpen;
 @property(nonatomic, strong) UILabel *nameLabel;
 @property(nonatomic, strong) UILabel *detailLabel;
 @property(nonatomic, strong) UIButton *playButton;
 - (void)applyTheme;
 @end
 @implementation GMBrowseCollectionHeader
+- (void)toggleCase {
+    self.caseOpen = !self.caseOpen;
+    [self.caseView setCaseOpen:self.caseOpen animated:YES];
+}
+- (BOOL)accessibilityToggleCase:(UIAccessibilityCustomAction *)action { [self toggleCase]; return YES; }
 - (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (!self) return nil;
     self.cover = [[UIImageView alloc] initWithFrame:CGRectZero];
     self.cover.layer.cornerRadius = 12; self.cover.clipsToBounds = YES;
+    self.caseView = [[GMCDCaseView alloc] initWithFrame:CGRectZero presentation:GMCDCasePresentationInspector];
+    self.caseView.hidden = YES; self.caseView.isAccessibilityElement = YES;
+    self.caseView.accessibilityTraits = UIAccessibilityTraitButton;
+    self.caseView.accessibilityHint = @"Use the Open or Close Case action";
+    self.caseView.accessibilityCustomActions = @[[[UIAccessibilityCustomAction alloc] initWithName:@"Open or Close Case" target:self selector:@selector(accessibilityToggleCase:)]];
+    [self.caseView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(toggleCase)]];
+    [self addSubview:self.caseView];
     self.nameLabel = GMLabel(@"",24,.6,GMPrimaryTextColor());
     self.nameLabel.adjustsFontSizeToFitWidth = YES; self.nameLabel.minimumScaleFactor = .6;
     self.detailLabel = GMLabel(@"",15,0,GMSecondaryTextColor());
@@ -923,6 +947,7 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
     [super layoutSubviews];
     CGFloat w = self.bounds.size.width, cover = GMMin(218,GMMax(130,w-100));
     self.cover.frame = CGRectMake((w-cover)/2,12,cover,cover);
+    self.caseView.frame = self.cover.frame;
     self.nameLabel.frame = CGRectMake(20,246,GMMax(0,w-40),31);
     self.detailLabel.frame = CGRectMake(20,281,GMMax(0,w-40),22);
     self.playButton.frame = CGRectMake(20,320,GMMax(0,w-40),48);
@@ -931,6 +956,7 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
     self.backgroundColor = [UIColor clearColor];
     self.nameLabel.textColor = GMPrimaryTextColor(); self.detailLabel.textColor = GMSecondaryTextColor();
     self.cover.backgroundColor = GMCardColor(); self.cover.tintColor = GMCurrentAccent();
+    [self.caseView applyTheme];
     GMStyleGlassButton(self.playButton,YES);
 }
 @end
@@ -950,6 +976,16 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 @end
 
 @implementation GMBrowseSongsController
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated]; [self.collectionHeader.caseView setActive:self.albumIdentifier != nil];
+}
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated]; [self.collectionHeader.caseView setActive:NO];
+}
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    [super scrollViewDidScroll:scrollView];
+    [self.collectionHeader.caseView setActive:self.albumIdentifier != nil && self.view.window != nil];
+}
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.navigationItem.largeTitleDisplayMode = 2;
@@ -1005,6 +1041,9 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
     }
     if (!artwork) artwork = GMBrowseTrackImage(GMBrowseTrack(self.shell,self.trackIndexes.firstObject));
     GMBrowseSetArtwork(self.collectionHeader.cover,artwork,self.playlistIdentifier ? @"music.note.list" : @"music.note");
+    self.collectionHeader.cover.hidden = self.albumIdentifier != nil;
+    self.collectionHeader.caseView.hidden = self.albumIdentifier == nil;
+    if (self.albumIdentifier) [self.collectionHeader.caseView configureWithIdentifier:self.albumIdentifier title:self.title artist:detail artwork:artwork];
     self.collectionHeader.nameLabel.text = self.title;
     self.collectionHeader.detailLabel.text = detail;
     self.collectionHeader.playButton.enabled = self.trackIndexes.count > 0;
@@ -1025,7 +1064,10 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 - (void)tableView:(UITableView *)table didSelectRowAtIndexPath:(NSIndexPath *)path {
     [table deselectRowAtIndexPath:path animated:YES];
     if ([self closeRevealedActionsIfNeeded]) return;
-    [self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row];
+    GMBrowseSongCell *cell = (GMBrowseSongCell *)[table cellForRowAtIndexPath:path];
+    CGRect source = [cell.rowCase convertRect:cell.rowCase.bounds toView:self.shell.view.window];
+    if ([self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row])
+        [self.shell presentNowPlayingFromCaseRect:source];
 }
 - (void)playCollection {
     [self closeRevealedActionsIfNeeded];
@@ -1110,7 +1152,7 @@ static void GMBrowsePushSongs(GMBrowseTableController *source, NSString *albumId
 @implementation GMAlbumTile
 - (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame]; if (!self) return nil;
-    self.caseView = [[GMCDCaseView alloc] initWithFrame:CGRectZero presentation:GMCDCasePresentationGrid];
+    self.caseView = [[GMCDCaseView alloc] initWithFrame:CGRectZero presentation:GMCDCasePresentationStatic];
     self.nameLabel = GMLabel(@"",15,0,GMPrimaryTextColor()); self.artistLabel = GMLabel(@"",13,0,GMSecondaryTextColor());
     self.caseView.userInteractionEnabled = NO; self.nameLabel.userInteractionEnabled = NO; self.artistLabel.userInteractionEnabled = NO;
     [self addSubview:self.caseView]; [self addSubview:self.nameLabel]; [self addSubview:self.artistLabel];

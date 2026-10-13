@@ -11,6 +11,8 @@
 @property(strong) id nativeAccessory;
 @property(strong) UIVisualEffectView *fallbackAccessory;
 @property NSInteger lastSelectedIndex;
+@property(strong) UIView *caseWarmHost;
+@property(strong) GMPlayerCaseTransition *caseTransition;
 - (void)savePreferences;
 @end
 
@@ -452,24 +454,33 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
         if ([browser respondsToSelector:@selector(refreshPlaybackIndicators)]) [browser refreshPlaybackIndicators];
     }
 }
-- (void)presentNowPlaying {
-    if (!self.player || self.player.presentingViewController || self.presentedViewController) return;
-    self.player.modalPresentationStyle = 0; // Full screen, including safe areas.
-    self.player.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
-    Class transitionClass = NSClassFromString(@"UIViewControllerTransition");
-    if ([self.player respondsToSelector:@selector(setPreferredTransition:)]) {
-        self.player.preferredTransition = nil;
-        BOOL reduceMotion = UIAccessibilityIsReduceMotionEnabled() || UIAccessibilityPrefersCrossFadeTransitions();
-        if (!reduceMotion && [transitionClass respondsToSelector:@selector(zoomWithOptions:sourceViewProvider:)]) {
-            __weak GMMusicShell *weakShell = self;
-            self.player.preferredTransition = [transitionClass zoomWithOptions:nil sourceViewProvider:^UIView *(UIZoomTransitionSourceViewProviderContext *context) {
-                // UIKit asks again for dismissal, so always resolve the live
-                // mini-player rather than retaining a one-time snapshot.
-                GMMusicShell *shell = weakShell;
-                return shell.compactPlayer;
-            }];
-        }
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    if (!self.player.caseTransitionInProgress) [self warmPlayerCase];
+}
+- (void)warmPlayerCase {
+    if (!self.view.window || self.player.caseTransitionInProgress || self.player.view.window) return;
+    if (!self.caseWarmHost) {
+        self.caseWarmHost = [[UIView alloc] initWithFrame:CGRectMake(0,0,300,300)];
+        self.caseWarmHost.userInteractionEnabled = NO;
+        self.caseWarmHost.accessibilityElementsHidden = YES;
+        self.caseWarmHost.alpha = .01;
+        [self.view insertSubview:self.caseWarmHost atIndex:0];
     }
+    [self.player.cdCaseView moveToHost:self.caseWarmHost frame:self.caseWarmHost.bounds prewarming:YES];
+}
+- (void)presentNowPlaying {
+    CGRect source = [self.compactPlayer.cover convertRect:self.compactPlayer.cover.bounds toView:self.view.window];
+    [self presentNowPlayingFromCaseRect:source];
+}
+- (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect {
+    if (!self.player || self.player.presentingViewController || self.presentedViewController) return;
+    self.caseTransition = [GMPlayerCaseTransition new];
+    self.caseTransition.shell = self; self.caseTransition.sourceRect = sourceRect;
+    self.player.modalPresentationStyle = 0;
+    if ([self.player respondsToSelector:@selector(setPreferredTransition:)]) self.player.preferredTransition = nil;
+    self.player.transitioningDelegate = self.caseTransition;
+    self.player.caseTransitionInProgress = YES;
     [self.player refreshPlayback];
     [self presentViewController:self.player animated:YES completion:nil];
 }

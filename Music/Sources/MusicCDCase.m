@@ -87,34 +87,7 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 - (void)layoutSubviews {
     [super layoutSubviews];
     CGFloat side = GMMin(self.bounds.size.width,self.bounds.size.height)*.97;
-    if (side < 1) return;
-    [CATransaction begin]; [CATransaction setDisableActions:YES];
-    self.caseBody.frame = CGRectMake((self.bounds.size.width-side)/2,(self.bounds.size.height-side)/2,side,side);
-    CGFloat diameter = side*.80, cx = side*.545, cy = side*.50;
-    self.discRim.frame = CGRectMake(cx-diameter/2,cy-diameter/2,diameter,diameter);
-    self.discRim.layer.cornerRadius = diameter/2;
-    self.discSheen.frame = self.discRim.bounds;
-    CGFloat margin = GMMax(1.2,diameter*.018);
-    self.disc.frame = CGRectMake(margin,margin,diameter-2*margin,diameter-2*margin);
-    self.disc.layer.cornerRadius = (diameter-2*margin)/2;
-    CGFloat ring = diameter*.25, hole = diameter*.10;
-    self.hubRing.frame = CGRectMake(cx-ring/2,cy-ring/2,ring,ring);
-    self.hubRing.layer.cornerRadius = ring/2;
-    self.hole.frame = CGRectMake(cx-hole/2,cy-hole/2,hole,hole);
-    self.hole.layer.cornerRadius = hole/2;
-    self.spine.frame = CGRectMake(side*.035,side*.025,side*.068,side*.95);
-    self.spine.layer.cornerRadius = 2;
-    self.reflection.frame = self.caseBody.bounds; self.reflection.cornerRadius = 5;
-    [CATransaction commit];
-}
-- (void)applyTheme {
-    BOOL dark = self.traitCollection.userInterfaceStyle == 2;
-    UIColor *page = [GMPageColor() resolvedColorWithTraitCollection:self.traitCollection];
-    self.caseBody.backgroundColor = GMCDWhite(dark ? .34 : .92,dark ? .16 : .27);
-    self.caseBody.layer.borderColor = GMCDWhite(dark ? 1 : .38,dark ? .43 : .40).CGColor;
-    self.caseBody.layer.shadowColor = [UIColor blackColor].CGColor;
-    self.spine.backgroundColor = GMCDWhite(dark ? .03 : .30,.18);
-    self.spine.layer.borderColor = GMCDWhite(dark ? 1 : .4,.32).CGColor;
+ …424 tokens truncated…ite(dark ? 1 : .4,.32).CGColor;
     self.discRim.layer.borderColor = GMCDWhite(.55,.65).CGColor;
     self.hubRing.backgroundColor = GMCDWhite(.82,.68);
     self.hubRing.layer.borderColor = GMCDWhite(1,.60).CGColor;
@@ -175,6 +148,7 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 @property(nonatomic, strong) NSMutableDictionary<NSString *,id> *pending;
 @property(nonatomic, copy) NSArray<NSNumber *> *backgroundComponents;
 @property(nonatomic) BOOL ownerActive;
+@property(nonatomic) BOOL prewarming;
 @property(nonatomic) BOOL playing;
 @property(nonatomic) BOOL caseOpen;
 @property(nonatomic) BOOL bridgeReady;
@@ -370,7 +344,7 @@ static GMCDMotionHub *GMCDSharedHub(void) {
     NSInteger priority = -1;
     if (!self.applicationSuspended && !GMCDReducedMotion() && !self.sensorFailed) {
         for (GMCDCaseView *view in self.views.allObjects) {
-            if (view.webView && view.rendered && [view eligibleForRenderer]) {
+            if (view.webView && view.rendered && !view.prewarming && [view eligibleForRenderer]) {
                 demand = YES;
                 if (view.presentation > priority) { orientation = GMCDOrientation(view.window); priority = view.presentation; }
             }
@@ -427,7 +401,7 @@ static GMCDMotionHub *GMCDSharedHub(void) {
             current.deliveryPending = NO;
             [current.sampleLock unlock];
             for (GMCDCaseView *view in current.views.allObjects)
-                if (view.webView && [view eligibleForRenderer]) [view acceptSensorX:latestX y:latestY];
+                if (view.webView && !view.prewarming && [view eligibleForRenderer]) [view acceptSensorX:latestX y:latestY];
         });
     }];
 }
@@ -499,11 +473,12 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     self.encodedArtwork = nil; self.encodedRevision = 0;
     self.failedThisActivation = NO;
     [self.stillView removeFromSuperview]; self.stillView = nil;
-    if (!self.rendered) self.fallback.hidden = NO;
+    self.rendered = NO; self.webView.alpha = .01; self.fallback.hidden = NO; self.fallback.alpha = 1;
     [self ensureEncodedArtwork];
     [GMCDSharedHub() reconcile];
 }
 - (BOOL)eligibleForRenderer {
+    if (self.presentation == GMCDCasePresentationStatic) return NO;
     if (!self.ownerActive || self.failedThisActivation || !self.window ||
         GMCDSharedHub().applicationSuspended || self.hidden || self.bounds.size.width < 2 || self.bounds.size.height < 2) return NO;
     UIWindowScene *scene = self.window.windowScene;
@@ -516,6 +491,20 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         if (parent.clipsToBounds && !GMCDRectsIntersect(visible,[parent convertRect:parent.bounds toView:self.window])) return NO;
     }
     return YES;
+}
+- (BOOL)readyForDisplay { return self.rendered && self.rendererArtworkRevision == self.artworkRevision; }
+- (void)moveToHost:(UIView *)host frame:(CGRect)frame prewarming:(BOOL)prewarming {
+    GMCDMotionHub *hub = GMCDSharedHub();
+    BOOL reconciling = hub.reconciling; hub.reconciling = YES;
+    self.prewarming = prewarming; self.ownerActive = YES;
+    self.transform = CGAffineTransformIdentity;
+    [host addSubview:self]; self.frame = frame;
+    [self layoutIfNeeded];
+    hub.reconciling = reconciling;
+    [hub reconcile];
+    self.pending[@"open"] = [NSNumber numberWithBool:(self.caseOpen && !prewarming)];
+    self.pending[@"animateOpen"] = [NSNumber numberWithBool:!prewarming];
+    [self queueMotionState];
 }
 - (void)setActive:(BOOL)active {
     if (self.ownerActive == active) { [GMCDSharedHub() reconcile]; return; }
@@ -531,7 +520,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     if (self.failedThisActivation && animated) [self retryRenderer];
     if (self.caseOpen == open && self.rendered) return;
     self.caseOpen = open;
-    self.pending[@"open"] = @(open);
+    self.pending[@"open"] = [NSNumber numberWithBool:(open && !self.prewarming)];
     self.pending[@"animateOpen"] = [NSNumber numberWithBool:(animated && !GMCDReducedMotion())];
     [self flushPending];
 }
@@ -553,7 +542,8 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     else if (orientation == UIInterfaceOrientationLandscapeRight) { CGFloat swap = x; x = y; y = -swap; }
     else if (orientation == UIInterfaceOrientationPortraitUpsideDown) { x = -x; y = -y; }
     if (GMCDReducedMotion()) x = y = 0;
-    if (self.sensorX == x && self.sensorY == y) return;
+    CGFloat dx = self.sensorX-x, dy = self.sensorY-y;
+    if (dx > -.002 && dx < .002 && dy > -.002 && dy < .002) return;
     self.sensorX = x; self.sensorY = y;
     self.pending[@"animateTilt"] = @YES;
     [self queueMotionState];
@@ -561,14 +551,15 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
 - (void)queueMotionState {
     BOOL reduced = GMCDReducedMotion();
     BOOL active = self.webView != nil && [self eligibleForRenderer];
-    BOOL spin = self.presentation == GMCDCasePresentationPlayer ? self.playing : YES;
+    BOOL spin = !self.prewarming && (self.presentation == GMCDCasePresentationPlayer ? self.playing : YES);
     self.pending[@"active"] = @(active);
+    if (self.prewarming) { self.pending[@"open"] = @NO; self.pending[@"animateOpen"] = @NO; }
     self.pending[@"playing"] = [NSNumber numberWithBool:(active && spin && !reduced)];
     self.pending[@"reducedMotion"] = @(reduced);
     // Public input is screen-space drag: X horizontal, Y vertical. The local
     // renderer uses tiltX for pitch and tiltY for yaw.
-    self.pending[@"tiltX"] = @(GMCDClamp(self.inspectionY+(reduced ? 0 : self.sensorY)));
-    self.pending[@"tiltY"] = @(GMCDClamp(self.inspectionX+(reduced ? 0 : self.sensorX)));
+    self.pending[@"tiltX"] = @(GMCDClamp(self.inspectionY+(reduced || self.prewarming ? 0 : self.sensorY)));
+    self.pending[@"tiltY"] = @(GMCDClamp(self.inspectionX+(reduced || self.prewarming ? 0 : self.sensorX)));
     [self flushPending];
 }
 - (void)motionPreferenceChanged {
@@ -621,6 +612,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [GMCDSharedHub() reconcile];
 }
 - (void)ensureEncodedArtwork {
+    if (self.presentation == GMCDCasePresentationStatic) return;
     if (self.encodedRevision == self.artworkRevision || self.encoding) return;
     if (!self.artwork.CGImage) {
         self.encodedArtwork = nil; self.encodedRevision = self.artworkRevision;

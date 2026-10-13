@@ -221,4 +221,27 @@ enum { UIViewAnimationOptionTransitionFlipFromLeft = 1UL << 20,
 + (void)transitionWithView:(UIView *)view duration:(NSTimeInterval)duration options:(UIViewAnimationOptions)options animations:(void (^)(void))animations completion:(void (^)(BOOL finished))completion;
 @end
 
+@protocol UIViewControllerContextTransitioning <NSObject>
+@property(nonatomic, readonly) UIView *containerView;
+@property(nonatomic, readonly) BOOL transitionWasCancelled;
+- (CGRect)finalFrameForViewController:(UIViewController *)controller;
+- (UIView *)viewForKey:(NSString *)key;
+- (void)completeTransition:(BOOL)completed;
+@end
+@protocol UIViewControllerAnimatedTransitioning <NSObject>
+- (NSTimeInterval)transitionDuration:(id<UIViewControllerContextTransitioning>)context;
+- (void)animateTransition:(id<UIViewControllerContextTransitioning>)context;
+@end
+@protocol UIViewControllerTransitioningDelegate <NSObject>
+@optional
+- (id<UIViewControllerAnimatedTransitioning>)animationControllerForPresentedController:(UIViewController *)presented presentingController:(UIViewController *)presenting sourceController:(UIViewController *)source;
+- (id<UIViewControllerAnimatedTransitioning>)animationControllerForDismissedController:(UIViewController *)dismissed;
+@end
+@interface UIViewController (GMPlayerTransition)
+@property(nonatomic, weak) id<UIViewControllerTransitioningDelegate> transitioningDelegate;
+@end
+@interface UIView (GMPlayerCoordinates)
+- (CGRect)convertRect:(CGRect)rect fromView:(UIView *)view;
+@end
+extern NSString *const UITransitionContextToViewKey;
 #endif
