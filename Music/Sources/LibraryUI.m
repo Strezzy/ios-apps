@@ -471,8 +471,26 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
     [self.player.cdCaseView moveToHost:self.caseWarmHost frame:self.caseWarmHost.bounds prewarming:YES];
 }
 - (void)presentNowPlaying {
-    CGRect source = [self.compactPlayer.cover convertRect:self.compactPlayer.cover.bounds toView:self.view.window];
-    [self presentNowPlayingFromCaseRect:source];
+    if (!self.player || self.player.presentingViewController || self.presentedViewController) return;
+    self.player.transitioningDelegate = nil;
+    self.player.modalPresentationStyle = 0; // Full screen, including safe areas.
+    self.player.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    Class transitionClass = NSClassFromString(@"UIViewControllerTransition");
+    if ([self.player respondsToSelector:@selector(setPreferredTransition:)]) {
+        self.player.preferredTransition = nil;
+        BOOL reduceMotion = UIAccessibilityIsReduceMotionEnabled() || UIAccessibilityPrefersCrossFadeTransitions();
+        if (!reduceMotion && [transitionClass respondsToSelector:@selector(zoomWithOptions:sourceViewProvider:)]) {
+            __weak GMMusicShell *weakShell = self;
+            self.player.preferredTransition = [transitionClass zoomWithOptions:nil sourceViewProvider:^UIView *(UIZoomTransitionSourceViewProviderContext *context) {
+                // UIKit asks again for dismissal, so always resolve the live
+                // mini-player rather than retaining a one-time snapshot.
+                GMMusicShell *shell = weakShell;
+                return shell.compactPlayer;
+            }];
+        }
+    }
+    [self.player refreshPlayback];
+    [self presentViewController:self.player animated:YES completion:nil];
 }
 - (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect {
     if (!self.player || self.player.presentingViewController || self.presentedViewController) return;

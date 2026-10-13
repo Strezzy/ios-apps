@@ -18,6 +18,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     if (!view.webView) { [self check:@"renderer_present" value:NO]; block(@{}); return; }
     [view.webView evaluateJavaScript:@"JSON.stringify(window.MusicCD.diagnostics())" completionHandler:^(id result,NSError *error){
         NSDictionary *state=[result isKindOfClass:NSString.class]?[NSJSONSerialization JSONObjectWithData:[result dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil]:nil;
+        if (!state || error) NSLog(@"BRIDGE_ERROR %@ result=%@ ready=%d failure=%@",error,result,view.bridgeReady,view.rendererFailureReason);
         [self check:@"bridge_readable" value:state!=nil && !error]; block(state?:@{});
     }];
 }
@@ -83,10 +84,10 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
         [self capture:@"Player-Open.png"];
         [player nextTrack];
         After(.5,^{[self state:hero then:^(NSDictionary *next){
-            [self check:@"next_track_keeps_spinning" value:player.player.isPlaying && [next[@"playing"] boolValue]];
+            [self check:@"next_track_keeps_spinning" value:player.player.isPlaying && [next[@"playing"] boolValue] && [next[@"spin"] doubleValue]>[state[@"spin"] doubleValue]+.001];
             [player previousTrack];
             After(.5,^{[self state:hero then:^(NSDictionary *previous){
-                [self check:@"previous_track_keeps_spinning" value:player.player.isPlaying && [previous[@"playing"] boolValue]];
+                [self check:@"previous_track_keeps_spinning" value:player.player.isPlaying && [previous[@"playing"] boolValue] && [previous[@"spin"] doubleValue]>[next[@"spin"] doubleValue]+.001];
                 [player pause];
             }];});
         }];});
@@ -100,11 +101,20 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
                 After(.2,^{[player pause];After(.2,^{[player play];});});
                 After(5,^{[self state:hero then:^(NSDictionary *resumed){
                     [self check:@"rapid_play_pause_settles_open" value:[resumed[@"open"] boolValue] && [resumed[@"phase"] isEqual:@"open"]];
-                    [player closeNowPlaying]; After(1,^{[self checkGrid];});
+                    [player closeNowPlaying]; After(1,^{[self checkMiniPlayer];});
                 }];});
             }];});
         }];});
     }];
+}
+- (void)checkMiniPlayer {
+    [self check:@"dismissal_retains_warm_renderer" value:self.shell.player.cdCaseView.prewarming && self.shell.player.cdCaseView.webView==self.originalWeb];
+    [self.shell presentNowPlaying];
+    [self check:@"mini_player_keeps_native_transition" value:self.shell.player.transitioningDelegate==nil && self.shell.player.preferredTransition!=nil];
+    After(3,^{
+        [self check:@"mini_player_reuses_hero" value:self.shell.player.cdCaseView.readyForDisplay && self.shell.player.cdCaseView.superview==self.shell.player.artView];
+        [self.shell.player closeNowPlaying]; After(1,^{[self checkGrid];});
+    });
 }
 - (void)checkGrid {
     [self check:@"dismissal_retains_warm_renderer" value:self.shell.player.cdCaseView.prewarming && self.shell.player.cdCaseView.webView==self.originalWeb];
@@ -126,18 +136,28 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
             GMBrowseSongsController *detail=(GMBrowseSongsController *)nav.topViewController;
             self.detail=detail.collectionHeader.caseView;
             [self check:@"album_detail_uses_hero" value:!self.detail.hidden && self.detail.webView!=nil && detail.collectionHeader.cover.hidden];
-            [detail.collectionHeader toggleCase];
-            After(4,^{[self state:self.detail then:^(NSDictionary *state){
-                [self check:@"album_detail_manual_open" value:[state[@"open"] boolValue]]; [self capture:@"Album-Detail.png"];
-                [detail.collectionHeader toggleCase];
-                After(3,^{[self state:self.detail then:^(NSDictionary *closed){
-                    [self check:@"album_detail_manual_close" value:![closed[@"open"] boolValue]];
-                    [self finish];
-                }];});
-            }];});
+            [detail.collectionHeader toggleCase]; // The intent must survive a still-loading cover.
+            self.attempts=0;
+            [self waitDetail];
         });
     });
 }
+- (void)waitDetail {
+    if(!self.detail.readyForDisplay && ++self.attempts<80){After(.5,^{[self waitDetail];});return;}
+    [self check:@"album_detail_correct_art_ready" value:self.detail.readyForDisplay];
+    After(2.5,^{[self state:self.detail then:^(NSDictionary *state){
+        [self check:@"album_detail_manual_open" value:[state[@"open"] boolValue]];
+        [self capture:@"Album-Detail.png"];
+        UINavigationController *nav=(UINavigationController *)self.shell.selectedViewController;
+        GMBrowseSongsController *detail=(GMBrowseSongsController *)nav.topViewController;
+        [detail.collectionHeader toggleCase];
+        After(3,^{[self state:self.detail then:^(NSDictionary *closed){
+            [self check:@"album_detail_manual_close" value:![closed[@"open"] boolValue]];
+            [self finish];
+        }];});
+    }];});
+}
+
 @end
 @interface ProbeDelegate : NSObject <UIApplicationDelegate> @end
 @implementation ProbeDelegate

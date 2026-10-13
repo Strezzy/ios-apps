@@ -968,6 +968,7 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 @property(nonatomic, copy) NSString *artistName;
 @property(nonatomic, copy) NSArray<NSNumber *> *trackIndexes;
 @property(nonatomic, strong) GMBrowseCollectionHeader *collectionHeader;
+@property(nonatomic) BOOL caseOwnerVisible;
 - (void)playCollection;
 - (void)addSongs;
 @end
@@ -977,14 +978,16 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
 
 @implementation GMBrowseSongsController
 - (void)viewDidAppear:(BOOL)animated {
-    [super viewDidAppear:animated]; [self.collectionHeader.caseView setActive:self.albumIdentifier != nil];
+    [super viewDidAppear:animated]; self.caseOwnerVisible = YES;
+    [self.collectionHeader.caseView setActive:self.albumIdentifier != nil];
 }
 - (void)viewWillDisappear:(BOOL)animated {
-    [super viewWillDisappear:animated]; [self.collectionHeader.caseView setActive:NO];
+    [super viewWillDisappear:animated]; self.caseOwnerVisible = NO;
+    [self.collectionHeader.caseView setActive:NO];
 }
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     [super scrollViewDidScroll:scrollView];
-    [self.collectionHeader.caseView setActive:self.albumIdentifier != nil && self.view.window != nil];
+    [self.collectionHeader.caseView setActive:self.caseOwnerVisible && self.albumIdentifier != nil];
 }
 - (void)viewDidLoad {
     [super viewDidLoad];

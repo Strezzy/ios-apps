@@ -65,11 +65,8 @@ jobs:
           cp "$DATA/Documents/"*.json Evidence/ || true
           cp "$DATA/Documents/"*.png Evidence/ || true
           tail -100 Evidence/runtime.log
-          python3 -c 'import json;d=json.load(open("Evidence/result.json"));print(json.dumps(d,indent=2));assert d["passed"]'
           xcrun simctl terminate "$DEVICE" com.billy.music.transitionprobe || true
-      - name: Stop simulator processes
-        if: always()
-        run: xcrun simctl shutdown all || true
+          python3 -c 'import json;d=json.load(open("Evidence/result.json"));print(json.dumps(d,indent=2));assert d["passed"]'
       - name: Save candidate IPA
         uses: actions/upload-artifact@v7
         with:
@@ -81,3 +78,7 @@ jobs:
         with:
           name: Music-case-transitions-evidence
           path: Evidence
+      - name: Stop simulator processes
+        if: always()
+        timeout-minutes: 1
+        run: xcrun simctl shutdown booted || true

@@ -298,6 +298,10 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     // Keep layout independent of the scale used by the play/pause spring.
     self.artView.bounds = CGRectMake(0,0,artSize,artSize);
     self.artView.center = CGPointMake(w/2,12+artSize/2);
+    // The mini-player keeps UIKit's existing zoom transition. Attach its warm
+    // case as soon as the destination enters the window, before the reveal.
+    if (self.view.window && !self.caseTransitionInProgress && self.cdCaseView.prewarming)
+        [self.cdCaseView moveToHost:self.artView frame:self.artView.bounds prewarming:NO];
     if (self.cdCaseView.superview == self.artView) self.cdCaseView.frame = self.artView.bounds;
     self.lyricsView.frame = CGRectMake(inset,12,contentW,artSize);
     CGFloat titleY = artSize+38;
@@ -322,6 +326,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 }
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    self.artworkOwnerVisible = YES;
     [self updateArtworkPlaybackStateAnimated:NO];
 }
 - (void)viewDidAppear:(BOOL)animated {
@@ -336,6 +341,13 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     self.artworkOwnerVisible = NO;
     if (!self.caseTransitionInProgress) [self.cdCaseView setActive:NO];
 }
+- (void)viewDidDisappear:(BOOL)animated {
+    [super viewDidDisappear:animated];
+    __weak PlayerController *weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(),^{
+        if (!weakSelf.presentingViewController) [weakSelf.shell warmPlayerCase];
+    });
+}
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     if (scrollView == self.nowPlayingScroll) [self updateCDCaseActivity];
 }
@@ -343,7 +355,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     return self.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskPortrait;
 }
 - (void)viewSafeAreaInsetsDidChange { [super viewSafeAreaInsetsDidChange]; [self.view setNeedsLayout]; }
-- (void)closeNowPlaying { self.caseTransitionInProgress = YES; [self dismissViewControllerAnimated:YES completion:nil]; }
+- (void)closeNowPlaying { self.caseTransitionInProgress = self.transitioningDelegate != nil; [self dismissViewControllerAnimated:YES completion:nil]; }
 - (UIViewController *)visiblePresenter {
     UIViewController *presenter = self.shell ?: self;
     while (presenter.presentedViewController) presenter = presenter.presentedViewController;
