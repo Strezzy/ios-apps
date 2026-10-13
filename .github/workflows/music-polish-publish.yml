@@ -1,0 +1,86 @@
+name: Publish verified Music 0.13
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/music-polish-publish.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: app-catalog
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_RUN: '38342559912'
+      RELEASE_TAG: music-0.13-build14
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Restore the exact native-tested and visually reviewed artifact
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$BUILD_RUN" --json conclusion --jq .conclusion)" = success
+          gh run download "$BUILD_RUN" --name Music-0.13-14-Verified --dir Release
+          (cd Release && sha256sum -c SHA256SUMS.txt)
+          python3 - <<'PY'
+          import hashlib,json,plistlib,zipfile
+          from pathlib import Path
+          ipa=Path('Release/Music.ipa')
+          assert hashlib.sha256(ipa.read_bytes()).hexdigest()=='cd18ba80388ef28165ec9ff1e2c4f51a43bf8fbf0925c62ca06a666f33d91c53'
+          assert hashlib.sha256(Path('Release/Music-Source.zip').read_bytes()).hexdigest()=='4be4197a1f51424e091d4e696f01091b7c1c9bfa8c24ebee6af3ff7030e9cfe4'
+          report=json.loads(Path('Release/BUILD-REPORT.json').read_text())
+          assert report['nativePassed'] and len(report['nativeChecks'])>=26 and all(report['nativeChecks'].values())
+          assert report['grid']['passed'] and report['grid']['scrollAndReturnVerified'] and report['grid']['nativeTabCount']==5
+          with zipfile.ZipFile(ipa) as z:
+              assert z.testzip() is None
+              info=plistlib.loads(z.read('Payload/Music.app/Info.plist'))
+              assert (info['CFBundleIdentifier'],info['CFBundleShortVersionString'],info['CFBundleVersion'])==('com.billy.glassmusic','0.13','14')
+          with zipfile.ZipFile('Release/Music-Source.zip') as z:
+              for name in z.namelist():
+                  if name.startswith(('Music/Sources/','Music/Resources/','Music/Support/')) and not name.endswith('/'):
+                      assert Path(name).read_bytes()==z.read(name), 'Source changed after validation: '+name
+          print('Reviewed device IPA, source and native test evidence match.')
+          PY
+      - name: Publish the new release without replacing old assets
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            mkdir -p Existing
+            gh release download "$RELEASE_TAG" --pattern Music.ipa --dir Existing
+            cmp Release/Music.ipa Existing/Music.ipa
+          else
+            gh release create "$RELEASE_TAG" Release/* --target "$GITHUB_SHA" --title 'Music 0.13 (14) - CD loading and rendering polish' --notes-file MusicRelease/NOTES-0.13.md
+          fi
+      - name: Update the original app catalog and download page
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --ff-only origin main
+          cp apps.json /tmp/catalog-before-music13.json
+          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local Release/Music.ipa --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --notes 'CD-case loading and visual polish: bounded warm-renderer reuse, smoother correct-artwork reveal, higher-density album rendering, improved reflection detail and tilt-safe framing. Native Liquid Glass navigation and album layout are preserved. Passed 26 native renderer checks and the Albums scroll-and-return test. Physical-device performance remains to be measured.'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          before=json.loads(Path('/tmp/catalog-before-music13.json').read_text())
+          after=json.loads(Path('apps.json').read_text())
+          assert before['identifier']==after['identifier']
+          others=lambda d:{a['bundleIdentifier']:a for a in d['apps'] if a['bundleIdentifier']!='com.billy.glassmusic'}
+          assert others(before)==others(after), 'Unexpected changes to other app entries'
+          music=next(a for a in after['apps'] if a['bundleIdentifier']=='com.billy.glassmusic')
+          assert music['version']=='0.13' and music['versions'][0]['buildNumber']=='14'
+          assert music['downloadURL'].endswith('/music-0.13-build14/Music.ipa')
+          print('Existing source updated to Music 0.13 (14); other apps unchanged.')
+          PY
+          git add apps.json README.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish native-verified Music 0.13 (14) in the existing app catalog'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
