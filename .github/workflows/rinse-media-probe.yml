@@ -1,0 +1,80 @@
+name: Rinse synthetic photo diagnostics
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/rinse-media-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inspect synthetic encoder metadata with production PhotoCleaner
+        shell: bash
+        run: |
+          mkdir -p /tmp/rinse-probe
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('Rinse/Core/PhotoCleaner.swift').read_text()
+          harness = r'''
+          struct CleanOptions {
+              enum PhotoFormat { case original, jpeg, png }
+              var photoFormat: PhotoFormat = .original
+              var maxPhotoPixels = 64_000_000
+          }
+          struct Audit { var fields: [String]; var mediaDescription: String }
+          enum RinseError: Error { case message(String) }
+          enum Workspace {
+              static func destination(extension suffix: String) -> URL {
+                  URL(fileURLWithPath: "/tmp/rinse-probe/" + UUID().uuidString).appendingPathExtension(suffix)
+              }
+          }
+          func inspect(_ url: URL, label: String) throws {
+              let src = CGImageSourceCreateWithURL(url as CFURL, nil)!
+              print("=== \(label) ===")
+              print("AUDIT", try PhotoCleaner.audit(url).fields)
+              print("GLOBAL", CGImageSourceCopyProperties(src, nil) as Any)
+              print("IMAGE", CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as Any)
+              if let metadata = CGImageSourceCopyMetadataAtIndex(src, 0, nil),
+                 let tags = CGImageMetadataCopyTags(metadata) as? [CGImageMetadataTag] {
+                  for tag in tags {
+                      print("TAG", CGImageMetadataTagCopyNamespace(tag) as Any,
+                            CGImageMetadataTagCopyName(tag) as Any,
+                            CGImageMetadataTagCopyValue(tag) as Any)
+                  }
+              }
+          }
+          let context = CGContext(data: nil, width: 48, height: 32, bitsPerComponent: 8,
+              bytesPerRow: 48 * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+          context.setFillColor(CGColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1))
+          context.fill(CGRect(x: 0, y: 0, width: 48, height: 32))
+          let properties: [CFString: Any] = [kCGImagePropertyOrientation: 1,
+              kCGImagePropertyGPSDictionary: [kCGImagePropertyGPSLatitude: 45.1234, kCGImagePropertyGPSLatitudeRef: "N"],
+              kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "RINSE_PRIVATE_FIXTURE", kCGImagePropertyTIFFModel: "PRIVATE_CAMERA_MODEL"],
+              kCGImagePropertyExifDictionary: [kCGImagePropertyExifDateTimeOriginal: "2026:10:12 12:34:56", kCGImagePropertyExifUserComment: "PRIVATE_COMMENT"]]
+          for type in [UTType.jpeg, UTType.png, UTType.heic] {
+              let input = Workspace.destination(extension: type.preferredFilenameExtension!)
+              let dest = CGImageDestinationCreateWithURL(input as CFURL, type.identifier as CFString, 1, nil)!
+              CGImageDestinationAddImage(dest, context.makeImage()!, properties as CFDictionary)
+              guard CGImageDestinationFinalize(dest) else { fatalError("Synthetic fixture encode failed") }
+              try inspect(input, label: "\(type.identifier) source")
+              let (output, _) = try PhotoCleaner.rebuild(input, options: CleanOptions())
+              try inspect(output, label: "\(type.identifier) reconstructed")
+          }
+          '''
+          Path('/tmp/rinse-probe/main.swift').write_text(source + '\n' + harness)
+          PY
+          xcrun swiftc -swift-version 5 /tmp/rinse-probe/main.swift -o /tmp/rinse-probe/inspect
+          /tmp/rinse-probe/inspect | tee /tmp/rinse-probe/metadata.txt
+      - name: Save synthetic diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Rinse-Synthetic-Photo-Metadata
+          path: /tmp/rinse-probe/metadata.txt
+          if-no-files-found: ignore
+          retention-days: 7
