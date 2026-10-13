@@ -29,9 +29,9 @@ struct EditionLabel: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: rarity.symbol).foregroundStyle(rarity.color)
-            Text(rarity.title.uppercased()).tracking(1.4)
+            Text(rarity.title.uppercased()).tracking(1.4).lineLimit(1).minimumScaleFactor(0.7)
             Spacer(minLength: 4)
-            Text("\(serial) OF \(total)").monospacedDigit().tracking(1.4)
+            Text("\(serial) OF \(total)").monospacedDigit().tracking(1.4).lineLimit(1).minimumScaleFactor(0.7)
         }.font(.system(size: 9,weight: .semibold,design: .monospaced)).foregroundStyle(.white.opacity(0.85))
     }
 }

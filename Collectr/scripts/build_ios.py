@@ -20,22 +20,24 @@ def run(args,log=None,capture=False):
 
 def main():
     BUILD.mkdir(exist_ok=True);(BUILD/'Logs').mkdir(exist_ok=True)
+    devices=json.loads(run(['xcrun','simctl','list','devices','available','--json'],capture=True))
+    choices=[d for runtime,items in devices['devices'].items() if 'iOS-26' in runtime or 'iOS-27' in runtime for d in items if d.get('isAvailable') and d['name'].startswith('iPhone')]
+    if not choices: raise RuntimeError('iOS 26+ simulator missing')
+    device=next((d for d in choices if 'Pro' in d['name']),choices[0]);udid=device['udid']
+    subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run([sys.executable,ROOT/'scripts/generate_icon.py'])
     run([sys.executable,ROOT/'scripts/prepare_models.py'])
     run(['xcodegen','generate','--spec',ROOT/'project.yml'])
     build_number=os.environ.get('COLLECTR_BUILD_NUMBER','1')
     common=['xcodebuild','-project',ROOT/'Collectr.xcodeproj','-scheme','Collectr','-derivedDataPath',BUILD/'DerivedData','CODE_SIGNING_ALLOWED=NO',f'CURRENT_PROJECT_VERSION={build_number}']
     run(common+['-configuration','Release','-sdk','iphoneos','-destination','generic/platform=iOS','build'],log='device-build.log')
-    devices=json.loads(run(['xcrun','simctl','list','devices','available','--json'],capture=True))
-    choices=[d for runtime,items in devices['devices'].items() if 'iOS-26' in runtime or 'iOS-27' in runtime for d in items if d.get('isAvailable') and d['name'].startswith('iPhone')]
-    if not choices: raise RuntimeError('iOS 26+ simulator missing')
-    device=next((d for d in choices if 'Pro' in d['name']),choices[0]);udid=device['udid']
     run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','build-for-testing'],log='test-build.log')
     subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run(['xcrun','simctl','bootstatus',udid,'-b'])
     run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','-parallel-testing-enabled','NO','-resultBundlePath',BUILD/'Tests.xcresult','test-without-building'],log='tests.log')
     log=(BUILD/'Logs/tests.log').read_text()
-    if '** TEST SUCCEEDED **' not in log or 'testBundledDA3ProducesFiniteDepth' not in log: raise RuntimeError('Native tests or bundled DA3 inference not verified')
+    successful = '** TEST EXECUTE SUCCEEDED **' in log or '** TEST SUCCEEDED **' in log
+    if not successful or 'testBundledDA3ProducesFiniteDepth' not in log: raise RuntimeError('Native tests or bundled DA3 inference not verified')
     simapp=BUILD/'DerivedData/Build/Products/Debug-iphonesimulator/Collectr.app'
     subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run(['xcrun','simctl','bootstatus',udid,'-b'])

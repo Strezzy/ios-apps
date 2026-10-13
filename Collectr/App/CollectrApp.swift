@@ -75,7 +75,7 @@ struct CollectrRoot: View {
             if focused == nil { palette = selected == 0 ? editor.palette : RGB.defaults }
             if selected != 2 { nearby.stop() }
         }
-        .onChange(of: scenePhase) { _,phase in if phase != .active { nearby.stop() } }
+        .onChange(of: scenePhase) { _,phase in if phase == .background { nearby.stop() } }
     }
     private func inspect(_ card: CollectorCard) {
         palette = card.palette

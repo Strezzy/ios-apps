@@ -53,7 +53,7 @@ final class EditorModel: ObservableObject {
         }
     }
     func updateDepth() {
-        if !depthEnabled { depthWorking = false; return }
+        if !depthEnabled { depthWorking = false; depthError = nil; return }
         guard let image, depth == nil, !depthWorking else { return }
         let token = generation
         work = Task { await generateDepth(image, token: token) }
