@@ -41,14 +41,26 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     self.shell=[GMMusicShell new]; [self.shell loadViewIfNeeded];
     NSMutableArray *tracks=[NSMutableArray new];
     for(NSInteger i=0;i<18;i++) {
-        GMTrack *t=[GMTrack new]; t.title=[NSString stringWithFormat:@"Song %02ld",(long)i]; t.album=[NSString stringWithFormat:@"Album %02ld",(long)i];
+        GMTrack *t=[GMTrack new]; t.title=[NSString stringWithFormat:@"Song %02ld",(long)i]; t.album=[NSString stringWithFormat:@"Album %02ld",(long)(i==17 ? 0 : i)];
         t.artist=@"Music"; t.albumArtist=t.artist; t.metadataLoaded=YES;
         NSString *file=[self.documents stringByAppendingPathComponent:[NSString stringWithFormat:@"track%ld.wav",(long)i]];
         [[NSFileManager defaultManager] copyItemAtPath:[[NSBundle mainBundle] pathForResource:@"fixture" ofType:@"wav"] toPath:file error:nil];
-        t.url=[NSURL fileURLWithPath:file]; t.artwork=[UIImage imageNamed:i%2?@"IconAuroraPreview":@"IconChromePreview"]; [tracks addObject:t];
+        t.url=[NSURL fileURLWithPath:file];
+        if([NSProcessInfo.processInfo.arguments containsObject:@"--cache-relaunch"]){
+            t.metadataLoaded=NO;t.artwork=nil;t.album=nil;
+            BOOL restored=GMRestoreCachedMetadata(t);
+            [self check:[NSString stringWithFormat:@"metadata_and_art_ready_before_library_display_%ld",(long)i] value:restored && t.metadataLoaded && t.artwork!=nil && t.album.length>0];
+        } else {
+            t.artwork=[UIImage imageNamed:i==17 ? @"IconSignalPreview" : (i%2?@"IconAuroraPreview":@"IconChromePreview")];
+            t.metadataSignature=GMMetadataSignature(t.url);GMCacheRawMetadata(t);
+        }
+        [tracks addObject:t];
     }
     self.shell.player.tracks=tracks; [self.shell reloadLibrary];
     self.window=[[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene]; self.window.rootViewController=self.shell; [self.window makeKeyAndVisible];
+    if([NSProcessInfo.processInfo.arguments containsObject:@"--cache-relaunch"]){
+        [self checkRestoredCache];return;
+    }
     After(1,^{[self waitWarm];});
     After(360,^{if(![[NSFileManager defaultManager] fileExistsAtPath:[self.documents stringByAppendingPathComponent:@"result.json"]]){[self check:@"timeout" value:NO];[self finish];}});
 }
@@ -66,6 +78,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     [self check:@"hero_prewarmed" value:hero.readyForDisplay && hero.prewarming];
     if(!stillsReady)[self logStillState];
     [self check:@"song_stills_from_live_renderer" value:stillsReady];
+    [self checkDiskCacheForMedium:0];
     self.originalWeb=hero.webView;
     [self state:hero then:^(NSDictionary *state){
         [self check:@"warm_has_no_spin" value:![state[@"playing"] boolValue] && ![state[@"scheduled"] boolValue]];
@@ -209,6 +222,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
 - (void)checkCassettePlayer {
     GMCDCaseView *hero=self.shell.player.cdCaseView;
     [self state:hero then:^(NSDictionary *state){
+        [self check:@"cassette_lid_opens_down_from_top" value:[state[@"hingeAxis"] isEqual:@"x"] && [state[@"hingeEdge"] isEqual:@"bottom"] && [state[@"lidAngle"] doubleValue]>2.9];
         [self check:@"cassette_player_replaces_cd" value:[state[@"medium"] isEqual:@"cassette"] && [state[@"reelCount"] integerValue]==2 && [state[@"open"] boolValue]];
         [self capture:@"Cassette-Player.png"];
         [self.shell.player nextTrack];
@@ -230,7 +244,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     for(GMBrowseSongCell *cell in self.shell.songsController.table.visibleCells) ready=ready && cell.rowCase.medium==1 && cell.rowCase.fallback.snapshot.image!=nil && !cell.rowCase.webView;
     if(!ready && ++self.attempts<90){After(.5,^{[self waitCassetteStills];});return;}
     if(!ready)[self logStillState];
-    [self check:@"cassette_stills_and_mini_pill" value:ready];[self capture:@"Cassette-Songs.png"];
+    [self check:@"cassette_stills_and_mini_pill" value:ready];[self checkDiskCacheForMedium:1];[self capture:@"Cassette-Songs.png"];
     self.shell.selectedIndex=1;[self.shell.albumsController.navigationController popToRootViewControllerAnimated:NO];self.attempts=0;After(.5,^{[self waitCassetteAlbums];});
 }
 - (void)waitCassetteAlbums {
@@ -240,8 +254,93 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     if(!ready)[self logStillState];
     [self check:@"cassette_album_stills" value:ready];[self capture:@"Cassette-Albums.png"];
         self.shell.selectedIndex=4;After(.5,^{[self capture:@"Settings-Media.png"];
-            [self.shell setLiveMedium:0];[self check:@"switch_back_to_cd" value:self.shell.player.cdCaseView.medium==0 && self.shell.compactPlayer.cover.medium==0];[self finish];
+            [self.shell setLiveMedium:0];[self check:@"switch_back_to_cd" value:self.shell.player.cdCaseView.medium==0 && self.shell.compactPlayer.cover.medium==0];
+            [self checkCollectionCoverage];[self captureCollectionCoverage];
         });
+}
+
+- (void)checkDiskCacheForMedium:(NSInteger)medium {
+    GMCDCaseView *reference=((GMBrowseSongCell *)self.shell.songsController.table.visibleCells.firstObject).rowCase;
+    NSString *key=[GMMediaStills() keyForView:reference];
+    GMMediaStillStore *cold=[GMMediaStillStore new];
+    UIImage *decoded=[UIImage imageWithData:UIImagePNGRepresentation(reference.artwork)];
+    NSString *equivalent=[cold keyForArtwork:decoded medium:medium background:reference.backgroundComponents];
+    [self check:[NSString stringWithFormat:@"%ld_cache_key_survives_image_recreation",(long)medium] value:[equivalent isEqual:key]];
+    [self check:[NSString stringWithFormat:@"%ld_rendered_png_survives_memory_eviction",(long)medium] value:[cold imageForKey:equivalent]!=nil && cold.worker==nil];
+    UIImage *cached=[cold imageForKey:equivalent];
+    for(NSInteger i=0;cached && i<65;i++)[cold rememberImage:cached key:[NSString stringWithFormat:@"evict-%ld",(long)i]];
+    [self check:@"decoded_cache_bounded_and_disk_retained" value:cold.cache.count<=64 && cold.cache[equivalent]==nil && [cold imageForKey:equivalent]!=nil];
+    [cold clear];
+    [self check:[NSString stringWithFormat:@"%ld_disk_survives_memory_warning",(long)medium] value:[cold imageForKey:equivalent]!=nil];
+    NSString *changed=[cold keyForArtwork:[UIImage imageNamed:@"IconSignalPreview"] medium:medium background:reference.backgroundComponents];
+    [self check:@"changed_art_invalidates_snapshot" value:![changed isEqual:key]];
+    [self check:@"legacy_drawn_fallback_removed" value:reference.fallback.subviews.count==1 && reference.fallback.subviews.firstObject==reference.fallback.snapshot];
+}
+- (void)checkCollectionCoverage {
+    GMPlaylist *playlist=[self.shell.playlistStore createPlaylistWithName:@"Cache verification" error:nil];
+    [self.shell.playlistStore addTracks:@[self.shell.player.tracks.firstObject] toPlaylist:playlist.identifier error:nil];
+    [self.shell reloadLibrary];
+    for(NSInteger medium=0;medium<2;medium++){
+        [self.shell setLiveMedium:medium];
+        GMPlaylistsController *playlists=self.shell.playlistsController;[playlists loadViewIfNeeded];
+        GMBrowseSongCell *row=(id)[playlists tableView:playlists.table cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:1]];
+        [self check:[NSString stringWithFormat:@"%ld_playlist_uses_cached_case",(long)medium] value:!row.rowCase.hidden && row.rowImage.hidden && row.rowCase.fallback.snapshot.image!=nil];
+        GMSearchController *search=self.shell.searchController;[search loadViewIfNeeded];[search reloadLibrary];
+        for(NSInteger section=1;section<=2;section++){
+            GMBrowseSongCell *result=(id)[search tableView:search.table cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
+            [self check:[NSString stringWithFormat:@"%ld_search_section_%ld_cached_case",(long)medium,(long)section] value:!result.rowCase.hidden && result.rowImage.hidden && result.rowCase.fallback.snapshot.image!=nil];
+        }
+        GMBrowseSongsController *detail=[GMBrowseSongsController new];detail.shell=self.shell;detail.playlistIdentifier=playlist.identifier;[detail loadViewIfNeeded];[detail reloadLibrary];
+        [self check:[NSString stringWithFormat:@"%ld_playlist_detail_uses_case",(long)medium] value:!detail.collectionHeader.caseView.hidden && detail.collectionHeader.cover.hidden];
+    }
+    [self.shell setLiveMedium:0];
+}
+- (void)captureCollectionCoverage {
+    self.shell.selectedIndex=2;
+    After(.5,^{
+        [self capture:@"CD-Playlists.png"];[self.shell setLiveMedium:1];
+        After(.5,^{
+            [self capture:@"Cassette-Playlists.png"];self.shell.selectedIndex=3;
+            GMSearchController *search=self.shell.searchController;
+            [search.table scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:2] atScrollPosition:UITableViewScrollPositionBottom animated:NO];
+            After(.5,^{
+                [self capture:@"Cassette-Search.png"];[self.shell setLiveMedium:0];
+                After(.5,^{[self capture:@"CD-Search.png"];self.attempts=0;[self waitOffscreenPreparation];});
+            });
+        });
+    });
+}
+- (void)checkMetadataInvalidation {
+    GMTrack *track=[GMTrack new];track.url=[NSURL fileURLWithPath:[self.documents stringByAppendingPathComponent:@"metadata-replacement.wav"]];
+    [[@"old-file" dataUsingEncoding:NSUTF8StringEncoding] writeToURL:track.url atomically:YES];
+    track.title=@"Cached title";track.artist=@"Artist";track.album=@"Album";track.albumArtist=@"Artist";
+    track.metadataLoaded=YES;track.metadataSignature=GMMetadataSignature(track.url);GMCacheRawMetadata(track);
+    GMTrack *restored=[GMTrack new];restored.url=track.url;
+    [self check:@"metadata_cache_restores_title_and_no_art" value:GMRestoreCachedMetadata(restored) && [restored.title isEqual:@"Cached title"] && restored.artwork==nil];
+    [[@"new-file-with-a-different-size" dataUsingEncoding:NSUTF8StringEncoding] writeToURL:track.url atomically:YES];
+    [self check:@"replaced_audio_invalidates_metadata_cache" value:!GMRestoreCachedMetadata(restored)];
+}
+- (void)waitOffscreenPreparation {
+    GMMediaStillStore *store=GMMediaStills();
+    BOOL ready=store.prefetch.count==0 && !store.jobKey && store.fingerprintQueue.operationCount==0;
+    if(!ready && ++self.attempts<60){After(.5,^{[self waitOffscreenPreparation];});return;}
+    [self check:@"offscreen_track_specific_artwork_prepared_in_both_styles" value:ready];[self checkMetadataInvalidation];[self finish];
+}
+- (void)checkRestoredCache {
+    CFTimeInterval started=CACurrentMediaTime();
+    // This runs in a newly launched process. Reconstruct UIImage objects and
+    // cells synchronously, without allowing a render-worker frame to run.
+    for(NSInteger medium=0;medium<2;medium++){
+        [self.shell setLiveMedium:medium];
+        for(NSUInteger i=0;i<self.shell.player.tracks.count;i++){
+            GMTrack *track=self.shell.player.tracks[i];
+            GMCDCaseView *view=[[GMCDCaseView alloc] initWithFrame:CGRectMake(0,0,52,52) presentation:GMCDCasePresentationStatic];
+            [view configureWithIdentifier:GMTrackIdentifier(track) title:track.title artist:track.artist artwork:track.artwork];
+            [self check:[NSString stringWithFormat:@"%ld_relaunch_first_frame_%lu",(long)medium,(unsigned long)i] value:view.fallback.snapshot.image!=nil && view.webView==nil];
+        }
+    }
+    BOOL passed=YES;for(NSNumber *value in self.checks.allValues)passed=passed && value.boolValue;
+    [[NSJSONSerialization dataWithJSONObject:@{@"passed":@(passed),@"checks":self.checks,@"synchronousCacheReadSeconds":@(CACurrentMediaTime()-started)} options:NSJSONWritingPrettyPrinted error:nil] writeToFile:[self.documents stringByAppendingPathComponent:@"relaunch.json"] atomically:YES];
 }
 
 @end

@@ -38,6 +38,16 @@ extern void NSLog(NSString *format, ...);
 - (void)removeAllObjects;
 - (void)removeObjectForKey:(id)key;
 @end
+@interface NSFileManager (GMMetadataFileSignature)
+- (NSDictionary *)attributesOfItemAtPath:(NSString *)path error:(NSError **)error;
+@end
+@interface NSMapTable (GMMediaPendingFingerprints)
++ (NSMapTable *)strongToWeakObjectsMapTable;
+- (void)removeObjectForKey:(id)key;
+@end
+@interface NSString (GMMediaDigestInput)
+- (NSData *)dataUsingEncoding:(NSUInteger)encoding;
+@end
 @interface NSData (GMCDJSON)
 - (instancetype)initWithBase64EncodedString:(NSString *)string options:(NSUInteger)options;
 - (NSString *)base64EncodedStringWithOptions:(NSUInteger)options;

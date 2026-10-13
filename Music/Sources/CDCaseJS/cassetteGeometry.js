@@ -7,7 +7,7 @@ export function cassetteTrayGeometry() {
   rods.add(roundedRect(0,0,70,47,5),rail(3,3,-.7),true);
   rods.add(roundedRect(0,0,72,49,6),rail(.7,.7,-4.5),true);
   rods.add(roundedRect(0,0,66,42,4),rail(1.1,1.8,-1.8),true);
-  for(const y of [-34,34]) rods.add([[-72,y-8],[-72,y+8]],rail(2.1,2.1,4));
+  for(const x of [-49,49]) rods.add([[x-8,-49],[x+8,-49]],rail(2.1,2.1,4));
   for(const x of [-30,30]) rods.add(circle(x,0,7),rail(.8,2,-2),true);
   return {rods:rods.build(),sheets:sheet(roundedRect(0,0,73,50,6),-5.2,-3.8)};
 }
@@ -15,9 +15,9 @@ export function cassetteLidGeometry() {
   const rods=new RodBuilder();
   rods.add(roundedRect(0,0,72,49,5),rail(1,1,4),true);
   rods.add(roundedRect(0,0,69,46,4),rail(.45,.45,3.2),true);
-  for(const y of [-17,17]) rods.add([[-72,y-7],[-72,y+7]],rail(2,2,4));
+  for(const x of [-25,25]) rods.add([[x-7,-49],[x+7,-49]],rail(2,2,4));
   // Locking tabs and injection-moulded ribs.
-  for(const y of [-32,32]) rods.add([[69,y-4],[69,y+4]],rail(.7,.7,3.4));
+  for(const x of [-32,32]) rods.add([[x-4,49],[x+4,49]],rail(.7,.7,3.4));
   return {rods:rods.build(),sheets:sheet(roundedRect(0,0,73,50,6),3,5)};
 }
 export function cassetteBodyGeometry() {
