@@ -270,7 +270,7 @@
     }
     project(x,y,z){if(!this.lastMatrix)return null;const m=this.lastMatrix,v=[x,y,z,1],p=[];for(let r=0;r<4;r++)p[r]=m[r]*v[0]+m[4+r]*v[1]+m[8+r]*v[2]+m[12+r];return{x:(p[0]/p[3]*.5+.5)*this.canvas.clientWidth,y:(1-(p[1]/p[3]*.5+.5))*this.canvas.clientHeight};}
     getState(){return{
-      api:'webgl1',contextLost:this.contextLost,frames:this.frames,restorations:this.restorations,errors:[...this.errors],artStyle:'smooth mystical rainforest',visualVersion:'2.2',
+      api:'webgl1',contextLost:this.contextLost,frames:this.frames,restorations:this.restorations,errors:[...this.errors],artStyle:'smooth mystical rainforest',visualVersion:'2.3',
       sceneResolution:[this.fboW,this.fboH],pixelResolution:[this.fboW,this.fboH],canvasResolution:[this.canvas.width,this.canvas.height],renderRatio:this.renderRatio,quality:this.reducedQuality?'reduced':'full',sceneDepthBits:this.sceneDepthBits,depthFormat:'DEPTH_STENCIL',
       staticTriangles:this.staticCount/3,dynamicTriangles:(this.dynamicCount||0)/3,visibleWorldTriangles:this.visibleDraws?.triangles||0,staticBatches:this.batches.length,visibleBatches:this.visibleDraws?.draws||0,
       shadows:{enabled:true,ready:this.shadowReady,resolution:[this.shadowSize,this.shadowSize],packedDepth:true,depthBits:this.shadowDepthBits,waterCaster:true,filter:'nine-tap PCF',worldTriangles:this.shadowDraws?.triangles||0},

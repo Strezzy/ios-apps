@@ -82,7 +82,7 @@ def verify(path, resource_root=None):
         info = plistlib.loads(archive.read(prefix + "Info.plist"))
         for key, expected in {"CFBundleIdentifier": BUNDLE, "CFBundleExecutable": EXECUTABLE,
                               "CFBundleDisplayName": "Enter the Third Dimension",
-                              "CFBundleShortVersionString": "2.2", "CFBundleVersion": "4",
+                              "CFBundleShortVersionString": "2.3", "CFBundleVersion": "5",
                               "MinimumOSVersion": "16.0", "CFBundleSupportedPlatforms": ["iPhoneOS"]}.items():
             require(info.get(key) == expected, f"Unexpected {key}: {info.get(key)!r}")
         landscape = {"UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"}
@@ -119,7 +119,7 @@ def verify(path, resource_root=None):
         require("rainforest.js" in html, "The bundled entry does not load the rainforest renderer")
         require("visuals.js" in html, "The bundled entry does not load the current lighting shaders")
         result.update({"bundle_identifier": BUNDLE, "display_name": info["CFBundleDisplayName"],
-                       "version": "2.2", "build": "4", "zip_integrity": "passed",
+                       "version": "2.3", "build": "5", "zip_integrity": "passed",
                        "executable_permissions": "passed", "resource_byte_equality": "passed",
                        "game_resources": resources, "privacy_manifest": "present, no collection",
                        "ipa_bytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),

@@ -46,13 +46,13 @@
       vec3 sclera=mix(vec3(.91,.975,.96),vec3(.44,.66,.71),smoothstep(-.35,1.,q.y)*.36);
       vec2 iq=(q-gaze*vec2(.22,.13))*vec2(1.04,.92);float ir=length(iq);
       float ring=1.-smoothstep(.60,.73,ir),angle=atan(iq.y,iq.x);
-      float rays=sin(angle*31.+ir*15.)*.5+.5;
+      float rays=.5;
       vec3 irisColor=mix(iris*1.2,iris*.24,smoothstep(.36,.73,ir));
       irisColor+=iris*rays*.22*(1.-smoothstep(.38,.69,ir));
       irisColor+=vec3(.11,.30,.28)*exp(-pow((ir-.42)/.13,2.))*(.5-.5*iq.y);
-      vec3 eye=mix(sclera,irisColor,ring);
-      float pupil=1.-smoothstep(.26,.33,length(iq*vec2(1.,1.03)));eye=mix(eye,ink*.48,pupil);
-      eye=mix(eye,vec3(1.),oval(q-vec2(-.28,.34),vec2(.21,.25))*.96);
+      vec3 eye=mix(ink,irisColor*.65,ring*.6);
+      float pupil=1.-smoothstep(.44,.57,length(iq*vec2(1.,1.03)));eye=mix(eye,ink*.48,pupil);
+      eye=mix(eye,vec3(1.),oval(q-vec2(-.28,.34),vec2(.26,.29))*.96);
       eye=mix(eye,vec3(.64,.96,1.),oval(q-vec2(.30,-.25),vec2(.09,.12))*.85);
       eye+=vec3(.10,.19,.20)*gaussian(q-vec2(-.1,-.6),vec2(.6,.22));
       color=mix(color,eye,inside*front);
@@ -76,25 +76,25 @@
       vec3 behind=vec3(texture2D(uBackground,clamp(uv+lens*1.010,margin,1.-margin)).r,
         texture2D(uBackground,clamp(uv+lens,margin,1.-margin)).g,
         texture2D(uBackground,clamp(uv+lens*.990,margin,1.-margin)).b);
-      vec3 absorption=exp(-vec3(.057,.020,.012)*thickness);
-      vec3 transmitted=behind*absorption+vec3(.018,.055,.070)*(1.-absorption+.38);
+      vec3 absorption=exp(-vec3(.035,.012,.009)*thickness);
+      vec3 transmitted=behind*absorption+vec3(.045,.105,.115)*(1.-absorption+.38);
       // A clear lower body, pearly face, and slightly deeper watery hair form a
       // deliberate material hierarchy instead of one uniformly cyan blob.
       float faceBody=(1.-step(.5,vPart))*smoothstep(18.5,24.,vLocal.y)*(1.-step(.5,uCreature))*smoothstep(.4,.95,uForm);
       vec3 key=normalize(vec3(-.48,.78,.40));
       float wrap=.68+.32*max(0.,dot(N,key));
-      vec3 waterColor=mix(vec3(.072,.365,.485),vec3(.16,.47,.56),faceBody*.68)*wrap;
+      vec3 waterColor=mix(vec3(.18,.53,.59),vec3(.34,.65,.68),faceBody*.68)*wrap;
       // A pearly suspended core gives the living water enough local contrast
       // to read in the bright forest while scene detail still bends through it.
-      transmitted=mix(transmitted,waterColor,.34+faceBody*.19);
+      transmitted=mix(transmitted,waterColor,.41+faceBody*.17);
       vec3 R=reflect(-V,N);
-      vec3 environment=mix(vec3(.062,.18,.17),vec3(.20,.34,.48),smoothstep(-.5,.8,R.y));
+      vec3 environment=mix(vec3(.22,.40,.30),vec3(.62,.80,.83),smoothstep(-.5,.8,R.y));
       float skyWindow=exp(-pow((R.y-.42-.13*sin(R.x*4.1))/ .13,2.));
       environment+=vec3(.21,.36,.31)*skyWindow;
       environment+=vec3(.22,.12,.24)*exp(-pow((R.y-.72+.11*cos(R.z*4.))/ .10,2.));
       vec3 nearby=texture2D(uBackground,clamp(uv+screenN*.17,margin,1.-margin)).rgb;
       environment=mix(environment,nearby,.17);
-      vec3 color=mix(transmitted,environment,.15+F*.64);
+      vec3 color=mix(transmitted,environment,.12+F*.68);
       vec3 pearl=.5+.5*cos(vec3(.4,2.25,4.3)+edgeF*3.7+P.y*.065);
       color+=(vec3(.40,.72,.81)+pearl*.13)*edgeF*.52;
       float keyGloss=pow(max(0.,dot(N,normalize(key+V))),72.);
@@ -118,7 +118,7 @@
         bubbles+=(1.-smoothstep(.018,.075,abs(length(q)-radius)))*smoothstep(.4,2.,vLocal.z);
       }
       color+=vec3(.10,.19,.22)*bubbles*.20*(1.-faceBody*.8);
-      if(hair>.5){color=mix(color,color*vec3(.86,.96,1.025)+vec3(.008,.006,.027),.62);}
+      if(hair>.5){color=mix(color,color*vec3(.88,1.,1.035)+vec3(.018,.024,.032),.62);}
       if(uCreature<.5&&vPart<.5){
         float hem=exp(-pow((vLocal.y-9.05)/.38,2.));
         color+=vec3(.12,.23,.24)*hem*.36*smoothstep(.5,1.,uForm);
@@ -329,6 +329,10 @@
                 Z+=Math.sin(t*2.15-y*.23+s.start*.017)*.15*trailing;
               }
             }
+            if(creature===0){
+              const head=smooth((Y-17)/8)*form;X*=1+.18*head;Z*=1+.12*head;
+              Y=mix(Y,Y*.87+Math.max(0,Y-18)*.25,form);
+            }
             const wave=Math.sin(Y*.48-t*8.2)*jelly*.023*(state.reduced?.4:1);
             X*=1+wave;Z*=1+wave;X*=creature===2?face:1;
             X+=lean*Y*.22+Math.sin(t*1.7+Y*.08)*.11*form;
@@ -387,7 +391,7 @@
       this.surfaceResolution=[width,height];this.draws++;
       if(this.draws===1){const error=gl.getError();if(error!==gl.NO_ERROR){const message='Water first-frame GL error '+error;this.errors.push(message);throw new Error(message);}}
     }
-    getState(){return{visualGeneration:'2.2',initialized:this.initialized,draws:this.draws,prepares:this.prepares,shadowDraws:this.shadowDraws,errors:[...this.errors],smooth:true,material:'clear pearly water with thickness absorption, Fresnel reflection, GGX highlights and restrained chromatic refraction',materialFeatures:['independent scene refraction','directional warm key and cool fill','soft pearlescent edges','internal caustic filaments and drifting bubbles','distinct face, hair and petal-hem finish'],modelFeatures:['sculpted chibi cheeks, sockets and nose','layered curved bangs and separate flowing locks','rounded hands and short planted feet','frog crouched haunches and separate web toes','quadruped fox with cheek muzzle, nose, ears and brush tail'],eyeFeatures:['layered radial iris and deep pupil','pale sclera and two corneal catchlights','soft upper lids and synchronized blinks','gentle gaze and expressive brows'],backgroundSampling:'separate opaque scene texture',surfaceResolution:[...this.surfaceResolution],vertices:this.vertexCount,triangles:this.triangles,form:this.lastForm,creature:this.creature||'girl',worldDepth:this.worldDepth,meshBounds:this.meshBounds||null,animation:'volume-preserving spring response, planted-foot walk, frog hop/tuck, diagonal fox trot, head turn and delayed liquid-hair/tail follow-through'};}
+    getState(){return{visualGeneration:'2.3',initialized:this.initialized,draws:this.draws,prepares:this.prepares,shadowDraws:this.shadowDraws,errors:[...this.errors],smooth:true,material:'clear pearly water with thickness absorption, Fresnel reflection, GGX highlights and restrained chromatic refraction',materialFeatures:['independent scene refraction','directional warm key and cool fill','soft pearlescent edges','internal caustic filaments and drifting bubbles','distinct face, hair and petal-hem finish'],modelFeatures:['sculpted chibi cheeks, sockets and nose','layered curved bangs and separate flowing locks','rounded hands and short planted feet','frog crouched haunches and separate web toes','quadruped fox with cheek muzzle, nose, ears and brush tail'],eyeFeatures:['layered radial iris and deep pupil','pale sclera and two corneal catchlights','soft upper lids and synchronized blinks','gentle gaze and expressive brows'],backgroundSampling:'separate opaque scene texture',surfaceResolution:[...this.surfaceResolution],vertices:this.vertexCount,triangles:this.triangles,form:this.lastForm,creature:this.creature||'girl',worldDepth:this.worldDepth,meshBounds:this.meshBounds||null,animation:'volume-preserving spring response, planted-foot walk, frog hop/tuck, diagonal fox trot, head turn and delayed liquid-hair/tail follow-through'};}
   }
   window.TD_WaterRenderer=WaterRenderer;
 })();

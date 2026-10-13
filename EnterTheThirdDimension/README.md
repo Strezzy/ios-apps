@@ -15,15 +15,22 @@ This release contains **Chapter I: The Folded Forest**, a complete short
 introductory chapter with a lost-light quest, checkpoints, twelve collectible
 shards, and a concluding story beat.
 
+## Cozy Canopy, version 2.3
+
+Round-canopy trees, original pastel cottages, garden pools, clean chibi faces,
+warm daylight and a tactile cream-and-sage interface. The water heroine keeps
+her reflective, refractive surface, with fuller proportions and a softer tint.
+The dimensional adventure and existing saved progress are preserved.
+
 ## A first look
 
-These are actual frames from the bundled game running in WebKit at a landscape
+These are actual 2.3 frames from the bundled game running in WebKit at a landscape
 iPhone viewport. The native Simulator capture and launch evidence are attached
 to the GitHub release.
 
-![A raindrop learns its first shape through a gentle touch.](docs/screenshots/First-Touch.png)
+![A raindrop learns its first shape through a gentle touch.](docs/screenshots/Cozy-First-Touch.png)
 
-![The water girl enters the third dimension in the mystical rainforest.](docs/screenshots/Rainforest-3D.png)
+![The water girl enters the third dimension in the mystical rainforest.](docs/screenshots/Cozy-Canopy.png)
 
 ## Controls
 
@@ -102,7 +109,7 @@ The current distribution package is ad-hoc signed for a sideloading workflow.
 For App Store distribution, build/archive with the appropriate Apple team,
 bundle registration and distribution signing. That submission is separate
 from this GitHub release. The stable bundle identifier remains
-`com.billy.moonhop`; app version is **2.2**, build **4**, deployment target
+`com.billy.moonhop`; app version is **2.3**, build **5**, deployment target
 **iOS 16.0**.
 
 ## Source map

@@ -11,7 +11,7 @@ from verify_ipa import verify, require
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "Build"
 REPO = "Strezzy/ios-apps"
-TAG = "enter-third-dimension-2.2-build4"
+TAG = "enter-third-dimension-2.3-build5"
 NAMES = ["EnterTheThirdDimension.ipa", "EnterTheThirdDimension-Source.zip",
          "BUILD-REPORT.json", "SHA256SUMS.txt", "Native-Launch.json", "Simulator-Launch.png"]
 
@@ -64,7 +64,7 @@ def main():
     if created:
         command(["gh", "release", "create", TAG, *[BUILD / name for name in NAMES],
                  "--repo", REPO, "--target", revision,
-                 "--title", "Enter the Third Dimension 2.2 (4)", "--notes-file", notes])
+                 "--title", "Enter the Third Dimension 2.3 (5)", "--notes-file", notes])
         release = api(f"releases/tags/{TAG}")
     else:
         require(not release.get("draft") and not release.get("prerelease"),

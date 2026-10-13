@@ -123,7 +123,7 @@
     }
   }
   function broadPlant(m,x,y,z,size,seed=0){
-    const palette=['#4b8865','#326e58','#6b9878','#44776b','#547671'];
+    const palette=['#88b783','#689e72','#a6c98e','#7eac80','#89b194'];
     for(let j=0;j<6;j++){
       const a=(j/5-.5)*2.5,reach=(17+h(seed+j)*18)*size;
       const tip=[x+Math.sin(a)*reach,y+(12+Math.cos(a)*20)*size,z-6*size+Math.sin(j*1.9)*7*size];
@@ -159,7 +159,7 @@
   }
   function platform(m,p,bridgeBlend=1){
     const top=p.y+p.h,r=Math.min(p.d*.24,p.w*.18,20),edge=outline(p.x,p.z,p.w,p.d,r,9),cx=p.x+p.w/2,cz=p.z+p.d/2;
-    const stone=p.kind==='stone',bridge=p.kind==='bridge',topColor=stone?'#99aa96':bridge?'#82a594':'#426b51';
+    const stone=p.kind==='stone',bridge=p.kind==='bridge',topColor=stone?'#99aa96':bridge?'#82a594':'#79a962';
     const rings=bridge?[{y:top,s:1,c:topColor},{y:top-2*bridgeBlend,s:1,c:'#5a7b64'},{y:p.y*bridgeBlend,s:.98,c:'#354f44'}]:[
       {y:top,s:1,c:topColor},{y:top-3,s:1,c:stone?'#7c8c7d':'#3d614b'},
       {y:top-Math.min(13,p.h*.35),s:.995,c:stone?'#5c7065':'#4b5740'},
@@ -188,7 +188,7 @@
       const bank=(i,j)=>{
         const x=p.x+i/rows*p.w,z=mix(p.z+.6,-169,j/depthRows),q=j/depthRows;
         const yy=mix(top+.012,forestHeight(x,-169)+.06,ease(q)),n=norm([0,1,.15*Math.sin(q*Math.PI)]);
-        return{p:[x,yy,z],n,c:blend('#426b51','#335e49',ease(q))};
+        return{p:[x,yy,z],n,c:blend('#79a962','#78a370',ease(q))};
       };
       for(let i=0;i<rows;i++)for(let j=0;j<depthRows;j++)for(const v of [bank(i,j),bank(i+1,j),bank(i+1,j+1),bank(i,j),bank(i+1,j+1),bank(i,j+1)])m.vertex(v.p,v.c,v.n,MAT.soil);
       for(let i=0;i<p.w/53;i++){
@@ -202,7 +202,7 @@
       const pathRows=Math.ceil(p.w/11),slices=8;
       const trail=(i,j)=>{
         const xx=p.x+i/pathRows*p.w,t=j/slices,u=t*2-1,center=Math.sin(xx*.015)*6.4+Math.sin(xx*.047)*.75,radius=12.8+Math.sin(xx*.021)*1.8;
-        return{p:[xx,top+.052+(1-u*u)*.012,center+u*radius],c:blend('#6f7352','#426b51',Math.pow(Math.abs(u),2.7)),n:[0,1,0]};
+        return{p:[xx,top+.052+(1-u*u)*.012,center+u*radius],c:blend('#d4bd89','#79a962',Math.pow(Math.abs(u),2.7)),n:[0,1,0]};
       };
       for(let i=0;i<pathRows;i++)for(let j=0;j<slices;j++)for(const v of [trail(i,j),trail(i+1,j),trail(i+1,j+1),trail(i,j),trail(i+1,j+1),trail(i,j+1)])m.vertex(v.p,v.c,v.n,MAT.path);
       for(let i=0;i<p.w/26;i++){
@@ -212,8 +212,8 @@
         for(let j=0;j<16;j++){
           const a=j/16*TAU,b=(j+1)/16*TAU,rA=.84+h(j+seed)*.18,rB=.84+h(j+1+seed)*.18;
           m.vertex([xx,top+.046,zz],color(center),[0,1,0],MAT.soil);
-          m.vertex([xx+Math.cos(a)*rx*rA,top+.038,zz+Math.sin(a)*rz*rA],color('#426b51'),[0,1,0],MAT.soil);
-          m.vertex([xx+Math.cos(b)*rx*rB,top+.038,zz+Math.sin(b)*rz*rB],color('#426b51'),[0,1,0],MAT.soil);
+          m.vertex([xx+Math.cos(a)*rx*rA,top+.038,zz+Math.sin(a)*rz*rA],color('#79a962'),[0,1,0],MAT.soil);
+          m.vertex([xx+Math.cos(b)*rx*rB,top+.038,zz+Math.sin(b)*rz*rB],color('#79a962'),[0,1,0],MAT.soil);
         }
       }
       for(let i=0;i<p.w/43;i++){
@@ -228,42 +228,40 @@
     }
   }
   function tree(m,x,y,z,size,seed=0,distant=false){
-    const tall=(125+h(seed)*65)*size,bend=(h(seed+3)-.5)*22*size;
-    const bark=distant?'#344f4c':seed%3===0?'#756453':'#5d6850';
-    const pts=[[x,y,z],[x-3*size,y+tall*.24,z-2*size],[x+bend*.3,y+tall*.52,z],[x+bend,y+tall*.8,z-4*size],[x+bend*.7,y+tall,z-2*size]];
-    tube(m,pts,[9*size,7.8*size,6*size,3.8*size,1.2*size],bark,MAT.wood,distant?10:16);
+    const height=(105+h(seed)*33)*size,bend=(h(seed+3)-.5)*13*size;
+    const bark=distant?'#81928b':'#a88c65';
+    tube(m,[[x,y,z],[x-2*size,y+height*.3,z],[x+bend*.4,y+height*.65,z-2*size],[x+bend,y+height,z]],
+      [9.2*size,7.8*size,5.6*size,2.3*size],bark,MAT.wood,distant?10:18);
     if(!distant){
-      for(let j=0;j<5;j++){const a=j*1.29+seed;const dx=Math.cos(a)*26*size,dz=Math.sin(a)*17*size;tube(m,[[x,y+15*size,z],[x+dx*.32,y+4*size,z+dz*.32],[x+dx*.67,y+.7,z+dz*.64],[x+dx,y-.8,z+dz]],[3.9*size,2.7*size,1.4*size,.14],shade(bark,.87),MAT.wood,9);}
-      const vine=pts.map((p,i)=>[p[0]+Math.cos(i*1.6)*7*size,p[1],p[2]+Math.sin(i*1.6)*7*size]);tube(m,vine,[1.05*size,1.0*size,.9*size,.6*size,.09],'#7d8e60',MAT.leaf,6);
-      // Long, offset cambium ridges and a small knot unify the tapered trunk.
-      for(let j=0;j<7;j++){
-        const angle=j/6*Math.PI,rr=[9.05,7.85,6.03,3.85,1.22];
-        const ridge=pts.map((p,i)=>[p[0]+Math.cos(angle+i*.035)*rr[i]*size,p[1]+Math.sin(j+i)*size,p[2]+Math.sin(angle+i*.035)*rr[i]*size]);
-        tube(m,ridge,[.30*size,.34*size,.25*size,.16*size,.04],shade(bark,j%2===0?1.15:.83),MAT.wood,5);
+      for(let j=0;j<4;j++){
+        const a=j*TAU/4+seed,dx=Math.cos(a)*23*size,dz=Math.sin(a)*16*size;
+        tube(m,[[x,y+11*size,z],[x+dx*.5,y+2*size,z+dz*.5],[x+dx,y-.6,z+dz]],
+          [4.1*size,2.2*size,.15],shade(bark,.94),MAT.wood,10);
       }
-      if(seed%3===0){
-        const knot=[];for(let j=0;j<=14;j++){const a=j/14*TAU;knot.push([x-1.6*size+Math.cos(a)*2.1*size,y+39*size+Math.sin(a)*4.2*size,z+7.5*size]);}
-        tube(m,knot,.40*size,shade(bark,.72),MAT.wood,6);
-        tube(m,[[x-1.7*size,y+41.3*size,z+7.6*size],[x-1.0*size,y+38.7*size,z+7.6*size],[x-2.0*size,y+37*size,z+7.6*size]],[.34*size,.43*size,.09],shade(bark,.6),MAT.wood,6);
+      // Broad carved marks, rather than high-frequency bark noise.
+      for(let j=0;j<3;j++){
+        const yy=y+(26+j*17)*size;
+        tube(m,[[x-3*size,yy+1,z+7.4*size],[x-1*size,yy-1,z+8*size],[x+2.5*size,yy,z+7.7*size]],
+          [.14*size,.24*size,.08],shade(bark,.83),MAT.wood,6);
       }
     }
-    for(let side=0;side<3;side++){
-      const direction=side===0?-1:1,start=pts[2+side%2],end=[x+bend+direction*(32+side*9)*size,y+tall*(.8+side*.1),z-8*size+side*4];
-      tube(m,[start,[mix(start[0],end[0],.4),end[1]-9*size,mix(start[2],end[2],.5)],end],[3*size,2*size,.5*size],bark,MAT.wood,9);
-      const leafColors=distant?['#2c5551','#345f51','#325752']:['#3c6d53','#578761','#749872','#57765e'];
-      for(let k=0;k<4;k++){
-        const a=k/4*TAU+side*.7,tip=[end[0]+Math.cos(a)*(44+h(seed+k)*18)*size,end[1]+(14+Math.sin(a)*23)*size,end[2]+Math.sin(a)*(21+side*3)*size];
-        leaf(m,end,tip,(9+h(k+seed)*6)*size,leafColors[(k+side)%leafColors.length],seed+k,0,distant?5:8);
-      }
-      if(!distant&&side===0&&seed%2===0){
-        const len=(30+h(seed+19)*29)*size,vine=[];
-        for(let k=0;k<6;k++)vine.push([end[0]+Math.sin(k*.85)*5*size,end[1]-k/5*len,end[2]+4*size]);
-        tube(m,vine,[.55*size,.51*size,.45*size,.36*size,.24*size,.05],'#69825c',MAT.leaf,6);
-        for(let k=1;k<5;k++){const p=vine[k],side=k%2?1:-1;leaf(m,p,[p[0]+side*10*size,p[1]-5*size,p[2]+2*size],3.1*size,'#7a996c',seed+k,MAT.leaf,5);}
-      }
+    const colors=distant?['#739887','#82a393','#6c917f']:['#80b567','#93bf73','#acd384','#70a35b','#91bb68'];
+    const lobes=[[-22,-1,2,27,25,22],[23,1,0,30,28,25],[-7,18,-13,33,31,28],[1,2,15,36,25,25]];
+    for(let i=0;i<lobes.length;i++){
+      const [xx,yy,zz,rx,ry,rz]=lobes[i],col=colors[(i+Math.abs(seed))%colors.length];
+      sculpt(m,(a,b)=>{
+        const sn=Math.sin(b),q=1+.025*Math.cos(a*5+seed)*sn*sn+.018*Math.cos(b*5);
+        return[x+bend+xx*size+Math.cos(a)*sn*rx*size*q,y+height+yy*size+Math.cos(b)*ry*size,z+zz*size+Math.sin(a)*sn*rz*size*q];
+      },(a,b)=>blend(col,shade(col,.85),Math.max(0,-Math.cos(b))*.55),MAT.leaf,distant?14:28,distant?9:18);
     }
-    if(!distant&&seed%3===1)for(let j=0;j<3;j++)blossom(m,x+bend-11*size+j*11*size,y+tall-7*size,z+4*size,2.1*size,'#d0a2d2',j);
+    if(!distant&&seed%3===0)for(let j=0;j<3;j++){
+      const xx=x+bend+(j-1)*16*size,yy=y+height-14*size+Math.sin(j*2)*7*size,zz=z+24*size;
+      ellipsoid(m,xx,yy,zz,4.6*size,5.1*size,4.2*size,'#edbb70',MAT.cloth,14,10);
+      tube(m,[[xx,yy+4.4*size,zz],[xx+1.2*size,yy+8*size,zz]],[.65*size,.3*size],bark,MAT.wood,6);
+      leaf(m,[xx,yy+6*size,zz],[xx+6*size,yy+9*size,zz+.5],2.5*size,'#5c9655',j,MAT.leaf,6);
+    }
   }
+
   function birthTree(m){
     tube(m,[[14,0,-25],[11,29,-24],[17,61,-22],[26,83,-19],[39,105,-18],[35,136,-20]],[12,11,9,6,3,1.2],'#706f54',MAT.wood,18);
     for(const side of [-1,1])tube(m,[[14,13,-25],[14+side*12,2,-15],[14+side*25,0,-12]],[6,4,.6],'#65634c',MAT.wood,10);
@@ -282,7 +280,7 @@
     const v=(i,j)=>{
       const x=mix(x0,x1,i/xn),z=mix(z0,z1,j/zn),y=forestHeight(x,z);
       const n=norm([forestHeight(x-1,z)-forestHeight(x+1,z),2,forestHeight(x,z-1)-forestHeight(x,z+1)]);
-      const c=blend('#294c40','#416348',.3+.4*Math.sin(x*.008+z*.015));return{p:[x,y,z],n,c};
+      const c=blend('#7d9e80','#94b087',.3+.4*Math.sin(x*.008+z*.015));return{p:[x,y,z],n,c};
     };
     const rows=Array.from({length:zn+1},(_,j)=>Array.from({length:xn+1},(_,i)=>v(i,j)));
     for(let j=0;j<zn;j++)for(let i=0;i<xn;i++){
@@ -291,7 +289,7 @@
     // Rounded low banks root every distant trunk in the forest floor.
     for(let i=0;i<31;i++){
       const x=-400+i*100,z=-176-h(i+70)*20,y=forestHeight(x,z);
-      sculpt(m,(a,b)=>{const sn=Math.sin(b),q=1+.025*Math.cos(a*3+b*7+i);return[x+Math.cos(a)*sn*(65+h(i)*38)*q,y-9+Math.cos(b)*(17+h(i+2)*19),z+Math.sin(a)*sn*45];},'#3c6348',MAT.soil,16,9);
+      sculpt(m,(a,b)=>{const sn=Math.sin(b),q=1+.025*Math.cos(a*3+b*7+i);return[x+Math.cos(a)*sn*(65+h(i)*38)*q,y-9+Math.cos(b)*(17+h(i+2)*19),z+Math.sin(a)*sn*45];},'#84ac74',MAT.soil,16,9);
       if(i%3===0)rock(m,x+25,y-3,z+15,19,13,16,'#697e61',i+160);
     }
   }
@@ -373,20 +371,22 @@
     for(let j=0;j<rings;j++)for(let i=0;i<sides;i++)for(const v of (j===0?[grid[j][i],grid[j+1][i],grid[j+1][i+1]]:[grid[j][i],grid[j+1][i],grid[j+1][i+1],grid[j][i],grid[j+1][i+1],grid[j][i+1]]))m.vertex(v.p,v.c,v.n,material);
   }
   function eye(m,x,y,z,rx,ry,iris,blink=0){
-    const open=1-blink,hh=Math.max(.065,ry*open),r=rx;
-    lens(m,x,y,z,r*1.11,hh*1.10,.15,'#765c50',MAT.skin,18,3);
-    lens(m,x,y,z+.09,r,hh,.30,(q,a)=>blend('#fff6de','#d2d7c7',q*.33+Math.max(0,Math.sin(a))*.10),MAT.eye,20,4);
-    lens(m,x-.07,y-.15*open,z+.37,r*.64,hh*.85,.13,(q,a)=>{
-      const pupil=q<.48?'#283737':iris,streak=.5+.5*Math.cos(a*19+q*8);
-      return q>.88?blend(iris,'#344c44',.54):q<.48?color(pupil):blend(iris,'#dfc482',(.12+.23*streak)*(1-q));
-    },MAT.eye,24,5);
-    lens(m,x-.07,y-.16*open,z+.50,r*.26,hh*.58,.06,'#243238',MAT.eye,16,3);
-    if(open>.15){lens(m,x-r*.27,y+hh*.36,z+.575,r*.24,hh*.22,.03,'#fffdf0',.25,10,3);lens(m,x+r*.27,y-hh*.39,z+.57,r*.095,hh*.095,.025,'#d4f5e5',.1,7,2);}
-    const upper=[];for(let j=0;j<=8;j++){const a=j/8*Math.PI;upper.push([x+Math.cos(a)*r*1.015,y+Math.sin(a)*hh,z+.40]);}
-    tube(m,upper,.115,'#4f423f',MAT.hair,6);
-    tube(m,[[x-r*.93,y+hh*.18,z+.4],[x-r*1.20,y+hh*.37,z+.42]],[.15,.02],'#554241',MAT.hair,5);
-    const lower=[];for(let j=0;j<=6;j++){const a=Math.PI+j/6*Math.PI;lower.push([x+Math.cos(a)*r*.99,y+Math.sin(a)*hh,z+.31]);}tube(m,lower,.055,'#c19278',MAT.skin,5);
+    const open=Math.max(.035,1-blink),r=rx*1.12,hh=ry*1.08*open;
+    // Readable enamel eyes with a deep pupil, broad reflected sky and two glints.
+    // No sub-pixel iris spokes, lash hairs, or coplanar translucent overlays.
+    lens(m,x,y,z,r*1.06,hh*1.05,.20,'#6b5046',MAT.cloth,24,4);
+    lens(m,x,y,z+.20,r,hh,.64,(q,a)=>blend('#263b3b',iris,
+      Math.max(0,-Math.sin(a))*(1-q*.6)*.42),MAT.eye,28,7);
+    if(open>.18){
+      lens(m,x-r*.28,y+hh*.32,z+.94,r*.27,hh*.23,.09,'#fff8e8',.08,14,4);
+      lens(m,x+r*.27,y-hh*.30,z+.93,r*.105,hh*.10,.055,'#b3dfd4',.02,10,3);
+    }
+    if(open<.25){
+      tube(m,[[x-r*.8,y+.08,z+.45],[x,y-.08,z+.58],[x+r*.8,y+.08,z+.45]],
+        [.09,.14,.09],'#314740',MAT.cloth,7);
+    }
   }
+
   function head(m,c){
     sculpt(m,(a,b)=>{
       const v=Math.cos(b),sn=Math.sin(b),cheek=1+.10*Math.exp(-Math.pow((v+.29)/.39,2)),chin=v<-.46?1-(Math.abs(v)-.46)*.29:1;
@@ -571,7 +571,11 @@
       if(data[i+9]===MAT.cloth&&py>6&&py<16){const hem=Math.pow((16-py)/10,1.4);px+=Math.sin(phase*.93+py*.18)*hem*.19;pz+=Math.cos(phase*.77+px*.21)*hem*.11;}
       const xx=(px-pivotX)*cy+pz*ss,zz=-(px-pivotX)*ss+pz*cy,yy=(py-pivotY)*sy;
       const nx=morph&&other?mix(data[i+6],other[i+6],morph):data[i+6],ny=morph&&other?mix(data[i+7],other[i+7],morph):data[i+7],nz=morph&&other?mix(data[i+8],other[i+8],morph):data[i+8],nnx=nx*cy+nz*ss,nnz=-nx*ss+nz*cy;
-      out.push(x+pivotX+xx*ca-yy*sa,y+pivotY+xx*sa+yy*ca,z+zz*depth,data[i+3],data[i+4],data[i+5],nnx*ca-ny*sa,nnx*sa+ny*ca,nnz,data[i+9]);
+      const tx=pivotX+xx*ca-yy*sa,ty=pivotY+xx*sa+yy*ca;
+      const q=clamp((ty-17)/8,0,1),blend=q*q*(3-2*q),sx=.98+.20*blend,ds=(q>0&&q<1)?.20*6*q*(1-q)/8:0;
+      const ty2=ty*.82+Math.max(0,ty-18)*.26,ys=ty>18?1.08:.82;
+      const nx2=(nnx*ca-ny*sa)/sx,ny2=((nnx*sa+ny*ca)-nx2*tx*ds)/ys;
+      out.push(x+tx*sx,y+ty2,z+zz*depth,data[i+3],data[i+4],data[i+5],nx2,ny2,nnz,data[i+9]);
     }
   }
   function blinkAt(t,seed){const q=(t+seed*.37)%4.6;return q<.19?Math.sin(q/.19*Math.PI):q>2.2&&q<2.36&&h(seed)>.65?Math.sin((q-2.2)/.16*Math.PI):0;}
@@ -614,8 +618,79 @@
       if(p.left)append(m,reach?p.reach:p.left);if(p.right)append(m,p.right);if(p.ears)for(const a of p.ears)append(m,a);append(m,p.eyes[0]);if(p.throat)append(m,p.throat);
     });
   }
+  // Original cozy set dressing. All props stay behind the walkable lane;
+  // the hidden bridge and both depth routes keep their existing collisions.
+  function cottage(m,x,z,palette=0){
+    const wall=['#f1d7ab','#eac3b1','#d0e2ba'][palette%3],roof=['#87a894','#ad8c9e','#beac7b'][palette%3];
+    const shell=cached('cozy-cottage:'+palette,local=>{
+      profile(local,[[0,29,22],[3,30,23],[32,30,23],[45,23,19],[48,0,0]],wall,MAT.cloth,32);
+      profile(local,[[36,36,28],[40,37,29],[47,32,26],[57,22,20],[67,7,9],[69,0,0]],roof,MAT.cloth,40);
+      // A round timber door, cream rim, amber handle and glass portholes.
+      ellipsoid(local,0,14,22.9,9.5,15.5,1.7,'#f9e7ba',MAT.cloth,24,16);
+      ellipsoid(local,0,13.8,24.2,7.5,13.6,.9,'#aa825b',MAT.wood,24,16);
+      ellipsoid(local,4,13,25.2,.95,.95,.75,'#f3cd78',MAT.eye,12,8);
+      for(const s of [-1,1]){
+        ellipsoid(local,s*19,24,20.2,6.4,7.4,1.5,'#f6e5bd',MAT.cloth,20,14);
+        ellipsoid(local,s*19,24,21.5,4.65,5.65,.65,'#83b8b0',MAT.eye,20,14);
+        tube(local,[[s*19-4,24,22.2],[s*19+4,24,22.2]],.48,'#efe0b2',MAT.cloth,8);
+        tube(local,[[s*19,19,22.2],[s*19,29,22.2]],.48,'#efe0b2',MAT.cloth,8);
+      }
+      ellipsoid(local,0,1.1,27,12,2.4,7,'#c6bd9b',MAT.stone,20,10);
+      // A ridge button and scalloped eave give the little house a clear silhouette.
+      ellipsoid(local,0,69,0,4,2.5,5,shade(roof,1.12),MAT.cloth,16,8);
+      for(let j=0;j<14;j++){
+        const a=j/14*TAU;
+        ellipsoid(local,Math.cos(a)*35,38,Math.sin(a)*27,3.4,2.7,3.2,shade(roof,1.06),MAT.cloth,10,7);
+      }
+      for(const s of [-1,1]){
+        ellipsoid(local,s*32,4,26,5,5,5,'#d1a780',MAT.cloth,16,10);
+        for(let j=0;j<3;j++)blossom(local,s*32+(j-1)*2.6,8,26,1.8,j%2?'#f2c389':'#df9caa',j);
+      }
+    });append(m,shell,x,0,z);
+  }
+  function garden(m,x,z){
+    for(let i=0;i<4;i++){
+      const xx=x+i*12;
+      ellipsoid(m,xx,10,z,1.8,10,1.8,'#dfcaa3',MAT.wood,12,8);
+      ellipsoid(m,xx,20,z,2.1,2.1,2.1,'#f0dab0',MAT.cloth,12,8);
+    }
+    for(const yy of [7,15])tube(m,[[x,yy,z],[x+36,yy,z]],1.1,'#d2bc92',MAT.wood,9);
+    for(let j=0;j<5;j++)blossom(m,x+j*8,0,z+8,2.4,j%2?'#f3ce88':'#e7a9bb',j);
+  }
+  function pond(m,x,z,rx,rz){
+    // Smooth opaque waterbed shader, separate from the refractive playable water.
+    for(let j=0;j<40;j++){
+      const a=j/40*TAU,b=(j+1)/40*TAU;
+      triangle(m,[x,.12,z],[x+Math.cos(a)*rx,.12,z+Math.sin(a)*rz],[x+Math.cos(b)*rx,.12,z+Math.sin(b)*rz],
+        '#92c9c5',[0,1,0],[0,1,0],[0,1,0],-11);
+    }
+    for(let i=0;i<8;i++){
+      const a=i/8*TAU;rock(m,x+Math.cos(a)*rx,.5,z+Math.sin(a)*rz,3.5,1.7,2.5,'#c6ccb0',i);
+    }
+    disk(m,x+rx*.27,.24,z-2,3.8,2.8,'#8cac6d',MAT.leaf,20);
+    blossom(m,x+rx*.27,.25,z-2,1.4,'#eec5bc',0);
+  }
+  function cozyWorld(m){
+    for(const [x,z,p]of [[184,-88,0],[555,-88,1],[1110,-88,2],[1745,-88,0]])cottage(m,x,z,p);
+    for(const [x,z]of [[213,-49],[568,-48],[1755,-49]])garden(m,x,z);
+    pond(m,442,-55,28,16);pond(m,1370,-51,25,17);
+  }
+  function cozyLife(m,state){
+    const t=state.time||0;
+    // Cached petals become distant butterflies, not new collectible forms.
+    const wing=cached('cozy-butterfly',local=>{
+      ellipsoid(local,-1.55,0,0,1.8,2.5,.35,'#f5c897',MAT.cloth,12,8);
+      ellipsoid(local,1.55,0,0,1.8,2.5,.35,'#f5c897',MAT.cloth,12,8);
+      ellipsoid(local,0,0,.2,.3,1.6,.35,'#8f785e',MAT.cloth,8,6);
+    });
+    for(let i=0;i<(state.reduced?2:5);i++){
+      const xx=Math.floor(state.cameraX/300)*300-220+i*138+Math.sin(t*.36+i)*16;
+      append(m,wing,xx,35+Math.sin(t*.55+i)*12,-115-i*8,1,.55+.35*Math.sin(t*10+i));
+    }
+  }
+
   function buildWorld(m,world){
-    forestFloor(m);
+    forestFloor(m);cozyWorld(m);
     for(let i=-2;i<19;i++){const x=i*130+h(i+77)*37,z=-455-h(i+3)*150;tree(m,x,forestHeight(x,z)-2,z,1.4+h(i)*.75,i+70,true);}
     for(let i=-2;i<20;i++){const x=i*119+h(i+11)*31,z=-172-h(i+5)*145;tree(m,x,forestHeight(x,z)-2,z,.77+h(i+23)*.75,i+25,false);}
     // Lower arched crowns frame the rainforest during the elevated 3-D view.
@@ -672,7 +747,7 @@
     return m;
   }
   function dynamic(m,world,state){
-    const p=state.player,t=state.time||0,d=state.dimensionBlend||0;
+    const p=state.player,t=state.time||0,d=state.dimensionBlend||0;cozyLife(m,state);
     const aspect=window.innerWidth&&window.innerHeight?window.innerWidth/window.innerHeight:2.18,viewHalf=(state.cameraHeight||232)*aspect*.5+64;
     const visible=(x,r=0)=>Math.abs(x-state.cameraX)<viewHalf+r;
     if(d>.03){
@@ -704,5 +779,5 @@
     shadow,
     // Read-only creation helpers are also used by visual diagnostics.
     ellipsoid,leaf,tree,characterData,
-    style:'smooth mystical rainforest',creatureDepth:.6});
+    style:'smooth mystical rainforest',artRevision:'Cozy Canopy 2.3',creatureDepth:.6});
 })();
