@@ -8,8 +8,12 @@ enum {
     GMCDCasePresentationGrid = 0,
     GMCDCasePresentationPlayer = 1,
     GMCDCasePresentationInspector = 2,
-    GMCDCasePresentationStatic = 3
+    GMCDCasePresentationStatic = 3,
+    GMCDCasePresentationSnapshot = 4
 };
+
+static NSInteger GMLiveMedium = 0; // 0 CD, 1 cassette; persisted with appearance.
+static NSString * const GMLiveMediumChanged = @"Music.LiveMediumChanged";
 
 @interface GMCDCaseView : UIView
 - (instancetype)initWithFrame:(CGRect)frame presentation:(GMCDCasePresentation)presentation;

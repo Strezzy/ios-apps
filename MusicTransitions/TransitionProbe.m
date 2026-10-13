@@ -50,13 +50,16 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     self.shell.player.tracks=tracks; [self.shell reloadLibrary];
     self.window=[[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene]; self.window.rootViewController=self.shell; [self.window makeKeyAndVisible];
     After(1,^{[self waitWarm];});
-    After(150,^{if(![[NSFileManager defaultManager] fileExistsAtPath:[self.documents stringByAppendingPathComponent:@"result.json"]]){[self check:@"timeout" value:NO];[self finish];}});
+    After(240,^{if(![[NSFileManager defaultManager] fileExistsAtPath:[self.documents stringByAppendingPathComponent:@"result.json"]]){[self check:@"timeout" value:NO];[self finish];}});
 }
 - (void)waitWarm {
     GMCDCaseView *hero=self.shell.player.cdCaseView;
-    if(!hero.readyForDisplay && ++self.attempts<60){After(1,^{[self waitWarm];});return;}
+    BOOL stillsReady=YES;
+    for(GMBrowseSongCell *cell in self.shell.songsController.table.visibleCells)if(!cell.rowCase.fallback.snapshot.image)stillsReady=NO;
+    if((!hero.readyForDisplay || !stillsReady) && ++self.attempts<90){After(1,^{[self waitWarm];});return;}
     NSLog(@"WARM active=%d prewarming=%d eligible=%d window=%@ hostAlpha=%f size=%@ failure=%@",hero.ownerActive,hero.prewarming,[hero eligibleForRenderer],hero.window,hero.superview.alpha,NSStringFromCGRect(hero.bounds),hero.rendererFailureReason);
     [self check:@"hero_prewarmed" value:hero.readyForDisplay && hero.prewarming];
+    [self check:@"song_stills_from_live_renderer" value:stillsReady];
     self.originalWeb=hero.webView;
     [self state:hero then:^(NSDictionary *state){
         [self check:@"warm_has_no_spin" value:![state[@"playing"] boolValue] && ![state[@"scheduled"] boolValue]];
@@ -171,9 +174,51 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
         [detail.collectionHeader toggleCase];
         After(3,^{[self state:self.detail then:^(NSDictionary *closed){
             [self check:@"album_detail_manual_close" value:![closed[@"open"] boolValue]];
-            [self finish];
+            [self checkCassette];
         }];});
     }];});
+}
+
+- (void)checkCassette {
+    [self.shell setLiveMedium:1];self.attempts=0;After(1,^{[self waitCassetteDetail];});
+}
+- (void)waitCassetteDetail {
+    if(!self.detail.readyForDisplay && ++self.attempts<60){After(.5,^{[self waitCassetteDetail];});return;}
+    [self state:self.detail then:^(NSDictionary *state){
+        [self check:@"cassette_detail_geometry" value:[state[@"medium"] isEqual:@"cassette"] && [state[@"reelCount"] integerValue]==2];
+        [self.detail setCaseOpen:YES animated:YES];
+        After(3,^{[self capture:@"Cassette-Detail.png"];[self.shell presentNowPlaying];After(4,^{[self checkCassettePlayer];});});
+    }];
+}
+- (void)checkCassettePlayer {
+    GMCDCaseView *hero=self.shell.player.cdCaseView;
+    [self state:hero then:^(NSDictionary *state){
+        [self check:@"cassette_player_replaces_cd" value:[state[@"medium"] isEqual:@"cassette"] && [state[@"reelCount"] integerValue]==2 && [state[@"open"] boolValue]];
+        [self capture:@"Cassette-Player.png"];
+        [self.shell.player nextTrack];
+        After(1,^{[self state:hero then:^(NSDictionary *next){
+            [self check:@"cassette_reels_continue_on_next" value:[next[@"reelSpin"] doubleValue]>[state[@"reelSpin"] doubleValue] && [next[@"playing"] boolValue]];
+            [self.shell.player pause];
+            After(3,^{[self state:hero then:^(NSDictionary *paused){
+                [self check:@"cassette_pause_closes" value:![paused[@"playing"] boolValue] && ![paused[@"open"] boolValue] && [paused[@"phase"] isEqual:@"rest"]];
+                [self capture:@"Cassette-Paused.png"];
+                [self.shell.player closeNowPlaying];After(2,^{
+                    self.shell.selectedIndex=0;self.attempts=0;[self waitCassetteStills];
+                });
+            }];});
+        }];});
+    }];
+}
+- (void)waitCassetteStills {
+    BOOL ready=self.shell.compactPlayer.cover.fallback.snapshot.image!=nil;
+    for(GMBrowseSongCell *cell in self.shell.songsController.table.visibleCells) ready=ready && cell.rowCase.medium==1 && cell.rowCase.fallback.snapshot.image!=nil && !cell.rowCase.webView;
+    if(!ready && ++self.attempts<90){After(.5,^{[self waitCassetteStills];});return;}
+    [self check:@"cassette_stills_and_mini_pill" value:ready];[self capture:@"Cassette-Songs.png"];
+    self.shell.selectedIndex=1;After(5,^{[self capture:@"Cassette-Albums.png"];
+        self.shell.selectedIndex=4;After(.5,^{[self capture:@"Settings-Media.png"];
+            [self.shell setLiveMedium:0];[self check:@"switch_back_to_cd" value:self.shell.player.cdCaseView.medium==0 && self.shell.compactPlayer.cover.medium==0];[self finish];
+        });
+    });
 }
 
 @end

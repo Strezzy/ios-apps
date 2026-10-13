@@ -21,7 +21,7 @@ function reportFailure(reason) {
 function receive(next) {
   if (disposed || failed || !next || typeof next !== 'object' || Array.isArray(next)) return;
   const clean = {};
-  for (const key of ['active','playing','reducedMotion','open','animateOpen','animateTilt']) {
+  for (const key of ['active','playing','reducedMotion','open','animateOpen','animateTilt','still']) {
     if (typeof next[key] === 'boolean') clean[key] = next[key];
   }
   for (const key of ['tiltX', 'tiltY']) {
@@ -36,9 +36,11 @@ function receive(next) {
     if (typeof next[key] === 'string' && next[key].length <= 100) clean[key] = next[key];
   }
   if (typeof next.padding === 'number' && Number.isFinite(next.padding)) clean.padding = Math.max(0, Math.min(12, next.padding));
+  if (next.medium === 'cd' || next.medium === 'cassette') clean.medium = next.medium;
+  const mediumChanged = clean.medium && state.medium !== clean.medium;
   const qualityChanged = clean.quality && state.quality !== clean.quality;
   Object.assign(state, clean);
-  if (qualityChanged && stage) { stage.dispose(); stage = null; }
+  if ((qualityChanged || mediumChanged) && stage) { stage.dispose(); stage = null; }
   try {
     if (!stage) {
       stage = createStage(container, { ...state }, {
@@ -53,6 +55,7 @@ function receive(next) {
 }
 window.MusicCD = Object.freeze({
   receive,
+  still: () => stage?.still(),
   dispose() { disposed = true; stage?.dispose(); stage = null; },
   // Read-only diagnostics used by the offline renderer validation harness.
   diagnostics: () => ({ ...stage?.debug(), failed, disposed }),

@@ -34,7 +34,12 @@ extern void NSLog(NSString *format, ...);
 - (id)objectForInfoDictionaryKey:(NSString *)key;
 - (NSURL *)URLForResource:(NSString *)name withExtension:(NSString *)extension subdirectory:(NSString *)subpath;
 @end
+@interface NSMutableDictionary (GMMediaStillCache)
+- (void)removeAllObjects;
+- (void)removeObjectForKey:(id)key;
+@end
 @interface NSData (GMCDJSON)
+- (instancetype)initWithBase64EncodedString:(NSString *)string options:(NSUInteger)options;
 - (NSString *)base64EncodedStringWithOptions:(NSUInteger)options;
 @end
 @interface NSArray (GMCDInspectionIndex)

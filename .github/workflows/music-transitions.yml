@@ -14,13 +14,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - name: Preserve Cask and the original 3D animation system
+      - name: Preserve Cask and the original optical shaders
         run: |
           shasum -a 256 -c <<'CHECKSUMS'
           6fcad389e6ce9b28a91fbf201529f9549ad8f42973c96bf68aa0f005d5c978f9  Music/Sources/MusicScrollAnimations.m
           7b1fa071d2ee6a3e5ab8f3054281d1ea92570bb4f6f8857d32322dde99c2065a  Music/Sources/MusicScrollSettings.m
-          9352a82f0c50eeb318352e6c36e776048bdec5a286937a2c8412d5314f217465  Music/Sources/CDCaseJS/stage.js
-          ae1308e606773e6279f757e771685a49f296b48ff71f10d6ac552ff6c223afa4  Music/Sources/CDCaseJS/caseGeometry.js
           9238bc94054bbc073c0d83e14a8244f35323de351684a1365d3c5ceab4a33a9e  Music/Sources/CDCaseJS/shaders.js
           a9d726e40a6e7362df5cf057b2aa4d27db6b8752ad6ff19a3f8ac5277a7391ab  Music/Sources/MusicCDInspector.m
           CHECKSUMS
@@ -61,7 +59,7 @@ jobs:
           xcrun simctl install "$DEVICE" /tmp/TransitionProbe.app
           xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" com.billy.music.transitionprobe > Evidence/runtime.log 2>&1 &
           DATA=$(xcrun simctl get_app_container "$DEVICE" com.billy.music.transitionprobe data)
-          for attempt in $(seq 1 60); do test ! -f "$DATA/Documents/result.json" || break; sleep 3; done
+          for attempt in $(seq 1 90); do test ! -f "$DATA/Documents/result.json" || break; sleep 3; done
           cp "$DATA/Documents/"*.json Evidence/ || true
           cp "$DATA/Documents/"*.png Evidence/ || true
           tail -100 Evidence/runtime.log

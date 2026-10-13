@@ -5,10 +5,11 @@
   "esbuildVersion": "0.25.12",
   "inputs": {
     "Resources/CDCase/index.html": "b9c1e1f8c77abff6397fa0c23559d41f2ff88190945921dbdd598425b07ac3c8",
-    "Sources/CDCaseJS/bridge.js": "5e881d0b8db0fef801d76f73584523ac4c4078f78cb47624a88179dc5bb1053a",
-    "Sources/CDCaseJS/caseGeometry.js": "ae1308e606773e6279f757e771685a49f296b48ff71f10d6ac552ff6c223afa4",
+    "Sources/CDCaseJS/bridge.js": "f0ff3cb7b0de69b8a4545edf6f7983fc66ce32a15c09c705efd500ea760d3b86",
+    "Sources/CDCaseJS/caseGeometry.js": "bb2be87966536b35ed78820eedd923c4c34a7dfc7c86a8d5572817821aa6c1c7",
+    "Sources/CDCaseJS/cassetteGeometry.js": "f11cd412ffc7496bf5836268a69354bb02d489f8b8a37f610e087d8d1f54bf0f",
     "Sources/CDCaseJS/shaders.js": "9238bc94054bbc073c0d83e14a8244f35323de351684a1365d3c5ceab4a33a9e",
-    "Sources/CDCaseJS/stage.js": "9352a82f0c50eeb318352e6c36e776048bdec5a286937a2c8412d5314f217465",
+    "Sources/CDCaseJS/stage.js": "770f32543c9125aa8f733bc57a4ed22e1ccde1714b57995d9a10b538095c24a7",
     "Sources/CDCaseJS/vendor/LICENSE": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
     "Sources/CDCaseJS/vendor/PROVENANCE.json": "69181964ea0ad9b6091170248637e88e29c80c9fd628af5212fd693a7c6555e5",
     "Sources/CDCaseJS/vendor/three.core.js": "3718df126d69c125362a03340913204470d8c50238605150e57f808840fb7759",
@@ -17,6 +18,6 @@
   },
   "output": {
     "path": "Resources/CDCase/music-cd.js",
-    "sha256": "9fb17d0ed1cd66462286d48f6e3b72424ddf668b9fc4e3ae7e204b70e9ff0dad"
+    "sha256": "564378f5f378d252cba186aee305c739a7bd954c943e97554906f954cbc958a8"
   }
 }

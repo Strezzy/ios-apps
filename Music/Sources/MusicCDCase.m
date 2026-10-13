@@ -31,6 +31,10 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 // renderer budget, or after a WebContent process is reclaimed by the system.
 // These ordinary native layers have no timers and retain only bounded artwork.
 @interface GMCDCaseFallbackView : UIView
+@property(nonatomic, strong) UIImageView *snapshot;
+@property(nonatomic, copy) NSString *snapshotKey;
+@property(nonatomic) BOOL cassette;
+@property(nonatomic, strong) UIView *secondHub;
 @property(nonatomic, strong) UIView *caseBody;
 @property(nonatomic, strong) UIView *spine;
 @property(nonatomic, strong) UIView *discRim;
@@ -77,6 +81,11 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
     self.reflection.startPoint = CGPointMake(0,0); self.reflection.endPoint = CGPointMake(1,1);
     self.reflection.locations = @[@0,@.08,@.13,@.45,@.50,@1];
     [self.caseBody.layer addSublayer:self.reflection];
+    self.secondHub = [[UIView alloc] initWithFrame:CGRectZero];
+    self.secondHub.layer.borderWidth=2;
+    [self.caseBody addSubview:self.secondHub];
+    self.snapshot=[[UIImageView alloc] initWithFrame:self.bounds];self.snapshot.contentMode=1;
+    [self addSubview:self.snapshot];
     [self applyTheme];
     return self;
 }
@@ -89,7 +98,10 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
     CGFloat side = GMMin(self.bounds.size.width,self.bounds.size.height)*.97;
     if (side < 1) return;
     [CATransaction begin]; [CATransaction setDisableActions:YES];
-    self.caseBody.frame = CGRectMake((self.bounds.size.width-side)/2,(self.bounds.size.height-side)/2,side,side);
+    CGFloat height=self.cassette ? side*.685 : side;
+    self.snapshot.frame=self.bounds;
+    self.caseBody.hidden=self.snapshot.image != nil;
+    self.caseBody.frame = CGRectMake((self.bounds.size.width-side)/2,(self.bounds.size.height-height)/2,side,height);
     CGFloat diameter = side*.80, cx = side*.545, cy = side*.50;
     self.discRim.frame = CGRectMake(cx-diameter/2,cy-diameter/2,diameter,diameter);
     self.discRim.layer.cornerRadius = diameter/2;
@@ -104,6 +116,16 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
     self.hole.layer.cornerRadius = hole/2;
     self.spine.frame = CGRectMake(side*.035,side*.025,side*.068,side*.95);
     self.spine.layer.cornerRadius = 2;
+    self.secondHub.hidden=!self.cassette;
+    if(self.cassette) {
+        self.discRim.frame=CGRectMake(side*.06,height*.09,side*.88,height*.82);self.discRim.layer.cornerRadius=3;
+        self.disc.frame=self.discRim.bounds;self.disc.layer.cornerRadius=3;
+        CGFloat wheel=side*.21;
+        self.hubRing.frame=CGRectMake(side*.29-wheel/2,height*.5-wheel/2,wheel,wheel);self.hubRing.layer.cornerRadius=wheel/2;
+        self.secondHub.frame=CGRectMake(side*.70-wheel/2,height*.5-wheel/2,wheel,wheel);self.secondHub.layer.cornerRadius=wheel/2;
+        self.secondHub.backgroundColor=self.hubRing.backgroundColor;self.secondHub.layer.borderColor=self.hubRing.layer.borderColor;
+        self.hole.hidden=YES;self.spine.hidden=YES;
+    } else {self.hole.hidden=NO;self.spine.hidden=NO;}
     self.reflection.frame = self.caseBody.bounds; self.reflection.cornerRadius = 5;
     [CATransaction commit];
 }
@@ -128,6 +150,21 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 @end
 
 @class GMCDMotionHub;
+@interface GMMediaStillStore : NSObject
+@property(nonatomic,strong) NSMutableDictionary *cache;
+@property(nonatomic,strong) NSMutableArray *order;
+@property(nonatomic,strong) GMCDCaseView *worker;
+@property(nonatomic,strong) UIView *host;
+@property(nonatomic,copy) NSString *jobKey;
+@property(nonatomic) BOOL scheduled;
+@property(nonatomic) BOOL capturing;
+- (void)request;
+- (void)pump;
+- (void)clear;
+- (NSString *)keyForView:(GMCDCaseView *)view;
+@end
+static GMMediaStillStore *GMMediaStills(void) { static GMMediaStillStore *store; if(!store)store=[GMMediaStillStore new];return store; }
+
 @interface GMCDScriptProxy : NSObject <WKScriptMessageHandler>
 @property(nonatomic, weak) GMCDCaseView *owner;
 @end
@@ -174,6 +211,7 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 @property(nonatomic) NSUInteger rendererArtworkRevision;
 @property(nonatomic, strong) NSMutableDictionary<NSString *,id> *pending;
 @property(nonatomic, copy) NSArray<NSNumber *> *backgroundComponents;
+@property(nonatomic) NSInteger medium;
 @property(nonatomic) BOOL ownerActive;
 @property(nonatomic) BOOL prewarming;
 @property(nonatomic) BOOL playing;
@@ -318,6 +356,7 @@ static GMCDMotionHub *GMCDSharedHub(void) {
     [self updateMotionDemand];
 }
 - (void)memoryWarning:(NSNotification *)notification {
+    [GMMediaStills() clear];
     [self.warmRenderers removeAllObjects];
     for (GMCDCaseView *view in self.views.allObjects) {
         view.failedThisActivation = YES;
@@ -334,14 +373,15 @@ static GMCDMotionHub *GMCDSharedHub(void) {
     GMCDCaseView *hero = nil;
     // Preserve an existing hero unless an inspector needs its one slot.
     for (GMCDCaseView *view in views) {
-        if (![view eligibleForRenderer] || view.presentation == GMCDCasePresentationGrid) continue;
+        if (![view eligibleForRenderer] || view.presentation == GMCDCasePresentationGrid || view.presentation == GMCDCasePresentationSnapshot) continue;
         if (!hero || view.presentation > hero.presentation ||
             (view.presentation == hero.presentation && view.webView && !hero.webView)) hero = view;
     }
     NSUInteger grids = 0;
     for (GMCDCaseView *view in views) {
         BOOL keep = [view eligibleForRenderer] &&
-            (view.presentation == GMCDCasePresentationGrid || view == hero);
+            (view.presentation == GMCDCasePresentationGrid || view == hero ||
+             (view.presentation == GMCDCasePresentationSnapshot && (!hero || hero.prewarming)));
         if (view.webView && !keep) [view stopRendererKeepingStill:YES];
         if (view.webView && view.presentation == GMCDCasePresentationGrid) grids++;
     }
@@ -352,6 +392,7 @@ static GMCDMotionHub *GMCDSharedHub(void) {
             [view startRenderer]; if (view.webView) grids++;
         }
     }
+    for(GMCDCaseView *view in views) if(view.presentation==GMCDCasePresentationSnapshot && (!hero || hero.prewarming) && [view eligibleForRenderer] && !view.webView) [view startRenderer];
     self.reconciling = NO;
     [self updateMotionDemand];
 }
@@ -462,6 +503,8 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
 @implementation GMCDCaseView
 - (instancetype)initWithFrame:(CGRect)frame presentation:(GMCDCasePresentation)presentation {
     self = [super initWithFrame:frame]; if (!self) return nil;
+    self.medium=GMLiveMedium;
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(mediumChanged:) name:GMLiveMediumChanged object:nil];
     self.presentation = presentation; self.backgroundColor = [UIColor clearColor];
     self.opaque = NO; self.isAccessibilityElement = NO;
     self.representedIdentifier = @""; self.artworkRevision = 1;
@@ -477,6 +520,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     return self;
 }
 - (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     // Neither the coordinator's weak registry nor the script proxy retains us.
     self.encodingGeneration++;
     self.artworkJob.cancelled = YES;
@@ -487,13 +531,32 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [hub.views removeObject:self];
     dispatch_async(dispatch_get_main_queue(),^{ [hub reconcile]; });
 }
+- (void)mediumChanged:(NSNotification *)note {
+    if(self.medium==GMLiveMedium)return;
+    self.medium=GMLiveMedium;self.fallback.cassette=self.medium==1;
+    self.fallback.snapshot.image=nil;self.fallback.snapshotKey=nil;[self.fallback setNeedsLayout];
+    self.rendered=NO;self.webView.alpha=.01;self.fallback.hidden=NO;
+    [self.stillView removeFromSuperview];self.stillView=nil;
+    self.pending[@"medium"]=self.medium==1 ? @"cassette" : @"cd";
+    self.renderTicket=[NSUUID UUID].UUIDString;self.pending[@"epoch"]=self.renderTicket;
+    [self queueMotionState];[self flushPending];[GMMediaStills() request];
+}
+- (void)refreshStaticArtwork {
+    if(self.presentation==GMCDCasePresentationSnapshot)return;
+    NSString *key=[GMMediaStills() keyForView:self];
+    if(![self.fallback.snapshotKey isEqual:key]) {
+        self.fallback.snapshotKey=key;self.fallback.snapshot.image=GMMediaStills().cache[key];
+        self.fallback.cassette=self.medium==1;[self.fallback setNeedsLayout];
+    }
+    if(!self.fallback.snapshot.image && self.window) [GMMediaStills() request];
+}
 - (void)configureWithIdentifier:(NSString *)identifier title:(NSString *)title artist:(NSString *)artist artwork:(UIImage *)artwork {
     NSString *stable = identifier ?: @"";
     BOOL changed = ![self.representedIdentifier isEqualToString:stable] || self.artwork != artwork;
     self.representedIdentifier = stable;
-    self.accessibilityLabel = [NSString stringWithFormat:@"CD case, %@%@%@",title ?: @"Album",artist.length ? @", " : @"",artist ?: @""];
+    self.accessibilityLabel = [NSString stringWithFormat:@"%@ case, %@%@%@",self.medium==1 ? @"Cassette" : @"CD",title ?: @"Album",artist.length ? @", " : @"",artist ?: @""];
     [self.fallback setArtwork:artwork];
-    if (!changed) return;
+    if (!changed) { [self refreshStaticArtwork]; return; }
     self.artwork = artwork; self.artworkRevision++;
     self.artworkJob.cancelled = YES; self.artworkJob = nil;
     self.encodingGeneration++; self.encoding = NO;
@@ -507,6 +570,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         self.rendered = NO; self.webView.alpha = .01;
         self.fallback.alpha = 1; self.fallback.hidden = NO;
     } else if (!self.rendered) self.fallback.hidden = NO;
+    [self refreshStaticArtwork];
     [self ensureEncodedArtwork];
     [GMCDSharedHub() reconcile];
 }
@@ -538,6 +602,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [self layoutIfNeeded];
     hub.reconciling = reconciling;
     [hub reconcile];
+    if(prewarming && self.presentation!=GMCDCasePresentationSnapshot)[GMMediaStills() request];
     self.pending[@"open"] = [NSNumber numberWithBool:(self.caseOpen && !prewarming)];
     self.pending[@"animateOpen"] = [NSNumber numberWithBool:!prewarming];
     [self queueMotionState];
@@ -612,6 +677,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         self.pending[@"background"] = components;
         [self.stillView removeFromSuperview]; self.stillView = nil;
         if (!self.rendered) self.fallback.hidden = NO;
+        [self refreshStaticArtwork];
         [self flushPending];
     }
 }
@@ -622,12 +688,13 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [super layoutSubviews];
     CGFloat halo = self.presentation == GMCDCasePresentationGrid ? 4 : 8;
     CGRect drawing = CGRectInset(self.bounds,-halo,-halo);
+    [self refreshStaticArtwork];
     self.webView.frame = drawing; self.fallback.frame = self.bounds; self.stillView.frame = drawing;
     self.rendererStatusLabel.frame = CGRectMake(4,GMMax(0,self.bounds.size.height-28),GMMax(0,self.bounds.size.width-8),28);
     [GMCDSharedHub() reconcile];
 }
 - (void)didMoveToWindow {
-    [super didMoveToWindow]; [self applyTheme]; [GMCDSharedHub() reconcile];
+    [super didMoveToWindow]; [self refreshStaticArtwork]; [self applyTheme]; [GMCDSharedHub() reconcile];
 }
 - (void)setHidden:(BOOL)hidden {
     [super setHidden:hidden];
@@ -643,7 +710,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     self.failedThisActivation = NO; self.automaticRetries = 0; self.rendererFailureReason = nil;
     [self showRendererStatus:nil];
     [self.stillView removeFromSuperview]; self.stillView = nil;
-    [self.fallback setArtwork:nil]; self.fallback.hidden = NO;
+    [self.fallback setArtwork:nil]; self.fallback.snapshot.image=nil;self.fallback.snapshotKey=nil;self.fallback.hidden = NO;
     self.pending = [NSMutableDictionary dictionary];
     [GMCDSharedHub() reconcile];
 }
@@ -730,6 +797,8 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [self addSubview:web]; [self bringSubviewToFront:self.rendererStatusLabel];
     [self showRendererStatus:nil];
     self.pending = [NSMutableDictionary dictionary];
+    self.pending[@"medium"]=self.medium==1 ? @"cassette" : @"cd";
+    self.pending[@"still"]=@(self.presentation==GMCDCasePresentationSnapshot);
     self.pending[@"quality"] = grid ? @"grid" : @"hero";
     self.pending[@"epoch"] = self.renderTicket;
     self.pending[@"padding"] = @(grid ? 0 : halo);
@@ -748,7 +817,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     });
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(60*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
         GMCDCaseView *view = weakSelf;
-        if (!view || view.rendererGeneration != generation || view.rendered || !view.ownerActive) return;
+        if (!view || view.rendererGeneration != generation || view.rendered || !view.ownerActive || ![view eligibleForRenderer]) return;
         [view recordRendererFailure:@"first-frame-timeout"]; [view failRenderer];
     });
 }
@@ -791,7 +860,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         [self addSubview:still];
     } else if (!keepStill) { [self.stillView removeFromSuperview]; self.stillView = nil; }
     self.fallback.hidden = self.stillView != nil;
-    BOOL canPark = self.bridgeReady && self.rendered && !self.failedThisActivation && !GMCDSharedHub().applicationSuspended;
+    BOOL canPark = self.presentation != GMCDCasePresentationSnapshot && self.bridgeReady && self.rendered && !self.failedThisActivation && !GMCDSharedHub().applicationSuspended;
     GMCDScriptProxy *proxy = self.scriptProxy;
     self.rendererGeneration++; self.encodingGeneration++; self.encoding = NO;
     self.artworkJob.cancelled = YES; self.artworkJob = nil;
@@ -893,5 +962,82 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         if (!view || view.rendererGeneration != generation || !view.ownerActive) return;
         view.failedThisActivation = NO; [GMCDSharedHub() reconcile];
     });
+}
+@end
+
+// One serial still renderer for the whole library. Visible cells receive UIImage
+// results, never WebViews. It yields its slot to a foreground live presentation.
+@implementation GMMediaStillStore
+- (instancetype)init { self=[super init];if(self){self.cache=[NSMutableDictionary new];self.order=[NSMutableArray new];}return self; }
+- (NSString *)keyForView:(GMCDCaseView *)view {
+    return [NSString stringWithFormat:@"v2:%ld:%@:%p:%@",(long)view.medium,view.representedIdentifier,view.artwork,view.backgroundComponents];
+}
+- (void)clear {
+    [self.cache removeAllObjects];[self.order removeAllObjects];self.jobKey=nil;self.capturing=NO;
+    [self.worker setActive:NO];[self.worker removeFromSuperview];self.worker=nil;
+}
+- (void)request {
+    if(self.scheduled)return;self.scheduled=YES;
+    __weak GMMediaStillStore *weakSelf=self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.12*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
+        weakSelf.scheduled=NO;[weakSelf pump];
+    });
+}
+- (void)pump {
+    if(GMCDSharedHub().applicationSuspended || self.capturing)return;
+    for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) {
+        if(view.presentation!=GMCDCasePresentationSnapshot && view.webView && !view.prewarming && [view eligibleForRenderer]) {
+            [self.worker setActive:NO];return;
+        }
+    }
+    if(self.jobKey) {
+        [self.worker setActive:YES];
+        if(self.worker.failedThisActivation){self.jobKey=nil;return;}
+        if(!self.worker.readyForDisplay){[self request];return;}
+        self.capturing=YES;
+        NSString *key=self.jobKey;GMCDCaseView *worker=self.worker;
+        [worker.webView evaluateJavaScript:@"window.MusicCD.still()" completionHandler:^(id result,NSError *error){
+            self.capturing=NO;
+            if(self.worker!=worker || ![self.jobKey isEqual:key])return;
+            self.jobKey=nil;
+            if(!error && [result isKindOfClass:[NSString class]] && [result length]<4*1024*1024) {
+                NSData *data=[[NSData alloc] initWithBase64EncodedString:result options:0];
+                UIImage *image=data ? [UIImage imageWithData:data] : nil;
+                if(image){
+                    self.cache[key]=image;[self.order addObject:key];
+                    while(self.order.count>32){[self.cache removeObjectForKey:self.order.firstObject];[self.order removeObjectAtIndex:0];}
+                    for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) if([[self keyForView:view] isEqual:key]) {
+                        view.fallback.snapshotKey=key;view.fallback.snapshot.image=image;[view.fallback setNeedsLayout];
+                    }
+                }
+            }
+            [self request];
+        }];return;
+    }
+    GMCDCaseView *next=nil;
+    for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) {
+        if(view.presentation==GMCDCasePresentationSnapshot || !view.window || view.hidden || view.prewarming || view.rendered || !view.representedIdentifier.length)continue;
+        CGRect rect=[view convertRect:view.bounds toView:view.window];
+        if(!GMCDRectsIntersect(rect,view.window.bounds))continue;
+        BOOL hidden=NO;for(UIView *p=view.superview;p;p=p.superview)if(p.hidden || p.alpha<.01)hidden=YES;
+        if(hidden)continue;
+        NSString *key=[self keyForView:view];UIImage *cached=self.cache[key];
+        if(cached){view.fallback.snapshot.image=cached;view.fallback.snapshotKey=key;[view.fallback setNeedsLayout];continue;}
+        next=view;break;
+    }
+    if(!next)return;
+    if(!self.host || self.host.window!=next.window){
+        [self.host removeFromSuperview];self.host=[[UIView alloc] initWithFrame:CGRectMake(0,0,240,240)];
+        self.host.alpha=.02;self.host.userInteractionEnabled=NO;self.host.accessibilityElementsHidden=YES;
+        [next.window.rootViewController.view insertSubview:self.host atIndex:0];
+    }
+    if(!self.worker)self.worker=[[GMCDCaseView alloc] initWithFrame:self.host.bounds presentation:GMCDCasePresentationSnapshot];
+    self.worker.prewarming=YES;
+    [self.worker configureWithIdentifier:next.representedIdentifier title:nil artist:nil artwork:next.artwork];
+    self.worker.backgroundComponents=next.backgroundComponents;
+    self.worker.pending[@"background"]=next.backgroundComponents ?: @[@1,@1,@1];
+    self.jobKey=[self keyForView:next];
+    [self.worker moveToHost:self.host frame:self.host.bounds prewarming:YES];
+    [self request];
 }
 @end
