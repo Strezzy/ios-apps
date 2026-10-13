@@ -6,7 +6,15 @@ struct CollectrApp: App {
     @StateObject private var editor = EditorModel()
     @StateObject private var nearby: NearbyTrade
     init() {
-        let store = CollectionStore()
+        let store: CollectionStore
+        #if DEBUG && targetEnvironment(simulator)
+        if PreviewFixtures.enabled {
+            store = CollectionStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("CollectrVisualQA"))
+            PreviewFixtures.prepare(store)
+        } else { store = CollectionStore() }
+        #else
+        store = CollectionStore()
+        #endif
         _store = StateObject(wrappedValue: store)
         _nearby = StateObject(wrappedValue: NearbyTrade(store: store))
     }
@@ -54,6 +62,14 @@ struct CollectrRoot: View {
             if let error = store.error {
                 ContentUnavailableView("Collection unavailable",systemImage: "externaldrive.badge.exclamationmark",description: Text(error)).background(.black.opacity(0.9)).zIndex(3)
             }
+        }
+        .onAppear {
+            #if DEBUG && targetEnvironment(simulator)
+            if CommandLine.arguments.contains("--preview-create") { editor.configurePreview() }
+            if CommandLine.arguments.contains("--preview-collections") { tab = 1 }
+            if CommandLine.arguments.contains("--preview-card"), let card = store.cards.first { tab = 1; inspect(card) }
+            if CommandLine.arguments.contains("--preview-trade") { tab = 2; tradeCard = store.cards.first?.id }
+            #endif
         }
         .onChange(of: tab) { _,selected in
             if focused == nil { palette = selected == 0 ? editor.palette : RGB.defaults }

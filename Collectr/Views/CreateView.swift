@@ -64,6 +64,7 @@ struct CreateView: View {
                     }
                 }.padding(.horizontal,24).padding(.bottom,32).frame(maxWidth: 600).frame(maxWidth: .infinity)
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Create").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if editor.image != nil && store.draft == nil {

@@ -108,6 +108,48 @@ final class CollectrTests: XCTestCase {
         let library = try XCTUnwrap(device.makeDefaultLibrary())
         XCTAssertNotNil(library.makeFunction(name: "cardVertex")); XCTAssertNotNil(library.makeFunction(name: "cardFragment"))
     }
+    func testMetalDepthActuallyMovesPhotoAndFlatCardsStayStill() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice())
+        let library = try XCTUnwrap(device.makeDefaultLibrary())
+        let desc = MTLRenderPipelineDescriptor()
+        desc.vertexFunction = library.makeFunction(name: "cardVertex")
+        desc.fragmentFunction = library.makeFunction(name: "cardFragment")
+        desc.colorAttachments[0].pixelFormat = .rgba8Unorm
+        let pipeline = try device.makeRenderPipelineState(descriptor: desc)
+        let textureDesc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba8Unorm,width: 96,height: 96,mipmapped: false)
+        textureDesc.storageMode = .shared; textureDesc.usage = [.shaderRead,.renderTarget]
+        let source = try XCTUnwrap(device.makeTexture(descriptor: textureDesc))
+        let depth = try XCTUnwrap(device.makeTexture(descriptor: textureDesc))
+        var pixels = [UInt8](repeating: 255,count: 96*96*4)
+        var depths = pixels
+        for y in 0..<96 { for x in 0..<96 {
+            let i = (y*96+x)*4
+            pixels[i] = UInt8(x*255/95); pixels[i+1] = UInt8(y*255/95); pixels[i+2] = UInt8((x/8+y/8)%2*255)
+            depths[i] = UInt8(x<48 ? 240 : 30)
+        } }
+        pixels.withUnsafeBytes { source.replace(region: MTLRegionMake2D(0,0,96,96),mipmapLevel: 0,withBytes: $0.baseAddress!,bytesPerRow: 96*4) }
+        depths.withUnsafeBytes { depth.replace(region: MTLRegionMake2D(0,0,96,96),mipmapLevel: 0,withBytes: $0.baseAddress!,bytesPerRow: 96*4) }
+        func render(_ tilt: SIMD2<Float>,amount: Float,hasDepth: Float) throws -> [UInt8] {
+            let target = try XCTUnwrap(device.makeTexture(descriptor: textureDesc))
+            let pass = MTLRenderPassDescriptor(); pass.colorAttachments[0].texture = target
+            pass.colorAttachments[0].loadAction = .clear; pass.colorAttachments[0].storeAction = .store
+            let command = try XCTUnwrap(device.makeCommandQueue()?.makeCommandBuffer())
+            let enc = try XCTUnwrap(command.makeRenderCommandEncoder(descriptor: pass))
+            var u = DepthPhoto.Renderer.Uniforms(tilt: tilt,amount: amount,hasDepth: hasDepth)
+            enc.setRenderPipelineState(pipeline); enc.setFragmentTexture(source,index: 0); enc.setFragmentTexture(depth,index: 1)
+            enc.setFragmentBytes(&u,length: MemoryLayout<DepthPhoto.Renderer.Uniforms>.stride,index: 0)
+            enc.drawPrimitives(type: .triangleStrip,vertexStart: 0,vertexCount: 4); enc.endEncoding()
+            command.commit(); command.waitUntilCompleted(); XCTAssertNil(command.error)
+            var result = [UInt8](repeating: 0,count: pixels.count)
+            result.withUnsafeMutableBytes { target.getBytes($0.baseAddress!,bytesPerRow: 96*4,from: MTLRegionMake2D(0,0,96,96),mipmapLevel: 0) }
+            return result
+        }
+        let centered = try render(.zero,amount: 1,hasDepth: 1)
+        let tilted = try render(SIMD2(1,0.5),amount: 1,hasDepth: 1)
+        XCTAssertNotEqual(centered,tilted)
+        XCTAssertEqual(try render(.zero,amount: 1,hasDepth: 0),try render(SIMD2(1,1),amount: 1,hasDepth: 0))
+        XCTAssertEqual(try render(.zero,amount: 0,hasDepth: 1),try render(SIMD2(1,1),amount: 0,hasDepth: 1))
+    }
     func testBundledDA3ProducesFiniteDepth() async throws {
         let image = try PhotoPipeline().render(photo(),edits: PhotoEdits())
         let depth = try await PhotoPipeline().depth(image)

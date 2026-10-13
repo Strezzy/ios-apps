@@ -89,6 +89,12 @@ final class EditorModel: ObservableObject {
             return try store.finalizeDraft()
         } catch { self.error = error.localizedDescription; return nil }
     }
+    #if DEBUG && targetEnvironment(simulator)
+    func configurePreview() {
+        image = PreviewFixtures.photo(); depth = PreviewFixtures.depth()
+        palette = PhotoPipeline.palette(image!); title = "First light"; rarity = .rare; editionCount = 3
+    }
+    #endif
     func reset() { work?.cancel(); generation = UUID(); source = nil; image = nil; depth = nil; title = ""; edits = PhotoEdits(); working = false; depthWorking = false; depthError = nil }
 }
 

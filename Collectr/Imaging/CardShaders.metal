@@ -9,7 +9,7 @@ vertex Vertex cardVertex(uint id [[vertex_id]]) {
 fragment float4 cardFragment(Vertex v [[stage_in]], texture2d<float> photo [[texture(0)]], texture2d<float> depth [[texture(1)]], constant Uniforms &u [[buffer(0)]]) {
     constexpr sampler s(filter::linear,address::clamp_to_edge);
     // Bounded inverse-depth ray intersection. Overscan hides disoccluded borders.
-    float2 base = (v.uv-.5)/1.055+.5;
+    float2 base = (v.uv-.5)/(1.+.055*u.amount*u.hasDepth)+.5;
     float2 ray = u.tilt * float2(.043,.031) * u.amount * u.hasDepth;
     float2 uv = base - ray*.5;
     float previous = 1.; float previousSurface = 0.;

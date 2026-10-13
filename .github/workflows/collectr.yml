@@ -25,7 +25,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: collectr-0.1.0-${{ github.run_number }}
-        run: gh release create "$RELEASE_TAG" Collectr/Build/Collectr.ipa Collectr/Build/BUILD-REPORT.json Collectr/Build/Simulator-Launch.png --target "$GITHUB_SHA" --title "Collectr 0.1.0 (${{ github.run_number }})" --notes-file Collectr/RELEASE-NOTES.md
+        run: gh release create "$RELEASE_TAG" Collectr/Build/Collectr.ipa Collectr/Build/BUILD-REPORT.json Collectr/Build/Simulator-Launch.png Collectr/Build/Preview-*.png --target "$GITHUB_SHA" --title "Collectr 0.1.0 (${{ github.run_number }})" --notes-file Collectr/RELEASE-NOTES.md
       - name: Add Collectr to Strezzy's app source
         env:
           GH_TOKEN: ${{ github.token }}
@@ -58,6 +58,7 @@ jobs:
             Collectr/Build/Tests.xcresult
             Collectr/Build/BUILD-REPORT.json
             Collectr/Build/Simulator-Launch.png
+            Collectr/Build/Preview-*.png
             Collectr/Build/Collectr.ipa
           retention-days: 14
           if-no-files-found: ignore

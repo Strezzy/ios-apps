@@ -12,7 +12,7 @@ def run(args,log=None,capture=False):
             p=subprocess.Popen(list(map(str,args)),cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
             for line in p.stdout:
                 stream.write(line)
-                if 'error:' in line or 'warning:' in line or 'Test Case' in line or '** ' in line: print(line,end='',flush=True)
+                if 'error:' in line or 'warning:' in line or 'Test Case' in line or 'Test Suite' in line or 'Testing started' in line or '** ' in line: print(line,end='',flush=True)
             if p.wait(): raise RuntimeError(f'{log} failed. See Build/Logs/{log}')
     else:
         p=subprocess.run(list(map(str,args)),cwd=ROOT,check=True,capture_output=capture,text=True)
@@ -30,7 +30,9 @@ def main():
     choices=[d for runtime,items in devices['devices'].items() if 'iOS-26' in runtime or 'iOS-27' in runtime for d in items if d.get('isAvailable') and d['name'].startswith('iPhone')]
     if not choices: raise RuntimeError('iOS 26+ simulator missing')
     device=next((d for d in choices if 'Pro' in d['name']),choices[0]);udid=device['udid']
-    run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','-resultBundlePath',BUILD/'Tests.xcresult','test'],log='tests.log')
+    subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    run(['xcrun','simctl','bootstatus',udid,'-b'])
+    run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','-parallel-testing-enabled','NO','-resultBundlePath',BUILD/'Tests.xcresult','test'],log='tests.log')
     log=(BUILD/'Logs/tests.log').read_text()
     if '** TEST SUCCEEDED **' not in log or 'testBundledDA3ProducesFiniteDepth' not in log: raise RuntimeError('Native tests or bundled DA3 inference not verified')
     simapp=BUILD/'DerivedData/Build/Products/Debug-iphonesimulator/Collectr.app'
@@ -40,7 +42,12 @@ def main():
     launch=run(['xcrun','simctl','launch',udid,'com.billy.collectr'],capture=True)
     time.sleep(3)
     run(['xcrun','simctl','io',udid,'screenshot',BUILD/'Simulator-Launch.png'])
-    app=BUILD/'DerivedData/Build/Products/Release-iphoneos/Collectr.app'
+    for name,argument in [('Create','--preview-create'),('Collections','--preview-collections'),('Card','--preview-card'),('Trade','--preview-trade')]:
+        subprocess.run(['xcrun','simctl','terminate',udid,'com.billy.collectr'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        run(['xcrun','simctl','launch',udid,'com.billy.collectr',argument])
+        time.sleep(2)
+        run(['xcrun','simctl','io',udid,'screenshot',BUILD/f'Preview-{name}.png'])
+    app=BUILD/'DerivedData/Build/Products/Release-iphoneos/Collectr.app' 
     info=plistlib.loads((app/'Info.plist').read_bytes())
     assert info['CFBundleIdentifier']=='com.billy.collectr'
     assert info['CFBundleVersion']==build_number

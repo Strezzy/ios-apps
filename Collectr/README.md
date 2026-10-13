@@ -30,4 +30,6 @@ Visual reference: Music's adaptation of Ann Nguyen's CD Case at upstream `efba8d
 
 DA3 model: `mlboydaisuke/Depth-Anything-3-Base-CoreML` revision `8e2e01d73a6b78f89beaac573ce3a009cf1fbb50`, upstream Depth Anything 3 Base Apache-2.0. Notices are bundled in Resources/Licenses. SHA-256 values and exact sizes are recorded in scripts/prepare_models.py.
 
+Simulator visual fixtures are compiled only in Debug for the simulator and use a separate temporary collection. They are not included in the iPhone release. The workflow exports Create, Collections, Card and Trade screenshots for layout review.
+
 See RELEASE-NOTES.md for the current validation limits.
