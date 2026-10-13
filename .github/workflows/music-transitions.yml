@@ -57,9 +57,9 @@ jobs:
           xcrun simctl boot "$DEVICE" || true
           xcrun simctl bootstatus "$DEVICE" -b
           xcrun simctl install "$DEVICE" /tmp/TransitionProbe.app
-          xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" com.billy.music.transitionprobe > Evidence/runtime.log 2>&1 &
+          xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" com.billy.music.transitionprobe 2>&1 | tee Evidence/runtime.log &
           DATA=$(xcrun simctl get_app_container "$DEVICE" com.billy.music.transitionprobe data)
-          for attempt in $(seq 1 90); do test ! -f "$DATA/Documents/result.json" || break; sleep 3; done
+          for attempt in $(seq 1 130); do test ! -f "$DATA/Documents/result.json" || break; sleep 3; done
           cp "$DATA/Documents/"*.json Evidence/ || true
           cp "$DATA/Documents/"*.png Evidence/ || true
           tail -100 Evidence/runtime.log

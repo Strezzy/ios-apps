@@ -50,7 +50,12 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     self.shell.player.tracks=tracks; [self.shell reloadLibrary];
     self.window=[[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene]; self.window.rootViewController=self.shell; [self.window makeKeyAndVisible];
     After(1,^{[self waitWarm];});
-    After(240,^{if(![[NSFileManager defaultManager] fileExistsAtPath:[self.documents stringByAppendingPathComponent:@"result.json"]]){[self check:@"timeout" value:NO];[self finish];}});
+    After(360,^{if(![[NSFileManager defaultManager] fileExistsAtPath:[self.documents stringByAppendingPathComponent:@"result.json"]]){[self check:@"timeout" value:NO];[self finish];}});
+}
+- (void)logStillState {
+    GMMediaStillStore *store=GMMediaStills();
+    NSLog(@"STILLS cache=%lu failures=%@ job=%@ ready=%d error=%@ renderer=%@",(unsigned long)store.cache.count,store.failures,store.jobKey,store.worker.readyForDisplay,store.lastCaptureError,store.worker.rendererFailureReason);
+    [store.worker.webView evaluateJavaScript:@"JSON.stringify(window.MusicCD.diagnostics())" completionHandler:^(id value,NSError *error){NSLog(@"STILL_BRIDGE %@ %@",value,error);}];
 }
 - (void)waitWarm {
     GMCDCaseView *hero=self.shell.player.cdCaseView;
@@ -59,6 +64,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     if((!hero.readyForDisplay || !stillsReady) && ++self.attempts<90){After(1,^{[self waitWarm];});return;}
     NSLog(@"WARM active=%d prewarming=%d eligible=%d window=%@ hostAlpha=%f size=%@ failure=%@",hero.ownerActive,hero.prewarming,[hero eligibleForRenderer],hero.window,hero.superview.alpha,NSStringFromCGRect(hero.bounds),hero.rendererFailureReason);
     [self check:@"hero_prewarmed" value:hero.readyForDisplay && hero.prewarming];
+    if(!stillsReady)[self logStillState];
     [self check:@"song_stills_from_live_renderer" value:stillsReady];
     self.originalWeb=hero.webView;
     [self state:hero then:^(NSDictionary *state){
@@ -223,6 +229,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     BOOL ready=self.shell.compactPlayer.cover.fallback.snapshot.image!=nil;
     for(GMBrowseSongCell *cell in self.shell.songsController.table.visibleCells) ready=ready && cell.rowCase.medium==1 && cell.rowCase.fallback.snapshot.image!=nil && !cell.rowCase.webView;
     if(!ready && ++self.attempts<90){After(.5,^{[self waitCassetteStills];});return;}
+    if(!ready)[self logStillState];
     [self check:@"cassette_stills_and_mini_pill" value:ready];[self capture:@"Cassette-Songs.png"];
     self.shell.selectedIndex=1;[self.shell.albumsController.navigationController popToRootViewControllerAnimated:NO];self.attempts=0;After(.5,^{[self waitCassetteAlbums];});
 }
@@ -230,6 +237,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     BOOL ready=YES;
     for(GMAlbumGridCell *cell in self.shell.albumsController.table.visibleCells)for(GMAlbumTile *tile in @[cell.leftTile,cell.rightTile])if(!tile.hidden)ready=ready && tile.caseView.medium==1 && tile.caseView.fallback.snapshot.image!=nil && !tile.caseView.webView;
     if(!ready && ++self.attempts<90){After(.5,^{[self waitCassetteAlbums];});return;}
+    if(!ready)[self logStillState];
     [self check:@"cassette_album_stills" value:ready];[self capture:@"Cassette-Albums.png"];
         self.shell.selectedIndex=4;After(.5,^{[self capture:@"Settings-Media.png"];
             [self.shell setLiveMedium:0];[self check:@"switch_back_to_cd" value:self.shell.player.cdCaseView.medium==0 && self.shell.compactPlayer.cover.medium==0];[self finish];

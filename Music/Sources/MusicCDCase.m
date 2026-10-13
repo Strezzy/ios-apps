@@ -157,6 +157,8 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 @property(nonatomic,strong) GMCDCaseView *worker;
 @property(nonatomic,strong) UIView *host;
 @property(nonatomic,copy) NSString *jobKey;
+@property(nonatomic,copy) NSString *lastCaptureError;
+@property(nonatomic) NSTimeInterval jobStartedAt;
 @property(nonatomic) BOOL scheduled;
 @property(nonatomic) BOOL capturing;
 - (void)request;
@@ -1016,13 +1018,20 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         [worker.webView evaluateJavaScript:@"window.MusicCD.still()" completionHandler:^(id result,NSError *error){
             self.capturing=NO;
             if(self.worker!=worker || ![self.jobKey isEqual:key])return;
+            // A rendered-frame acknowledgement can arrive while a queued art
+            // decode is still settling. Null is "not ready", not a failed image.
+            BOOL pending=!error && (!result || [result isKindOfClass:[NSNull class]]);
+            if(pending && CACurrentMediaTime()-self.jobStartedAt<20){
+                self.lastCaptureError=@"Waiting for the current artwork frame";
+                [self request];return;
+            }
             self.jobKey=nil;
             BOOL captured=NO;
             if(!error && [result isKindOfClass:[NSString class]] && [result length]<4*1024*1024) {
                 NSData *data=[[NSData alloc] initWithBase64EncodedString:result options:0];
                 UIImage *image=data ? [UIImage imageWithData:data] : nil;
                 if(image){
-                    captured=YES;[self.failures removeObjectForKey:key];
+                    captured=YES;self.lastCaptureError=nil;[self.failures removeObjectForKey:key];
                     self.cache[key]=image;[self.order addObject:key];
                     while(self.order.count>32){[self.cache removeObjectForKey:self.order.firstObject];[self.order removeObjectAtIndex:0];}
                     for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) if([[self keyForView:view] isEqual:key]) {
@@ -1030,7 +1039,10 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
                     }
                 }
             }
-            if(!captured)self.failures[key]=@([self.failures[key] integerValue]+1);
+            if(!captured){
+                self.lastCaptureError=error.localizedDescription ?: @"Snapshot did not produce an image";
+                self.failures[key]=@([self.failures[key] integerValue]+1);
+            }
             [self request];
         }];return;
     }
@@ -1057,7 +1069,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     [self.worker configureWithIdentifier:next.representedIdentifier title:nil artist:nil artwork:next.artwork];
     self.worker.backgroundComponents=next.backgroundComponents;
     self.worker.pending[@"background"]=next.backgroundComponents ?: @[@1,@1,@1];
-    self.jobKey=[self keyForView:next];
+    self.jobKey=[self keyForView:next];self.jobStartedAt=CACurrentMediaTime();
     [self.worker moveToHost:self.host frame:self.host.bounds prewarming:YES];
     [self request];
 }
