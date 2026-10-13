@@ -121,7 +121,17 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     if(!hero.readyForDisplay && ++self.attempts<80){After(.5,^{[self waitMiniPlayer];});return;}
     [self check:@"mini_player_recovers_evicted_hero" value:hero.readyForDisplay && hero.superview==self.shell.player.artView && !hero.failedThisActivation];
     self.originalWeb=hero.webView;
-    [self.shell.player closeNowPlaying]; After(1,^{[self checkGrid];});
+    [self.shell.player closeNowPlaying]; self.attempts=0;
+    After(.25,^{[self waitMiniPlayerDismissal];});
+}
+- (void)waitMiniPlayerDismissal {
+    PlayerController *player=self.shell.player;
+    // UIKit's native zoom can outlast a fixed delay on a busy simulator.
+    if((player.presentingViewController || player.view.window || !player.cdCaseView.prewarming) && ++self.attempts<40){
+        After(.25,^{[self waitMiniPlayerDismissal];});return;
+    }
+    [self check:@"mini_player_dismissal_completes" value:!player.presentingViewController && !player.view.window];
+    [self checkGrid];
 }
 
 - (void)checkGrid {

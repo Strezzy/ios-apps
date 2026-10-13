@@ -355,7 +355,10 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     return self.traitCollection.userInterfaceIdiom == UIUserInterfaceIdiomPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskPortrait;
 }
 - (void)viewSafeAreaInsetsDidChange { [super viewSafeAreaInsetsDidChange]; [self.view setNeedsLayout]; }
-- (void)closeNowPlaying { self.caseTransitionInProgress = self.transitioningDelegate != nil; [self dismissViewControllerAnimated:YES completion:nil]; }
+- (void)closeNowPlaying {
+    self.caseTransitionInProgress = self.transitioningDelegate != nil;
+    [self dismissViewControllerAnimated:YES completion:^{ [self.shell warmPlayerCase]; }];
+}
 - (UIViewController *)visiblePresenter {
     UIViewController *presenter = self.shell ?: self;
     while (presenter.presentedViewController) presenter = presenter.presentedViewController;
