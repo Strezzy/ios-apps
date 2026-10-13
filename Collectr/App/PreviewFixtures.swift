@@ -3,6 +3,7 @@ import UIKit
 import SwiftUI
 
 // Simulator-only visual QA data. Never compiled into the iPhone release.
+@MainActor
 enum PreviewFixtures {
     static var enabled: Bool { CommandLine.arguments.contains { $0.hasPrefix("--preview-") } }
     static func photo() -> UIImage {

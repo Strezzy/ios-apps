@@ -11,7 +11,7 @@ def run(args,log=None,capture=False):
         with (BUILD/'Logs'/log).open('w') as stream:
             p=subprocess.Popen(list(map(str,args)),cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
             for line in p.stdout:
-                stream.write(line)
+                stream.write(line); stream.flush()
                 if 'error:' in line or 'warning:' in line or 'Test Case' in line or 'Test Suite' in line or 'Testing started' in line or '** ' in line: print(line,end='',flush=True)
             if p.wait(): raise RuntimeError(f'{log} failed. See Build/Logs/{log}')
     else:
@@ -30,9 +30,10 @@ def main():
     choices=[d for runtime,items in devices['devices'].items() if 'iOS-26' in runtime or 'iOS-27' in runtime for d in items if d.get('isAvailable') and d['name'].startswith('iPhone')]
     if not choices: raise RuntimeError('iOS 26+ simulator missing')
     device=next((d for d in choices if 'Pro' in d['name']),choices[0]);udid=device['udid']
+    run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','build-for-testing'],log='test-build.log')
     subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run(['xcrun','simctl','bootstatus',udid,'-b'])
-    run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','-parallel-testing-enabled','NO','-resultBundlePath',BUILD/'Tests.xcresult','test'],log='tests.log')
+    run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','-parallel-testing-enabled','NO','-resultBundlePath',BUILD/'Tests.xcresult','test-without-building'],log='tests.log')
     log=(BUILD/'Logs/tests.log').read_text()
     if '** TEST SUCCEEDED **' not in log or 'testBundledDA3ProducesFiniteDepth' not in log: raise RuntimeError('Native tests or bundled DA3 inference not verified')
     simapp=BUILD/'DerivedData/Build/Products/Debug-iphonesimulator/Collectr.app'

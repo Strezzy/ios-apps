@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: collectr-build
+  group: collectr-native-build
   cancel-in-progress: true
 jobs:
   build:
