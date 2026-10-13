@@ -4,8 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/cozy_pass.py'
-      - 'scripts/cozy_qa.py'
+      - 'scripts/cozy_*.py'
       - '.github/workflows/cozy-canopy.yml'
 permissions:
   contents: write
@@ -21,7 +20,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Apply original Cozy Canopy art revision
-        run: python3 scripts/cozy_pass.py
+        run: |
+          python3 scripts/cozy_pass.py
+          python3 scripts/cozy_finish.py
+          git restore .github/workflows/third-dimension.yml
       - name: Prepare independent WebKit gameplay verification
         run: |
           python3 -m venv "$RUNNER_TEMP/cozy-qa"
@@ -54,7 +56,7 @@ jobs:
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add EnterTheThirdDimension .github/workflows/third-dimension.yml
+          git add EnterTheThirdDimension
           if ! git diff --cached --quiet; then
             git commit -m "Build Cozy Canopy 2.3: original cozy art and verified gameplay"
           fi
