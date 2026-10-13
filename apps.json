@@ -17,6 +17,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "0.14",
+          "buildVersion": "15",
+          "buildNumber": "15",
+          "date": "2026-10-13T06:45:26Z",
+          "localizedDescription": "Live CD and Live Cassette artwork throughout Music, matching rendered thumbnails in Songs, Albums and the mini-player, faster song-to-player transitions with a source-art fade, and continuous spinning across song changes. Cask and the original optical shaders are preserved. All 42 native simulator checks passed; physical-device performance remains to be measured.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.14-build15/Music.ipa",
+          "size": 3068808,
+          "minOSVersion": "16.0",
+          "sha256": "3a50c185f5628de5dd6ea66e9e289121cf31424efba23f9d1c314983aea3fb19"
+        },
+        {
           "version": "0.13",
           "buildVersion": "14",
           "buildNumber": "14",
@@ -68,11 +79,11 @@
           "NSMotionUsageDescription": "Music uses device motion to gently tilt visible CD cases. Motion stays on your device."
         }
       },
-      "version": "0.13",
-      "versionDate": "2026-10-13T03:59:42Z",
-      "versionDescription": "CD-case loading and visual polish: bounded warm-renderer reuse, smoother correct-artwork reveal, higher-density album rendering, improved reflection detail and tilt-safe framing. Native Liquid Glass navigation and album layout are preserved. Passed 26 native renderer checks and the Albums scroll-and-return test. Physical-device performance remains to be measured.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.13-build14/Music.ipa",
-      "size": 3051758
+      "version": "0.14",
+      "versionDate": "2026-10-13T06:45:26Z",
+      "versionDescription": "Live CD and Live Cassette artwork throughout Music, matching rendered thumbnails in Songs, Albums and the mini-player, faster song-to-player transitions with a source-art fade, and continuous spinning across song changes. Cask and the original optical shaders are preserved. All 42 native simulator checks passed; physical-device performance remains to be measured.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.14-build15/Music.ipa",
+      "size": 3068808
     },
     {
       "name": "VoiceGlass",
