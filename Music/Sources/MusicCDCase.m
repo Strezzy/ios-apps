@@ -500,7 +500,13 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     self.encodedArtwork = nil; self.encodedRevision = 0;
     self.failedThisActivation = NO;
     [self.stillView removeFromSuperview]; self.stillView = nil;
-    if (!self.rendered) self.fallback.hidden = NO;
+    // A newly selected row must never lift the previous song's texture out
+    // of the warm host. Keep its matching static case until the art ticket
+    // is acknowledged. Visible Next/Previous retain the live disc crossfade.
+    if (self.prewarming) {
+        self.rendered = NO; self.webView.alpha = .01;
+        self.fallback.alpha = 1; self.fallback.hidden = NO;
+    } else if (!self.rendered) self.fallback.hidden = NO;
     [self ensureEncodedArtwork];
     [GMCDSharedHub() reconcile];
 }
