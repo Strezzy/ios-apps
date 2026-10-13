@@ -87,7 +87,34 @@ static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
 - (void)layoutSubviews {
     [super layoutSubviews];
     CGFloat side = GMMin(self.bounds.size.width,self.bounds.size.height)*.97;
- …424 tokens truncated…ite(dark ? 1 : .4,.32).CGColor;
+    if (side < 1) return;
+    [CATransaction begin]; [CATransaction setDisableActions:YES];
+    self.caseBody.frame = CGRectMake((self.bounds.size.width-side)/2,(self.bounds.size.height-side)/2,side,side);
+    CGFloat diameter = side*.80, cx = side*.545, cy = side*.50;
+    self.discRim.frame = CGRectMake(cx-diameter/2,cy-diameter/2,diameter,diameter);
+    self.discRim.layer.cornerRadius = diameter/2;
+    self.discSheen.frame = self.discRim.bounds;
+    CGFloat margin = GMMax(1.2,diameter*.018);
+    self.disc.frame = CGRectMake(margin,margin,diameter-2*margin,diameter-2*margin);
+    self.disc.layer.cornerRadius = (diameter-2*margin)/2;
+    CGFloat ring = diameter*.25, hole = diameter*.10;
+    self.hubRing.frame = CGRectMake(cx-ring/2,cy-ring/2,ring,ring);
+    self.hubRing.layer.cornerRadius = ring/2;
+    self.hole.frame = CGRectMake(cx-hole/2,cy-hole/2,hole,hole);
+    self.hole.layer.cornerRadius = hole/2;
+    self.spine.frame = CGRectMake(side*.035,side*.025,side*.068,side*.95);
+    self.spine.layer.cornerRadius = 2;
+    self.reflection.frame = self.caseBody.bounds; self.reflection.cornerRadius = 5;
+    [CATransaction commit];
+}
+- (void)applyTheme {
+    BOOL dark = self.traitCollection.userInterfaceStyle == 2;
+    UIColor *page = [GMPageColor() resolvedColorWithTraitCollection:self.traitCollection];
+    self.caseBody.backgroundColor = GMCDWhite(dark ? .34 : .92,dark ? .16 : .27);
+    self.caseBody.layer.borderColor = GMCDWhite(dark ? 1 : .38,dark ? .43 : .40).CGColor;
+    self.caseBody.layer.shadowColor = [UIColor blackColor].CGColor;
+    self.spine.backgroundColor = GMCDWhite(dark ? .03 : .30,.18);
+    self.spine.layer.borderColor = GMCDWhite(dark ? 1 : .4,.32).CGColor;
     self.discRim.layer.borderColor = GMCDWhite(.55,.65).CGColor;
     self.hubRing.backgroundColor = GMCDWhite(.82,.68);
     self.hubRing.layer.borderColor = GMCDWhite(1,.60).CGColor;
@@ -473,7 +500,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     self.encodedArtwork = nil; self.encodedRevision = 0;
     self.failedThisActivation = NO;
     [self.stillView removeFromSuperview]; self.stillView = nil;
-    self.rendered = NO; self.webView.alpha = .01; self.fallback.hidden = NO; self.fallback.alpha = 1;
+    if (!self.rendered) self.fallback.hidden = NO;
     [self ensureEncodedArtwork];
     [GMCDSharedHub() reconcile];
 }
