@@ -38,7 +38,11 @@ extern void NSLog(NSString *format, ...);
 - (void)removeAllObjects;
 - (void)removeObjectForKey:(id)key;
 @end
+@interface NSFileManager (GMMetadataFileSignature)
+- (NSDictionary *)attributesOfItemAtPath:(NSString *)path error:(NSError **)error;
+@end
 @interface NSMapTable (GMMediaPendingFingerprints)
++ (NSMapTable *)strongToWeakObjectsMapTable;
 - (void)removeObjectForKey:(id)key;
 @end
 @interface NSString (GMMediaDigestInput)

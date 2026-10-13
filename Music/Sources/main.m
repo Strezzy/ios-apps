@@ -62,6 +62,7 @@ static UIButton *GMButton(NSString *symbol, NSString *label, id target, SEL acti
 @property(strong) UIImage *artwork;
 @property BOOL demo;
 @property BOOL metadataLoaded;
+@property(strong) NSDictionary *metadataSignature;
 @end
 @implementation GMTrack @end
 
@@ -84,6 +85,7 @@ static UIButton *GMButton(NSString *symbol, NSString *label, id target, SEL acti
 #import "MusicScrollSettings.m"
 #import "MusicScrollAnimations.m"
 #import "MusicCDCase.m"
+#import "MusicMetadataCache.m"
 
 static UIImage *GMPlayerSymbol(NSString *name, CGFloat size) {
     return [UIImage systemImageNamed:name withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:size weight:6]];
@@ -389,6 +391,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
             track = [GMTrack new]; track.url = url;
             track.title = filename.stringByDeletingPathExtension; track.artist = @"Unknown Artist";
             track.album = @"Unknown Album";
+            GMRestoreCachedMetadata(track);
         }
         [self.shell.editsStore applyToTrack:track];
         [self.tracks addObject:track];
@@ -444,6 +447,9 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
                 self.metadataLoading = NO;
                 [self refreshEditedLibrary];
             });
+            // Publishing fresh metadata does not wait for PNG compression or
+            // disk writes. These are raw copies; user edits remain separate.
+            for(GMTrack *copy in pending){@autoreleasepool {GMCacheRawMetadata(copy);}}
         }
     });
 }
@@ -468,6 +474,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
 - (void)readMetadataForTrack:(GMTrack *)track {
     if (track.metadataLoaded) return;
     track.metadataLoaded = YES;
+    track.metadataSignature=GMMetadataSignature(track.url);
     AVURLAsset *asset = [AVURLAsset URLAssetWithURL:track.url options:nil];
     for (AVMetadataItem *item in asset.commonMetadata) {
         NSString *key = item.commonKey;

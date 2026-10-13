@@ -45,7 +45,16 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
         t.artist=@"Music"; t.albumArtist=t.artist; t.metadataLoaded=YES;
         NSString *file=[self.documents stringByAppendingPathComponent:[NSString stringWithFormat:@"track%ld.wav",(long)i]];
         [[NSFileManager defaultManager] copyItemAtPath:[[NSBundle mainBundle] pathForResource:@"fixture" ofType:@"wav"] toPath:file error:nil];
-        t.url=[NSURL fileURLWithPath:file]; t.artwork=[UIImage imageNamed:i==17 ? @"IconSignalPreview" : (i%2?@"IconAuroraPreview":@"IconChromePreview")]; [tracks addObject:t];
+        t.url=[NSURL fileURLWithPath:file];
+        if([NSProcessInfo.processInfo.arguments containsObject:@"--cache-relaunch"]){
+            t.metadataLoaded=NO;t.artwork=nil;t.album=nil;
+            BOOL restored=GMRestoreCachedMetadata(t);
+            [self check:[NSString stringWithFormat:@"metadata_and_art_ready_before_library_display_%ld",(long)i] value:restored && t.metadataLoaded && t.artwork!=nil && t.album.length>0];
+        } else {
+            t.artwork=[UIImage imageNamed:i==17 ? @"IconSignalPreview" : (i%2?@"IconAuroraPreview":@"IconChromePreview")];
+            t.metadataSignature=GMMetadataSignature(t.url);GMCacheRawMetadata(t);
+        }
+        [tracks addObject:t];
     }
     self.shell.player.tracks=tracks; [self.shell reloadLibrary];
     self.window=[[UIWindow alloc] initWithWindowScene:(UIWindowScene *)scene]; self.window.rootViewController=self.shell; [self.window makeKeyAndVisible];
@@ -301,11 +310,21 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
         });
     });
 }
+- (void)checkMetadataInvalidation {
+    GMTrack *track=[GMTrack new];track.url=[NSURL fileURLWithPath:[self.documents stringByAppendingPathComponent:@"metadata-replacement.wav"]];
+    [[@"old-file" dataUsingEncoding:NSUTF8StringEncoding] writeToURL:track.url atomically:YES];
+    track.title=@"Cached title";track.artist=@"Artist";track.album=@"Album";track.albumArtist=@"Artist";
+    track.metadataLoaded=YES;track.metadataSignature=GMMetadataSignature(track.url);GMCacheRawMetadata(track);
+    GMTrack *restored=[GMTrack new];restored.url=track.url;
+    [self check:@"metadata_cache_restores_title_and_no_art" value:GMRestoreCachedMetadata(restored) && [restored.title isEqual:@"Cached title"] && restored.artwork==nil];
+    [[@"new-file-with-a-different-size" dataUsingEncoding:NSUTF8StringEncoding] writeToURL:track.url atomically:YES];
+    [self check:@"replaced_audio_invalidates_metadata_cache" value:!GMRestoreCachedMetadata(restored)];
+}
 - (void)waitOffscreenPreparation {
     GMMediaStillStore *store=GMMediaStills();
     BOOL ready=store.prefetch.count==0 && !store.jobKey && store.fingerprintQueue.operationCount==0;
     if(!ready && ++self.attempts<60){After(.5,^{[self waitOffscreenPreparation];});return;}
-    [self check:@"offscreen_track_specific_artwork_prepared_in_both_styles" value:ready];[self finish];
+    [self check:@"offscreen_track_specific_artwork_prepared_in_both_styles" value:ready];[self checkMetadataInvalidation];[self finish];
 }
 - (void)checkRestoredCache {
     CFTimeInterval started=CACurrentMediaTime();
