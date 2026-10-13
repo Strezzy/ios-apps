@@ -43,7 +43,7 @@
             page.transform = CGAffineTransformMakeTranslation(0,container.bounds.size.height);
         } else page.alpha = 0;
         hero.alpha=0;
-        [UIView animateWithDuration:reduced ? 0 : .12 animations:^{hero.alpha=1;self.sourceArtwork.alpha=0;}];
+        [UIView animateWithDuration:reduced ? 0 : .12 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{hero.alpha=1;self.sourceArtwork.alpha=0;} completion:nil];
         player.artworkOwnerVisible = YES;
         [hero setPlaying:player.player.isPlaying];
         [hero setCaseOpen:player.player.isPlaying animated:!reduced];
