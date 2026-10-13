@@ -4,6 +4,10 @@
 #ifndef MUSIC_UIKIT_CD_CASE_ADDITIONS
 #define MUSIC_UIKIT_CD_CASE_ADDITIONS
 
+typedef double CFTimeInterval;
+extern CFTimeInterval CACurrentMediaTime(void);
+extern CGRect CGRectInset(CGRect rect, CGFloat dx, CGFloat dy);
+
 @class WKWebView, WKWebViewConfiguration, WKNavigation, WKNavigationAction;
 @class WKUserContentController, WKScriptMessage, WKFrameInfo, WKWebsiteDataStore;
 @class NSURLRequest, CMMotionManager, CMDeviceMotion, CMAttitude, NSOperationQueue;
@@ -27,6 +31,7 @@ extern void NSLog(NSString *format, ...);
 @property(readonly, copy) NSString *absoluteString;
 @end
 @interface NSBundle (GMCDLocalResources)
+- (id)objectForInfoDictionaryKey:(NSString *)key;
 - (NSURL *)URLForResource:(NSString *)name withExtension:(NSString *)extension subdirectory:(NSString *)subpath;
 @end
 @interface NSData (GMCDJSON)

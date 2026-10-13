@@ -22,7 +22,8 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     }];
 }
 - (void)capture:(NSString *)name {
-    UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:self.window.bounds.size];
+    UIGraphicsImageRendererFormat *format=[UIGraphicsImageRendererFormat defaultFormat]; format.scale=1;
+    UIGraphicsImageRenderer *renderer=[[UIGraphicsImageRenderer alloc] initWithSize:self.window.bounds.size format:format];
     UIImage *image=[renderer imageWithActions:^(UIGraphicsImageRendererContext *context){[self.window drawViewHierarchyInRect:self.window.bounds afterScreenUpdates:NO];}];
     [UIImagePNGRepresentation(image) writeToFile:[self.documents stringByAppendingPathComponent:name] atomically:YES];
 }
