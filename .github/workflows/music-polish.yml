@@ -1,0 +1,135 @@
+name: Verify Music 0.13 polish
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['MusicPolish13/**', '.github/workflows/music-polish.yml']
+permissions:
+  contents: write
+concurrency:
+  group: music-polish-13
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Apply targeted changes without replacing the native glass UI
+        run: |
+          set -euo pipefail
+          python3 MusicPolish13/prepare.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('MusicPolish13/RendererProbe.m')
+          p.write_text(p.read_text().replace('if(t==29){','if(t>=29 && self.pendingCaptures==0){'))
+          PY
+          npm install --prefix /tmp/music-tools --no-audit --no-fund esbuild@0.25.12
+          MUSIC_ESBUILD_MODULE=/tmp/music-tools/node_modules/esbuild/lib/main.js node Music/Support/build_cd_renderer.mjs > Evidence/renderer-bundle.json
+      - name: Build native production and test applications
+        run: |
+          set -euo pipefail
+          bash Music/build-macos.sh > Evidence/device-compile.log 2>&1
+          codesign --verify --deep --strict Music/Build-Mac/Payload/Music.app
+          for PROBE in Renderer Grid; do
+            APP="/tmp/Music${PROBE}Probe.app"
+            mkdir -p "$APP"
+            cp -R Music/Resources/. "$APP/"
+            PROBE="$PROBE" python3 - <<'PY'
+          import os,plistlib
+          from pathlib import Path
+          name=os.environ['PROBE'];p=Path('/tmp/Music'+name+'Probe.app/Info.plist')
+          d=plistlib.loads(p.read_bytes());d['CFBundleIdentifier']='com.billy.music.'+name.lower()+'probe';d['CFBundleExecutable']='Probe';d['CFBundleSupportedPlatforms']=['iPhoneSimulator'];d.pop('UIRequiredDeviceCapabilities',None)
+          d['UIApplicationSceneManifest']={'UIApplicationSupportsMultipleScenes':False,'UISceneConfigurations':{}}
+          p.write_bytes(plistlib.dumps(d))
+          PY
+            xcrun --sdk iphonesimulator clang -arch arm64 -isysroot "$(xcrun --sdk iphonesimulator --show-sdk-path)" -mios-simulator-version-min=26.0 -O1 -fobjc-arc -fblocks -Wno-deprecated-declarations -framework Foundation -framework UIKit -framework AVFoundation -framework AVFAudio -framework AVKit -framework MediaPlayer -framework UniformTypeIdentifiers -framework QuartzCore -framework PhotosUI -framework ImageIO -framework CoreGraphics -framework CoreText -framework WebKit -framework CoreMotion "MusicPolish13/${PROBE}Probe.m" -o "$APP/Probe" > "Evidence/${PROBE}-compile.log" 2>&1
+            codesign --force --sign - "$APP"
+          done
+      - name: Run native Open Close playback warm reuse and six-case grid checks
+        run: |
+          set -euo pipefail
+          xcrun simctl list devices available -j > Evidence/devices.json
+          DEVICE=$(python3 -c 'import json;d=json.load(open("Evidence/devices.json"));print(next(x["udid"] for k in sorted(d["devices"],reverse=True) if "iOS-26" in k for x in d["devices"][k] if x["name"]=="iPhone 17 Pro"))')
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl status_bar "$DEVICE" override --time '9:41' --batteryState charged --batteryLevel 100
+          for PROBE in Renderer Grid; do
+            if [ "$PROBE" = Renderer ]; then ID=com.billy.music.rendererprobe; RESULT=result.json; else ID=com.billy.music.gridprobe; RESULT=grid-result.json; fi
+            xcrun simctl install "$DEVICE" "/tmp/Music${PROBE}Probe.app"
+            xcrun simctl launch --terminate-running-process --console-pty "$DEVICE" "$ID" > "Evidence/${PROBE}-runtime.log" 2>&1 &
+            DATA=$(xcrun simctl get_app_container "$DEVICE" "$ID" data)
+            for attempt in $(seq 1 110); do test ! -f "$DATA/Documents/$RESULT" || break; sleep 3; done
+            cp "$DATA/Documents/"*.json Evidence/ || true
+            cp "$DATA/Documents/"*.png Evidence/ || true
+            python3 -c 'import json,sys;d=json.load(open("Evidence/"+sys.argv[1]));print(json.dumps(d.get("checks",d),indent=2));assert d["passed"]' "$RESULT"
+            if [ "$PROBE" = Grid ]; then
+              xcrun simctl io "$DEVICE" screenshot Evidence/Native-Albums-Light.png
+              xcrun simctl ui "$DEVICE" appearance dark
+              sleep 3
+              xcrun simctl io "$DEVICE" screenshot Evidence/Native-Albums-Dark.png
+            fi
+            xcrun simctl terminate "$DEVICE" "$ID" || true
+          done
+          xcrun simctl shutdown "$DEVICE" || true
+      - name: Verify exact IPA and preserve reviewed source
+        env:
+          MUSIC_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,plistlib,shutil,struct,zipfile
+          from pathlib import Path
+          ipa=Path('Music/Build-Mac/Music.ipa')
+          with zipfile.ZipFile(ipa) as z:
+              assert z.testzip() is None
+              info=plistlib.loads(z.read('Payload/Music.app/Info.plist'))
+              assert (info['CFBundleIdentifier'],info['CFBundleShortVersionString'],info['CFBundleVersion'])==('com.billy.glassmusic','0.13','14')
+              binary=z.read('Payload/Music.app/'+info['CFBundleExecutable']);assert binary[:4]==bytes.fromhex('cffaedfe') and struct.unpack_from('<I',binary,4)[0]==0x100000c
+              manifest=json.loads(z.read('Payload/Music.app/CDCase/manifest.json'))
+              assert hashlib.sha256(z.read('Payload/Music.app/CDCase/music-cd.js')).hexdigest()==manifest['output']['sha256']
+              for license in ['CDCase-ACKNOWLEDGMENTS.txt','Three-LICENSE.txt','Cask3-LICENSE.txt']:assert z.read('Payload/Music.app/'+license)
+          native=json.loads(Path('Evidence/result.json').read_text());grid=json.loads(Path('Evidence/grid-result.json').read_text())
+          assert native['passed'] and all(native['checks'].values()) and grid['passed'] and grid['nativeTabCount']==5
+          timings=json.loads(Path('Evidence/loading-times.json').read_text())
+          report={'version':'0.13','build':'14','ipaBytes':ipa.stat().st_size,'ipaSHA256':hashlib.sha256(ipa.read_bytes()).hexdigest(),'nativeChecks':native['checks'],'grid':grid,'loadingMeasurement':timings,'physicalDeviceTested':False,'nativePassed':True,'runURL':os.environ['MUSIC_RUN_URL'],'note':'Measured in Apple iOS simulator, not a physical iPhone or LiveContainer. UI and album-grid layout hashes preserved.'}
+          Path('Music/BUILD-REPORT.json').write_text(json.dumps(report,indent=2)+'\n')
+          Path('Music/README.txt').write_text('Music 0.13 (14)\n\nCD render quality and loading polish.\nRun bash build-macos.sh with Xcode to rebuild. Native glass controls and album layout are unchanged.\nSee BUILD-REPORT.json for native regression checks, loading measurements and remaining physical-device testing.\n')
+          docs=Path('Music/Verification-0.13');docs.mkdir(exist_ok=True)
+          for name in ['result.json','grid-result.json','loading-times.json','UI-PRESERVATION.json']:shutil.copy2(Path('Evidence')/name,docs/name)
+          print(json.dumps(report,indent=2))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Music MusicPolish13/RendererProbe.m MusicPolish13/GridProbe.m
+          git commit -m 'Save native-tested Music 0.13 rendering and warm reuse'
+          git pull --rebase origin main
+          git push origin HEAD:main
+          mkdir -p Release
+          cp Music/Build-Mac/Music.ipa Release/
+          cp Music/BUILD-REPORT.json Release/
+          cp Evidence/Native-*.png Release/
+          cp Evidence/loading-times.json Release/LOADING-REPORT.json
+          cp Evidence/grid-result.json Release/GRID-REPORT.json
+          python3 - <<'PY'
+          import hashlib,zipfile
+          from pathlib import Path
+          with zipfile.ZipFile('Release/Music-Source.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for p in sorted(Path('Music').rglob('*')):
+                  if p.is_file() and not any(c in {'Build-Mac','Build-Probe','node_modules'} for c in p.parts):z.write(p,p.as_posix())
+          files=sorted(p for p in Path('Release').iterdir() if p.is_file())
+          Path('Release/SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in files))
+          PY
+      - name: Save build for visual review before publication
+        uses: actions/upload-artifact@v7
+        with:
+          name: Music-0.13-14-Verified
+          path: Release
+          retention-days: 14
+      - name: Save native evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Music-0.13-Evidence
+          path: Evidence
+          retention-days: 14
