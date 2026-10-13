@@ -464,7 +464,8 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
         self.caseWarmHost = [[UIView alloc] initWithFrame:CGRectMake(0,0,300,300)];
         self.caseWarmHost.userInteractionEnabled = NO;
         self.caseWarmHost.accessibilityElementsHidden = YES;
-        self.caseWarmHost.alpha = .01;
+        // Stay above UIKit's quantized visibility cutoff while hidden behind navigation.
+        self.caseWarmHost.alpha = .02;
         [self.view insertSubview:self.caseWarmHost atIndex:0];
     }
     [self.player.cdCaseView moveToHost:self.caseWarmHost frame:self.caseWarmHost.bounds prewarming:YES];

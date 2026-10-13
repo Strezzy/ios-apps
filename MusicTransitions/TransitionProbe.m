@@ -13,7 +13,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
 @property(nonatomic) NSInteger attempts;
 @end
 @implementation TransitionProbe
-- (void)check:(NSString *)key value:(BOOL)value { self.checks[key]=@(value); NSLog(@"CHECK %@ %@",key,value?@"PASS":@"FAIL"); }
+- (void)check:(NSString *)key value:(BOOL)value { self.checks[key]=@(value && (!self.checks[key] || [self.checks[key] boolValue])); NSLog(@"CHECK %@ %@",key,value?@"PASS":@"FAIL"); }
 - (void)state:(GMCDCaseView *)view then:(void (^)(NSDictionary *))block {
     if (!view.webView) { [self check:@"renderer_present" value:NO]; block(@{}); return; }
     [view.webView evaluateJavaScript:@"JSON.stringify(window.MusicCD.diagnostics())" completionHandler:^(id result,NSError *error){
@@ -30,7 +30,8 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
 - (void)finish {
     BOOL passed=self.checks.count>15;
     for(NSNumber *value in self.checks.allValues) passed=passed&&value.boolValue;
-    NSDictionary *report=@{@"passed":@(passed),@"checks":self.checks,@"physicalDeviceTested":@NO};
+    NSDictionary *report=@{@"passed":@(passed),@"checks":self.checks,@"physicalDeviceTested":@NO,
+        @"rendererAllocations":@(GMCDSharedHub().rendererAllocations),@"rendererReuses":@(GMCDSharedHub().rendererReuses)};
     [[NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:nil] writeToFile:[self.documents stringByAppendingPathComponent:@"result.json"] atomically:YES];
 }
 - (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)options {
@@ -52,6 +53,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
 - (void)waitWarm {
     GMCDCaseView *hero=self.shell.player.cdCaseView;
     if(!hero.readyForDisplay && ++self.attempts<60){After(1,^{[self waitWarm];});return;}
+    NSLog(@"WARM active=%d prewarming=%d eligible=%d window=%@ hostAlpha=%f size=%@ failure=%@",hero.ownerActive,hero.prewarming,[hero eligibleForRenderer],hero.window,hero.superview.alpha,NSStringFromCGRect(hero.bounds),hero.rendererFailureReason);
     [self check:@"hero_prewarmed" value:hero.readyForDisplay && hero.prewarming];
     self.originalWeb=hero.webView;
     [self state:hero then:^(NSDictionary *state){

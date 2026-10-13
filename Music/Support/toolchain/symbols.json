@@ -172,7 +172,9 @@
         "_UIImagePNGRepresentation",
         "_UISceneDidActivateNotification",
         "_UISceneWillDeactivateNotification",
-        "_UISheetPresentationControllerDetentIdentifierLarge"
+        "_UISheetPresentationControllerDetentIdentifierLarge",
+        "_UITransitionContextToViewKey",
+        "_UIAccessibilityTraitButton"
       ]
     },
     {

@@ -703,7 +703,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     }
     CGFloat halo = grid ? 4 : 8;
     web.frame = CGRectInset(self.bounds,-halo,-halo);
-    [web.layer removeAllAnimations]; web.alpha = .01;
+    [web.layer removeAllAnimations]; web.alpha = self.prewarming ? 1 : .01;
     self.fallback.alpha = 1; self.fallback.hidden = NO;
     self.renderTicket = [NSUUID UUID].UUIDString;
     self.rendererStartedAt = CACurrentMediaTime(); self.firstFrameSeconds = -1;

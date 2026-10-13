@@ -240,7 +240,10 @@ enum { UIViewAnimationOptionTransitionFlipFromLeft = 1UL << 20,
 @interface UIViewController (GMPlayerTransition)
 @property(nonatomic, weak) id<UIViewControllerTransitioningDelegate> transitioningDelegate;
 @end
+typedef unsigned long long UIAccessibilityTraits;
+extern const UIAccessibilityTraits UIAccessibilityTraitButton;
 @interface UIView (GMPlayerCoordinates)
+@property(nonatomic) UIAccessibilityTraits accessibilityTraits;
 - (CGRect)convertRect:(CGRect)rect fromView:(UIView *)view;
 @end
 extern NSString *const UITransitionContextToViewKey;
