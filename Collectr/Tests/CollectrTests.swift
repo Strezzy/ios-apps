@@ -86,6 +86,15 @@ final class CollectrTests: XCTestCase {
         payload = try sender.payload(card); payload.card.owner = UUID()
         XCTAssertThrowsError(try receiver.stage(payload,id: UUID(),from: sender.identity))
     }
+    func testDuplicateIncomingSerialIsReserved() throws {
+        let sender = try fresh(), receiver = try fresh(); let card = try mint(sender)
+        let payload = try sender.payload(card), id = UUID()
+        try receiver.stage(payload,id: id,from: sender.identity)
+        try receiver.stage(payload,id: id,from: sender.identity)
+        XCTAssertThrowsError(try receiver.stage(payload,id: UUID(),from: sender.identity))
+        var altered = payload; altered.card.id = UUID()
+        XCTAssertThrowsError(try receiver.stage(altered,id: UUID(),from: sender.identity))
+    }
     func testDepthNormalizationHandlesDA3Distance() throws {
         let result = try DepthNormalization().normalize([1,2,4,8],isInverseDepth: false,luma: [],temporal: false)
         XCTAssertGreaterThan(result[0],result[3]); XCTAssertTrue(result.allSatisfy { (0...1).contains($0) })

@@ -16,7 +16,7 @@ struct InteractiveCard: View {
     var body: some View {
         let tilt = reduceMotion ? SIMD2<Float>.zero : motion.tilt + drag
         CardFace(image: image,depth: depth,amount: amount,tilt: tilt,rarity: rarity,serial: serial,total: total,sleeved: sleeved,live: image != nil)
-            .rotation3DEffect(.degrees(Double(tilt.y)*-7),axis: (x: 1,y: 0,z: 0),perspective: 0.5)
+            .rotation3DEffect(.degrees(Double(tilt.y) * -7),axis: (x: 1,y: 0,z: 0),perspective: 0.5)
             .rotation3DEffect(.degrees(Double(tilt.x)*9),axis: (x: 0,y: 1,z: 0),perspective: 0.5)
             .gesture(DragGesture(minimumDistance: 8).onChanged { value in drag = SIMD2(Float(max(-1,min(1,value.translation.width/140))),Float(max(-1,min(1,value.translation.height/140)))) }.onEnded { _ in withAnimation(.spring(response: 0.6,dampingFraction: 0.7)) { drag = .zero } })
             .onAppear { updateMotion() }.onDisappear { motion.stop() }

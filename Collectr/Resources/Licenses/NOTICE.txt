@@ -1,0 +1,13 @@
+Collectr includes the Depth Anything 3 Base monocular Core ML conversion.
+Upstream: https://github.com/ByteDance-Seed/Depth-Anything-3
+Conversion: https://huggingface.co/mlboydaisuke/Depth-Anything-3-Base-CoreML
+Pinned revision: 8e2e01d73a6b78f89beaac573ce3a009cf1fbb50
+Package: DepthAnythingV3_base_504.mlpackage (FP16, 504 x 504)
+Model and conversion are distributed under Apache License 2.0.
+The license is included alongside this notice.
+
+DepthEstimator and DepthNormalization were adapted from Strezzy/ios-apps/DepthCheck.
+Collectr's palette extraction follows the bounded weighted clustering method in
+Strezzy/ios-apps/Music/Sources/ArtworkPalette.h. The sleeve and Metal card surface
+are original Collectr implementations, visually informed by Music's CD case.
+No Three.js or CD Case JavaScript is included.

@@ -65,7 +65,12 @@ final class CollectionStore: ObservableObject {
         if FileManager.default.fileExists(atPath: photoURL.path) {
             guard Self.hash(try Data(contentsOf: photoURL)) == Self.hash(photo) else { throw CollectrError.message("This edition's image does not match the saved original.") }
         } else { try photo.write(to: photoURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
-        if let depth { try depth.write(to: mediaURL(edition, depth: true), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
+        if let depth {
+            let depthURL = mediaURL(edition, depth: true)
+            if FileManager.default.fileExists(atPath: depthURL.path) {
+                guard Self.hash(try Data(contentsOf: depthURL)) == Self.hash(depth) else { throw CollectrError.message("This edition’s depth does not match its saved original.") }
+            } else { try depth.write(to: depthURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
+        }
     }
     func saveDraft(_ draft: DraftRecord, photo: Data, depth: Data?) throws {
         guard (1...1000).contains(draft.count), !draft.title.isEmpty, draft.title.count <= 80, draft.depthAmount.isFinite, (0...1).contains(draft.depthAmount), draft.palette.count == 3, Self.hash(photo) == draft.imageHash, depth.map(Self.hash) == draft.depthHash else { throw CollectrError.message("This draft has an invalid edition or image.") }
@@ -118,8 +123,9 @@ final class CollectionStore: ObservableObject {
         if let old = transfers.first(where: { $0.id == id }) {
             guard old.incoming, old.peer == peer, old.card == payload.card else { throw CollectrError.message("Trade identity mismatch.") }; return
         }
-        if let existing = cards.first(where: { $0.editionID == payload.card.editionID }) {
-            guard existing.creator == payload.card.creator, existing.editionSize == payload.card.editionSize, existing.imageHash == payload.card.imageHash, existing.depthHash == payload.card.depthHash, existing.rarity == payload.card.rarity, existing.depthAmount == payload.card.depthAmount else { throw CollectrError.message("The edition does not match its existing copies.") }
+        guard !transfers.contains(where: { $0.incoming && [.offered, .staged].contains($0.phase) && ($0.card.id == payload.card.id || ($0.card.editionID == payload.card.editionID && $0.card.serial == payload.card.serial)) }) else { throw CollectrError.message("This numbered copy already has an incoming offer.") }
+        if let existing = cards.first(where: { $0.editionID == payload.card.editionID }) ?? transfers.first(where: { $0.card.editionID == payload.card.editionID })?.card {
+            guard existing.title == payload.card.title, existing.created == payload.card.created, existing.palette == payload.card.palette, existing.creator == payload.card.creator, existing.editionSize == payload.card.editionSize, existing.imageHash == payload.card.imageHash, existing.depthHash == payload.card.depthHash, existing.rarity == payload.card.rarity, existing.depthAmount == payload.card.depthAmount else { throw CollectrError.message("The edition does not match its existing copies.") }
         }
         try writeMedia(payload.card.editionID, photo: payload.photo, depth: payload.depth)
         try change { $0.transfers.insert(Transfer(id: id, peer: peer, card: payload.card, phase: .offered, incoming: true, date: Date()), at: 0) }
@@ -148,7 +154,7 @@ final class CollectionStore: ObservableObject {
             var card = db.transfers[i].card
             card.history.append(TradeStamp(id: id, from: peer, to: db.identity, date: db.transfers[i].date))
             card.owner = db.identity; try card.validate()
-            guard !db.cards.contains(where: { $0.id == card.id }) else { throw CollectrError.message("This copy is already owned.") }
+            guard !db.cards.contains(where: { $0.id == card.id || ($0.editionID == card.editionID && $0.serial == card.serial) }) else { throw CollectrError.message("This copy is already owned.") }
             db.cards.append(card); db.transfers[i].phase = .received
         }
     }

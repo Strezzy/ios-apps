@@ -24,7 +24,7 @@ final class DepthEstimator: @unchecked Sendable {
             Bundle.main.url(forResource: name, withExtension: "mlmodelc")
         ].compactMap { $0 }
         guard let modelURL = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
-            throw DepthCheckError.message("The \(choice.title) model is missing from this installation. Install the complete Depth Check release, which includes both offline models.")
+            throw DepthCheckError.message("The \(choice.title) model is missing from this installation. Install the complete Collectr release, which includes its offline depth model.")
         }
 
         let configuration = MLModelConfiguration()
