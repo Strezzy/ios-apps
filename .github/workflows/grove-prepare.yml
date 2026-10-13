@@ -1,0 +1,50 @@
+name: Prepare and verify Sunshower Grove
+on:
+  push:
+    branches: [sunshower-grove-v23]
+permissions:
+  contents: write
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Apply the exact tested source changes
+        run: python3 .grove-transfer/prepare.py
+      - name: Check source syntax
+        run: |
+          python3 -m py_compile EnterTheThirdDimension/Support/*.py
+          for file in EnterTheThirdDimension/Resources/Game/*.js; do node --check "$file"; done
+      - name: Install the browser verifier
+        run: |
+          python3 -m venv /tmp/grove-qa
+          /tmp/grove-qa/bin/pip install playwright==1.57.0
+          /tmp/grove-qa/bin/playwright install --with-deps webkit
+      - name: Exercise the bundled game in WebKit
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a /tmp/grove-qa/bin/python EnterTheThirdDimension/Support/qa_browser.py --engine webkit
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Sunshower-Grove-WebKit
+          path: EnterTheThirdDimension/Build/BrowserQA
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Commit the verified source and actual frames to the staging branch
+        run: |
+          set -euo pipefail
+          cp EnterTheThirdDimension/Build/BrowserQA/QA.json EnterTheThirdDimension/docs/WEBKIT-QA.json
+          cp EnterTheThirdDimension/Build/BrowserQA/*.png EnterTheThirdDimension/docs/screenshots/
+          rm -rf .grove-transfer
+          rm .github/workflows/grove-prepare.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add EnterTheThirdDimension .github/workflows/third-dimension.yml .github/workflows/grove-prepare.yml .grove-transfer
+          git commit -m 'Complete Sunshower Grove 2.3 with WebKit-verified source and gameplay frames'
+          git push origin HEAD:sunshower-grove-v23
+          git rev-parse HEAD
