@@ -34,7 +34,7 @@ const SPIN = THREE.MathUtils.degToRad(18);
 const SPIN_EASE = 0.9;
 const FIT = 0.94;
 
-const MSAA = 0;
+const MSAA = 4;
 
 const STARS = 1.6;
 const STAR_THRESHOLD = 2.0;
@@ -194,7 +194,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     onFail?.(reason);
   };
   const grid = control.quality === 'grid';
-  const ROOM_SIZE = grid ? 128 : 256;
+  const ROOM_SIZE = 256;
   const targetFPS = grid ? 18 : 30;
   const getSpin = () => control.playing && !control.reducedMotion;
   // The native user decides when to open the lid; no timed presentation tour.
@@ -208,6 +208,13 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   let previousArt = null;
   let artMix = 1;
   let artKey = null;
+  let artLoading = false;
+  let announcedFrame = '';
+  let artworkCompletedAt = 0;
+  const startedAt = performance.now();
+  let firstFrameMs = null;
+  let fittedExtent = 0;
+  let fitRatio = 1;
   const background = new THREE.Vector3(0.018, 0.018, 0.023);
   const disc = { artIn: 16.2, printOut: 59.1 };
 
@@ -238,7 +245,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     const details = [gl.getProgramInfoLog(program),gl.getShaderInfoLog(vertex),gl.getShaderInfoLog(fragment)].filter(Boolean).join(' | ');
     fatal('shader-compile: ' + details.slice(0,1800));
   };
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, grid ? 1 : 1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.autoClear = false;
   renderer.setClearColor(0xffffff, 0);
   const hdr =
@@ -251,8 +258,14 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       stencilBuffer: false,
       resolveDepthBuffer: false,
     });
-  const rtPage = target(0, true);
-  const rt = [target(MSAA, true), target(MSAA, true)];
+  // Antialias the actual offscreen geometry, not just the final full-screen
+  // quad. The old grid rendered these surfaces at 1x with zero MSAA samples.
+  const gl = renderer.getContext();
+  const supportedSamples = Array.from(gl.getInternalformatParameter(gl.RENDERBUFFER,
+    hdr ? gl.RGBA16F : gl.RGBA8, gl.SAMPLES) || []);
+  const sampleCount = Math.max(0, ...supportedSamples.filter(n => n <= MSAA));
+  const rtPage = target(sampleCount, true);
+  const rt = [target(sampleCount, true), target(sampleCount, true)];
   const rtBright = target(0);
   const rtStarA = target(0);
   const rtStarB = target(0);
@@ -353,7 +366,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   const depthOnly = track(new THREE.MeshBasicMaterial({ colorWrite: false }));
   glass.add(copyQuad);
 
-  const samples = 1;
+  const samples = 2;
 
   const rodMaterial = () =>
     track(
@@ -478,7 +491,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   const ndc = new THREE.Vector2();
   let item = null;
   let last = 0;
-  let view = { w: 1, h: 1, openScale: 1 };
+  let view = { w: 1, h: 1, openScale: 1, baseDistance: 400 };
 
   const setOpenFlag = (on) => {
     if (st.open === on) return;
@@ -661,8 +674,47 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     }
 
     place(showPose(t));
+    fitPoseInsideArtwork();
     draw();
-    if (firstFrame && !failed) { firstFrame = false; onReady?.(); }
+    // Announce only a frame with the requested cover. A pooled renderer must
+    // never reveal the previous album while the replacement image is decoding.
+    const frameKey = String(control.epoch || '') + ':' + String(control.artToken || '');
+    if (!artLoading && control.artToken !== 'pending' && !failed && (firstFrame || announcedFrame !== frameKey)) {
+      firstFrame = false; announcedFrame = frameKey;
+      if (firstFrameMs === null) firstFrameMs = performance.now() - startedAt;
+      onReady?.(control.epoch, control.artToken);
+    }
+  }
+
+  const fitPoint = new THREE.Vector3();
+  function fitPoseInsideArtwork() {
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+    const reserve = Math.max(3, Math.min(view.w, view.h) * 0.012);
+    const safeX = 1 - 2 * reserve / Math.max(1, view.w);
+    const safeY = 1 - 2 * reserve / Math.max(1, view.h);
+    let distance = view.baseDistance;
+    // Conservative bounds cover the rounded rails, hinge and sheets. They
+    // also include depth, so perspective foreshortening cannot clip a corner.
+    for (const matrix of [item.mCase, item.mLid]) {
+      for (let i = 0; i < 8; i++) {
+        fitPoint.set(i & 1 ? HALF + 1.25 : -HALF - 1.25,
+          i & 2 ? HALF + 1.25 : -HALF - 1.25, i & 4 ? 7 : -7).applyMatrix4(matrix);
+        distance = Math.max(distance,
+          fitPoint.z + Math.abs(fitPoint.x) / (tanHalf * camera.aspect * safeX),
+          fitPoint.z + Math.abs(fitPoint.y) / (tanHalf * safeY));
+      }
+    }
+    camera.position.z = distance * 1.002;
+    camera.updateMatrixWorld();
+    fitRatio = view.baseDistance / camera.position.z;
+    fittedExtent = 0;
+    for (const matrix of [item.mCase, item.mLid]) {
+      for (let i = 0; i < 8; i++) {
+        fitPoint.set(i & 1 ? HALF + 1.25 : -HALF - 1.25,
+          i & 2 ? HALF + 1.25 : -HALF - 1.25, i & 4 ? 7 : -7).applyMatrix4(matrix).project(camera);
+        fittedExtent = Math.max(fittedExtent, Math.abs(fitPoint.x), Math.abs(fitPoint.y));
+      }
+    }
   }
 
   const _c = new THREE.Vector3();
@@ -762,8 +814,9 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     rtStarB.setSize(hw, hh);
     camera.aspect = w / h;
     const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
-    const fitH = CASE / FIT / 2 / tanHalf;
-    const fitW = (CASE * 1.065) / 2 / (tanHalf * camera.aspect);
+    const padding = clamp(Number(control.padding) || 0, 0, 12);
+    const fitH = CASE / FIT / 2 / tanHalf * h / Math.max(1, h - padding * 2);
+    const fitW = (CASE * 1.065) / 2 / (tanHalf * camera.aspect) * w / Math.max(1, w - padding * 2);
     const dist = Math.max(fitH, fitW);
     camera.position.set(0, 0, dist);
     camera.lookAt(0, 0, 0);
@@ -771,7 +824,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld();
     const across = 2 * dist * tanHalf * camera.aspect;
-    view = { w, h, openScale: Math.min(1.04, across / (CASE * 2.25)) };
+    view = { w, h, openScale: Math.min(1.04, across / (CASE * 2.25)), baseDistance: dist };
     dirty = true;
     schedule();
   }
@@ -881,14 +934,15 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   async function updateArt(art) {
     const key = typeof art === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(art) && art.length <= 8 * 1024 * 1024 ? art : defaultArt;
     if (key === artKey) return;
-    artKey = key;
+    artKey = key; artLoading = true;
     const generation = ++artGeneration;
     let tex;
     try { tex = await new THREE.TextureLoader().loadAsync(key); }
     catch { try { tex = await new THREE.TextureLoader().loadAsync(defaultArt); } catch { fatal('texture-unavailable'); return; } }
     if (disposed || failed || generation !== artGeneration) { tex.dispose(); return; }
+    artLoading = false; artworkCompletedAt = performance.now();
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = Math.min(grid ? 2 : 4, renderer.capabilities.getMaxAnisotropy());
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     if (!item) {
       currentArt = previousArt = tex;
       item = buildCase(tex);
@@ -897,7 +951,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       if (previousArt && previousArt !== currentArt) previousArt.dispose();
       previousArt = currentArt;
       currentArt = tex;
-      artMix = control.reducedMotion ? 1 : 0;
+      artMix = control.reducedMotion || firstFrame ? 1 : 0;
       const u = item.discMesh.material.uniforms;
       u.uArt.value = currentArt; u.uArtPrevious.value = previousArt; u.uArtMix.value = artMix;
       if (artMix === 1) { previousArt.dispose(); previousArt = currentArt; u.uArtPrevious.value = currentArt; }
@@ -910,7 +964,14 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     if (disposed || failed) return;
     const openBefore = control.open;
     const motionBefore = control.reducedMotion;
+    const changedEpoch = typeof state.epoch === 'string' && state.epoch !== control.epoch;
     Object.assign(control, state);
+    if (changedEpoch) {
+      firstFrame = true; announcedFrame = '';
+      st.phase = 'rest'; st.phaseAt = st.t; st.open = false; st.closeAfter = false;
+      st.auto = false; st.spinRate = 0;
+      lean.x = lean.y = grab.x = grab.y = grab.vx = grab.vy = 0;
+    }
     if (Array.isArray(control.background) && control.background.length === 3) {
       const linear = control.background.map(v => {
         v = clamp(Number(v) || 0, 0, 1); return v < 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
@@ -923,7 +984,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       lean.y = (Number(control.tiltY) || 0) * (grid ? 0.27 : 0.75);
       grab.x = grab.y = grab.vx = grab.vy = 0;
     }
-    if (openBefore !== control.open || (!motionBefore && control.reducedMotion)) toggleOpen(!!control.open);
+    if (changedEpoch || openBefore !== control.open || (!motionBefore && control.reducedMotion)) toggleOpen(!!control.open);
     updateArt(control.art);
     dirty = true;
     visibility();
@@ -935,6 +996,8 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     update,
     setOpen: (on) => { control.open = !!on; toggleOpen(on); },
     debug: () => ({ quality: grid ? 'grid' : 'hero', roomSize: ROOM_SIZE, pixelRatio: renderer.getPixelRatio(),
+      msaaSamples: sampleCount, refractionSamples: samples, fittedExtent, fitRatio, firstFrameMs, artworkCompletedAt,
+      epoch: control.epoch, artToken: control.artToken, artLoading,
       fpsLimit: targetFPS, playing: !!control.playing, reducedMotion: !!control.reducedMotion, frameCount, active: !!control.active, scheduled: !!raf, disposed, ready: !firstFrame,
       open: st.open, phase: st.phase, spin: st.spin, tiltX:lean.x, tiltY:lean.y, artMix, textureCount: renderer.info.memory.textures,
       geometryCount: renderer.info.memory.geometries, width: rtPage.width, height: rtPage.height }),

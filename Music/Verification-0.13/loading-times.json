@@ -1,0 +1,7 @@
+{
+  "environment" : "iOS simulator; not physical iPhone timing",
+  "rendererAllocations" : 1,
+  "warmHeroSeconds" : 0.12264437499993619,
+  "rendererReuses" : 1,
+  "coldHeroSeconds" : 8.7134492500000533
+}

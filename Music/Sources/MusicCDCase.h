@@ -16,7 +16,7 @@ enum {
 - (void)configureWithIdentifier:(NSString *)identifier title:(NSString *)title
                         artist:(NSString *)artist artwork:(UIImage *)artwork;
 // Owner visibility is combined with actual window/scene visibility. Setting
-// active to NO releases this view's live renderer and keeps a case still.
+// active to NO pauses rendering and may cache a bounded idle renderer for reuse.
 - (void)setActive:(BOOL)active;
 - (void)setPlaying:(BOOL)playing;
 - (void)setCaseOpen:(BOOL)open animated:(BOOL)animated;

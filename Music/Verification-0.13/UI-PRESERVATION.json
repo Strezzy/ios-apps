@@ -1,0 +1,13 @@
+{
+  "unchanged": {
+    "Music/Sources/main.m": "39ec35eec7aaceb149a1f431a798a2b21c94962bfed4b40fbd1fadd44d03aeba",
+    "Music/Sources/BrowseUI.m": "303d14020381235513f8390944d1e7303e552f011b94843d94526e3a3f6a466d",
+    "Music/Sources/MusicCDInspector.m": "a9d726e40a6e7362df5cf057b2aa4d27db6b8752ad6ff19a3f8ac5277a7391ab",
+    "Music/Sources/MusicAppearance.m": "2396aae39d76bdc91dc62b840ceb5d0154a9a832967583d319dee7f7806ceab5",
+    "Music/Sources/MusicArtworkBackdrop.m": "0ed10a98051c7da8afbdfce11ebd282a2c65768bdff9ff025efb0f47523d4b7c"
+  },
+  "albumTileLayoutUnchanged": true,
+  "nativeGlassDockUnchanged": true,
+  "gridTransparentMarginPoints": 4,
+  "heroTransparentMarginPoints": 8
+}

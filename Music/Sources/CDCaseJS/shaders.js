@@ -113,15 +113,15 @@ export const ROOM_BAKE_FRAG = `
   }
   void main() {
     vec4 acc = vec4(0.0);
-    for (int y = 0; y < 4; y++) {
-      for (int x = 0; x < 4; x++) {
-        vec2 st = (gl_FragCoord.xy + (vec2(float(x), float(y)) + 0.5) / 4.0 - 0.5) / uSize;
+    for (int y = 0; y < 2; y++) {
+      for (int x = 0; x < 2; x++) {
+        vec2 st = (gl_FragCoord.xy + (vec2(float(x), float(y)) + 0.5) / 2.0 - 0.5) / uSize;
         vec3 d = normalize(faceDir(uFace, st));
         vec3 l = lamps(d);
         acc += vec4(room(d) + l, dot(l, vec3(0.3333)));
       }
     }
-    gl_FragColor = acc / 16.0;
+    gl_FragColor = acc / 4.0;
   }
 `;
 

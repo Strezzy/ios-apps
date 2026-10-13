@@ -32,13 +32,17 @@ function receive(next) {
   if (Array.isArray(next.background) && next.background.length === 3 && next.background.every(Number.isFinite)) {
     clean.background = next.background.map(v => Math.max(0, Math.min(1, v)));
   }
+  for (const key of ['epoch','artToken']) {
+    if (typeof next[key] === 'string' && next[key].length <= 100) clean[key] = next[key];
+  }
+  if (typeof next.padding === 'number' && Number.isFinite(next.padding)) clean.padding = Math.max(0, Math.min(12, next.padding));
   const qualityChanged = clean.quality && state.quality !== clean.quality;
   Object.assign(state, clean);
   if (qualityChanged && stage) { stage.dispose(); stage = null; }
   try {
     if (!stage) {
       stage = createStage(container, { ...state }, {
-        onReady: () => post({ type: 'rendered' }),
+        onReady: (epoch, artToken) => post({ type: 'rendered', epoch, artToken }),
         onOpen: open => post({ type: 'open', open }),
         onFail: reportFailure,
       });

@@ -141,7 +141,7 @@ static void GMConfigureArtwork(UIImageView *view, GMTrack *track) {
         cell.textLabel.text = @"Playlists";
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu",(unsigned long)self.shell.playlistStore.playlists.count];
     } else {
-        cell.textLabel.text = @"Music"; cell.detailTextLabel.text = @"0.10 (11)";
+        cell.textLabel.text = @"Music"; cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ (%@)",[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"],[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]];
     }
     GMApplyAppFontToViewTree(cell.contentView);
     return cell;

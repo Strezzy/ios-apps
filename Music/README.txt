@@ -1,8 +1,5 @@
-Music 0.12 (13)
+Music 0.13 (14)
 
-Repairs the CD renderer bootstrap and boolean playback bridge.
-Larger, tighter album grid. Native glass UI and existing data paths preserved.
-
-See BUILD-REPORT.json for actual native checks and remaining device validation.
-Run bash build-macos.sh with Xcode installed to rebuild the IPA.
-Original renderer geometry, shaders, credits and licenses are included.
+CD render quality and loading polish.
+Run bash build-macos.sh with Xcode to rebuild. Native glass controls and album layout are unchanged.
+See BUILD-REPORT.json for native regression checks, loading measurements and remaining physical-device testing.
