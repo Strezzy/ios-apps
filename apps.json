@@ -253,6 +253,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "2.3",
+          "buildVersion": "5",
+          "buildNumber": "5",
+          "date": "2026-10-13T22:54:29Z",
+          "localizedDescription": "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.3-build5/EnterTheThirdDimension.ipa",
+          "size": 3410491,
+          "minOSVersion": "16.0",
+          "sha256": "12972ba0db9efcb4397deb6a356a74fc30a8b1ea2ce5c97a7e2dc42883cdc704"
+        },
+        {
           "version": "2.2",
           "buildVersion": "4",
           "buildNumber": "4",
@@ -291,11 +302,11 @@
         "entitlements": [],
         "privacy": {}
       },
-      "version": "2.2",
-      "versionDate": "2026-10-12T22:46:20Z",
-      "versionDescription": "A visual polish update with expressive chibi inhabitants, sculpted reflective water forms, animated rainforest foliage, soft dynamic shadows, richer materials, luminous bloom, and smoother edges. Explore the Folded Forest, remember girl, frog, and fox forms, and unfold the world into 3D. Landscape touch controls, checkpoints, and offline play.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.2-build4/EnterTheThirdDimension.ipa",
-      "size": 3407046
+      "version": "2.3",
+      "versionDate": "2026-10-13T22:54:29Z",
+      "versionDescription": "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.3-build5/EnterTheThirdDimension.ipa",
+      "size": 3410491
     },
     {
       "name": "Rinse",
