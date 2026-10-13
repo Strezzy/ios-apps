@@ -11,6 +11,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Generate and edit images with AI | 1.2 (3) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/prism-1.2-build3/Prism.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png" width="44" alt=""/> **Depth Check** — Convert photos and videos to 3D | 1.0 (8) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension-Rain.png" width="44" alt=""/> **Enter the Third Dimension** — Become the creatures of a magical rainforest | 2.2 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.2-build4/EnterTheThirdDimension.ipa) | iOS 16.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rinse.jpg" width="44" alt=""/> **Rinse** — Remove metadata from photos and videos | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-4/Rinse.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -41,6 +42,10 @@ Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-
 ### Enter the Third Dimension
 
 Play as a living raindrop in a mystical rainforest. Touch creatures to learn their forms, become a translucent girl, frog or fox, and shift between 2D and 3D to explore hidden paths. Includes an animated origin story, a playable first chapter, simple landscape touch controls, checkpoints, and offline play.
+
+### Rinse
+
+Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.
 
 ## Add my apps to LiveContainer
 

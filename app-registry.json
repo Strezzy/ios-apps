@@ -38,5 +38,13 @@
     "icon": "ThirdDimension-Rain.png",
     "category": "games",
     "tintColor": "#7FE6E3"
+  },
+  "com.billy.rinse": {
+    "name": "Rinse",
+    "subtitle": "Remove metadata from photos and videos",
+    "localizedDescription": "Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.",
+    "icon": "Rinse.jpg",
+    "category": "photo-video",
+    "tintColor": "#0DC2C2"
   }
 }

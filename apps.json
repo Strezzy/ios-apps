@@ -239,6 +239,40 @@
       "versionDescription": "A visual polish update with expressive chibi inhabitants, sculpted reflective water forms, animated rainforest foliage, soft dynamic shadows, richer materials, luminous bloom, and smoother edges. Explore the Folded Forest, remember girl, frog, and fox forms, and unfold the world into 3D. Landscape touch controls, checkpoints, and offline play.",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.2-build4/EnterTheThirdDimension.ipa",
       "size": 3407046
+    },
+    {
+      "name": "Rinse",
+      "subtitle": "Remove metadata from photos and videos",
+      "localizedDescription": "Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.",
+      "category": "photo-video",
+      "tintColor": "#0DC2C2",
+      "bundleIdentifier": "com.billy.rinse",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "buildNumber": "1",
+          "date": "2026-10-13T00:41:32Z",
+          "localizedDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-4/Rinse.ipa",
+          "size": 2319256,
+          "minOSVersion": "26.0",
+          "sha256": "9028e28fc7ba5ef8d64fb6b6c330b3fa7cc011f0d33de1fbe8aea7d2ee893a07"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rinse.jpg",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Save the clean photos you choose to your library."
+        }
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-13T00:41:32Z",
+      "versionDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-4/Rinse.ipa",
+      "size": 2319256
     }
   ],
   "news": []
