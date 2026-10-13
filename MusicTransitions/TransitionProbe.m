@@ -246,7 +246,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     [self check:@"cassette_album_stills" value:ready];[self capture:@"Cassette-Albums.png"];
         self.shell.selectedIndex=4;After(.5,^{[self capture:@"Settings-Media.png"];
             [self.shell setLiveMedium:0];[self check:@"switch_back_to_cd" value:self.shell.player.cdCaseView.medium==0 && self.shell.compactPlayer.cover.medium==0];
-            [self checkCollectionCoverage];[self finish];
+            [self checkCollectionCoverage];[self captureCollectionCoverage];
         });
 }
 
@@ -258,6 +258,9 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     NSString *equivalent=[cold keyForArtwork:decoded medium:medium background:reference.backgroundComponents];
     [self check:[NSString stringWithFormat:@"%ld_cache_key_survives_image_recreation",(long)medium] value:[equivalent isEqual:key]];
     [self check:[NSString stringWithFormat:@"%ld_rendered_png_survives_memory_eviction",(long)medium] value:[cold imageForKey:equivalent]!=nil && cold.worker==nil];
+    UIImage *cached=[cold imageForKey:equivalent];
+    for(NSInteger i=0;cached && i<65;i++)[cold rememberImage:cached key:[NSString stringWithFormat:@"evict-%ld",(long)i]];
+    [self check:@"decoded_cache_bounded_and_disk_retained" value:cold.cache.count<=64 && cold.cache[equivalent]==nil && [cold imageForKey:equivalent]!=nil];
     [cold clear];
     [self check:[NSString stringWithFormat:@"%ld_disk_survives_memory_warning",(long)medium] value:[cold imageForKey:equivalent]!=nil];
     NSString *changed=[cold keyForArtwork:[UIImage imageNamed:@"IconSignalPreview"] medium:medium background:reference.backgroundComponents];
@@ -283,7 +286,23 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     }
     [self.shell setLiveMedium:0];
 }
+- (void)captureCollectionCoverage {
+    self.shell.selectedIndex=2;
+    After(.5,^{
+        [self capture:@"CD-Playlists.png"];[self.shell setLiveMedium:1];
+        After(.5,^{
+            [self capture:@"Cassette-Playlists.png"];self.shell.selectedIndex=3;
+            GMSearchController *search=self.shell.searchController;
+            [search.table scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:2] atScrollPosition:UITableViewScrollPositionBottom animated:NO];
+            After(.5,^{
+                [self capture:@"Cassette-Search.png"];[self.shell setLiveMedium:0];
+                After(.5,^{[self capture:@"CD-Search.png"];[self finish];});
+            });
+        });
+    });
+}
 - (void)checkRestoredCache {
+    CFTimeInterval started=CACurrentMediaTime();
     // This runs in a newly launched process. Reconstruct UIImage objects and
     // cells synchronously, without allowing a render-worker frame to run.
     for(NSInteger medium=0;medium<2;medium++){
@@ -296,7 +315,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
         }
     }
     BOOL passed=YES;for(NSNumber *value in self.checks.allValues)passed=passed && value.boolValue;
-    [[NSJSONSerialization dataWithJSONObject:@{@"passed":@(passed),@"checks":self.checks} options:NSJSONWritingPrettyPrinted error:nil] writeToFile:[self.documents stringByAppendingPathComponent:@"relaunch.json"] atomically:YES];
+    [[NSJSONSerialization dataWithJSONObject:@{@"passed":@(passed),@"checks":self.checks,@"synchronousCacheReadSeconds":@(CACurrentMediaTime()-started)} options:NSJSONWritingPrettyPrinted error:nil] writeToFile:[self.documents stringByAppendingPathComponent:@"relaunch.json"] atomically:YES];
 }
 
 @end

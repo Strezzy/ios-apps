@@ -59,6 +59,8 @@ static NSString *GMMediaDigest(NSData *data) {
 @property(nonatomic,strong) NSMutableDictionary *failures;
 @property(nonatomic,strong) NSMutableArray *order;
 @property(nonatomic,strong) NSMapTable *artworkKeys;
+@property(nonatomic,strong) NSMapTable *pendingFingerprints;
+@property(nonatomic,strong) NSOperationQueue *fingerprintQueue;
 @property(nonatomic,strong) NSURL *directory;
 @property(nonatomic,strong) NSMutableDictionary *prefetch;
 - (UIImage *)imageForKey:(NSString *)key;
@@ -899,6 +901,8 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
     self=[super init];if(self){
         self.cache=[NSMutableDictionary new];self.failures=[NSMutableDictionary new];self.order=[NSMutableArray new];
         self.artworkKeys=[NSMapTable weakToStrongObjectsMapTable];self.prefetch=[NSMutableDictionary new];
+        self.pendingFingerprints=[NSMapTable weakToStrongObjectsMapTable];
+        self.fingerprintQueue=[NSOperationQueue new];self.fingerprintQueue.maxConcurrentOperationCount=1;
         // Application Support survives relaunches and ordinary OS cache purges.
         NSURL *support=[[NSFileManager defaultManager] URLsForDirectory:14 inDomains:1].firstObject;
         self.directory=[support URLByAppendingPathComponent:@"RenderedMedia-v3"];
@@ -934,6 +938,27 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
 }
 - (void)enqueueArtwork:(UIImage *)artwork background:(NSArray *)background {
     if(!background)return;
+    // Bulk library preparation must not JPEG-encode every cover on the UI
+    // thread, or sit ahead of the live player's own artwork encoding queue.
+    if(artwork && ![self.artworkKeys objectForKey:artwork]){
+        NSMutableArray *backgrounds=[self.pendingFingerprints objectForKey:artwork];
+        if(backgrounds){if(![backgrounds containsObject:background])[backgrounds addObject:background];return;}
+        backgrounds=[NSMutableArray array];[backgrounds addObject:background];
+        [self.pendingFingerprints setObject:backgrounds forKey:artwork];
+        __weak GMMediaStillStore *weakSelf=self;
+        [self.fingerprintQueue addOperationWithBlock:^{
+            @autoreleasepool {
+                NSString *digest=GMMediaDigest([GMCDEncodedArtwork(artwork,128) dataUsingEncoding:NSUTF8StringEncoding]);
+                dispatch_async(dispatch_get_main_queue(),^{
+                    GMMediaStillStore *store=weakSelf;if(!store)return;
+                    [store.artworkKeys setObject:digest forKey:artwork];
+                    NSArray *pending=[[store.pendingFingerprints objectForKey:artwork] copy];
+                    [store.pendingFingerprints removeObjectForKey:artwork];
+                    for(NSArray *colors in pending)[store enqueueArtwork:artwork background:colors];
+                });
+            }
+        }];return;
+    }
     for(NSInteger medium=0;medium<2;medium++){
         NSString *key=[self keyForArtwork:artwork medium:medium background:background];
         if(self.cache[key] || [[NSFileManager defaultManager] fileExistsAtPath:[self.directory URLByAppendingPathComponent:key].path])continue;
@@ -970,8 +995,8 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         self.capturing=YES;
         NSString *key=self.jobKey;GMCDCaseView *worker=self.worker;
         [worker.webView evaluateJavaScript:@"window.MusicCD.still()" completionHandler:^(id result,NSError *error){
-            self.capturing=NO;
             if(self.worker!=worker || ![self.jobKey isEqual:key])return;
+            self.capturing=NO;
             // A rendered-frame acknowledgement can arrive while a queued art
             // decode is still settling. Null is "not ready", not a failed image.
             BOOL pending=!error && (!result || [result isKindOfClass:[NSNull class]]);

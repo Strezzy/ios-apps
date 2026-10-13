@@ -38,6 +38,9 @@ extern void NSLog(NSString *format, ...);
 - (void)removeAllObjects;
 - (void)removeObjectForKey:(id)key;
 @end
+@interface NSMapTable (GMMediaPendingFingerprints)
+- (void)removeObjectForKey:(id)key;
+@end
 @interface NSString (GMMediaDigestInput)
 - (NSData *)dataUsingEncoding:(NSUInteger)encoding;
 @end
