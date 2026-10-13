@@ -1,0 +1,75 @@
+name: Publish reviewed Music build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['MusicRelease/approved.json']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: app-catalog
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Restore the reviewed native artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BUILD_RUN=$(python3 -c 'import json;print(json.load(open("MusicRelease/approved.json"))["buildRun"])')
+          GRID_RUN=$(python3 -c 'import json;print(json.load(open("MusicRelease/approved.json"))["gridRun"])')
+          test "$(gh run view "$BUILD_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$GRID_RUN" --json conclusion --jq .conclusion)" = success
+          gh run download "$BUILD_RUN" --name Music-0.12-13-Verified --dir Release
+          gh run download "$GRID_RUN" --name Music-0.12-Grid-Evidence --dir Grid-Evidence
+          (cd Release && sha256sum -c SHA256SUMS.txt)
+          python3 - <<'PY'
+          import hashlib,json,plistlib,zipfile
+          from pathlib import Path
+          approval=json.loads(Path('MusicRelease/approved.json').read_text())
+          ipa=Path('Release/Music.ipa')
+          assert hashlib.sha256(ipa.read_bytes()).hexdigest()==approval['ipaSHA256']
+          report=json.loads(Path('Release/BUILD-REPORT.json').read_text())
+          grid=json.loads(Path('Grid-Evidence/grid-result.json').read_text())
+          assert report['nativePassed'] and all(report['nativeIOSSimulatorChecks'].values()) and grid['passed']
+          with zipfile.ZipFile(ipa) as z:
+              info=plistlib.loads(z.read('Payload/Music.app/Info.plist'))
+              assert (info['CFBundleIdentifier'],info['CFBundleShortVersionString'],info['CFBundleVersion'])==('com.billy.glassmusic','0.12','13')
+          with zipfile.ZipFile('Release/Music-Source.zip') as z:
+              for name in z.namelist():
+                  if name.startswith(('Music/Sources/','Music/Resources/','Music/Support/')) and not name.endswith('/'):
+                      assert Path(name).read_bytes()==z.read(name), f'Source changed after testing: {name}'
+          PY
+          cp Grid-Evidence/Native-Albums-*.png Release/
+          cp Grid-Evidence/grid-result.json Release/GRID-REPORT.json
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          paths=sorted(p for p in Path('Release').iterdir() if p.is_file() and p.name!='SHA256SUMS.txt')
+          Path('Release/SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in paths))
+          PY
+      - name: Publish Music 0.12 build 13
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create music-0.12-build13 Release/* --target "$(git rev-parse HEAD)" --title 'Music 0.12 (13) - CD renderer repair' --notes-file MusicRelease/NOTES.md
+      - name: Update the unchanged existing LiveContainer source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git pull --rebase origin main
+          python3 scripts/update_catalog.py --tag music-0.12-build13 --local Release/Music.ipa --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --notes 'Repairs the native CD renderer startup and playback commands. Clear reflective cases, spinning discs, working Open/Close and tilt controls, and a larger, tighter two-column Albums grid. Validated with native iOS simulator controls and actual rendered frames. Update the existing Music installation and keep its data container. See the release for test evidence and remaining physical-device checks.'
+          git add apps.json README.md
+          git commit -m 'Publish Music 0.12 (13) in the existing app catalog'
+          git push origin HEAD:main
