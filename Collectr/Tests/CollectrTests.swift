@@ -61,6 +61,21 @@ final class CollectrTests: XCTestCase {
         XCTAssertEqual(received.history.count,1); XCTAssertEqual(received.owner,receiver.identity); try received.validate()
         XCTAssertThrowsError(try restartedReceiver.stage(sender.payload(card),id: UUID(),from: sender.identity))
     }
+    func testDifferentSerialsFromOneEditionCanBothBeReceived() throws {
+        let sender = try fresh(), receiver = try fresh(); try mint(sender)
+        let originals = sender.cards
+        XCTAssertEqual(Set(originals.map(\.created)).count,1)
+        for card in originals.prefix(2) {
+            let transfer = try sender.offer(card,to: receiver.identity)
+            try receiver.stage(sender.payload(card),id: transfer.id,from: sender.identity)
+            try receiver.accept(transfer.id); try sender.commitOutgoing(transfer.id,peer: receiver.identity)
+            try receiver.receiveCommit(transfer.id,peer: sender.identity)
+            try sender.acknowledge(transfer.id,peer: receiver.identity)
+        }
+        XCTAssertEqual(receiver.cards.map(\.serial).sorted(),[1,2])
+        XCTAssertEqual(sender.cards.map(\.serial),[3])
+        XCTAssertEqual(Set(receiver.cards.map(\.editionID)).count,1)
+    }
     func testCancelledOfferUnlocksSenderAndCannotCommit() throws {
         let sender = try fresh(), receiver = try fresh(); let card = try mint(sender)
         let t = try sender.offer(card,to: receiver.identity)

@@ -82,9 +82,10 @@ final class CollectionStore: ObservableObject {
         guard let draft, draft.deletionConfirmed else { throw CollectrError.message("Remove the original from Photos before sealing this edition.") }
         guard Self.hash(try Data(contentsOf: mediaURL(draft.editionID))) == draft.imageHash else { throw CollectrError.message("The saved card could not be verified. Your draft has been kept.") }
         guard (1...1000).contains(draft.count) else { throw CollectrError.message("The edition size is invalid.") }
+        let created = Date()
         var minted: [CollectorCard] = []
         for serial in 1...draft.count {
-            let card = CollectorCard(id: UUID(), editionID: draft.editionID, title: draft.title, creator: identity, owner: identity, serial: serial, editionSize: draft.count, rarity: draft.rarity, created: Date(), palette: draft.palette, depthAmount: draft.depthAmount, imageHash: draft.imageHash, depthHash: draft.depthHash, history: [])
+            let card = CollectorCard(id: UUID(), editionID: draft.editionID, title: draft.title, creator: identity, owner: identity, serial: serial, editionSize: draft.count, rarity: draft.rarity, created: created, palette: draft.palette, depthAmount: draft.depthAmount, imageHash: draft.imageHash, depthHash: draft.depthHash, history: [])
             try card.validate(); minted.append(card)
         }
         try change { $0.cards += minted; $0.draft = nil }
@@ -125,7 +126,7 @@ final class CollectionStore: ObservableObject {
         }
         guard !transfers.contains(where: { $0.incoming && [.offered, .staged].contains($0.phase) && ($0.card.id == payload.card.id || ($0.card.editionID == payload.card.editionID && $0.card.serial == payload.card.serial)) }) else { throw CollectrError.message("This numbered copy already has an incoming offer.") }
         if let existing = cards.first(where: { $0.editionID == payload.card.editionID }) ?? transfers.first(where: { $0.card.editionID == payload.card.editionID })?.card {
-            guard existing.title == payload.card.title, existing.created == payload.card.created, existing.palette == payload.card.palette, existing.creator == payload.card.creator, existing.editionSize == payload.card.editionSize, existing.imageHash == payload.card.imageHash, existing.depthHash == payload.card.depthHash, existing.rarity == payload.card.rarity, existing.depthAmount == payload.card.depthAmount else { throw CollectrError.message("The edition does not match its existing copies.") }
+            guard existing.title == payload.card.title, existing.palette == payload.card.palette, existing.creator == payload.card.creator, existing.editionSize == payload.card.editionSize, existing.imageHash == payload.card.imageHash, existing.depthHash == payload.card.depthHash, existing.rarity == payload.card.rarity, existing.depthAmount == payload.card.depthAmount else { throw CollectrError.message("The edition does not match its existing copies.") }
         }
         try writeMedia(payload.card.editionID, photo: payload.photo, depth: payload.depth)
         try change { $0.transfers.insert(Transfer(id: id, peer: peer, card: payload.card, phase: .offered, incoming: true, date: Date()), at: 0) }
