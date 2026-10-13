@@ -1,0 +1,121 @@
+name: Publish verified Music 0.14
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/music-live-media-publish.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: app-catalog
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: macos-26
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUILD_RUN: '38357167594'
+      TESTED_SHA: 8ce7210987751b4aef1952af3433de05cb6594f7
+      RELEASE_TAG: music-0.14-build15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify the tested source and native evidence
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$BUILD_RUN" --json conclusion --jq .conclusion)" = success
+          test "$(gh run view "$BUILD_RUN" --json headSha --jq .headSha)" = "$TESTED_SHA"
+          gh run download "$BUILD_RUN" --name Music-case-transitions-candidate --dir Candidate
+          gh run download "$BUILD_RUN" --name Music-case-transitions-evidence --dir Evidence
+          python3 - <<'PY'
+          import hashlib,json,os,plistlib,subprocess,zipfile
+          from pathlib import Path
+          assert hashlib.sha256(Path('Candidate/Music.ipa').read_bytes()).hexdigest()=='e09b251a4921ce81f25c5d8907cd18e566cfc96634dd2117175a47030e0233f4'
+          report=json.loads(Path('Evidence/result.json').read_text())
+          assert report['passed'] and len(report['checks'])==42 and all(report['checks'].values())
+          changed=set(subprocess.check_output(['git','diff','--name-only',os.environ['TESTED_SHA'],'HEAD','--','Music'],text=True).splitlines())
+          assert changed <= {'Music/Resources/Info.plist','Music/README.txt','Music/BUILD-REPORT.json'},changed
+          before=plistlib.loads(subprocess.check_output(['git','show',os.environ['TESTED_SHA']+':Music/Resources/Info.plist']))
+          after=plistlib.loads(Path('Music/Resources/Info.plist').read_bytes())
+          assert (after['CFBundleShortVersionString'],after['CFBundleVersion'])==('0.14','15')
+          for key in ['CFBundleShortVersionString','CFBundleVersion']: before.pop(key);after.pop(key)
+          assert before==after
+          with zipfile.ZipFile('Candidate/Music.ipa') as z:
+              assert z.read('Payload/Music.app/CDCase/music-cd.js')==Path('Music/Resources/CDCase/music-cd.js').read_bytes()
+          print('All 42 native checks pass; production source matches the verified candidate.')
+          PY
+      - name: Build and sign the versioned device release
+        run: |
+          set -euo pipefail
+          mkdir -p Release
+          bash Music/build-macos.sh
+          codesign --verify --deep --strict Music/Build-Mac/Payload/Music.app
+          cp Music/Build-Mac/Music.ipa Release/Music.ipa
+          git archive --format=zip --output=Release/Music-Source.zip HEAD Music MusicTransitions MusicRelease scripts .github/workflows/music-transitions.yml .github/workflows/music-live-media-publish.yml
+          zip -qry Release/Verification.zip Evidence
+          python3 - <<'PY'
+          import hashlib,json,os,plistlib,zipfile
+          from pathlib import Path
+          ipa=Path('Release/Music.ipa')
+          with zipfile.ZipFile(ipa) as z:
+              assert z.testzip() is None
+              info=plistlib.loads(z.read('Payload/Music.app/Info.plist'))
+              assert (info['CFBundleIdentifier'],info['CFBundleShortVersionString'],info['CFBundleVersion'])==('com.billy.glassmusic','0.14','15')
+              assert 'iPhoneOS' in info['CFBundleSupportedPlatforms']
+              assert z.read('Payload/Music.app/CDCase/music-cd.js')==Path('Music/Resources/CDCase/music-cd.js').read_bytes()
+          report=json.loads(Path('Evidence/result.json').read_text())
+          report.update(version='0.14',build='15',sourceCommit=os.environ['GITHUB_SHA'],testedSourceCommit=os.environ['TESTED_SHA'],nativeRunURL='https://github.com/Strezzy/ios-apps/actions/runs/'+os.environ['BUILD_RUN'],ipaBytes=ipa.stat().st_size,ipaSHA256=hashlib.sha256(ipa.read_bytes()).hexdigest(),releaseSignatureVerified=True)
+          Path('Release/BUILD-REPORT.json').write_text(json.dumps(report,indent=2)+'\n')
+          Path('Release/SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(Path('Release').iterdir()) if p.is_file() and p.name!='SHA256SUMS.txt'))
+          PY
+      - name: Publish and verify the release assets
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release download "$RELEASE_TAG" --dir Existing
+            (cd Existing && shasum -a 256 -c SHA256SUMS.txt)
+            python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          report=json.loads(Path('Existing/BUILD-REPORT.json').read_text())
+          assert report['sourceCommit']==os.environ['GITHUB_SHA'] and report['testedSourceCommit']==os.environ['TESTED_SHA']
+          assert report['passed'] and report['releaseSignatureVerified']
+          PY
+            cp Existing/Music.ipa Release/Music.ipa
+          else
+            gh release create "$RELEASE_TAG" Release/* --draft --target "$GITHUB_SHA" --title 'Music 0.14 (15) - Live Cassette and faster artwork transitions' --notes-file MusicRelease/NOTES-0.14.md
+            gh release download "$RELEASE_TAG" --dir Published
+            (cd Published && shasum -a 256 -c SHA256SUMS.txt)
+            cmp Release/Music.ipa Published/Music.ipa
+          fi
+          gh release edit "$RELEASE_TAG" --draft=false
+      - name: Update the existing app source and download page
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout main
+          git pull --ff-only origin main
+          cp apps.json /tmp/catalog-before-music14.json
+          release_date="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .published_at)"
+          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local Release/Music.ipa --date "$release_date" --notes 'Live CD and Live Cassette artwork throughout Music, matching rendered thumbnails in Songs, Albums and the mini-player, faster song-to-player transitions with a source-art fade, and continuous spinning across song changes. Cask and the original optical shaders are preserved. All 42 native simulator checks passed; physical-device performance remains to be measured.'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          before=json.loads(Path('/tmp/catalog-before-music14.json').read_text());after=json.loads(Path('apps.json').read_text())
+          assert before['identifier']==after['identifier']
+          others=lambda d:{a['bundleIdentifier']:a for a in d['apps'] if a['bundleIdentifier']!='com.billy.glassmusic'}
+          assert others(before)==others(after)
+          music=next(a for a in after['apps'] if a['bundleIdentifier']=='com.billy.glassmusic')
+          assert music['version']=='0.14' and music['versions'][0]['buildNumber']=='15'
+          assert music['downloadURL'].endswith('/music-0.14-build15/Music.ipa')
+          PY
+          git add apps.json README.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish Music 0.14 (15) in the existing app catalog'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
