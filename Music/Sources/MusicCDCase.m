@@ -15,9 +15,6 @@ static BOOL GMCDRectsIntersect(CGRect a, CGRect b) {
         a.origin.x < b.origin.x+b.size.width && b.origin.x < a.origin.x+a.size.width &&
         a.origin.y < b.origin.y+b.size.height && b.origin.y < a.origin.y+a.size.height;
 }
-static UIColor *GMCDWhite(CGFloat white, CGFloat alpha) {
-    return [UIColor colorWithRed:white green:white blue:white alpha:alpha];
-}
 static UIInterfaceOrientation GMCDOrientation(UIWindow *window) {
     UIWindowScene *scene = window.windowScene;
     if ([scene respondsToSelector:@selector(effectiveGeometry)]) return scene.effectiveGeometry.interfaceOrientation;
@@ -904,7 +901,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
         // Application Support survives relaunches and ordinary OS cache purges.
         NSURL *support=[[NSFileManager defaultManager] URLsForDirectory:14 inDomains:1].firstObject;
         self.directory=[support URLByAppendingPathComponent:@"RenderedMedia-v3"];
-        [[NSFileManager defaultManager] createDirectoryAtURL:self.directory withIntermediateDirectories:YES attributes:nil error:nil];
+        [[NSFileManager defaultManager] createDirectoryAtURL:self.directory withIntermediateDirectories:YES attributes:nil error:(NSError **)0];
     }return self;
 }
 - (NSString *)keyForArtwork:(UIImage *)artwork medium:(NSInteger)medium background:(NSArray *)background {
@@ -990,7 +987,7 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
                     captured=YES;self.lastCaptureError=nil;[self.failures removeObjectForKey:key];
                     // Commit the file before publishing the image to cells, so any
                     // subsequent tab switch or relaunch can use it immediately.
-                    [data writeToURL:[self.directory URLByAppendingPathComponent:key] options:1 error:nil];
+                    [data writeToURL:[self.directory URLByAppendingPathComponent:key] options:1 error:(NSError **)0];
                     [self rememberImage:image key:key];[self.prefetch removeObjectForKey:key];
                     for(GMCDCaseView *view in GMCDSharedHub().views.allObjects) if([[self keyForView:view] isEqual:key]) {
                         view.fallback.snapshotKey=key;view.fallback.snapshot.image=image;[view.fallback setNeedsLayout];
