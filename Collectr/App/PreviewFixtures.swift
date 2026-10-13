@@ -40,6 +40,14 @@ enum PreviewFixtures {
             ctx.drawLinearGradient(gradient,start: .zero,end: CGPoint(x: 0,y: 490),options: [])
         }
     }
+    static func markReady() {
+        let token = CommandLine.arguments.first(where: { $0.hasPrefix("--preview-") }) ?? "normal"
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            let path = FileManager.default.urls(for: .documentDirectory,in: .userDomainMask)[0].appendingPathComponent("preview-ready.txt")
+            try? Data(token.utf8).write(to: path,options: .atomic)
+        }
+    }
     static func prepare(_ store: CollectionStore) {
         guard store.cards.isEmpty else { return }
         let image = photo(), bytes = image.jpegData(compressionQuality: 0.94)!, map = depth().pngData()!

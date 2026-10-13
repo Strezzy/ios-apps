@@ -65,6 +65,7 @@ struct CollectrRoot: View {
         }
         .onAppear {
             #if DEBUG && targetEnvironment(simulator)
+            PreviewFixtures.markReady()
             if CommandLine.arguments.contains("--preview-create") { editor.configurePreview() }
             if CommandLine.arguments.contains("--preview-collections") { tab = 1 }
             if CommandLine.arguments.contains("--preview-card"), let card = store.cards.first { tab = 1; inspect(card) }

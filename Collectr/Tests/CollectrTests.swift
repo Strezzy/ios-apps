@@ -1,7 +1,8 @@
 import XCTest
 import UIKit
 import CoreImage
-import Metal
+import MetalKit
+import ImageIO
 @testable import Collectr
 
 @MainActor
@@ -149,6 +150,26 @@ final class CollectrTests: XCTestCase {
         XCTAssertNotEqual(centered,tilted)
         XCTAssertEqual(try render(.zero,amount: 1,hasDepth: 0),try render(SIMD2(1,1),amount: 1,hasDepth: 0))
         XCTAssertEqual(try render(.zero,amount: 0,hasDepth: 1),try render(SIMD2(1,1),amount: 0,hasDepth: 1))
+    }
+    func testReloadedJPEGTextureKeepsColorsAndOrientation() throws {
+        let device = try XCTUnwrap(MTLCreateSystemDefaultDevice())
+        let bytes = photo()
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(bytes as CFData,nil))
+        let cg = try XCTUnwrap(CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways: true,kCGImageSourceThumbnailMaxPixelSize: 2200,kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary))
+        let renderer = DepthPhoto.Renderer()
+        let view = MTKView(frame: CGRect(x: 0,y: 0,width: 100,height: 140),device: device)
+        try renderer.configure(view)
+        try renderer.update(image: UIImage(cgImage: cg),depth: nil,tilt: .zero,amount: 0)
+        let texture = try XCTUnwrap(renderer.photo)
+        XCTAssertEqual(texture.pixelFormat,.rgba8Unorm)
+        func pixel(_ x: Int,_ y: Int) -> [UInt8] {
+            var p = [UInt8](repeating: 0,count: 4)
+            p.withUnsafeMutableBytes { texture.getBytes($0.baseAddress!,bytesPerRow: 4,from: MTLRegionMake2D(x,y,1,1),mipmapLevel: 0) }
+            return p
+        }
+        let top = pixel(50,10), bottom = pixel(50,110)
+        XCTAssertLessThan(top[0],25); XCTAssertGreaterThan(top[1],220); XCTAssertGreaterThan(top[2],220)
+        XCTAssertGreaterThan(bottom[0],220); XCTAssertGreaterThan(bottom[1],90); XCTAssertLessThan(bottom[1],180); XCTAssertLessThan(bottom[2],25)
     }
     func testBundledDA3ProducesFiniteDepth() async throws {
         let image = try PhotoPipeline().render(photo(),edits: PhotoEdits())

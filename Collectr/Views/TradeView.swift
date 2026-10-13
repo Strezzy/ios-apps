@@ -23,7 +23,7 @@ struct TradeView: View {
                                 VStack(alignment: .leading,spacing: 4) { Text(nearby.enabled ? "Looking nearby" : "Meet another collector").font(.headline); Text("Open Trade on both phones.").font(.caption).foregroundStyle(.secondary) }
                                 Spacer()
                             }
-                            Button(nearby.enabled ? "Stop nearby" : "Find nearby collectors",action: { nearby.enabled ? nearby.stop() : nearby.start() }).buttonStyle(.glassProminent)
+                            Button(nearby.enabled ? "Stop nearby" : "Find nearby collectors",action: { nearby.enabled ? nearby.stop() : nearby.start() }).buttonStyle(.glassProminent).foregroundStyle(.black)
                             if nearby.enabled && nearby.peers.isEmpty { Text("Keep both phones unlocked with Wi-Fi and Bluetooth on.").font(.caption).foregroundStyle(.secondary) }
                             ForEach(nearby.peers) { peer in
                                 Button { selectedPeer = peer.id } label: {
@@ -52,7 +52,7 @@ struct TradeView: View {
                                 }
                                 if let card = available.first(where: { $0.id == selectedCard }) {
                                     CardFace(image: store.image(card,thumbnail: true),rarity: card.rarity,serial: card.serial,total: card.editionSize).frame(width: 160).padding(.vertical,8)
-                                    Button("Offer this copy",systemImage: "arrow.up.forward") { confirmOffer = true }.buttonStyle(.glassProminent).disabled(!nearby.peers.contains(where: { $0.id == selectedPeer && $0.connected }))
+                                    Button("Offer this copy",systemImage: "arrow.up.forward") { confirmOffer = true }.buttonStyle(.glassProminent).foregroundStyle(.black).disabled(!nearby.peers.contains(where: { $0.id == selectedPeer && $0.connected }))
                                 }
                             }
                         }
@@ -65,7 +65,7 @@ struct TradeView: View {
                     }
                     Text("Check the matching pair code on both screens. Each transfer moves one numbered copy. Its rarity, edition size and trade history travel with it.").font(.caption).foregroundStyle(.secondary)
                 }.padding(24).padding(.bottom,32).frame(maxWidth: 600).frame(maxWidth: .infinity)
-            }.navigationBarTitleDisplayMode(.inline).toolbarBackground(.hidden,for: .navigationBar)
+            }.background(AmbientBackground(palette: RGB.defaults)).navigationBarTitleDisplayMode(.inline).toolbarBackground(.hidden,for: .navigationBar)
             .confirmationDialog("Offer this numbered copy?",isPresented: $confirmOffer,titleVisibility: .visible) {
                 Button("Send offer") {
                     if let card = available.first(where: { $0.id == selectedCard }), let peer = nearby.peers.first(where: { $0.id == selectedPeer }) { nearby.offer(card,to: peer) }
@@ -88,7 +88,7 @@ struct TradeView: View {
                 }
                 if transfer.phase == .offered {
                     HStack {
-                        if transfer.incoming { Button("Accept card") { nearby.accept(transfer) }.buttonStyle(.glassProminent) }
+                        if transfer.incoming { Button("Accept card") { nearby.accept(transfer) }.buttonStyle(.glassProminent).foregroundStyle(.black) }
                         Button(transfer.incoming ? "Decline" : "Cancel offer",role: .cancel) { nearby.cancel(transfer) }.buttonStyle(.glass)
                     }
                 }

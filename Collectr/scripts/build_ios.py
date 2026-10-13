@@ -29,7 +29,7 @@ def main():
     run([sys.executable,ROOT/'scripts/prepare_models.py'])
     run(['xcodegen','generate','--spec',ROOT/'project.yml'])
     build_number=os.environ.get('COLLECTR_BUILD_NUMBER','1')
-    common=['xcodebuild','-project',ROOT/'Collectr.xcodeproj','-scheme','Collectr','-derivedDataPath',BUILD/'DerivedData','CODE_SIGNING_ALLOWED=NO',f'CURRENT_PROJECT_VERSION={build_number}']
+    common=['xcodebuild','-project',ROOT/'Collectr.xcodeproj','-scheme','Collectr','-derivedDataPath',BUILD/'DerivedData','-jobs','2','CODE_SIGNING_ALLOWED=NO',f'CURRENT_PROJECT_VERSION={build_number}']
     run(common+['-configuration','Release','-sdk','iphoneos','-destination','generic/platform=iOS','build'],log='device-build.log')
     run(common+['-configuration','Debug','-destination',f'platform=iOS Simulator,id={udid}','build-for-testing'],log='test-build.log')
     subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -42,14 +42,22 @@ def main():
     subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run(['xcrun','simctl','bootstatus',udid,'-b'])
     run(['xcrun','simctl','install',udid,simapp])
-    launch=run(['xcrun','simctl','launch',udid,'com.billy.collectr'],capture=True)
-    time.sleep(3)
-    run(['xcrun','simctl','io',udid,'screenshot',BUILD/'Simulator-Launch.png'])
-    for name,argument in [('Create','--preview-create'),('Collections','--preview-collections'),('Card','--preview-card'),('Trade','--preview-trade')]:
+    container=Path(run(['xcrun','simctl','get_app_container',udid,'com.billy.collectr','data'],capture=True).strip())
+    marker=container/'Documents/preview-ready.txt'
+    def screenshot(name,argument=None):
         subprocess.run(['xcrun','simctl','terminate',udid,'com.billy.collectr'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        run(['xcrun','simctl','launch',udid,'com.billy.collectr',argument])
+        marker.unlink(missing_ok=True)
+        result=run(['xcrun','simctl','launch',udid,'com.billy.collectr']+([argument] if argument else []),capture=True)
+        deadline=time.monotonic()+30
+        while not marker.exists() or marker.read_text()!=(argument or 'normal'):
+            if time.monotonic()>deadline: raise RuntimeError(f'{name} did not finish opening')
+            time.sleep(0.25)
         time.sleep(2)
-        run(['xcrun','simctl','io',udid,'screenshot',BUILD/f'Preview-{name}.png'])
+        run(['xcrun','simctl','io',udid,'screenshot',BUILD/name])
+        return result
+    launch=screenshot('Simulator-Launch.png')
+    for name,argument in [('Create','--preview-create'),('Collections','--preview-collections'),('Card','--preview-card'),('Trade','--preview-trade')]:
+        screenshot(f'Preview-{name}.png',argument)
     app=BUILD/'DerivedData/Build/Products/Release-iphoneos/Collectr.app' 
     info=plistlib.loads((app/'Info.plist').read_bytes())
     assert info['CFBundleIdentifier']=='com.billy.collectr'

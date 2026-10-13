@@ -61,13 +61,31 @@ struct DepthPhoto: UIViewRepresentable {
         }
         func update(image: UIImage,depth map: UIImage?,tilt: SIMD2<Float>,amount: Double) throws {
             guard let device else { return }
-            let loader = MTKTextureLoader(device: device)
-            let options: [MTKTextureLoader.Option: Any] = [.SRGB: false, .origin: MTKTextureLoader.Origin.topLeft]
-            if lastPhoto !== image, let cg = image.cgImage { photo = try loader.newTexture(cgImage: cg,options: options); lastPhoto = image }
+            if lastPhoto !== image { photo = try texture(image,grayscale: false,device: device); lastPhoto = image }
             if lastDepth !== map {
-                if let cg = map?.cgImage { depth = try loader.newTexture(cgImage: cg,options: options) } else { depth = nil }; lastDepth = map
+                depth = try map.map { try texture($0,grayscale: true,device: device) }; lastDepth = map
             }
             uniforms = Uniforms(tilt: tilt,amount: Float(amount),hasDepth: map == nil ? 0 : 1)
+        }
+        // ImageIO can return extended-range and differently ordered JPEG pixels.
+        // Convert once to an explicit sRGB RGBA8 layout, rather than letting a
+        // texture loader infer the image's channel encoding or transfer curve.
+        private func texture(_ image: UIImage,grayscale: Bool,device: MTLDevice) throws -> MTLTexture {
+            guard let cg = image.cgImage, cg.width > 0, cg.height > 0 else { throw CollectrError.message("This card image could not be read.") }
+            let components = grayscale ? 1 : 4, row = cg.width * components
+            var pixels = [UInt8](repeating: 0,count: row * cg.height)
+            let space = grayscale ? CGColorSpaceCreateDeviceGray() : CGColorSpace(name: CGColorSpace.sRGB)!
+            let info = grayscale ? CGImageAlphaInfo.none.rawValue : CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+            let drawn = pixels.withUnsafeMutableBytes { ptr -> Bool in
+                guard let ctx = CGContext(data: ptr.baseAddress,width: cg.width,height: cg.height,bitsPerComponent: 8,bytesPerRow: row,space: space,bitmapInfo: info) else { return false }
+                ctx.draw(cg,in: CGRect(x: 0,y: 0,width: cg.width,height: cg.height)); return true
+            }
+            guard drawn else { throw CollectrError.message("This card image could not be prepared for depth.") }
+            let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: grayscale ? .r8Unorm : .rgba8Unorm,width: cg.width,height: cg.height,mipmapped: false)
+            desc.storageMode = .shared; desc.usage = .shaderRead
+            guard let texture = device.makeTexture(descriptor: desc) else { throw CollectrError.message("There is not enough memory to display this card.") }
+            pixels.withUnsafeBytes { texture.replace(region: MTLRegionMake2D(0,0,cg.width,cg.height),mipmapLevel: 0,withBytes: $0.baseAddress!,bytesPerRow: row) }
+            return texture
         }
         func draw(in view: MTKView) {
             guard let pipeline, let photo, let drawable = view.currentDrawable, let pass = view.currentRenderPassDescriptor, let buffer = queue?.makeCommandBuffer(), let enc = buffer.makeRenderCommandEncoder(descriptor: pass) else { return }

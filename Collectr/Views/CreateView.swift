@@ -48,14 +48,14 @@ struct CreateView: View {
                         draftRecovery(draft)
                     } else if editor.image == nil {
                         VStack(spacing: 14) {
-                            Button(action: editor.pick) { Label(editor.working ? "Opening photo…" : "Choose a photo",systemImage: "plus").frame(maxWidth: .infinity).padding(.vertical,8) }.buttonStyle(.glassProminent).disabled(editor.working)
+                            Button(action: editor.pick) { Label(editor.working ? "Opening photo…" : "Choose a photo",systemImage: "plus").frame(maxWidth: .infinity).padding(.vertical,8) }.buttonStyle(.glassProminent).foregroundStyle(.black).disabled(editor.working)
                             Text("Give a photo depth. Choose its rarity.\nSeal it into a collection of its own.").font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
                         }
                     } else {
                         editingControls
                         Button { editor.showSeal = true } label: {
                             Label(editor.sealing ? "Sealing your edition…" : "Seal edition",systemImage: "seal").frame(maxWidth: .infinity).padding(.vertical,8)
-                        }.buttonStyle(.glassProminent).disabled(!editor.canSeal)
+                        }.buttonStyle(.glassProminent).foregroundStyle(.black).disabled(!editor.canSeal)
                         Text("The original is removed from Photos before sealing.\nYour card stays safely in Collectr.").font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     if let error = editor.depthError {
@@ -64,6 +64,7 @@ struct CreateView: View {
                     }
                 }.padding(.horizontal,24).padding(.bottom,32).frame(maxWidth: 600).frame(maxWidth: .infinity)
             }
+            .background(AmbientBackground(palette: editor.palette))
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Create").navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -128,7 +129,7 @@ struct CreateView: View {
             VStack(spacing: 14) {
                 Text("Your edition is saved.").font(.headline)
                 Text(draft.deletionConfirmed ? "Finish sealing to add it to Collections." : "Continue the Photos confirmation to seal your edition.").font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                Button("Continue sealing") { Task { if let card = await editor.resume(store: store) { editor.reset(); onCreated(card) } } }.buttonStyle(.glassProminent).disabled(editor.sealing)
+                Button("Continue sealing") { Task { if let card = await editor.resume(store: store) { editor.reset(); onCreated(card) } } }.buttonStyle(.glassProminent).foregroundStyle(.black).disabled(editor.sealing)
                 if !draft.deletionConfirmed { Button("Discard draft",role: .destructive) { do { try store.discardDraft() } catch { editor.error = error.localizedDescription } }.buttonStyle(.glass) }
             }
         }

@@ -19,7 +19,7 @@ struct CollectionsView: View {
                         VStack(spacing: 22) {
                             CardFace(image: nil).frame(width: 210).rotationEffect(.degrees(-5)).padding(.vertical,20)
                             Text("Start with something\nworth keeping.").font(.system(size: 27,weight: .light,design: .serif)).multilineTextAlignment(.center)
-                            Button("Create your first card",action: onCreate).buttonStyle(.glassProminent)
+                            Button("Create your first card",action: onCreate).buttonStyle(.glassProminent).foregroundStyle(.black)
                         }.frame(maxWidth: .infinity).padding(.vertical,20)
                     } else {
                         LazyVGrid(columns: [GridItem(.flexible(),spacing: 20),GridItem(.flexible(),spacing: 20)],spacing: 28) {
@@ -39,7 +39,7 @@ struct CollectionsView: View {
                         }
                     }
                 }.padding(24).padding(.bottom,30).frame(maxWidth: 760).frame(maxWidth: .infinity)
-            }.navigationBarTitleDisplayMode(.inline).toolbarBackground(.hidden,for: .navigationBar)
+            }.background(AmbientBackground(palette: RGB.defaults)).navigationBarTitleDisplayMode(.inline).toolbarBackground(.hidden,for: .navigationBar)
         }
     }
 }
@@ -88,7 +88,7 @@ struct CardInspector: View {
                     Menu {
                         ForEach(copies) { copy in Button("Copy \(copy.serial) of \(copy.editionSize)") { card = copy } }
                     } label: { Label("\(selected.serial)/\(selected.editionSize)",systemImage: "square.stack") }.buttonStyle(.glass).disabled(copies.count < 2)
-                    Button("Trade",systemImage: "arrow.left.arrow.right") { onTrade(selected) }.labelStyle(.iconOnly).buttonStyle(.glassProminent).disabled(store.isLocked(selected))
+                    Button("Trade",systemImage: "arrow.left.arrow.right") { onTrade(selected) }.labelStyle(.iconOnly).buttonStyle(.glassProminent).foregroundStyle(.black).disabled(store.isLocked(selected))
                 }.controlSize(.regular)
                 Text(selected.depthAmount > 0 ? "Tilt gently to look inside." : "A moment, beautifully kept.").font(.caption2).foregroundStyle(.secondary).padding(.bottom,10)
             }.padding(.horizontal,24).padding(.top,8)
