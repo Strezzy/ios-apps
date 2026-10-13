@@ -1,4 +1,4 @@
-name: Publish verified Music 0.14
+name: Publish verified Music 0.15
 on:
   workflow_dispatch:
   push:
@@ -16,9 +16,9 @@ jobs:
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
-      BUILD_RUN: '38357167594'
-      TESTED_SHA: 8ce7210987751b4aef1952af3433de05cb6594f7
-      RELEASE_TAG: music-0.14-build15
+      BUILD_RUN: '38362660531'
+      TESTED_SHA: a97d745093214fc0d9f1e4950f6875dd9aa8a2bf
+      RELEASE_TAG: music-0.15-build16
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,19 +33,21 @@ jobs:
           python3 - <<'PY'
           import hashlib,json,os,plistlib,subprocess,zipfile
           from pathlib import Path
-          assert hashlib.sha256(Path('Candidate/Music.ipa').read_bytes()).hexdigest()=='e09b251a4921ce81f25c5d8907cd18e566cfc96634dd2117175a47030e0233f4'
+          assert hashlib.sha256(Path('Candidate/Music.ipa').read_bytes()).hexdigest()=='1990453ce21217e93fe5cbb0d2aee8f46934256ffd0b77412b773e1ee5ac82fe'
           report=json.loads(Path('Evidence/result.json').read_text())
-          assert report['passed'] and len(report['checks'])==42 and all(report['checks'].values())
+          assert report['passed'] and len(report['checks'])==63 and all(report['checks'].values())
+          relaunch=json.loads(Path('Evidence/relaunch.json').read_text())
+          assert relaunch['passed'] and len(relaunch['checks'])==54 and all(relaunch['checks'].values())
           changed=set(subprocess.check_output(['git','diff','--name-only',os.environ['TESTED_SHA'],'HEAD','--','Music'],text=True).splitlines())
           assert changed <= {'Music/Resources/Info.plist','Music/README.txt','Music/BUILD-REPORT.json'},changed
           before=plistlib.loads(subprocess.check_output(['git','show',os.environ['TESTED_SHA']+':Music/Resources/Info.plist']))
           after=plistlib.loads(Path('Music/Resources/Info.plist').read_bytes())
-          assert (after['CFBundleShortVersionString'],after['CFBundleVersion'])==('0.14','15')
+          assert (after['CFBundleShortVersionString'],after['CFBundleVersion'])==('0.15','16')
           for key in ['CFBundleShortVersionString','CFBundleVersion']: before.pop(key);after.pop(key)
           assert before==after
           with zipfile.ZipFile('Candidate/Music.ipa') as z:
               assert z.read('Payload/Music.app/CDCase/music-cd.js')==Path('Music/Resources/CDCase/music-cd.js').read_bytes()
-          print('All 42 native checks pass; production source matches the verified candidate.')
+          print('All 117 native checks pass; production source matches the verified candidate.')
           PY
       - name: Build and sign the versioned device release
         run: |
@@ -63,11 +65,13 @@ jobs:
           with zipfile.ZipFile(ipa) as z:
               assert z.testzip() is None
               info=plistlib.loads(z.read('Payload/Music.app/Info.plist'))
-              assert (info['CFBundleIdentifier'],info['CFBundleShortVersionString'],info['CFBundleVersion'])==('com.billy.glassmusic','0.14','15')
+              assert (info['CFBundleIdentifier'],info['CFBundleShortVersionString'],info['CFBundleVersion'])==('com.billy.glassmusic','0.15','16')
               assert 'iPhoneOS' in info['CFBundleSupportedPlatforms']
               assert z.read('Payload/Music.app/CDCase/music-cd.js')==Path('Music/Resources/CDCase/music-cd.js').read_bytes()
           report=json.loads(Path('Evidence/result.json').read_text())
-          report.update(version='0.14',build='15',sourceCommit=os.environ['GITHUB_SHA'],testedSourceCommit=os.environ['TESTED_SHA'],nativeRunURL='https://github.com/Strezzy/ios-apps/actions/runs/'+os.environ['BUILD_RUN'],ipaBytes=ipa.stat().st_size,ipaSHA256=hashlib.sha256(ipa.read_bytes()).hexdigest(),releaseSignatureVerified=True)
+          report['relaunch']=json.loads(Path('Evidence/relaunch.json').read_text())
+          report['checkCount']=len(report['checks'])+len(report['relaunch']['checks'])
+          report.update(version='0.15',build='16',sourceCommit=os.environ['GITHUB_SHA'],testedSourceCommit=os.environ['TESTED_SHA'],nativeRunURL='https://github.com/Strezzy/ios-apps/actions/runs/'+os.environ['BUILD_RUN'],ipaBytes=ipa.stat().st_size,ipaSHA256=hashlib.sha256(ipa.read_bytes()).hexdigest(),releaseSignatureVerified=True)
           Path('Release/BUILD-REPORT.json').write_text(json.dumps(report,indent=2)+'\n')
           Path('Release/SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(Path('Release').iterdir()) if p.is_file() and p.name!='SHA256SUMS.txt'))
           PY
@@ -86,7 +90,7 @@ jobs:
           PY
             cp Existing/Music.ipa Release/Music.ipa
           else
-            gh release create "$RELEASE_TAG" Release/* --draft --target "$GITHUB_SHA" --title 'Music 0.14 (15) - Live Cassette and faster artwork transitions' --notes-file MusicRelease/NOTES-0.14.md
+            gh release create "$RELEASE_TAG" Release/* --draft --target "$GITHUB_SHA" --title 'Music 0.15 (16) - Persistent artwork and front-opening cassette cases' --notes-file MusicRelease/NOTES-0.15.md
             gh release download "$RELEASE_TAG" --dir Published
             (cd Published && shasum -a 256 -c SHA256SUMS.txt)
             cmp Release/Music.ipa Published/Music.ipa
@@ -99,23 +103,23 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git checkout main
           git pull --ff-only origin main
-          cp apps.json /tmp/catalog-before-music14.json
+          cp apps.json /tmp/catalog-before-music15.json
           release_date="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .published_at)"
-          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local Release/Music.ipa --date "$release_date" --notes 'Live CD and Live Cassette artwork throughout Music, matching rendered thumbnails in Songs, Albums and the mini-player, faster song-to-player transitions with a source-art fade, and continuous spinning across song changes. Cask and the original optical shaders are preserved. All 42 native simulator checks passed; physical-device performance remains to be measured.'
+          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local Release/Music.ipa --date "$release_date" --notes 'Persistent CD and cassette artwork replaces the old fallback and survives app relaunches and tab changes. Covers and album metadata restore before the library appears. Cassette cases open forward and downward; playlists and Search album and artist previews use the selected media style. Cask and the original optical shaders are preserved. All 117 native simulator checks passed. New covers need one initial render; physical-device performance remains to be measured.'
           python3 - <<'PY'
           import json
           from pathlib import Path
-          before=json.loads(Path('/tmp/catalog-before-music14.json').read_text());after=json.loads(Path('apps.json').read_text())
+          before=json.loads(Path('/tmp/catalog-before-music15.json').read_text());after=json.loads(Path('apps.json').read_text())
           assert before['identifier']==after['identifier']
           others=lambda d:{a['bundleIdentifier']:a for a in d['apps'] if a['bundleIdentifier']!='com.billy.glassmusic'}
           assert others(before)==others(after)
           music=next(a for a in after['apps'] if a['bundleIdentifier']=='com.billy.glassmusic')
-          assert music['version']=='0.14' and music['versions'][0]['buildNumber']=='15'
-          assert music['downloadURL'].endswith('/music-0.14-build15/Music.ipa')
+          assert music['version']=='0.15' and music['versions'][0]['buildNumber']=='16'
+          assert music['downloadURL'].endswith('/music-0.15-build16/Music.ipa')
           PY
           git add apps.json README.md
           if ! git diff --cached --quiet; then
-            git commit -m 'Publish Music 0.14 (15) in the existing app catalog'
+            git commit -m 'Publish Music 0.15 (16) in the existing app catalog'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
