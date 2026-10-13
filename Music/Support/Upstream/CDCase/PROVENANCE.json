@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/annnguyentt/vibe-coding",
+  "commit": "efba8dfb956cca848422f18e8ede1bdf96033fca",
+  "permission": "Author README expressly invites use/remix/fork with credit; no standard LICENSE file",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "b6586346dafd49a0fac3c8b8aa8c4a9a8d6021a43500c8ebd44b052efd61d097"
+    },
+    {
+      "path": "cd-case/README.md",
+      "sha256": "b510befb2792be7b94dc85d6f2b5584be496679b8f6a004342cf676fb9119c6e"
+    },
+    {
+      "path": "cd-case/src/components/cd-case/CaseStage.js",
+      "sha256": "a63d3c54df35de83369a9d15c2164f3c64eb65a13c49da2307cefd33f42c0d3c"
+    },
+    {
+      "path": "cd-case/src/components/cd-case/caseGeometry.js",
+      "sha256": "80690a78e18bb99d8d18ce45cd176f866eb85af87ed608d83448bfce6fdc10fb"
+    },
+    {
+      "path": "cd-case/src/components/cd-case/shaders.js",
+      "sha256": "b47b6ec9801e8e6e73f10c28f3848ad1c0414c8b737dc599dcf0d4ecde55f960"
+    },
+    {
+      "path": "cd-case/src/components/cd-case/disc.js",
+      "sha256": "5ecbc947adbb0c4e55536f448c0169680e0e5e9ffeb38cf1a9eab235bf728f5f"
+    }
+  ]
+}

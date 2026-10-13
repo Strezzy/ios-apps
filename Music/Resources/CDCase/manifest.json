@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "upstreamCommit": "efba8dfb956cca848422f18e8ede1bdf96033fca",
+  "threeVersion": "0.185.1",
+  "esbuildVersion": "0.25.12",
+  "inputs": {
+    "Resources/CDCase/index.html": "b9c1e1f8c77abff6397fa0c23559d41f2ff88190945921dbdd598425b07ac3c8",
+    "Sources/CDCaseJS/bridge.js": "118c96b6f223eccbca0042f0e11fdfcb70c0be123232845cd327bbd9a6d7aa35",
+    "Sources/CDCaseJS/caseGeometry.js": "ae1308e606773e6279f757e771685a49f296b48ff71f10d6ac552ff6c223afa4",
+    "Sources/CDCaseJS/shaders.js": "ecf9f4d5bd600048e9004aa5e79183407fef26f37437ac5191ebd06aaae9fa95",
+    "Sources/CDCaseJS/stage.js": "7ba6a71925f1848bca5f296dda5050355e1a710a916ae74eeeadf74c08e182ab",
+    "Sources/CDCaseJS/vendor/LICENSE": "8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
+    "Sources/CDCaseJS/vendor/PROVENANCE.json": "69181964ea0ad9b6091170248637e88e29c80c9fd628af5212fd693a7c6555e5",
+    "Sources/CDCaseJS/vendor/three.core.js": "3718df126d69c125362a03340913204470d8c50238605150e57f808840fb7759",
+    "Sources/CDCaseJS/vendor/three.module.js": "bbf5ed13fe4373f5bd38b14ea8e62e9f157327da5638edc6d3863e08b167c9c7",
+    "Support/build_cd_renderer.mjs": "7f8b4d441dee81f69354e4f84b9cf2a481ec1c5e7c7e7f5f18c6431e621692b4"
+  },
+  "output": {
+    "path": "Resources/CDCase/music-cd.js",
+    "sha256": "1eb49fb0a482cd0cce5655261943db85a71c1b03c45bc967133fae4b777ebc80"
+  }
+}

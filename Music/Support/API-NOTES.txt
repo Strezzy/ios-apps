@@ -1,0 +1,476 @@
+MUSIC 0.10 / BUILD 11 — NATIVE APIS AND PERSISTENCE NOTES
+
+The narrow declarations were checked against Apple's public iOS 26 SDK headers
+and documentation. This file records the current construction, not an SDK
+replacement or evidence of an on-device run.
+
+APP-LOCAL CASK 3 SCROLLING ANIMATIONS
+MusicScrollAnimations.h/.m adapts all 15 presets from Cask 3, pinned at commit
+f82e252334d69a151afa8f20db3d59e7a84ee592. Cask 3 is by Ryan Nair, inspired by
+Ryan Petrich's original Cask, and is licensed under Apache 2.0. The full original
+license ships in the IPA; unmodified source, README, license, and byte hashes are
+retained under Support/Upstream/Cask3. The adaptation carries modification notes.
+
+Only ordinary row content is placed inside GMScrollAnimationView. The host's
+private contentView has namespaced explicit Core Animation effects; its model
+transform stays identity and opacity stays one. A separate tint view handles
+Color/Permanent Color. Native glass action trays, swipe foreground transforms,
+UIKit cell frames, tab bar/accessory geometry, and waveform animation keys remain
+outside the engine's ownership. No method replacement or jailbreak hooks exist.
+
+Apple publicly documents transform.rotation.x/y/z as scalar radians and the
+corresponding scale/translation key paths. Rotate uses scalar angle keyframes
+for an actual full turn. Shake keeps the original eight offsets without the
+original mismatched nine key times. Glitch uses bounded keyframes with an exact
+unit-scale endpoint. Bounce keeps a physical spring with damping ratio 0.5 and
+normalizes its complete settling duration to 0.5 seconds; it does not truncate
+an unsettled spring. CALayer.opacity and CAAnimation.speed are float, whereas
+animation duration and CASpringAnimation settlingDuration are doubles.
+
+The normal Settings page contains the switch and a GMScrollStyleCell. Native
+UIButton.menu/showsMenuAsPrimaryAction provides the anchored Liquid Glass style
+menu, with selected-state checkmarks. Its inline preview uses the same engine;
+preview content remains separate from native glass menu/Replay surfaces.
+Preset selection, replay, and offline Credits use the menu-dismissal handoff so
+new presentation does not compete with UIKit's menu animation. Preferences are
+stored separately in Documents/MusicScrollSettings.plist; Off/Fade are defaults.
+Supported identifiers are validated and commits are atomic.
+
+Public API references:
+https://github.com/ryannair05/Cask-3
+https://github.com/ryannair05/Cask-3/blob/f82e252334d69a151afa8f20db3d59e7a84ee592/Sources/Cask.swift
+https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/CoreAnimation_guide/Key-ValueCodingExtensions/Key-ValueCodingExtensions.html
+https://developer.apple.com/documentation/quartzcore/caspringanimation
+
+The 0.9/build10 implementation was approved by the user before this focused
+update. Device/simulator animation rendering remains unavailable here; source,
+public ABI, preserved-module comparison, compilation, and IPA checks do not
+substitute for a physical-device animation check.
+
+CONTROLLER AND PRESENTATION STRUCTURE
+One UITabBarController owns five UINavigationController children, ordered Songs,
+Albums, Playlists, Search, Settings. Controllers share the existing audio engine;
+opening an editor or Now Playing must not replace the controller tree or player.
+Songs is the complete alphabetical list with Play/Shuffle. Albums is an album
+browser; its former All Songs shortcut is absent.
+
+Song-row selection in Songs, album/playlist/artist details, and Search installs
+the collection queue and starts playback without presenting Now Playing. Header
+Play/Shuffle actions still present the player on success. playAllTrackIndexes:
+sets normal order; shuffleTrackIndexes: keeps a natural-order queue, chooses a
+random first song, and installs a shuffled queue. Ordinary row selection keeps
+the current playback mode. Search song selection resigns the keyboard while
+leaving its query/results active; album/artist navigation and editing retain the
+existing UISearchController dismissal-completion handoff.
+
+The linked SDK is 26 and minimum deployment is iOS 16. Native navigation bars
+and glass surfaces provide Liquid Glass on supported systems. Appearance values
+remain System=0, Light=1, Dark=2, with Dynamic replacing Gray at saved value 3.
+Dynamic maps to UIKit style 0, so semantic foreground contrast follows the system.
+MusicAppearance.m chooses shared artwork backdrops for Dynamic pages and retains
+the standard page treatment for System/Light/Dark. The visible segment order is
+System, Dark, Light, Dynamic; it is explicitly mapped to those saved values.
+
+UITabAccessory is an NSObject, instantiated with -initWithContentView:. Resolve
+its class dynamically and guard the owning bottomAccessory selectors. It remains
+attached and supplies the native mini-player glass in every supported layout.
+Foreground Play/Pause and Skip buttons use
+plain images, retaining the 0.5 correction for lingering nested glass backplates
+and the 0.4 play/pause symbol-state correction. Layout uses current bounds.
+
+NATIVE TAB BAR, SELECTION, AND MINIMIZATION
+Version 0.9 restores the original genuine UITabBarController bar and selected
+capsule permanently. MusicDock.h/.m, GMFluidDock, GMDockTabControl, and the manual
+scroll/hide/swap/inset coordinator are removed. The five existing ordinary
+UITabBarItem/viewControllers destinations and UINavigationController stacks
+retain their routing. UIKit owns the outer material, shape, position, selection
+bubble, and animation at both endpoints. There is no replacement dock or fixed
+140-point native-path bottom reservation.
+
+Set tabBarMinimizeBehavior=UITabBarMinimizeBehaviorOnScrollDown on iOS 26. The
+public NSInteger enum values are Automatic=0, Never=1, OnScrollDown=2, OnScrollUp=3.
+The 0.6/0.7 archives had correctly selected Never for their manual coordinator;
+that choice did not enable native minimization. UIKit now observes the real
+browse table, registered by setContentScrollView:forEdge:NSDirectionalRectEdgeAll,
+and handles collapse and expansion as scrolling changes direction. The setter
+accepts an aggregate edge; contentScrollViewForEdge: only accepts one edge.
+NSDirectionalRectEdge is NSUInteger, with Bottom=4 and All=15.
+
+Compact navigation follows UIKit's selected-tab presentation. Settings remains
+an ordinary tab. UITabBarController.Mode chooses bar/sidebar presentation, not
+the minimized state. The iOS 26 UIKit header exposes no direct minimized-state
+setter or force-expand operation. setTabBarHidden:animated: controls visibility
+and is not used as a substitute. UIKit has UISearchTab, not a UITabRoleSearch
+property on UITab; repurposing Search for Settings would not preserve its
+documented role. UITabPlacementPinned only promises trailing placement where
+customizable placements are supported, not a detached iPhone Settings bubble.
+Keeping the current ordinary model avoids converting routing just for that
+unsupported presentation assumption.
+
+GMCompactPlayerView now requests intrinsic height 52 instead of 60. Regular
+content uses 30-point artwork, 14/11-point title/artist text, 30-point transport
+frames with 44-point hit areas, and 13/12-point play/next symbols. Inline content
+uses 26-point artwork and hides Skip. Its foreground is persistent, with the
+same view serving as the native Now Playing zoom source. UIKit determines the
+actual outer accessory geometry; the app only lays out its content bounds.
+
+UITraitCollection.tabAccessoryEnvironment has NSInteger values Unspecified=0,
+None=1, Regular=2, Inline=3. Dynamically resolve UITraitTabAccessoryEnvironment
+and register once on the content UIView with registerForTraitChanges:withTarget:
+action:, calling the no-argument updateNativeAccessoryEnvironment selector.
+Apple explicitly permits zero, one, or two action arguments. The initial call,
+didMoveToWindow, and layout also read the current environment. UIKit manages
+registration lifetime; no explicit unregister/token retention is needed here.
+UIKitNativeDockAdditions.h contains the narrow public iOS 17 registration API;
+the observed accessory trait itself is iOS 26 and is not strongly imported.
+
+When native UITabAccessory is unavailable, the existing blur fallback requests
+height 52 and adds 64 points of bottom space. That inset is limited to the
+fallback. Native tab appearance objects are left to UIKit; clear UIView backing
+and tint preserve its genuine glass and selection treatment.
+
+ANCHORED IMPORT MENU
+GMImportMenuButton in BrowseUI.m is the actual plus UIButton installed in a
+custom UIBarButtonItem. UIButton.menu and showsMenuAsPrimaryAction provide the
+native anchored Import Songs / Import Album menu. The former import-choice
+bottom sheet and GMImportOptionsController are removed; the two existing import
+routes remain unchanged. Menu construction refreshes the current busy state.
+
+Public UIControl context-menu configuration/display/end overrides call super.
+willEndForConfiguration:animator: schedules the pending route with the native
+animator's addCompletion: block, whose signature is void(void). When no animator
+exists, a next-main-queue handoff lets UIKit finish its callback. Generation,
+window, and busy checks prevent an older completion from consuming a later
+menu's choice; the pending action is read at completion, not captured too early.
+Weak references avoid retaining a discarded plus button. The button owns one
+native glass surface; guarded UIBarButtonItem.hidesSharedBackground prevents a
+second shared bar background. UIKitImportMenuAdditions.h records the exact
+public callbacks and boolean getter. Static review found no concrete lifecycle
+or ABI defect; on-device menu animation/picker handoff is still unverified.
+
+GMPlaybackIndicatorView in PlaybackIndicator.h/.m is a 22-point four-bar accessory.
+configurePlaying: preserves its animation phase when playback state is unchanged;
+reset stops, hides, and clears accessibility for reuse. Public CAKeyframeAnimation
+keyframes animate bounds.size.height with matching loop endpoints and per-segment
+timing functions. There are no per-cell timers. Paused playback has shorter static
+bars; Reduce Motion disables motion. Window removal and hiding stop animations.
+The indicator uses tintColor and exposes Playing/Paused; a grouped song cell
+mirrors that state in its accessibility value. Add Songs membership checkmarks
+retain their existing selection meaning.
+
+Now Playing is a separate full-screen controller sharing the audio engine. The
+native UIViewController zoom transition is guarded for iOS 18+; cross-dissolve is
+the fallback. The mini-player supplies its source view. A lower close control
+allows dismissal without stopping audio. Scroll/safe-area layout remains UIKit's
+responsibility around native bars and accessories.
+
+NOW PLAYING CONTROLS, MODES, AND ARTWORK
+AVKit's native AVRoutePickerView supplies AirPlay selection, with audio routes
+preferred and the existing MPVolumeView used for system volume. Lyrics, AirPlay,
+and playback mode sit below the transport/volume controls. Do not replace the
+system route picker with an inert app menu.
+
+The mode cycle is Off (0) -> Shuffle (1) -> Repeat One (2) -> Off. The engine
+retains both natural-order and active queues using stable track identifiers.
+Shuffle uses a Fisher-Yates permutation while preserving the selected song.
+Repeat One sets AVAudioPlayer.numberOfLoops=-1; other modes use zero. Native
+audio looping supplies repeat behavior without a timer-driven restart at the
+end of every track. Mode changes rebuild queue state around the current song.
+
+Artwork uses scale 1 while playing and .90 while paused. An interruptible
+UIViewPropertyAnimator spring returns from the current rendered transform, with
+duration .50 seconds and damping ratio .76. Reduce Motion, Prefer Cross-Fade,
+offscreen presentation, or the visible lyrics pane bypass that artwork motion.
+
+GMArtworkPaletteState in MusicArtworkBackdrop.m owns the current artwork object
+and one shared palette. It samples a 40-by-40 RGBA image off the main queue; the
+pure C ArtworkPalette.h helper chooses three colors with alpha-aware weighting.
+Repeated updates for the same artwork object do not repeat extraction. A
+generation check discards stale results before one main-queue publication to
+all GMArtworkBackdrop instances, including Now Playing and Dynamic pages.
+Missing artwork uses the current accent. Each view blends an axial foundation
+and three broad radial CAGradientLayers from presentation-layer colors/positions.
+There is no per-frame image analysis, continuous timer, or remote artwork fetch.
+GMBackdropTone bounds source colors for the current appearance before blending:
+dark sources have a maximum channel of .52, while light sources have a minimum
+of .55. This tone adjustment is shared by Now Playing and Dynamic pages and
+keeps the underlying cover color character while supporting semantic text.
+Reduce Motion/Prefer Cross-Fade use a short color transition without moving the
+radial centers. Focused pure C palette checks covered transparent/bounded input,
+monochrome, dominant ordering, premultiplied alpha, and white/black cases under
+AddressSanitizer and UndefinedBehaviorSanitizer in 0.7. Those retained extractor
+checks do not validate shared UIKit publication or rendering. The user approved
+Dynamic's appearance in 0.8; that feedback is limited to the reported feature.
+
+WHOLE-ALBUM IMPORT
+MusicAlbumImport.h/.m provides GMAlbumImporter, GMAlbumReviewController,
+GMAlbumImportSession, GMAlbumImportEntry, and GMAlbumImportFieldCell. Existing
+individual-song import remains available. Album import accepts a Files folder
+or multiple selected audio files and opens a native grouped review sheet with
+album name, artist, ordered songs, a cover, and Save/Cancel. The shared custom
+font helpers apply to its text. Review edits are a draft until Save.
+
+UIDocumentPicker uses UTTypeFolder with asCopy=NO for folders. Hold the selected
+security scope while reading descendants; NSFileCoordinator coordinates provider
+reads. Stream NSDirectoryEnumerator rather than loading an unbounded URL array.
+The implementation skips hidden items, packages, symlinks, and nonregular files;
+limits are 4096 visited entries, directory depth 8, 500 songs, 8 GiB total audio,
+and 2 GiB per song. UIKitAlbumImportAdditions.h records the public directory,
+resource-value, file-coordinator, stream-reading, and natural-sort declarations.
+
+Staged files live in Caches/AlbumImports/<UUID>. Prefer recognized cover/front/
+folder-named images, with embedded artwork as fallback. A source cover is bounded
+to 32 MiB and downsampled through the shared <=1200-pixel ImageIO decoder. Users
+can replace/remove it from Files in review. Saved JPEG limits remain 3 MiB.
+The shared cover cache and seeded metadata avoid repeated per-song cover decode.
+
+Save moves newly named Album-UUID-ordinal.ext audio copies to Documents/Music,
+then commits one MusicEdits.plist transaction for title, artist, album,
+albumArtist, order fields, and one shared cover. MusicEditsStore adds optional
+trackNumber/discNumber keys while retaining formatVersion 1. Observed move or
+metadata failures remove only this session's newly published copies; failed
+cleanup is surfaced. Originals are never written and existing filenames are not
+overwritten. The manifest is atomic; the audio moves collectively are not a
+crash-atomic filesystem transaction. Cancel removes the staged draft.
+
+FONTS AND ICON PERSONALIZATION
+MusicPersonalization.h/.m provides GMPersonalizationStore,
+GMFontSettingsController, and GMIconPickerController. Internal classes are
+GMPFontDraft, GMPFontPreviewController, GMPIconChoiceTile, and
+GMPIconPreviewController. UIKitPersonalizationAdditions.h contains the narrow
+UIKit/CoreText declarations. UIFontDescriptorSymbolicTraits and
+CTFontManagerScope are 32-bit unsigned values; registration/unregistration return
+C bool, not a pointer. CF Create/Copy results receive matching CFRelease calls.
+
+UIFontPickerViewController exposes installed faces. TTF/OTF Files import permits
+16 MiB per file and 32 saved files, followed by a Save/Cancel preview. Parse font
+descriptors and PostScript names before registration. Write each imported file
+to its final UUID location before process-scope registration; do not rename it
+while registered. Save adds its reference and selected name to the atomic
+manifest. Cancel unregisters/removes an uncommitted draft; if CoreText cannot
+unregister a still-used face, retain its unreferenced file for that process.
+Saved fonts register again at launch. Unavailable selected faces fall back to
+the system. Font helpers retain baseline sizing/weight and preserve monospaced
+elapsed/duration counters. They avoid replacing the system font-picker UI.
+
+Documents/MusicPersonalization/Personalization.plist references Fonts/<UUID>.ttf
+or .otf and Icons/<UUID>.png. The 128 KiB manifest is fully validated before
+registration or mutation; unsupported/corrupt loads block writes. Bounded reads
+close their file handles on error and success. A new image precedes manifest
+commit; failure removes only the new image, and a replaced image is removed
+after success. The selected font changes only after the atomic write succeeds.
+
+Icon choices are Original plus Noir, Ivory, Aurora, Signal, and Chrome. Both
+CFBundleIcons and CFBundleIcons~ipad declare the same alternate names. The
+public setAlternateIconName:completionHandler: API selects those names; it
+does not install arbitrary images chosen from Files. Marshal its completion to
+main and check actual alternateIconName before reporting success. The UI reports
+unavailable host behavior instead of claiming an icon change occurred.
+
+Custom image import reads at most 12 MiB, downsamples to <=1200 pixels, renders
+an opaque centered 1024-square crop, and saves a PNG no larger than 6 MiB. This
+saved image is independent of the active bundled icon. UIActivityViewController
+exports it, with a public popover anchor for wide layouts. Manual guidance uses
+LiveContainer's Copy Launch URL with Shortcuts URL/Open URLs actions, or Open App
+for a separately installed Music copy. A Home Screen shortcut is a custom
+launcher; it leaves the bundled app icon intact. Apple documents both named
+bundle alternatives and the shortcut's image choice in the references below.
+
+Both Files callbacks wait for document-picker dismissal before presenting a
+font/image preview or error, and recheck window/dismissal state. Alternate-icon
+Save disables competing actions while its completion is pending. Static review
+covered these callback lifetimes, public ABI declarations, and draft/manifest
+ordering; it is not evidence of device execution.
+
+OFFLINE LYRICS
+MusicLyrics.h/.m provides GMLyricsStore, GMLyricsView, and GMLyricsEditor.
+The panel replaces the artwork area while shown. Files import accepts .txt and
+.lrc, and the editor accepts pasted/typed text. Save commits local lyrics by
+stable song identifier; Cancel leaves the saved entry intact. Source LRC tags
+are retained in storage and stripped from plain display. There is no timed
+highlighting or synchronized scrolling; updatePlaybackTime: is an intentional
+no-op. No lyric service or network client is involved.
+
+Documents/MusicLyrics.plist stores the lyrics separately from audio metadata and
+playlist manifests. Missing files start an empty store. Unreadable or unsupported
+files block mutation until a successful reload; atomic commits precede changes
+to the in-memory lyrics. Empty saved text removes that song's lyrics entry.
+The formatVersion-1 manifest contains a lyrics dictionary and permits 20,000
+identifiers and 8 MiB. A song permits 65,536 UTF-16 text units; import reads are
+bounded to 256 KiB. Decode UTF-8, BOM-marked UTF-16, or recognizable BOM-less
+UTF-16; reject ambiguous input. Recognized LRC timestamp/metadata tags disappear
+from display while ordinary section labels such as [Chorus] remain. Files access
+is security-scoped, and imported text becomes an editor draft for the captured
+song identifier before Save. UIKitLyricsAdditions.h contains the narrow text,
+file-reading, keyboard-layout, and document-type declarations.
+
+EDITING, PICKERS, AND CONFIRMATION
+GMBrowseSongCell reveals trash and More from the right. On iOS 26, real glass
+surfaces follow the drag, merge/separate, and settle with an interruptible
+UIViewPropertyAnimator spring. UIKitMotionAdditions.h supplies the public glass,
+animation, scroll, and accessibility declarations. Compatible controls remain on
+older systems. Song trash always routes to confirmed global deletion of the
+imported local copy, regardless of which collection displayed the row.
+More > Remove from Playlist routes to confirmed membership removal. Playlist
+deletion is also confirmed and preserves audio.
+
+The 0.7 row polish sets UITableViewCell.selectionStyle=None in construction and
+reuse, with a clear selectedBackgroundView. UIKit's selection/highlight state
+is left intact; only the automatic visual flash is suppressed. The app-owned
+foreground receives systemGray5 with alpha .94 times clamped reveal progress,
+and cornerRadius 18 times that progress. CALayer.maskedCorners uses only the two
+physical MaxX corners (bits 1 and 3), preserving square leading corners. Color,
+radius, and translation share the reveal spring and reset on collapse/reuse.
+The glass action tray is a sibling, so the foreground's translucent gray fill
+does not fade any glass surface or ancestor. UIKitRowPolishAdditions.h records
+the narrow UITableViewCell and CALayer declarations.
+
+GMMetadataEditor and GMTextEntryCell hold draft title/artist/album or playlist-name
+fields and a draft image. Only Save calls the stores. Cancel discards the draft.
+GMCollectionDestinationPicker supports Add to Album and Add to Playlist. Album
+assignment preserves title and copies album name, artist, albumArtist, and cover;
+an album without a cover explicitly clears the previous song artwork.
+
+Photos uses PHPickerViewController and NSItemProvider with an image selection.
+Consume or copy a loadFileRepresentation temporary URL before that completion
+handler returns. Files selections must be read within their security-scoped
+access lifetime. Publish decoded UIImage values and UI changes on the main
+queue. There is no direct PhotoKit-library enumeration or network client.
+
+MusicArtwork.m uses ImageIO thumbnail creation to bound decoded pixel dimensions
+before UIImage display, for both embedded and selected artwork. CF Create/Copy
+results require matching release calls; borrowed UIImage.CGImage is not released
+by the caller. UIKitEditingAdditions.h declares the corresponding public UIKit,
+PhotosUI, Foundation, CoreGraphics, CoreFoundation, and ImageIO signatures.
+
+LOCAL STORE CONTRACTS
+MusicLibraryStore.m is imported before MusicEditsStore.m in the shared main.m
+translation unit. The latter uses the former's private validation/artwork helpers.
+Both stores are used from the main queue.
+
+GMTrackIdentifier remains filename-based (local:<filename>) with the reserved
+bundled-demo ID demo:glass-study. Metadata edits never rename or retag audio.
+After reading raw embedded metadata, apply GMTrackEditsStore overlays before
+publishing refreshed library rows or album grouping.
+
+MusicEdits.plist uses formatVersion 1 and a tracks dictionary keyed by identifier.
+Optional fields are title, artist, album, albumArtist, artworkFilename,
+artworkCleared, hidden, and the 0.8 discNumber/trackNumber fields used by album
+imports. Text fields are separate; nil save arguments preserve
+existing fields. Title is nonempty; each text field permits up to 512 characters
+on one line. An unchanged album preserves albumArtist; changing album sets it to
+the song artist. A hidden flag is accepted only for the bundled demo. Every edit
+preserves an existing hidden flag.
+
+The edits store supports applyToTrack:, saveTrack:title:artist:album:artwork:
+replaceArtwork:error:, assignTrack:toAlbum:tracks:error:, isTrackHidden:, and
+hideTrack:error:. replaceArtwork=NO retains the cover; YES with nil explicitly
+clears the song's cover, including embedded artwork on later reloads.
+
+MusicPlaylists.plist retains formatVersion 1. Each playlist keeps its UUID, name,
+ordered trackIdentifiers, and optional artworkFilename. Earlier records without
+that optional field load unchanged. GMPlaylist.artwork loads the custom cover
+lazily. updatePlaylist:name:artwork:replaceArtwork:error: commits name and cover
+together. Rename/add/remove preserve existing custom art. Clearing playlist art
+allows its UI to fall back to song artwork. Missing track IDs remain in saved
+order so reimporting that filename can restore its playlist position.
+
+ARTWORK AND TRANSACTION GUARANTEES
+Covers use UUID.jpg basenames under MusicEditsArtwork or MusicPlaylistArtwork,
+next to their manifests in Documents. Arbitrary paths are rejected. Incoming
+images are bounded at 1200 pixels per side and encoded JPEG data at 3 MiB. Saved
+artwork is decoded through the same bounded ImageIO helper. Missing or invalid
+custom images safely fall back; an explicit song-cover clear still means nil.
+
+A new cover is written atomically to a new filename before the manifest changes.
+The manifest is serialized as a binary property list and saved with
+NSDataWritingAtomic. Only a successful write publishes model/live-track changes.
+A failed manifest save removes only the newly staged image. Superseded image
+files are removed after success and only when no saved record still references
+them. Cleanup never targets the imported audio directory.
+
+Malformed or unsupported manifests preserve the original and block mutations
+until a successful reload. Bounds are 512 playlists, 20,000 identifiers per
+playlist, 120-character playlist names, and a 4 MiB playlist manifest; the edits
+manifest supports 20,000 tracks and 8 MiB. No timestamp APIs or NSUserDefaults are
+used by these stores.
+
+BUILD AND ABI GUARDS
+Preserve the 8-byte NSObject isa word in MiniSDK.h. Direct subclasses can have
+constant ivar offsets; omitting that header caused the original startup crash.
+CGFloat is double, BOOL is _Bool, NSInteger is signed long, and NSUInteger is
+unsigned long for the arm64 target. New API declarations must preserve exact
+superclasses, struct layouts, block signatures, and ownership annotations.
+
+The layout gate includes the shell and five tab controllers, compact player,
+native import menu button, playback indicator, shared artwork palette and
+backdrop, lyrics store/view/editor, playlist/edits stores, metadata editor, text
+entry cell, destination picker, and browse song cell. It also requires all five
+album-import classes and the three public/four internal personalization classes
+named above. The stores retain the NSObject header before their own ivars.
+Source and algorithm checks are separate from runtime persistence tests.
+
+The Mac build links AVKit, PhotosUI, ImageIO, CoreGraphics, and CoreText in
+addition to existing frameworks. UIKitPlaybackAdditions.h supplies the narrow route-picker,
+looping, artwork-animation, and color-analysis declarations for Linux builds.
+__Unwind_Resume resolves through libSystem.B.dylib's libunwind
+re-export. Avoid compiler-generated private empty-array imports; use the public
+[NSArray array] constructor for empty arrays in this narrow SDK build.
+
+NSFontAttributeName uses the public UIKit umbrella in Linux stubs. The checked
+iOS 26 SDK chain is UIKit -> UIKitCore -> UIFoundation -> _NSFontAttributeName;
+Foundation.tbd does not export it. Do not directly link private re-exported
+frameworks. CoreText registration functions/constants link to public CoreText.
+
+Support/package_and_verify.py checks CoreText linkage and both icon declaration
+dictionaries. All six icon families must contain their required iPhone/iPad
+sizes and 1024px previews. PNG validation checks dimensions, opaque RGB format
+without tRNS transparency, chunk CRCs, bounded decompression, and final archive
+bytes. Support/create_icons.py regenerates the five alternate families with
+Pillow primitives; it does not require third-party art or font glyphs.
+
+Version 0.6 / build 7 was user-confirmed working in LiveContainer. The user
+continued feature work after 0.7 without explicitly confirming all its flows.
+In 0.8, the user approved Dynamic appearance and criticized the custom dock's
+size and changed selection treatment, while noting smoother motion. Version
+0.9 / build 10 restores native controls and requires a physical-device check of
+minimization/expansion, the smaller accessory/touch targets, and the anchored
+import-menu dismissal/picker sequence. No iOS device or simulator is available
+here, and the feedback does not establish that every other 0.8 flow was tested.
+Keep the same bundle ID, executable, and data container when updating.
+
+PRIMARY APPLE REFERENCES
+https://developer.apple.com/documentation/uikit/uitabbarcontroller
+https://developer.apple.com/documentation/uikit/uitabaccessory
+https://developer.apple.com/documentation/uikit/uitraitcollection/tabaccessoryenvironment
+https://developer.apple.com/documentation/uikit/uitraitchangeobservable-7qoet/registerfortraitchanges%3Awithtarget%3Aaction%3A
+https://developer.apple.com/videos/play/wwdc2025/284/
+https://developer.apple.com/videos/play/wwdc2023/10057/
+https://developer.apple.com/documentation/uikit/uicontrol
+https://developer.apple.com/documentation/uikit/uicontextmenuinteractionanimating
+https://developer.apple.com/documentation/uikit/uiglasseffect
+https://developer.apple.com/documentation/uikit/uiglasscontainereffect
+https://developer.apple.com/documentation/uikit/uiviewpropertyanimator
+https://developer.apple.com/documentation/quartzcore/cakeyframeanimation
+https://developer.apple.com/documentation/quartzcore/calayer/maskedcorners
+https://developer.apple.com/documentation/quartzcore/cagradientlayer
+https://developer.apple.com/documentation/avkit/avroutepickerview
+https://developer.apple.com/documentation/avfaudio/avaudioplayer/numberofloops
+https://developer.apple.com/documentation/uikit/uitextview
+https://developer.apple.com/documentation/uikit/uiviewcontroller/transition
+https://developer.apple.com/documentation/uikit/uibutton/configuration
+https://developer.apple.com/documentation/photosui/phpickerviewcontroller
+https://developer.apple.com/documentation/foundation/nsitemprovider
+https://developer.apple.com/documentation/uikit/uidocumentpickerviewcontroller
+https://developer.apple.com/documentation/uikit/providing-access-to-directories
+https://developer.apple.com/documentation/foundation/nsfilecoordinator
+https://developer.apple.com/documentation/uikit/uifontpickerviewcontroller
+https://developer.apple.com/documentation/coretext/ctfontmanagerregisterfontsforurl(_:_:_:)
+https://developer.apple.com/documentation/uikit/uiapplication/setalternateiconname(_:completionhandler:)
+https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+https://support.apple.com/guide/shortcuts/apd735880972/ios
+https://developer.apple.com/documentation/imageio
+https://developer.apple.com/documentation/foundation/propertylistserialization
+https://github.com/apple-oss-distributions/libunwind/blob/main/libunwind/src/UnwindLevel1.c
+https://github.com/apple-oss-distributions/Libsystem/blob/main/requiredlibs
+https://github.com/apple-oss-distributions/Libsystem/blob/main/xcodescripts/linker_arguments.sh

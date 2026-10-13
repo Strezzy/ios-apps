@@ -1,0 +1,30 @@
+{
+  "version": "0.12",
+  "build": "13",
+  "bundleIdentifier": "com.billy.glassmusic",
+  "ipaBytes": 3046593,
+  "ipaSHA256": "dbb82dee36cec2a7048605553a466c969a1112847a9a54b2b5980d89a108a344",
+  "nativeIOSSimulatorChecks": {
+    "no_renderer_failure": 1,
+    "next_album_updates_disc": true,
+    "open_button_enabled": true,
+    "typed_boolean_regression": 1,
+    "pause_stops_disc": 1,
+    "open_button_opens_lid": 1,
+    "motion_bridge_changes_pose": 1,
+    "in_memory_bootstrap": true,
+    "artwork_encoded": 1,
+    "native_drag_changes_pose": 1,
+    "player_spins_while_playing": 1,
+    "real_geometry": 1,
+    "disc_spins": 1,
+    "close_button_closes_lid": 1,
+    "resume_restarts_disc": 1,
+    "native_first_frame": true
+  },
+  "nativePassed": true,
+  "physicalDeviceTested": false,
+  "runURL": "https://github.com/Strezzy/ios-apps/actions/runs/38336868230",
+  "baselineSHA256": "e476dcbcd36814e65b45e584c751c847ba0485983d142eecc304e72b6ac735f9",
+  "note": "Actual Apple SDK compilation, code signature verification and native WKWebView controls. Device gyroscope and LiveContainer installation remain physical-device tests."
+}

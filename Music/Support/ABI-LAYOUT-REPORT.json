@@ -1,0 +1,353 @@
+{
+  "after": {
+    "object": "/workspace/scratch/ae9bcd8b8cd4/GlassMusic/Build/main.o",
+    "passed": true,
+    "constant_accessor_offsets": {
+      "SceneDelegate.window": 8,
+      "GMTrack.demo": 8,
+      "GMTrack.metadataLoaded": 9,
+      "GMTrack.url": 16
+    },
+    "dynamic_superclass_offsets": {
+      "PlayerController setSelectedIndex:": true,
+      "PlayerController setTracks:": true
+    },
+    "classes": {
+      "GMTrack": {
+        "instance_start": 8,
+        "compiled_instance_size": 80
+      },
+      "GMContentBackdrop": {
+        "instance_start": 8,
+        "compiled_instance_size": 32
+      },
+      "GMAlbum": {
+        "instance_start": 8,
+        "compiled_instance_size": 48
+      },
+      "GMPlaylist": {
+        "instance_start": 8,
+        "compiled_instance_size": 48
+      },
+      "GMPlaylistStore": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMTrackEditsStore": {
+        "instance_start": 8,
+        "compiled_instance_size": 56
+      },
+      "GMPlaybackIndicatorView": {
+        "instance_start": 8,
+        "compiled_instance_size": 48
+      },
+      "GMArtworkPaletteState": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMArtworkBackdrop": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMLyricsStore": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMLyricsEditor": {
+        "instance_start": 8,
+        "compiled_instance_size": 88
+      },
+      "GMLyricsView": {
+        "instance_start": 8,
+        "compiled_instance_size": 160
+      },
+      "GMPFontDraft": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMPersonalizationStore": {
+        "instance_start": 8,
+        "compiled_instance_size": 64
+      },
+      "GMPFontPreviewController": {
+        "instance_start": 8,
+        "compiled_instance_size": 88
+      },
+      "GMFontSettingsController": {
+        "instance_start": 8,
+        "compiled_instance_size": 104
+      },
+      "GMPIconChoiceTile": {
+        "instance_start": 8,
+        "compiled_instance_size": 48
+      },
+      "GMPIconPreviewController": {
+        "instance_start": 8,
+        "compiled_instance_size": 112
+      },
+      "GMIconPickerController": {
+        "instance_start": 8,
+        "compiled_instance_size": 104
+      },
+      "GMScrollSettings": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMScrollPresetMenuButton": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMScrollStyleCell": {
+        "instance_start": 8,
+        "compiled_instance_size": 80
+      },
+      "GMScrollCreditsController": {
+        "instance_start": 8,
+        "compiled_instance_size": 32
+      },
+      "GMScrollAnimationView": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMCDCaseFallbackView": {
+        "instance_start": 8,
+        "compiled_instance_size": 72
+      },
+      "GMCDArtworkJob": {
+        "instance_start": 8,
+        "compiled_instance_size": 9
+      },
+      "GMCDMotionHub": {
+        "instance_start": 8,
+        "compiled_instance_size": 112
+      },
+      "GMCDScriptProxy": {
+        "instance_start": 8,
+        "compiled_instance_size": 16
+      },
+      "GMCDCaseView": {
+        "instance_start": 8,
+        "compiled_instance_size": 184
+      },
+      "PlayerController": {
+        "instance_start": 8,
+        "compiled_instance_size": 288
+      },
+      "GMImportMenuButton": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMScrollRowDisplay": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMBrowseTableController": {
+        "instance_start": 8,
+        "compiled_instance_size": 88
+      },
+      "GMBrowseSongCell": {
+        "instance_start": 8,
+        "compiled_instance_size": 192
+      },
+      "GMSongsControlsHeader": {
+        "instance_start": 8,
+        "compiled_instance_size": 24
+      },
+      "GMSongsController": {
+        "instance_start": 88,
+        "compiled_instance_size": 104
+      },
+      "GMBrowseCollectionHeader": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMBrowseSongsController": {
+        "instance_start": 88,
+        "compiled_instance_size": 136
+      },
+      "GMPlaylistSongPicker": {
+        "instance_start": 88,
+        "compiled_instance_size": 96
+      },
+      "GMAlbumTile": {
+        "instance_start": 8,
+        "compiled_instance_size": 48
+      },
+      "GMAlbumGridCell": {
+        "instance_start": 8,
+        "compiled_instance_size": 40
+      },
+      "GMAlbumsController": {
+        "instance_start": 88,
+        "compiled_instance_size": 160
+      },
+      "GMPlaylistsController": {
+        "instance_start": 88,
+        "compiled_instance_size": 88
+      },
+      "GMSearchController": {
+        "instance_start": 88,
+        "compiled_instance_size": 136
+      },
+      "GMCDCreditsController": {
+        "instance_start": 8,
+        "compiled_instance_size": 56
+      },
+      "GMCDAlbumInspector": {
+        "instance_start": 8,
+        "compiled_instance_size": 200
+      },
+      "GMAlbumImportEntry": {
+        "instance_start": 8,
+        "compiled_instance_size": 32
+      },
+      "GMAlbumImportSession": {
+        "instance_start": 8,
+        "compiled_instance_size": 80
+      },
+      "GMAlbumImportFieldCell": {
+        "instance_start": 8,
+        "compiled_instance_size": 24
+      },
+      "GMAlbumReviewController": {
+        "instance_start": 8,
+        "compiled_instance_size": 112
+      },
+      "GMAlbumImporter": {
+        "instance_start": 8,
+        "compiled_instance_size": 56
+      },
+      "GMAppearanceCell": {
+        "instance_start": 8,
+        "compiled_instance_size": 16
+      },
+      "GMSettingsController": {
+        "instance_start": 88,
+        "compiled_instance_size": 88
+      },
+      "GMCompactTransportButton": {
+        "instance_start": 8,
+        "compiled_instance_size": 8
+      },
+      "GMCompactPlayerView": {
+        "instance_start": 8,
+        "compiled_instance_size": 72
+      },
+      "GMMusicShell": {
+        "instance_start": 8,
+        "compiled_instance_size": 136
+      },
+      "GMTextEntryCell": {
+        "instance_start": 8,
+        "compiled_instance_size": 24
+      },
+      "GMMetadataEditor": {
+        "instance_start": 8,
+        "compiled_instance_size": 120
+      },
+      "GMCollectionDestinationPicker": {
+        "instance_start": 88,
+        "compiled_instance_size": 112
+      },
+      "SceneDelegate": {
+        "instance_start": 8,
+        "compiled_instance_size": 16
+      },
+      "AppDelegate": {
+        "instance_start": 8,
+        "compiled_instance_size": 8
+      }
+    },
+    "required_classes": [
+      "AppDelegate",
+      "GMAlbumImportEntry",
+      "GMAlbumImportFieldCell",
+      "GMAlbumImportSession",
+      "GMAlbumImporter",
+      "GMAlbumReviewController",
+      "GMAlbumsController",
+      "GMArtworkBackdrop",
+      "GMArtworkPaletteState",
+      "GMBrowseSongCell",
+      "GMCDAlbumInspector",
+      "GMCDArtworkJob",
+      "GMCDCaseFallbackView",
+      "GMCDCaseView",
+      "GMCDCreditsController",
+      "GMCDMotionHub",
+      "GMCDScriptProxy",
+      "GMCollectionDestinationPicker",
+      "GMCompactPlayerView",
+      "GMFontSettingsController",
+      "GMIconPickerController",
+      "GMImportMenuButton",
+      "GMLyricsEditor",
+      "GMLyricsStore",
+      "GMLyricsView",
+      "GMMetadataEditor",
+      "GMMusicShell",
+      "GMPFontDraft",
+      "GMPFontPreviewController",
+      "GMPIconChoiceTile",
+      "GMPIconPreviewController",
+      "GMPersonalizationStore",
+      "GMPlaybackIndicatorView",
+      "GMPlaylistStore",
+      "GMPlaylistsController",
+      "GMScrollAnimationView",
+      "GMScrollCreditsController",
+      "GMScrollPresetMenuButton",
+      "GMScrollRowDisplay",
+      "GMScrollSettings",
+      "GMScrollStyleCell",
+      "GMSearchController",
+      "GMSettingsController",
+      "GMSongsController",
+      "GMTextEntryCell",
+      "GMTrack",
+      "GMTrackEditsStore",
+      "PlayerController",
+      "SceneDelegate"
+    ],
+    "all_emitted_class_headers_checked": true,
+    "failures": [],
+    "outlined_accessor_targets": {
+      "GMTrack setDemo:": [
+        "_OUTLINED_FUNCTION_505"
+      ],
+      "GMTrack setMetadataLoaded:": [
+        "_OUTLINED_FUNCTION_784"
+      ]
+    },
+    "accessor_instructions": {
+      "SceneDelegate setWindow:": [
+        "576cc:\tmov\tw3, #0x8",
+        "576d0:\tb\t_objc_setProperty_atomic"
+      ],
+      "GMTrack setDemo:": [
+        "80:\tb\t_OUTLINED_FUNCTION_505",
+        "5a0e0:\tstrb\tw2, [x0, #0x8]",
+        "5a0e4:\tret"
+      ],
+      "GMTrack setMetadataLoaded:": [
+        "8c:\tb\t_OUTLINED_FUNCTION_784",
+        "5adf4:\tstrb\tw2, [x0, #0x9]",
+        "5adf8:\tret"
+      ],
+      "GMTrack setUrl:": [
+        "8:\tmov\tw3, #0x10",
+        "c:\tb\t_objc_setProperty_atomic"
+      ],
+      "PlayerController setSelectedIndex:": [
+        "31a24:\tadrp\tx8, _OBJC_IVAR_$_PlayerController._selectedIndex@PAGE",
+        "31a28:\tldrsw\tx8, [x8, _OBJC_IVAR_$_PlayerController._selectedIndex@PAGEOFF]",
+        "31a2c:\tb\t_OUTLINED_FUNCTION_414"
+      ],
+      "PlayerController setTracks:": [
+        "319dc:\tadrp\tx8, _OBJC_IVAR_$_PlayerController._tracks@PAGE",
+        "319e0:\tldrsw\tx3, [x8, _OBJC_IVAR_$_PlayerController._tracks@PAGEOFF]",
+        "319e4:\tb\t_objc_setProperty_atomic"
+      ]
+    }
+  }
+}

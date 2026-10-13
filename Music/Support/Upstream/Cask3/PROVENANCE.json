@@ -1,0 +1,29 @@
+{
+  "repository": "https://github.com/ryannair05/Cask-3",
+  "commit": "f82e252334d69a151afa8f20db3d59e7a84ee592",
+  "license": "Apache-2.0",
+  "upstream_developer": "Ryan Nair (@ryannair05)",
+  "original_inspiration": "Cask by Ryan Petrich",
+  "upstream_notice_file": false,
+  "scope": "Unmodified animation source and README retained for attribution/provenance. Hook, injection, and jailbreak preference code not included. Music-specific Objective-C adaptation in Sources/MusicScrollAnimations.m.",
+  "files": [
+    {
+      "path": "Support/Upstream/Cask3/Sources/Cask.swift",
+      "bytes": 7907,
+      "git_blob_sha1": "6f6db16ead3cf1de29de2eeeb1e5b69923195614",
+      "sha256": "dd90c1036bdf7218b83afcc3a7d66ce4fbd381b64aec55c77ab5a2e2118fc8de"
+    },
+    {
+      "path": "Resources/Cask3-LICENSE.txt",
+      "bytes": 11357,
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "Support/Upstream/Cask3/README.md",
+      "bytes": 1476,
+      "git_blob_sha1": "be5cecd53c97ba156ddce0225c76d1a75ccb9139",
+      "sha256": "181cfd19271b476c9f76c9fe6f35a4a0da8ba477061df7d7310e5a396201ffaa"
+    }
+  ]
+}

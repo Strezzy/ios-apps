@@ -1,0 +1,32 @@
+{
+  "upstream_preset_identifiers_match": [
+    "fade",
+    "flip",
+    "bounce",
+    "color",
+    "permanentColor",
+    "glitch",
+    "helix",
+    "rotate",
+    "zoom",
+    "drop",
+    "stretch",
+    "slide",
+    "shake",
+    "swing",
+    "jiggle"
+  ],
+  "approved_native_dock_and_mini_player": "byte-identical to 0.9",
+  "approved_import_menu": "byte-identical to 0.9",
+  "existing_main_playback_code": "unchanged except four new module imports",
+  "existing_source_files_modified": [
+    "BrowseUI.h",
+    "BrowseUI.m",
+    "LibraryUI.m",
+    "MiniSDK.h",
+    "main.m"
+  ],
+  "all_other_existing_source_files": "byte-identical to 0.9",
+  "device_or_simulator_execution": "unavailable",
+  "report_scope": "Historical 0.10 comparison against 0.9; CD-PRESERVATION-REPORT.json covers 0.11"
+}

@@ -1,0 +1,28 @@
+CD Case — acknowledgments
+
+With thanks to Ann Nguyen for the original clear CD case, its jewel-case geometry, studio reflections, ray-refraction shaders, and opening choreography. The original project was built with TypingMind.
+
+Ann Nguyen
+https://x.com/ann_nnng
+
+TypingMind
+https://typingmind.com
+
+Original project
+https://github.com/annnguyentt/vibe-coding/tree/efba8dfb956cca848422f18e8ede1bdf96033fca/cd-case
+
+Adapted for Music: local album artwork on the disc, transparent compositing over the app, device-motion input, native album browsing, accessibility, and bounded foreground rendering. The renderer and its dependencies are bundled in the app and do not need an internet connection.
+
+Permission
+The original repository's README expressly invites use, remixing, and forking with credit to Ann Nguyen and TypingMind. It does not contain a standard MIT or Apache license. The original permission text and unchanged source snapshot are retained in Music's source archive under Support/Upstream/CDCase.
+
+Three.js
+Copyright © 2010–2026 three.js authors.
+Three.js 0.185.1 is used under the MIT License. The full license is included in Three-LICENSE.txt.
+https://threejs.org
+
+Spectral color approximation
+The original disc shader's spectral_zucconi6 coefficients were developed by Alan Zucconi, based on GPU Gems. Thank you for the work behind these rainbow colors.
+https://www.alanzucconi.com/2017/07/15/improving-the-rainbow-2/
+
+Music is an independent adaptation. These acknowledgments do not imply endorsement by the original authors.

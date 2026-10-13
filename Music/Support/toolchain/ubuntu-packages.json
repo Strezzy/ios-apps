@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "host": "Linux x86_64, glibc >=2.38",
+  "archive_base": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z/",
+  "packages": {
+    "clang-20": {
+      "Version": "1:20.1.2-0ubuntu1~24.04.3",
+      "Filename": "pool/universe/l/llvm-toolchain-20/clang-20_20.1.2-0ubuntu1~24.04.3_amd64.deb",
+      "Size": "77674",
+      "SHA256": "d3fec854d8b998510a6f525ba397123563be091939d11131ce2dff02ed9368bc"
+    },
+    "libclang-common-20-dev": {
+      "Version": "1:20.1.2-0ubuntu1~24.04.3",
+      "Filename": "pool/universe/l/llvm-toolchain-20/libclang-common-20-dev_20.1.2-0ubuntu1~24.04.3_amd64.deb",
+      "Size": "782474",
+      "SHA256": "1f50ed5cb36909b83e885e5e507ccb8a54c70816f4f6574d6190cfa5cf95a891"
+    },
+    "libclang-cpp20": {
+      "Version": "1:20.1.2-0ubuntu1~24.04.3",
+      "Filename": "pool/universe/l/llvm-toolchain-20/libclang-cpp20_20.1.2-0ubuntu1~24.04.3_amd64.deb",
+      "Size": "14244738",
+      "SHA256": "0dc8f6d4cc8588e963fa86414c93f6065766211064cdc766e588c9b882b0714b"
+    },
+    "lld-20": {
+      "Version": "1:20.1.2-0ubuntu1~24.04.3",
+      "Filename": "pool/universe/l/llvm-toolchain-20/lld-20_20.1.2-0ubuntu1~24.04.3_amd64.deb",
+      "Size": "1488474",
+      "SHA256": "50d8db763d3e3526c050d01c2c8c9c94e3f94cca6f7dbdb8f9a4c65aefefcf83"
+    },
+    "llvm-20": {
+      "Version": "1:20.1.2-0ubuntu1~24.04.3",
+      "Filename": "pool/universe/l/llvm-toolchain-20/llvm-20_20.1.2-0ubuntu1~24.04.3_amd64.deb",
+      "Size": "19772486",
+      "SHA256": "b7ca50166943d94c786611ebe7a0dd8f5b9a9b1f81025620cf9dfcd8aac84563"
+    },
+    "libllvm20": {
+      "Version": "1:20.1.2-0ubuntu1~24.04.3",
+      "Filename": "pool/main/l/llvm-toolchain-20/libllvm20_20.1.2-0ubuntu1~24.04.3_amd64.deb",
+      "Size": "30574382",
+      "SHA256": "f018e71c72c7a4742fb1aff9dc98b45586f42e6ea464d4918af7e3772b7f0658"
+    }
+  }
+}

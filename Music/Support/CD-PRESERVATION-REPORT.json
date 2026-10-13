@@ -1,0 +1,76 @@
+{
+  "baseline": "Music 0.10/build 11",
+  "current": "Music 0.11/build 12",
+  "unchanged_components": [
+    {
+      "path": "Sources/LibraryUI.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "4311468b918caeeb432f41410ed3a3be268fff715aa79fe918a44f2fafabbb81",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicAppearance.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "2396aae39d76bdc91dc62b840ceb5d0154a9a832967583d319dee7f7806ceab5",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicArtworkBackdrop.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "0ed10a98051c7da8afbdfce11ebd282a2c65768bdff9ff025efb0f47523d4b7c",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicScrollAnimations.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "6fcad389e6ce9b28a91fbf201529f9549ad8f42973c96bf68aa0f005d5c978f9",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicScrollSettings.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "7b1fa071d2ee6a3e5ab8f3054281d1ea92570bb4f6f8857d32322dde99c2065a",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicLyrics.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "bca205371ae59690605ad67acfd445ef10680c9aacf0c87283df16c3616b995a",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicLibraryStore.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "1ad75899add8bf6ce23c16fcfafe199b87ddbc5281fcdb0d1fc3111cd23f7f4c",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicEditsStore.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "daa840b0a37be91d17e558dea38504e100ac56fd01a736fa05f578b47d4f81b8",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicEditingUI.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "f6e94bf6bb1105530baa7ef89558a2169330acfcab5abdf016f9d9b0925b7581",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicAlbumImport.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "159ca71f55b24c778d2bd3c8715e6c42c19675cc7ba3ec9532a065c3610d037a",
+      "byte_identical": true
+    },
+    {
+      "path": "Sources/MusicPersonalization.m",
+      "baseline": "Music 0.10/build 11",
+      "sha256": "57abcacfee6009c317a09871d8afa816d23ad395ee1610a21226d8f48d56012a",
+      "byte_identical": true
+    }
+  ],
+  "native_dock_and_import_menu": "Native dock LibraryUI.m is byte-identical; album changes confined to native grid/inspector integration",
+  "unchanged_data_formats": true,
+  "new_behavior": "CD artwork views, foreground motion host, album inspection and orientation support",
+  "device_tested": false
+}

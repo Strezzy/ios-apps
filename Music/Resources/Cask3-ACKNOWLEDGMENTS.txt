@@ -1,0 +1,27 @@
+Cask 3 — Scrolling Animations
+
+Scrolling animations adapted from Cask 3 by Ryan Nair (@ryannair05), inspired by
+the original Cask by Ryan Petrich. Thank you both for bringing personality to
+scrolling.
+
+Project: https://github.com/ryannair05/Cask-3
+Original Cask creator: https://github.com/rpetrich
+Source revision: f82e252334d69a151afa8f20db3d59e7a84ee592
+License: Apache License, Version 2.0
+
+Music includes an Objective-C adaptation of the animation presets in the
+upstream Sources/Cask.swift file. The original authors are credited for their
+work; this Music adaptation is maintained separately.
+
+Changes for Music: the presets animate app-owned content inside Music's rows
+using public UIKit and Core Animation APIs. Row reuse, scrolling, interaction,
+settings, and accessibility control when effects start and stop. The adaptation
+keeps the row model geometry stable, isolates existing swipe and glass controls,
+corrects the Rotate angle and Shake keyframe timing, and bounds spring and color
+effects for readable app content. It does not include Cask 3's system-wide hooks,
+injection code, or jailbreak preferences.
+
+An unmodified copy of the complete Apache 2.0 license is included alongside this
+notice as Cask3-LICENSE.txt and can be read in Music's scrolling-animation
+credits. The source download also includes the unmodified upstream animation
+file, README, license, and pinned source provenance under Support/Upstream/Cask3.

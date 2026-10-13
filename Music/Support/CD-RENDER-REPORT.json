@@ -1,0 +1,149 @@
+{
+  "environment": "Chromium WebGL2 via SwiftShader on Linux; no iOS runtime",
+  "checks": [
+    {
+      "name": "Local classic script installs native bridge with network disabled",
+      "passed": true
+    },
+    {
+      "name": "Custom case shaders render; active playback advances disc rotation",
+      "passed": true,
+      "quality": "hero",
+      "roomSize": 256,
+      "pixelRatio": 1,
+      "fpsLimit": 30,
+      "active": true,
+      "scheduled": true,
+      "disposed": false,
+      "ready": true,
+      "open": false,
+      "phase": "rest",
+      "spin": 0.12650829566008498,
+      "artMix": 1,
+      "textureCount": 8,
+      "geometryCount": 7,
+      "width": 400,
+      "height": 400,
+      "failed": false
+    },
+    {
+      "name": "Pause settles disc and stops idle animation frames",
+      "passed": true
+    },
+    {
+      "name": "Native normalized tilt changes case pose without browser gestures",
+      "passed": true
+    },
+    {
+      "name": "Rapid Open\u2013Close\u2013Open honors newest intent without an unwanted extra close",
+      "passed": true
+    },
+    {
+      "name": "Original lid-opening choreography reaches open pose",
+      "passed": true
+    },
+    {
+      "name": "Landscape resize retains same live case and open state",
+      "passed": true
+    },
+    {
+      "name": "Rapid artwork replacement settles to newest texture without texture growth",
+      "passed": true,
+      "textureCount": 8
+    },
+    {
+      "name": "Inactive view stops animation even while audio state says playing",
+      "passed": true
+    },
+    {
+      "name": "Reduce Motion suppresses automatic spin and snaps explicit lid changes",
+      "passed": true
+    },
+    {
+      "name": "Enabling Reduce Motion during lid animation immediately settles its requested endpoint",
+      "passed": true
+    },
+    {
+      "name": "Remote artwork rejected; every requested dependency stays local",
+      "passed": true
+    },
+    {
+      "name": "Grid uses bounded resolution and render budget",
+      "passed": true,
+      "quality": "grid",
+      "roomSize": 128,
+      "pixelRatio": 1,
+      "fpsLimit": 18,
+      "active": true,
+      "scheduled": true,
+      "disposed": false,
+      "ready": true,
+      "open": false,
+      "phase": "rest",
+      "spin": 0.06769837999228412,
+      "artMix": 1,
+      "textureCount": 5,
+      "geometryCount": 7,
+      "width": 180,
+      "height": 180,
+      "failed": false
+    },
+    {
+      "name": "WebGL context loss reports native fallback instead of silent broken view",
+      "passed": true
+    },
+    {
+      "name": "Resize after context loss cannot restart the failed renderer",
+      "passed": true
+    },
+    {
+      "name": "No uncaught JavaScript or shader errors",
+      "passed": true
+    },
+    {
+      "name": "Transparent canvas with translucent case shadow preserves native background",
+      "passed": true,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        17
+      ]
+    },
+    {
+      "name": "Disc print pixels visibly change from red to blue artwork",
+      "passed": true,
+      "red_RGBA": [
+        250,
+        79,
+        108,
+        255
+      ],
+      "blue_RGBA": [
+        41,
+        138,
+        216,
+        255
+      ]
+    }
+  ],
+  "warnings": [],
+  "screenshots": [
+    "hero-closed.png",
+    "hero-tilted.png",
+    "hero-open.png",
+    "inspector-landscape.png",
+    "artwork-red.png",
+    "artwork-blue.png",
+    "grid-case.png"
+  ],
+  "nativeDeviceTested": false,
+  "requests": [
+    "file:///workspace/scratch/ae9bcd8b8cd4/GlassMusic/Resources/CDCase/index.html",
+    "file:///workspace/scratch/ae9bcd8b8cd4/GlassMusic/Resources/CDCase/music-cd.js"
+  ],
+  "renderBundleSHA256": "bd88eb97599a104e32b128ff1ee932ad4f7fc8ec0be23a9ceecdf52454a2e1fd",
+  "browserVersion": "151.0.7922.34",
+  "passed": true,
+  "screenshot_storage": "Development-only scratch previews, excluded from downloads"
+}
