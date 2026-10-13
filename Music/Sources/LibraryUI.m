@@ -506,10 +506,11 @@
     [self.player refreshPlayback];
     [self presentViewController:self.player animated:YES completion:nil];
 }
-- (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect {
+- (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect artworkView:(UIView *)sourceArtwork {
     if (!self.player || self.player.presentingViewController || self.presentedViewController) return;
     self.caseTransition = [GMPlayerCaseTransition new];
     self.caseTransition.shell = self; self.caseTransition.sourceRect = sourceRect;
+    self.caseTransition.sourceArtwork=sourceArtwork;
     self.player.modalPresentationStyle = 0;
     if ([self.player respondsToSelector:@selector(setPreferredTransition:)]) self.player.preferredTransition = nil;
     self.player.transitioningDelegate = self.caseTransition;

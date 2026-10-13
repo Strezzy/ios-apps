@@ -20,13 +20,13 @@ jobs:
           6fcad389e6ce9b28a91fbf201529f9549ad8f42973c96bf68aa0f005d5c978f9  Music/Sources/MusicScrollAnimations.m
           7b1fa071d2ee6a3e5ab8f3054281d1ea92570bb4f6f8857d32322dde99c2065a  Music/Sources/MusicScrollSettings.m
           9238bc94054bbc073c0d83e14a8244f35323de351684a1365d3c5ceab4a33a9e  Music/Sources/CDCaseJS/shaders.js
-          a9d726e40a6e7362df5cf057b2aa4d27db6b8752ad6ff19a3f8ac5277a7391ab  Music/Sources/MusicCDInspector.m
+          866aa3ef722fb755266a9fd72808b1ab6cfcfc437980cf9b87457d81fc009690  Music/Sources/MusicCDInspector.m
           CHECKSUMS
       - name: Check the Linux-compatible API declarations
         run: |
           mkdir -p /tmp/Music-emptySDK
           xcrun clang -target arm64-apple-ios16.0 -isysroot /tmp/Music-emptySDK -nostdinc -Oz -fobjc-arc -fblocks -Wall -Wextra -Werror -Wno-unused-parameter -c Music/Sources/main.m -o /tmp/Music-compat.o
-      - name: Build the unchanged offline renderer and native app
+      - name: Build the offline renderer and native app
         run: |
           set -euo pipefail
           mkdir -p Evidence

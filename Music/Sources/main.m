@@ -195,7 +195,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     self.artView = [[UIView alloc] initWithFrame:CGRectZero];
     self.artView.backgroundColor = [UIColor clearColor];
     self.artView.isAccessibilityElement = YES;
-    self.artView.accessibilityHint = @"Open the CD case with the accessibility action.";
+    self.artView.accessibilityHint = @"Open the media case with the accessibility action.";
     self.cdCaseView = [[GMCDCaseView alloc] initWithFrame:CGRectZero presentation:GMCDCasePresentationPlayer];
     self.cdCaseView.userInteractionEnabled = NO;
     [self.artView addSubview:self.cdCaseView];
@@ -843,8 +843,8 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     self.trackArtist.text = track.artist ?: @"Music";
     [self.cdCaseView configureWithIdentifier:GMTrackIdentifier(track) title:track.title ?: @"Choose a song"
                                     artist:track.artist ?: @"Music" artwork:track.artwork];
-    self.artView.accessibilityLabel = [NSString stringWithFormat:@"%@, CD case",track.title ?: @"Choose a song"];
-    self.artView.accessibilityCustomActions = @[[[UIAccessibilityCustomAction alloc] initWithName:self.playerCaseOpen ? @"Close CD Case" : @"Open CD Case" target:self selector:@selector(accessibilityToggleCDCase:)]];
+    self.artView.accessibilityLabel = [NSString stringWithFormat:@"%@, %@ case",track.title ?: @"Choose a song",GMLiveMedium==1 ? @"cassette" : @"CD"];
+    self.artView.accessibilityCustomActions = @[[[UIAccessibilityCustomAction alloc] initWithName:self.playerCaseOpen ? @"Close Case" : @"Open Case" target:self selector:@selector(accessibilityToggleCDCase:)]];
     [self updateCDCaseActivity];
     // The shared palette also animates visible Dynamic pages while this full
     // player is offscreen. Each backdrop decides its own window visibility.
@@ -875,7 +875,7 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     if (self.showingLyrics || self.selectedIndex < 0 || self.selectedIndex >= (NSInteger)self.tracks.count) return;
     self.playerCaseOpen = !self.playerCaseOpen;
     [self.cdCaseView setCaseOpen:self.playerCaseOpen animated:YES];
-    self.artView.accessibilityCustomActions = @[[[UIAccessibilityCustomAction alloc] initWithName:self.playerCaseOpen ? @"Close CD Case" : @"Open CD Case" target:self selector:@selector(accessibilityToggleCDCase:)]];
+    self.artView.accessibilityCustomActions = @[[[UIAccessibilityCustomAction alloc] initWithName:self.playerCaseOpen ? @"Close Case" : @"Open Case" target:self selector:@selector(accessibilityToggleCDCase:)]];
 }
 - (BOOL)accessibilityToggleCDCase:(UIAccessibilityCustomAction *)action {
     (void)action;

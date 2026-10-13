@@ -24,7 +24,7 @@ UIImage *GMArtworkFromData(NSData *data);
 - (void)reloadLibrary;
 - (void)refreshPlaybackState;
 - (void)presentNowPlaying;
-- (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect;
+- (void)presentNowPlayingFromCaseRect:(CGRect)sourceRect artworkView:(UIView *)sourceArtwork;
 - (void)warmPlayerCase;
 - (BOOL)canImportMusic;
 - (void)importSongs;

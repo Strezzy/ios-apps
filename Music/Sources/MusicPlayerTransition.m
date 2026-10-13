@@ -3,6 +3,7 @@
 @interface GMPlayerCaseTransition : NSObject <UIViewControllerTransitioningDelegate, UIViewControllerAnimatedTransitioning>
 @property(nonatomic, weak) GMMusicShell *shell;
 @property(nonatomic) CGRect sourceRect;
+@property(nonatomic,weak) UIView *sourceArtwork;
 @property(nonatomic) BOOL presenting;
 @end
 @implementation GMPlayerCaseTransition
@@ -13,7 +14,7 @@
     self.presenting = NO; return self;
 }
 - (NSTimeInterval)transitionDuration:(id<UIViewControllerContextTransitioning>)context {
-    return GMCDReducedMotion() ? .2 : (self.presenting ? 1.05 : .4);
+    return GMCDReducedMotion() ? .2 : (self.presenting ? .5 : .4);
 }
 - (void)animateTransition:(id<UIViewControllerContextTransitioning>)context {
     PlayerController *player = self.shell.player;
@@ -31,6 +32,7 @@
         [page setNeedsLayout]; [page layoutIfNeeded];
         CGRect destination = [player.artView convertRect:player.artView.bounds toView:container];
         GMCDCaseView *hero = player.cdCaseView;
+        [hero setEntranceSpeed:reduced ? 1 : 2.4];
         [hero setCaseOpen:NO animated:NO];
         [hero moveToHost:container frame:destination prewarming:NO];
         CGRect source = [container convertRect:self.sourceRect fromView:container.window];
@@ -40,6 +42,8 @@
             hero.center = CGPointMake(source.origin.x+source.size.width/2,source.origin.y+source.size.height/2);
             page.transform = CGAffineTransformMakeTranslation(0,container.bounds.size.height);
         } else page.alpha = 0;
+        hero.alpha=0;
+        [UIView animateWithDuration:reduced ? 0 : .12 animations:^{hero.alpha=1;self.sourceArtwork.alpha=0;}];
         player.artworkOwnerVisible = YES;
         [hero setPlaying:player.player.isPlaying];
         [hero setCaseOpen:player.player.isPlaying animated:!reduced];
@@ -49,9 +53,10 @@
             hero.center = CGPointMake(destination.origin.x+destination.size.width/2,destination.origin.y+destination.size.height/2);
         } completion:^(BOOL finished) {
             BOOL cancelled = context.transitionWasCancelled;
+            self.sourceArtwork.alpha=1;hero.alpha=1;
             player.caseTransitionInProgress = NO;
             player.playerCaseOpen = player.player.isPlaying;
-            if (cancelled) { [page removeFromSuperview]; [self.shell warmPlayerCase]; }
+            if (cancelled) { [hero setEntranceSpeed:1]; [page removeFromSuperview]; [self.shell warmPlayerCase]; }
             else {
                 [hero moveToHost:player.artView frame:player.artView.bounds prewarming:NO];
                 [player updateArtworkPlaybackStateAnimated:NO];

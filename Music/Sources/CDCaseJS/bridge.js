@@ -37,6 +37,7 @@ function receive(next) {
   }
   if (typeof next.padding === 'number' && Number.isFinite(next.padding)) clean.padding = Math.max(0, Math.min(12, next.padding));
   if (next.medium === 'cd' || next.medium === 'cassette') clean.medium = next.medium;
+  if(typeof next.entranceSpeed === 'number' && Number.isFinite(next.entranceSpeed)) clean.entranceSpeed=Math.max(1,Math.min(3,next.entranceSpeed));
   const mediumChanged = clean.medium && state.medium !== clean.medium;
   const qualityChanged = clean.quality && state.quality !== clean.quality;
   Object.assign(state, clean);
@@ -49,6 +50,9 @@ function receive(next) {
         onFail: reportFailure,
       });
     } else stage.update(clean);
+    // The stage retains this one-shot entrance speed until its opening finishes.
+    // Do not carry it into a later medium/quality rebuild.
+    if (clean.entranceSpeed) state.entranceSpeed = 1;
   } catch (error) {
     reportFailure((error?.name || 'initialization') + ': ' + (error?.message || '').slice(0,1000));
   }

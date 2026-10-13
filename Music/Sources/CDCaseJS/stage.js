@@ -226,7 +226,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute(
     'aria-label',
-    'A clear CD jewel case with its disc spinning inside. Tap the case to open it, or drag it to turn it.',
+    cassette ? 'A clear cassette case with two spinning reels. Tap to open, or drag to turn.' : 'A clear CD jewel case with its disc spinning inside. Tap the case to open it, or drag it to turn it.',
   );
   container.appendChild(canvas);
 
@@ -643,7 +643,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
   const hovering = () => pointer.over && !grab.active && caseAt(pointer.x, pointer.y);
 
   function frame(dt) {
-    st.t += dt;
+    st.t += dt * (st.phase === 'opening' ? (Number(control.entranceSpeed) || 1) : 1);
     const { t } = st;
 
     const want = getSpin() ? SPIN : 0;
@@ -675,6 +675,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
     const since = t - st.phaseAt;
     if (st.phase === 'opening' && since >= OPEN_T) {
       st.phase = 'open';
+      control.entranceSpeed=1;
       st.phaseAt = t;
     } else if (st.phase === 'closing' && since >= CLOSE_T) {
       st.phase = 'rest';
@@ -1028,6 +1029,7 @@ export function createStage(container, control, { onOpen, onReady, onFail }) {
       msaaSamples: sampleCount, refractionSamples: samples, fittedExtent, fitRatio, firstFrameMs, artworkCompletedAt,
       epoch: control.epoch, artToken: control.artToken, artLoading,
       fpsLimit: targetFPS, playing: !!control.playing, reducedMotion: !!control.reducedMotion, frameCount, active: !!control.active, scheduled: !!raf, disposed, ready: !firstFrame,
+      entranceSpeed: Number(control.entranceSpeed) || 1, openingDuration: OPEN_T / (Number(control.entranceSpeed) || 1),
       open: st.open, phase: st.phase, spin: st.spin, tiltX:lean.x, tiltY:lean.y, artMix, textureCount: renderer.info.memory.textures,
       geometryCount: renderer.info.memory.geometries, width: rtPage.width, height: rtPage.height }),
     dispose() {

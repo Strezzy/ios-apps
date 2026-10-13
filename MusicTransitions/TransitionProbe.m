@@ -69,12 +69,18 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
         for(GMBrowseSongCell *cell in table.visibleCells) staticRows=staticRows && !cell.rowCase.hidden && !cell.rowCase.webView && !cell.rowCase.encoding && cell.rowImage.hidden;
         [self check:@"songs_are_static_cases" value:staticRows]; [self capture:@"Songs.png"];
         [self.shell.songsController tableView:table didSelectRowAtIndexPath:[NSIndexPath indexPathForRow:1 inSection:0]];
-        After(.35,^{
+        GMPlayerCaseTransition *transition=self.shell.caseTransition;
+        [self check:@"song_entrance_at_least_twice_as_fast" value:[transition transitionDuration:nil]<=.5];
+        After(.15,^{
+            [self check:@"source_art_fades_during_lift" value:transition.sourceArtwork!=nil && transition.sourceArtwork.alpha<.01];
+            [self state:hero then:^(NSDictionary *flight){
+                [self check:@"opening_flip_at_least_twice_as_fast" value:[flight[@"openingDuration"] doubleValue]<=1.15];
+            }];
             [self check:@"song_starts_player_transition" value:self.shell.player.caseTransitionInProgress && self.shell.player.player.isPlaying];
             [self check:@"same_webview_during_flight" value:self.shell.player.cdCaseView.webView==self.originalWeb];
             [self capture:@"Transition.png"];
         });
-        After(5,^{[self checkPlayer];});
+        After(5,^{[self check:@"source_art_restored_after_lift" value:transition.sourceArtwork.alpha==1];[self checkPlayer];});
     }];
 }
 - (void)checkPlayer {
@@ -82,6 +88,7 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     [self state:hero then:^(NSDictionary *state){
         [self check:@"song_opens_now_playing" value:player.presentingViewController!=nil && !player.caseTransitionInProgress];
         [self check:@"hero_attached_to_player" value:hero.superview==player.artView && hero.webView==self.originalWeb && hero.readyForDisplay];
+        [self check:@"normal_opening_speed_restored" value:[state[@"entranceSpeed"] doubleValue]==1];
         [self check:@"playing_opens_and_spins" value:[state[@"open"] boolValue] && [state[@"playing"] boolValue] && [state[@"phase"] isEqual:@"open"]];
         [self check:@"correct_song_art_ready" value:[state[@"artToken"] isEqual:[NSString stringWithFormat:@"%lu",(unsigned long)hero.artworkRevision]]];
         [self capture:@"Player-Open.png"];
@@ -180,7 +187,10 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
 }
 
 - (void)checkCassette {
-    [self.shell setLiveMedium:1];self.attempts=0;After(1,^{[self waitCassetteDetail];});
+    [self.shell setLiveMedium:1];
+    NSDictionary *preferences=[NSDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:[self.documents stringByAppendingPathComponent:@"GlassMusicSettings.plist"]]];
+    [self check:@"cassette_preference_persisted" value:[preferences[@"liveMedium"] integerValue]==1 && preferences[@"appearance"]!=nil && preferences[@"accent"]!=nil];
+    self.attempts=0;After(1,^{[self waitCassetteDetail];});
 }
 - (void)waitCassetteDetail {
     if(!self.detail.readyForDisplay && ++self.attempts<60){After(.5,^{[self waitCassetteDetail];});return;}
@@ -214,11 +224,16 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
     for(GMBrowseSongCell *cell in self.shell.songsController.table.visibleCells) ready=ready && cell.rowCase.medium==1 && cell.rowCase.fallback.snapshot.image!=nil && !cell.rowCase.webView;
     if(!ready && ++self.attempts<90){After(.5,^{[self waitCassetteStills];});return;}
     [self check:@"cassette_stills_and_mini_pill" value:ready];[self capture:@"Cassette-Songs.png"];
-    self.shell.selectedIndex=1;After(5,^{[self capture:@"Cassette-Albums.png"];
+    self.shell.selectedIndex=1;[self.shell.albumsController.navigationController popToRootViewControllerAnimated:NO];self.attempts=0;After(.5,^{[self waitCassetteAlbums];});
+}
+- (void)waitCassetteAlbums {
+    BOOL ready=YES;
+    for(GMAlbumGridCell *cell in self.shell.albumsController.table.visibleCells)for(GMAlbumTile *tile in @[cell.leftTile,cell.rightTile])if(!tile.hidden)ready=ready && tile.caseView.medium==1 && tile.caseView.fallback.snapshot.image!=nil && !tile.caseView.webView;
+    if(!ready && ++self.attempts<90){After(.5,^{[self waitCassetteAlbums];});return;}
+    [self check:@"cassette_album_stills" value:ready];[self capture:@"Cassette-Albums.png"];
         self.shell.selectedIndex=4;After(.5,^{[self capture:@"Settings-Media.png"];
             [self.shell setLiveMedium:0];[self check:@"switch_back_to_cd" value:self.shell.player.cdCaseView.medium==0 && self.shell.compactPlayer.cover.medium==0];[self finish];
         });
-    });
 }
 
 @end

@@ -891,8 +891,11 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
     if ([self closeRevealedActionsIfNeeded]) return;
     GMBrowseSongCell *cell = (GMBrowseSongCell *)[table cellForRowAtIndexPath:path];
     CGRect source = [cell.rowCase convertRect:cell.rowCase.bounds toView:self.shell.view.window];
-    if ([self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row])
-        [self.shell presentNowPlayingFromCaseRect:source];
+    if ([self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row]) {
+        [table layoutIfNeeded];
+        GMBrowseSongCell *sourceCell=(GMBrowseSongCell *)[table cellForRowAtIndexPath:path];
+        [self.shell presentNowPlayingFromCaseRect:source artworkView:sourceCell.rowCase];
+    }
 }
 - (void)playAllSongs {
     [self closeRevealedActionsIfNeeded];
@@ -1069,8 +1072,11 @@ static void GMBrowseConfigureSong(GMBrowseSongCell *cell, GMTrack *track) {
     if ([self closeRevealedActionsIfNeeded]) return;
     GMBrowseSongCell *cell = (GMBrowseSongCell *)[table cellForRowAtIndexPath:path];
     CGRect source = [cell.rowCase convertRect:cell.rowCase.bounds toView:self.shell.view.window];
-    if ([self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row])
-        [self.shell presentNowPlayingFromCaseRect:source];
+    if ([self.shell.player playTrackIndexes:self.trackIndexes startingAtPosition:path.row]) {
+        [table layoutIfNeeded];
+        GMBrowseSongCell *sourceCell=(GMBrowseSongCell *)[table cellForRowAtIndexPath:path];
+        [self.shell presentNowPlayingFromCaseRect:source artworkView:sourceCell.rowCase];
+    }
 }
 - (void)playCollection {
     [self closeRevealedActionsIfNeeded];
@@ -1159,7 +1165,7 @@ static void GMBrowsePushSongs(GMBrowseTableController *source, NSString *albumId
     self.nameLabel = GMLabel(@"",15,0,GMPrimaryTextColor()); self.artistLabel = GMLabel(@"",13,0,GMSecondaryTextColor());
     self.caseView.userInteractionEnabled = NO; self.nameLabel.userInteractionEnabled = NO; self.artistLabel.userInteractionEnabled = NO;
     [self addSubview:self.caseView]; [self addSubview:self.nameLabel]; [self addSubview:self.artistLabel];
-    self.isAccessibilityElement = YES; self.accessibilityHint = @"Open album. Use Inspect Album in actions to turn its CD case.";
+    self.isAccessibilityElement = YES; self.accessibilityHint = @"Open album. Use Inspect Album in actions to turn its media case.";
     self.accessibilityCustomActions = @[[[UIAccessibilityCustomAction alloc] initWithName:@"Inspect Album" target:self selector:@selector(accessibilityInspectAlbum:)]];
     [self addTarget:self action:@selector(openAlbum) forControlEvents:(1UL<<6)];
     return self;

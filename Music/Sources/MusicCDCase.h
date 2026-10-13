@@ -27,6 +27,7 @@ static NSString * const GMLiveMediumChanged = @"Music.LiveMediumChanged";
 - (void)moveToHost:(UIView *)host frame:(CGRect)frame prewarming:(BOOL)prewarming;
 @property(nonatomic, readonly) BOOL readyForDisplay;
 - (void)setPlaying:(BOOL)playing;
+- (void)setEntranceSpeed:(CGFloat)speed;
 - (void)setCaseOpen:(BOOL)open animated:(BOOL)animated;
 - (void)setInspectionTiltX:(CGFloat)x y:(CGFloat)y;
 - (void)resetInspectionTiltAnimated:(BOOL)animated;
