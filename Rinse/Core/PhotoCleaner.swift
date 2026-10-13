@@ -7,7 +7,10 @@ import UniformTypeIdentifiers
 enum PhotoCleaner {
     private static let context = CIContext(options: [.cacheIntermediates: false])
     private static let allowedExif: Set<String> = ["ColorSpace", "PixelXDimension", "PixelYDimension", "ComponentsConfiguration", "ExifVersion", "FlashPixVersion"]
-    private static let allowedTIFF: Set<String> = ["Orientation", "XResolution", "YResolution", "ResolutionUnit", "WhitePoint", "PrimaryChromaticities"]
+    // ImageIO generates TIFF tile dimensions for freshly encoded HEIC images.
+    // These describe image layout, not the source camera, owner or location.
+    // The synthetic native probe and HEIC round-trip test cover this distinction.
+    private static let allowedTIFF: Set<String> = ["Orientation", "XResolution", "YResolution", "ResolutionUnit", "WhitePoint", "PrimaryChromaticities", "TileWidth", "TileLength"]
     static func audit(_ url: URL) throws -> Audit {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
             throw RinseError.message("This photo could not be opened.")

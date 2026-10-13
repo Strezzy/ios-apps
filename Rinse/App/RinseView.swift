@@ -105,7 +105,7 @@ struct RinseView: View {
     }
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 24) {
-            Label("Nothing leaves until you share it", systemImage: "iphone.gen3.radiowaves.left.and.right.slash")
+            Label("Nothing leaves until you share it", systemImage: "wifi.slash")
                 .font(.headline)
             benefit("Personal tags removed", detail: "Location, camera details, dates and other embedded fields.", icon: "mappin.slash")
             benefit("Every output checked", detail: "See the metadata report and compare SHA-256 fingerprints.", icon: "checkmark.seal")
