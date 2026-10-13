@@ -17,6 +17,17 @@
       "developerName": "Strezzy",
       "versions": [
         {
+          "version": "0.15",
+          "buildVersion": "16",
+          "buildNumber": "16",
+          "date": "2026-10-13T07:40:22Z",
+          "localizedDescription": "Persistent CD and cassette artwork replaces the old fallback and survives app relaunches and tab changes. Covers and album metadata restore before the library appears. Cassette cases open forward and downward; playlists and Search album and artist previews use the selected media style. Cask and the original optical shaders are preserved. All 117 native simulator checks passed. New covers need one initial render; physical-device performance remains to be measured.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.15-build16/Music.ipa",
+          "size": 3069818,
+          "minOSVersion": "16.0",
+          "sha256": "1a7910ea6b4cd89169ada5ead1de167a2e1e0cf1a339d4383135b4b82f9c6923"
+        },
+        {
           "version": "0.14",
           "buildVersion": "15",
           "buildNumber": "15",
@@ -79,11 +90,11 @@
           "NSMotionUsageDescription": "Music uses device motion to gently tilt visible CD cases. Motion stays on your device."
         }
       },
-      "version": "0.14",
-      "versionDate": "2026-10-13T06:45:26Z",
-      "versionDescription": "Live CD and Live Cassette artwork throughout Music, matching rendered thumbnails in Songs, Albums and the mini-player, faster song-to-player transitions with a source-art fade, and continuous spinning across song changes. Cask and the original optical shaders are preserved. All 42 native simulator checks passed; physical-device performance remains to be measured.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.14-build15/Music.ipa",
-      "size": 3068808
+      "version": "0.15",
+      "versionDate": "2026-10-13T07:40:22Z",
+      "versionDescription": "Persistent CD and cassette artwork replaces the old fallback and survives app relaunches and tab changes. Covers and album metadata restore before the library appears. Cassette cases open forward and downward; playlists and Search album and artist previews use the selected media style. Cask and the original optical shaders are preserved. All 117 native simulator checks passed. New covers need one initial render; physical-device performance remains to be measured.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/music-0.15-build16/Music.ipa",
+      "size": 3069818
     },
     {
       "name": "VoiceGlass",
