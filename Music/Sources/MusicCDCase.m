@@ -529,6 +529,9 @@ static NSString *GMCDEncodedArtwork(UIImage *artwork, NSUInteger maximumPixels) 
 - (void)moveToHost:(UIView *)host frame:(CGRect)frame prewarming:(BOOL)prewarming {
     GMCDMotionHub *hub = GMCDSharedHub();
     BOOL reconciling = hub.reconciling; hub.reconciling = YES;
+    // A user opening the player is a new activation after memory-pressure
+    // eviction, even though the warm host still owns this native view.
+    if (self.prewarming && !prewarming) self.failedThisActivation = NO;
     self.prewarming = prewarming; self.ownerActive = YES;
     self.transform = CGAffineTransformIdentity;
     [host addSubview:self]; self.frame = frame;

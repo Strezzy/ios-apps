@@ -109,13 +109,21 @@ static void After(double seconds, void (^block)(void)) { dispatch_after(dispatch
 }
 - (void)checkMiniPlayer {
     [self check:@"dismissal_retains_warm_renderer" value:self.shell.player.cdCaseView.prewarming && self.shell.player.cdCaseView.webView==self.originalWeb];
+    // Exercise a real cache eviction before the existing mini-player zoom.
+    [GMCDSharedHub() memoryWarning:nil];
+    [self check:@"memory_pressure_evicts_renderer" value:self.shell.player.cdCaseView.webView==nil];
     [self.shell presentNowPlaying];
     [self check:@"mini_player_keeps_native_transition" value:self.shell.player.transitioningDelegate==nil && self.shell.player.preferredTransition!=nil];
-    After(3,^{
-        [self check:@"mini_player_reuses_hero" value:self.shell.player.cdCaseView.readyForDisplay && self.shell.player.cdCaseView.superview==self.shell.player.artView];
-        [self.shell.player closeNowPlaying]; After(1,^{[self checkGrid];});
-    });
+    self.attempts=0; After(1,^{[self waitMiniPlayer];});
 }
+- (void)waitMiniPlayer {
+    GMCDCaseView *hero=self.shell.player.cdCaseView;
+    if(!hero.readyForDisplay && ++self.attempts<80){After(.5,^{[self waitMiniPlayer];});return;}
+    [self check:@"mini_player_recovers_evicted_hero" value:hero.readyForDisplay && hero.superview==self.shell.player.artView && !hero.failedThisActivation];
+    self.originalWeb=hero.webView;
+    [self.shell.player closeNowPlaying]; After(1,^{[self checkGrid];});
+}
+
 - (void)checkGrid {
     [self check:@"dismissal_retains_warm_renderer" value:self.shell.player.cdCaseView.prewarming && self.shell.player.cdCaseView.webView==self.originalWeb];
     self.shell.selectedIndex=1;
