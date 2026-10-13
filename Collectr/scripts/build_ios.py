@@ -24,7 +24,6 @@ def main():
     choices=[d for runtime,items in devices['devices'].items() if 'iOS-26' in runtime or 'iOS-27' in runtime for d in items if d.get('isAvailable') and d['name'].startswith('iPhone')]
     if not choices: raise RuntimeError('iOS 26+ simulator missing')
     device=next((d for d in choices if 'Pro' in d['name']),choices[0]);udid=device['udid']
-    subprocess.run(['xcrun','simctl','boot',udid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run([sys.executable,ROOT/'scripts/generate_icon.py'])
     run([sys.executable,ROOT/'scripts/prepare_models.py'])
     run(['xcodegen','generate','--spec',ROOT/'project.yml'])
