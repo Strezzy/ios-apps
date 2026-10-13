@@ -1,0 +1,280 @@
+--- a/Music/Sources/MusicCDCase.m
++++ b/Music/Sources/MusicCDCase.m
+@@ -134,4 +134,21 @@
+ // Workers retain this small token rather than temporarily retaining a UIView
+ // off-main. Cancellation also avoids decoding covers for already-reused rows.
++// At most two already-rendered, paused WebViews can wait for reuse. They
++// retain compiled shaders, not a running animation or a sensor subscription.
++@interface GMCDWarmRenderer : NSObject
++@property(nonatomic,strong) WKWebView *webView;
++@property(nonatomic,strong) GMCDScriptProxy *proxy;
++@property(nonatomic) BOOL grid;
++@property(nonatomic) CFTimeInterval parkedAt;
++@end
++@implementation GMCDWarmRenderer
++- (void)dealloc {
++    self.proxy.owner = nil;
++    [self.webView.configuration.userContentController removeScriptMessageHandlerForName:@"musicCD"];
++    self.webView.navigationDelegate = nil;
++    [self.webView stopLoading];
++}
++@end
++
+ @interface GMCDArtworkJob : NSObject
+ @property(atomic, getter=isCancelled) BOOL cancelled;
+@@ -161,4 +178,8 @@
+ @property(nonatomic) BOOL caseOpen;
+ @property(nonatomic) BOOL bridgeReady;
++@property(nonatomic,copy) NSString *renderTicket;
++@property(nonatomic) CFTimeInterval rendererStartedAt;
++@property(nonatomic) CFTimeInterval firstFrameSeconds;
++@property(nonatomic) BOOL usedWarmRenderer;
+ @property(nonatomic, strong) UILabel *rendererStatusLabel;
+ @property(nonatomic, copy) NSString *rendererFailureReason;
+@@ -196,4 +217,10 @@
+ @property(nonatomic, strong) CMMotionManager *motionManager;
+ @property(nonatomic, strong) WKWebsiteDataStore *dataStore;
++@property(nonatomic, strong) NSMutableArray<GMCDWarmRenderer *> *warmRenderers;
++@property(nonatomic, copy) NSString *rendererSource;
++@property(nonatomic) NSUInteger rendererAllocations;
++@property(nonatomic) NSUInteger rendererReuses;
++- (GMCDWarmRenderer *)takeWarmRendererForGrid:(BOOL)grid;
++- (void)parkWebView:(WKWebView *)web proxy:(GMCDScriptProxy *)proxy grid:(BOOL)grid;
+ @property(nonatomic, strong) NSLock *sampleLock;
+ @property(nonatomic, strong) CMAttitude *referenceAttitude;
+@@ -222,8 +249,9 @@
+     self.motionQueue = [NSOperationQueue new]; self.motionQueue.maxConcurrentOperationCount = 1;
+     self.motionQueue.name = @"Music.CDCase.Motion";
+-    self.artworkQueue = [NSOperationQueue new]; self.artworkQueue.maxConcurrentOperationCount = 1;
++    self.artworkQueue = [NSOperationQueue new]; self.artworkQueue.maxConcurrentOperationCount = 2;
+     self.artworkQueue.name = @"Music.CDCase.Artwork";
+     self.sampleLock = [NSLock new];
+     self.dataStore = [WKWebsiteDataStore nonPersistentDataStore];
++    self.warmRenderers = [NSMutableArray new];
+     UIApplication *application = [UIApplication sharedApplication];
+     self.applicationSuspended = application.applicationState != UIApplicationStateActive;
+@@ -239,6 +267,29 @@
+     return self;
+ }
++- (GMCDWarmRenderer *)takeWarmRendererForGrid:(BOOL)grid {
++    for (GMCDWarmRenderer *slot in [self.warmRenderers copy]) {
++        if (CACurrentMediaTime()-slot.parkedAt > 20) { [self.warmRenderers removeObject:slot]; continue; }
++        if (slot.grid == grid) {
++            [self.warmRenderers removeObject:slot]; self.rendererReuses++;
++            return slot;
++        }
++    }
++    return nil;
++}
++- (void)parkWebView:(WKWebView *)web proxy:(GMCDScriptProxy *)proxy grid:(BOOL)grid {
++    GMCDWarmRenderer *slot = [GMCDWarmRenderer new];
++    slot.webView = web; slot.proxy = proxy; slot.grid = grid; slot.parkedAt = CACurrentMediaTime();
++    [self.warmRenderers addObject:slot];
++    // Two recent slots may survive navigation or row reuse; extra pooled
++    // views are evicted oldest-first. No unbounded WebGL cache.
++    while (self.warmRenderers.count > 2) [self.warmRenderers removeObjectAtIndex:0];
++    __weak GMCDMotionHub *weakSelf = self; __weak GMCDWarmRenderer *weakSlot = slot;
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(20*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
++        GMCDWarmRenderer *expired = weakSlot;
++        if (expired && CACurrentMediaTime()-expired.parkedAt >= 19.9) [weakSelf.warmRenderers removeObject:expired];
++    });
++}
+ - (void)applicationPaused:(NSNotification *)notification {
+-    self.applicationSuspended = YES; [self reconcile];
++    self.applicationSuspended = YES; [self.warmRenderers removeAllObjects]; [self reconcile];
+ }
+ - (void)applicationResumed:(NSNotification *)notification {
+@@ -265,4 +316,5 @@
+ }
+ - (void)memoryWarning:(NSNotification *)notification {
++    [self.warmRenderers removeAllObjects];
+     for (GMCDCaseView *view in self.views.allObjects) {
+         view.failedThisActivation = YES;
+@@ -447,5 +499,5 @@
+     [self.stillView removeFromSuperview]; self.stillView = nil;
+     if (!self.rendered) self.fallback.hidden = NO;
+-    if (self.webView) [self ensureEncodedArtwork];
++    [self ensureEncodedArtwork];
+     [GMCDSharedHub() reconcile];
+ }
+@@ -540,5 +592,7 @@
+ - (void)layoutSubviews {
+     [super layoutSubviews];
+-    self.webView.frame = self.bounds; self.fallback.frame = self.bounds; self.stillView.frame = self.bounds;
++    CGFloat halo = self.presentation == GMCDCasePresentationGrid ? 0 : 8;
++    CGRect drawing = CGRectInset(self.bounds,-halo,-halo);
++    self.webView.frame = drawing; self.fallback.frame = self.bounds; self.stillView.frame = drawing;
+     self.rendererStatusLabel.frame = CGRectMake(4,GMMax(0,self.bounds.size.height-28),GMMax(0,self.bounds.size.width-8),28);
+     [GMCDSharedHub() reconcile];
+@@ -569,9 +623,10 @@
+     if (!self.artwork.CGImage) {
+         self.encodedArtwork = nil; self.encodedRevision = self.artworkRevision;
+-        self.pending[@"art"] = [NSNull null]; [self flushPending]; return;
++        self.pending[@"art"] = [NSNull null]; self.pending[@"artToken"] = [NSString stringWithFormat:@"%lu",(unsigned long)self.artworkRevision];
++        [self flushPending]; return;
+     }
+     self.encoding = YES;
+     NSUInteger generation = ++self.encodingGeneration, revision = self.artworkRevision;
+-    NSUInteger maximum = self.presentation == GMCDCasePresentationGrid ? 512 : 1024;
++    NSUInteger maximum = self.presentation == GMCDCasePresentationGrid ? 768 : 1024;
+     UIImage *artwork = self.artwork;
+     GMCDArtworkJob *job = [GMCDArtworkJob new]; self.artworkJob = job;
+@@ -588,4 +643,5 @@
+                 view.encoding = NO; view.encodedArtwork = encoded; view.encodedRevision = revision;
+                 view.pending[@"art"] = encoded ?: (id)[NSNull null];
++                view.pending[@"artToken"] = [NSString stringWithFormat:@"%lu",(unsigned long)revision];
+                 [view flushPending];
+             });
+@@ -597,8 +653,22 @@
+     // The guest app reads its own signed, bundled JavaScript. WebContent does
+     // not need permission to traverse a LiveContainer guest's bundle path.
+-    NSURL *scriptURL = [[NSBundle mainBundle] URLForResource:@"music-cd" withExtension:@"js" subdirectory:@"CDCase"];
+-    NSData *scriptData = scriptURL ? [NSData dataWithContentsOfURL:scriptURL options:0 error:NULL] : nil;
+-    NSString *source = scriptData.length && scriptData.length < 4*1024*1024 ? [[NSString alloc] initWithData:scriptData encoding:4] : nil;
++    GMCDMotionHub *hub = GMCDSharedHub();
++    BOOL grid = self.presentation == GMCDCasePresentationGrid;
++    GMCDWarmRenderer *warm = [hub takeWarmRendererForGrid:grid];
++    self.usedWarmRenderer = warm != nil;
++    if (!hub.rendererSource.length) {
++        NSURL *scriptURL = [[NSBundle mainBundle] URLForResource:@"music-cd" withExtension:@"js" subdirectory:@"CDCase"];
++        NSData *scriptData = scriptURL ? [NSData dataWithContentsOfURL:scriptURL options:0 error:NULL] : nil;
++        if (scriptData.length && scriptData.length < 4*1024*1024) hub.rendererSource = [[NSString alloc] initWithData:scriptData encoding:4];
++    }
++    NSString *source = hub.rendererSource;
+     if (!source.length) { [self recordRendererFailure:@"bundled-renderer-missing"]; [self failRenderer]; return; }
++    WKWebView *web = warm.webView;
++    if (warm) {
++        self.scriptProxy = warm.proxy;
++        // Transfer ownership before the idle-slot wrapper is released.
++        warm.webView = nil; warm.proxy = nil;
++        self.scriptProxy.owner = self;
++    } else {
+     WKWebViewConfiguration *configuration = [WKWebViewConfiguration new];
+     configuration.websiteDataStore = GMCDSharedHub().dataStore;
+@@ -608,5 +678,13 @@
+     [controller addUserScript:[[WKUserScript alloc] initWithSource:source injectionTime:WKUserScriptInjectionTimeAtDocumentEnd forMainFrameOnly:YES]];
+     configuration.userContentController = controller;
+-    WKWebView *web = [[WKWebView alloc] initWithFrame:self.bounds configuration:configuration];
++    web = [[WKWebView alloc] initWithFrame:self.bounds configuration:configuration];
++    hub.rendererAllocations++;
++    }
++    CGFloat halo = grid ? 0 : 8;
++    web.frame = CGRectInset(self.bounds,-halo,-halo);
++    [web.layer removeAllAnimations]; web.alpha = .01;
++    self.fallback.alpha = 1; self.fallback.hidden = NO;
++    self.renderTicket = [NSUUID UUID].UUIDString;
++    self.rendererStartedAt = CACurrentMediaTime(); self.firstFrameSeconds = -1;
+     web.userInteractionEnabled = NO; web.accessibilityElementsHidden = YES;
+     web.opaque = NO; web.backgroundColor = [UIColor clearColor];
+@@ -617,11 +695,14 @@
+     web.allowsBackForwardNavigationGestures = NO; web.allowsLinkPreview = NO; web.navigationDelegate = self;
+     self.webView = web; self.rendererGeneration++; self.rendererArtworkRevision = self.artworkRevision;
+-    self.bridgeReady = NO; self.rendered = NO; self.evaluating = NO; self.rendererFailureReason = nil;
++    self.bridgeReady = warm != nil; self.rendered = NO; self.evaluating = NO; self.rendererFailureReason = nil;
+     // The real renderer must not be occluded by its own placeholder while
+     // waiting for WebKit's first-frame acknowledgement.
+     [self addSubview:web]; [self bringSubviewToFront:self.rendererStatusLabel];
+-    [self showRendererStatus:@"Loading 3D case…"];
++    [self showRendererStatus:nil];
+     self.pending = [NSMutableDictionary dictionary];
+-    self.pending[@"quality"] = self.presentation == GMCDCasePresentationGrid ? @"grid" : @"hero";
++    self.pending[@"quality"] = grid ? @"grid" : @"hero";
++    self.pending[@"epoch"] = self.renderTicket;
++    self.pending[@"padding"] = @(halo);
++    self.pending[@"artToken"] = self.encodedRevision == self.artworkRevision ? [NSString stringWithFormat:@"%lu",(unsigned long)self.artworkRevision] : @"pending";
+     self.pending[@"background"] = self.backgroundComponents ?: @[@1,@1,@1];
+     self.pending[@"open"] = @(self.caseOpen); self.pending[@"animateOpen"] = @NO;
+@@ -629,7 +710,11 @@
+     [self queueMotionState]; [self ensureEncodedArtwork];
+     NSString *html = @"<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'><meta http-equiv='Content-Security-Policy' content=\"default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'\"><style>html,body,#case{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;overflow:hidden;background:transparent;touch-action:none;-webkit-user-select:none}canvas{display:block;width:100%;height:100%;background:transparent}</style></head><body><div id='case'></div></body></html>";
+-    [web loadHTMLString:html baseURL:nil];
++    if (!warm) [web loadHTMLString:html baseURL:nil];
+     NSUInteger generation = self.rendererGeneration;
+     __weak GMCDCaseView *weakSelf = self;
++    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(.65*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
++        GMCDCaseView *view = weakSelf;
++        if (view && view.rendererGeneration == generation && !view.rendered && view.ownerActive) [view showRendererStatus:@"Loading 3D case…"];
++    });
+     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,(int64_t)(60*NSEC_PER_SEC)),dispatch_get_main_queue(),^{
+         GMCDCaseView *view = weakSelf;
+@@ -672,17 +757,21 @@
+     UIView *still = keepStill && self.rendered && artworkMatches && web.window ? [web snapshotViewAfterScreenUpdates:NO] : nil;
+     if (still) {
+-        still.userInteractionEnabled = NO; still.accessibilityElementsHidden = YES; still.frame = self.bounds;
++        still.userInteractionEnabled = NO; still.accessibilityElementsHidden = YES; still.frame = web.frame;
+         [self.stillView removeFromSuperview]; self.stillView = still;
+         [self addSubview:still];
+     } else if (!keepStill) { [self.stillView removeFromSuperview]; self.stillView = nil; }
+     self.fallback.hidden = self.stillView != nil;
++    BOOL canPark = self.bridgeReady && self.rendered && !self.failedThisActivation && !GMCDSharedHub().applicationSuspended;
++    GMCDScriptProxy *proxy = self.scriptProxy;
+     self.rendererGeneration++; self.encodingGeneration++; self.encoding = NO;
+     self.artworkJob.cancelled = YES; self.artworkJob = nil;
+     self.bridgeReady = NO; self.rendered = NO; self.evaluating = NO;
+     self.scriptProxy.owner = nil;
+-    [web.configuration.userContentController removeScriptMessageHandlerForName:@"musicCD"];
++    if (!canPark) [web.configuration.userContentController removeScriptMessageHandlerForName:@"musicCD"];
+     web.navigationDelegate = nil;
+     [web evaluateJavaScript:@"if(window.MusicCD){window.MusicCD.receive({active:false});}void 0;" completionHandler:nil];
++    [web.layer removeAllAnimations];
+     [web stopLoading]; [web removeFromSuperview];
++    if (canPark) [GMCDSharedHub() parkWebView:web proxy:proxy grid:self.presentation == GMCDCasePresentationGrid];
+     self.webView = nil; self.scriptProxy = nil;
+     self.pending = [NSMutableDictionary dictionary];
+@@ -716,7 +805,23 @@
+     if ([type isEqualToString:@"ready"]) { self.bridgeReady = YES; [self flushPending]; }
+     else if ([type isEqualToString:@"rendered"]) {
+-        self.rendered = YES;
+-        [self.stillView removeFromSuperview]; self.stillView = nil;
+-        self.fallback.hidden = YES; self.automaticRetries = 0; [self showRendererStatus:nil];
++        NSDictionary *body = message.body;
++        NSString *token = [NSString stringWithFormat:@"%lu",(unsigned long)self.artworkRevision];
++        if (![body[@"epoch"] isEqual:self.renderTicket] || ![body[@"artToken"] isEqual:token] || self.encodedRevision != self.artworkRevision) return;
++        BOOL reveal = !self.rendered;
++        self.rendered = YES; self.rendererArtworkRevision = self.artworkRevision;
++        if (reveal) self.firstFrameSeconds = CACurrentMediaTime()-self.rendererStartedAt;
++        self.automaticRetries = 0; [self showRendererStatus:nil];
++        if (reveal) {
++            NSUInteger generation = self.rendererGeneration;
++            __weak GMCDCaseView *weakSelf = self;
++            [UIView animateWithDuration:GMCDReducedMotion() ? 0 : .18 animations:^{
++                weakSelf.webView.alpha = 1; weakSelf.fallback.alpha = 0; weakSelf.stillView.alpha = 0;
++            } completion:^(BOOL finished) {
++                GMCDCaseView *view = weakSelf;
++                if (!view || view.rendererGeneration != generation) return;
++                view.fallback.hidden = YES; view.fallback.alpha = 1;
++                [view.stillView removeFromSuperview]; view.stillView = nil;
++            }];
++        }
+         [GMCDSharedHub() updateMotionDemand];
+     } else if ([type isEqualToString:@"failed"]) {
+--- a/Music/Sources/MusicCDCase.h
++++ b/Music/Sources/MusicCDCase.h
+@@ -17,5 +17,5 @@
+                         artist:(NSString *)artist artwork:(UIImage *)artwork;
+ // Owner visibility is combined with actual window/scene visibility. Setting
+-// active to NO releases this view's live renderer and keeps a case still.
++// active to NO pauses rendering and may cache a bounded idle renderer for reuse.
+ - (void)setActive:(BOOL)active;
+ - (void)setPlaying:(BOOL)playing;
+--- a/Music/Sources/LibraryUI.m
++++ b/Music/Sources/LibraryUI.m
+@@ -142,5 +142,5 @@
+         cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu",(unsigned long)self.shell.playlistStore.playlists.count];
+     } else {
+-        cell.textLabel.text = @"Music"; cell.detailTextLabel.text = @"0.10 (11)";
++        cell.textLabel.text = @"Music"; cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ (%@)",[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"],[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]];
+     }
+     GMApplyAppFontToViewTree(cell.contentView);
+--- a/Music/Resources/Info.plist
++++ b/Music/Resources/Info.plist
+@@ -18,7 +18,7 @@
+ 	<string>APPL</string>
+ 	<key>CFBundleShortVersionString</key>
+-	<string>0.12</string>
++	<string>0.13</string>
+ 	<key>CFBundleVersion</key>
+-	<string>13</string>
++	<string>14</string>
+ 	<key>CFBundleSupportedPlatforms</key>
+ 	<array>
