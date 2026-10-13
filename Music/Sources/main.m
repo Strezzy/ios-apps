@@ -420,8 +420,9 @@ static UIVisualEffectView *GMPlayerRouteSurface(void) {
     for (GMTrack *track in self.tracks) {
         if (track.metadataLoaded) continue;
         GMTrack *copy = [GMTrack new];
-        copy.url = track.url; copy.title = track.title; copy.artist = track.artist;
-        copy.album = track.album; copy.albumArtist = track.albumArtist;
+        copy.url = track.url; copy.title = track.url.lastPathComponent.stringByDeletingPathExtension;
+        copy.artist = @"Unknown Artist"; copy.album = @"Unknown Album";
+        // Cache source metadata only. Saved user edits are reapplied below.
         [pending addObject:copy];
     }
     self.metadataLoading = pending.count > 0;
