@@ -203,8 +203,25 @@ final class StereoRenderer {
         var value: CVPixelBuffer?
         // The writer owns submitted buffers until it finishes encoding. The pool
         // recycles only released buffers; never overwrite an in-flight frame.
-        let result = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, pools[key]!,
-            [kCVPixelBufferPoolAllocationThresholdKey as String: 10] as CFDictionary, &value)
+        let allocation = [kCVPixelBufferPoolAllocationThresholdKey as String: 10] as CFDictionary
+        var result = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault,
+            pools[key]!, allocation, &value)
+        // Writer readiness does not imply that its earlier input buffers have
+        // already been released. Drop only unused cached texture references,
+        // then allow the encoder a bounded interval to release in-flight frames.
+        // The ten-buffer cap and output dimensions remain unchanged.
+        let deadline = ProcessInfo.processInfo.systemUptime + 2
+        while result == kCVReturnWouldExceedAllocationThreshold {
+            try Task.checkCancellation()
+            CVMetalTextureCacheFlush(cache, 0)
+            result = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault,
+                pools[key]!, allocation, &value)
+            if result != kCVReturnWouldExceedAllocationThreshold { break }
+            if ProcessInfo.processInfo.systemUptime >= deadline { break }
+            // This synchronous renderer runs on the export worker. Sleeping
+            // yields CPU time instead of spinning or increasing memory use.
+            Thread.sleep(forTimeInterval: 0.005)
+        }
         guard result == kCVReturnSuccess, let value else {
             throw DepthCheckError.message("The full-resolution buffer pool is busy or memory is exhausted. Enable Memory Saver and close other large apps, then retry. The export resolution was not reduced.")
         }
