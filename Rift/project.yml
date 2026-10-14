@@ -1,0 +1,80 @@
+name: Rift
+options:
+  deploymentTarget:
+    iOS: '26.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    CLANG_CXX_LANGUAGE_STANDARD: c++17
+    CLANG_CXX_LIBRARY: libc++
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    TARGETED_DEVICE_FAMILY: '1'
+    MARKETING_VERSION: '1.0'
+    CURRENT_PROJECT_VERSION: '1'
+targets:
+  Rift:
+    type: application
+    platform: iOS
+    sources:
+      - path: Rift
+        excludes: [Info.plist]
+    info:
+      path: Rift/Info.plist
+      properties:
+        CFBundleDisplayName: Rift
+        CFBundleShortVersionString: '1.0'
+        CFBundleVersion: '1'
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIFileSharingEnabled: false
+        LSSupportsOpeningDocumentsInPlace: true
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rift
+        SWIFT_OBJC_BRIDGING_HEADER: Rift/Rift-Bridging-Header.h
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        HEADER_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/ThirdParty/llama/include
+          - $(SRCROOT)/ThirdParty/llama/ggml/include
+          - $(SRCROOT)/ThirdParty/llama/common
+          - $(SRCROOT)/ThirdParty/llama/vendor
+          - $(SRCROOT)/ThirdParty/llama/vendor/nlohmann
+        LIBRARY_SEARCH_PATHS: $(SRCROOT)/Build/Native/$(PLATFORM_NAME)
+        OTHER_LDFLAGS: ['$(inherited)', '-lruntime', '-lc++', '-lz', '-framework', Accelerate, '-framework', Metal, '-framework', Foundation, '-framework', Security]
+        DEAD_CODE_STRIPPING: YES
+  RiftTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [RiftTests]
+    dependencies:
+      - target: Rift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rift.tests
+        GENERATE_INFOPLIST_FILE: YES
+  RiftUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [RiftUITests]
+    dependencies:
+      - target: Rift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rift.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Rift:
+    build:
+      targets:
+        Rift: all
+        RiftTests: [test]
+        RiftUITests: [test]
+    test:
+      gatherCoverageData: true
+      targets: [RiftTests, RiftUITests]
