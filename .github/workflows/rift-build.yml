@@ -1,0 +1,66 @@
+name: Build and verify Rift for iPhone
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['Rift/**', '.github/workflows/rift-build.yml']
+permissions:
+  contents: write
+concurrency:
+  group: rift-native-build
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare native tools
+        id: tools
+        run: |
+          xcodebuild -version
+          echo "xcode=$(xcodebuild -version | tr '\n ' '-')" >> "$GITHUB_OUTPUT"
+          python -m pip install Pillow==11.1.0
+          if ! command -v xcodegen; then brew install xcodegen; fi
+          if ! command -v cmake; then brew install cmake; fi
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+      - uses: actions/cache@v4
+        with:
+          path: Rift/Build/Native
+          key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+      - name: Build, run native tests, verify every model and package the iPhone app
+        env:
+          RIFT_BUILD_NUMBER: ${{ github.run_number }}
+        run: python Rift/scripts/build.py
+      - name: Preserve the exact source, pinned catalog and icon
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Rift/Rift Rift/project.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record verified Rift source, pinned uncensored catalog and approved artwork [skip ci]'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+          git rev-parse HEAD > Rift/Build/SOURCE-REVISION.txt
+      - name: Preserve build evidence and the real IPA
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Rift-iPhone
+          path: |
+            Rift/Build/Rift.ipa
+            Rift/Build/Rift-Source.zip
+            Rift/Build/BUILD-REPORT.json
+            Rift/Build/MODEL-SMOKE.json
+            Rift/Build/catalog-resolution.json
+            Rift/Build/SOURCE-REVISION.txt
+            Rift/Build/Screenshots
+            Rift/Build/Logs
+          if-no-files-found: warn
+          retention-days: 14
