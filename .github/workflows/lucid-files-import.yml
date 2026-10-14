@@ -25,14 +25,43 @@ jobs:
           python-version: '3.11'
       - name: Apply and commit the targeted repair
         run: |
+          git fetch origin main
+          git merge --ff-only origin/main
+          python - <<'PY'
+          import copy, importlib.util, json, subprocess
+          from pathlib import Path
+          baseline='8c8f34c5afd161a4b19968caf4b422789d083ddb'
+          old=json.loads(subprocess.check_output(['git','show',baseline+':apps.json'],text=True))
+          path=Path('apps.json');catalog=json.loads(path.read_text())
+          old_veil=next(a for a in old['apps'] if a['bundleIdentifier']=='com.billy.veil')
+          current=next(a for a in catalog['apps'] if a['bundleIdentifier']=='com.billy.veil')
+          if current!=old_veil and current['versions'][0]['downloadURL'].endswith('/veil-1.1-build202/Veil.ipa'):
+              before={a['bundleIdentifier']:copy.deepcopy(a) for a in catalog['apps'] if a['bundleIdentifier']!='com.billy.veil'}
+              catalog['apps']=[copy.deepcopy(old_veil) if a['bundleIdentifier']=='com.billy.veil' else a for a in catalog['apps']]
+              assert before=={a['bundleIdentifier']:a for a in catalog['apps'] if a['bundleIdentifier']!='com.billy.veil'}
+              path.write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n')
+              evidence=Path('branding/native-releases/Veil.json')
+              evidence.write_bytes(subprocess.check_output(['git','show',baseline+':'+str(evidence)]))
+              spec=importlib.util.spec_from_file_location('catalog_recovery','scripts/update_catalog.py')
+              module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+              module.render_readme(catalog)
+              print('Restored only Veil catalog/evidence to its pre-hotfix version; published release bytes were not deleted or replaced.')
+          subprocess.run(['git','diff','--exit-code',baseline,'--','LumaLift/Core','LumaLift/scripts/prepare_models.py','LumaLift/project.yml','Music','assets/Music.png','assets/Prism.png'],check=True)
+          PY
           python LumaLift/scripts/apply_files_fix.py
           git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add LumaLift/App/LumaLiftApp.swift LumaLift/App/AppStore.swift LumaLift/App/VideoFileImportPolicy.swift LumaLift/Tests/LumaLiftTests.swift LumaLift/scripts/build_ios.py
+          git add LumaLift/App/LumaLiftApp.swift LumaLift/App/AppStore.swift LumaLift/App/VideoFileImportPolicy.swift LumaLift/Tests/LumaLiftTests.swift LumaLift/scripts/build_ios.py apps.json README.md branding/native-releases/Veil.json
           if ! git diff --cached --quiet; then
-            git commit -m 'Fix greyed-out Files videos with content validation and coordinated imports [skip ci]'
-            git push origin HEAD:main
+            git commit -m 'Finish Lucid Files import normalization and restore unrelated catalog entry [skip ci]'
+            pushed=false
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:main; then pushed=true; break; fi
+              git fetch origin main
+              git rebase origin/main
+            done
+            test "$pushed" = true
           fi
           echo "LUCID_SOURCE_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           python - <<'PY'
@@ -86,7 +115,7 @@ jobs:
           tag=f"lucid-{report['version']}-build{report['build']}"
           notes=(f"Lucid {report['version']} ({report['build']})\n\n"
               'Fixes videos appearing greyed out or unselectable when importing from Files. The picker no longer relies on a file provider labeling a movie with a video-specific type. It allows file selection, then checks the actual video track before accepting it. Non-video files and folders are rejected.\n\n'
-              'Files imports now coordinate read access while permission is held and copy into private storage off the main thread. Originals are not modified, failed imports are cleaned up, and an invalid selection does not replace the current clip.\n\n'
+              'Files imports now coordinate read access while permission is held and copy into private storage off the main thread. MOV/MP4 files with missing or generic extensions receive a container hint only on the private copy. Originals are not modified, failed imports are cleaned up, and an invalid selection does not replace the current clip.\n\n'
               'The app name, icon and bundle identifier remain Lucid / com.billy.lucid. This is an ordinary update to Lucid, not a new app identity. The enhancement engine, RIFE frame-rate processing, model preparation, UI theme and export settings were not changed.\n\n'
               f"Validation: {report['native_tests']['count']} simulator-supported tests passed, including six new Files/identity regressions. The two hardware-only motion tests remain explicitly skipped. The real Files-provider interface and LiveContainer behavior still require physical-device confirmation.\n\n"
               f"Built from source revision `{report['source_revision']}`. The release tag uses the publication branch; the attached report and source archive identify the tested code.\n")
