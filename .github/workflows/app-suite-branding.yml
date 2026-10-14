@@ -30,10 +30,21 @@ jobs:
           git fetch origin main
           git merge --ff-only origin/main
           "$RUNNER_TEMP/branding-env/bin/python" scripts/suite_branding.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          registry = json.loads(Path('app-registry.json').read_text())
+          for folder, bundle in [('Rinse', 'com.billy.rinse'), ('LumaLift', 'com.billy.lumalift')]:
+              path = Path(folder) / 'catalog-entry.json'
+              entry = json.loads(path.read_text())
+              for key in ('name', 'icon', 'tintColor'):
+                  entry[key] = registry[bundle][key]
+              path.write_text(json.dumps(entry, indent=2, ensure_ascii=False) + '\n')
+          PY
       - name: Verify preserved apps and publish
         run: |
           git diff --exit-code -- Music assets/Music.png assets/Prism.png
-          git add app-registry.json apps.json README.md Rinse/catalog-entry.json assets/Facet.png assets/Veil.png assets/Lucid.png assets/Echo.png branding/app-icons branding/verification.json
+          git add app-registry.json apps.json README.md Rinse/catalog-entry.json LumaLift/catalog-entry.json assets/Facet.png assets/Veil.png assets/Lucid.png assets/Echo.png branding/app-icons branding/verification.json
           if ! git diff --cached --quiet; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
