@@ -1,0 +1,28 @@
+name: Clear superseded Rift build
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/rift-release-queue.yml']
+permissions:
+  actions: write
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Cancel only the already-failed superseded Rift run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          route = 'repos/Strezzy/ios-apps/actions/runs/38626083189'
+          data = json.loads(subprocess.check_output(['gh', 'api', route], text=True))
+          assert data['head_sha'] == '29b5f57c59eaad61ddc23969db66ec54372007da'
+          assert data['path'] == '.github/workflows/rift-build.yml'
+          if data['status'] != 'completed':
+              jobs = json.loads(subprocess.check_output(['gh', 'api', route + '/jobs'], text=True))['jobs']
+              assert any(job['id'] == 116065551302 and job['conclusion'] == 'failure' for job in jobs)
+              subprocess.run(['gh', 'api', '--method', 'POST', route + '/cancel'], check=True)
+          print('Superseded run no longer blocks the corrected release.')
+          PY
