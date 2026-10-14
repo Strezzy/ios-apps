@@ -1,0 +1,163 @@
+name: Build native app-suite releases
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Native app to build
+        type: choice
+        default: all
+        options: [all, Facet, Veil, Lucid]
+  workflow_call:
+    inputs:
+      app:
+        type: string
+        default: all
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/native-suite.yml'
+      - 'scripts/native_suite_*.py'
+      - 'DepthCheck/**'
+      - 'Rinse/**'
+      - 'LumaLift/**'
+permissions:
+  contents: write
+concurrency:
+  group: native-suite-releases
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      revision: ${{ steps.source.outputs.revision }}
+      matrix: ${{ steps.source.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Apply native source and save the exact build revision
+        id: source
+        env:
+          SELECTED_APP: ${{ inputs.app || 'all' }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          git fetch origin main
+          git merge --ff-only origin/main
+          python3 scripts/native_suite_branding.py all
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          apps = [('Facet', 'DepthCheck', 'depthcheck'), ('Veil', 'Rinse', 'rinse'), ('Lucid', 'LumaLift', 'lumalift')]
+          catalog = json.loads(Path('apps.json').read_text())
+          matrix = []
+          for name, folder, legacy in apps:
+              if os.environ['SELECTED_APP'] not in ('all', name): continue
+              previous = [int(v['buildVersion']) for a in catalog['apps'] if a['bundleIdentifier'] in ('com.billy.'+legacy, 'com.billy.'+name.lower()) for v in a['versions'] if v['buildVersion'].isdigit()]
+              build = max(100+int(os.environ['RUN_NUMBER']), max(previous or [0])+1)
+              matrix.append({'app':name, 'folder':folder, 'build':str(build)})
+          assert matrix
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('matrix='+json.dumps({'include':matrix})+'\n')
+          for filename, name in [('depth-check.yml','Facet'), ('rinse.yml','Veil'), ('lumalift.yml','Lucid')]:
+              Path('.github/workflows/'+filename).write_text('name: Build '+name+' via native suite\non:\n  workflow_dispatch:\npermissions:\n  contents: write\njobs:\n  build:\n    uses: ./.github/workflows/native-suite.yml\n    with:\n      app: '+name+'\n')
+          guide = '''# Native suite installation change
+          
+          Facet, Veil, Lucid and Echo are receiving rebuilt native identities, not just catalog labels. The bundle IDs use com.billy.facet, com.billy.veil, com.billy.lucid and com.billy.echo respectively.
+          
+          These are new app identities. Keep the previous installation and export any important media or voice recordings before removing it. iOS does not automatically transfer the old app sandbox, preferences or keychain data. Model downloads may need to be installed again. Do not assume that changing a catalog name migrates data.
+          
+          Older published releases remain available and are not overwritten. The source listing switches each app only after its new IPA passes the native build and packaging checks. Prism and Music are unchanged.
+          
+          After this one-time identity change, subsequent releases retain the new IDs and can use the normal update process. Physical iPhone testing is still required; simulator results are not physical-device validation.
+          '''
+          Path('docs/NATIVE-SUITE-UPGRADE.md').write_text(guide)
+          template = Path('scripts/README.template.md')
+          text = template.read_text()
+          marker = '## Update an app and keep your data'
+          note = '## Native suite rename\n\n**The first native Facet, Veil, Lucid and Echo releases use new bundle IDs.** Keep the old installation and export important files before removing it. Data does not automatically transfer to the new app identity. See [the one-time installation note](docs/NATIVE-SUITE-UPGRADE.md). Prism and Music are unchanged.\n\n'
+          if '## Native suite rename' not in text:
+              assert marker in text
+              template.write_text(text.replace(marker,note+marker))
+          renderer = Path('scripts/suite_branding.py')
+          text = renderer.read_text()
+          anchor = "    registry = json.loads(registry_path.read_text())"
+          addition = "\n    # Native renamed IDs supersede legacy catalog identities.\n    for old_id, identity in list(BRANDS.items()):\n        current_id = 'com.billy.' + identity[0].lower()\n        if current_id in registry and old_id not in registry:\n            BRANDS[current_id] = BRANDS.pop(old_id)"
+          if 'Native renamed IDs supersede' not in text:
+              assert anchor in text
+              renderer.write_text(text.replace(anchor,anchor+addition))
+          for folder in ('DepthCheck/scripts','Rinse/scripts','LumaLift/scripts'):
+              for p in Path(folder).glob('*.py'): compile(p.read_text(),str(p),'exec')
+          PY
+          git diff --exit-code -- Music MusicChecks MusicPolish13 MusicRelease MusicRepair MusicTransitions assets/Music.png assets/Prism.png app-registry.json apps.json README.md
+          git add DepthCheck Rinse LumaLift .github/workflows/depth-check.yml .github/workflows/rinse.yml .github/workflows/lumalift.yml scripts/suite_branding.py scripts/README.template.md docs/NATIVE-SUITE-UPGRADE.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if ! git diff --cached --quiet; then
+            git commit -m 'Wire native suite names, identifiers, artwork and Veil green UI [skip ci]'
+            pushed=false
+            for attempt in 1 2 3 4; do
+              if git push origin HEAD:main; then pushed=true; break; fi
+              git fetch origin main
+              git rebase origin/main
+            done
+            test "$pushed" = true
+          fi
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    name: Native ${{ matrix.app }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.revision }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare native build tools
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          python -m pip install Pillow==11.1.0
+          command -v xcodegen || brew install xcodegen
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+      - name: Prepare Lucid bundled models
+        if: matrix.app == 'Lucid'
+        run: |
+          python -m pip install numpy==1.26.4 torch==2.5.0 coremltools==8.3.0
+          python LumaLift/scripts/prepare_models.py
+      - name: Build device app and run the original native tests
+        env:
+          DEPTHCHECK_BUILD_NUMBER: ${{ matrix.build }}
+          RINSE_BUILD_NUMBER: ${{ matrix.build }}
+          LUMALIFT_BUILD_NUMBER: ${{ matrix.build }}
+          GITHUB_SHA: ${{ needs.prepare.outputs.revision }}
+        run: python '${{ matrix.folder }}/scripts/build_ios.py'
+      - name: Verify installed name, bundle IDs and actual compiled icon pixels
+        run: python scripts/native_suite_publish.py verify '${{ matrix.app }}'
+      - name: Publish verified native app and migrate only its catalog identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ needs.prepare.outputs.revision }}
+        run: python scripts/native_suite_publish.py publish '${{ matrix.app }}'
+      - name: Store native app and verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Native-${{ matrix.app }}
+          path: |
+            ${{ matrix.folder }}/Build/${{ matrix.app }}.ipa
+            ${{ matrix.folder }}/Build/${{ matrix.app }}-BUILD-REPORT.json
+            ${{ matrix.folder }}/Build/${{ matrix.app }}-light.png
+            ${{ matrix.folder }}/Build/${{ matrix.app }}-dark.png
+            ${{ matrix.folder }}/Build/BUILD-REPORT.json
+            ${{ matrix.folder }}/Build/Simulator-Launch.png
+            ${{ matrix.folder }}/Build/Logs
+          if-no-files-found: ignore
+          retention-days: 14
