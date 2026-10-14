@@ -8,12 +8,12 @@
     "tintColor": "#70A6FF"
   },
   "com.billy.voiceglass": {
-    "name": "VoiceGlass",
+    "name": "Echo",
     "subtitle": "Turn text into speech with your voice",
     "localizedDescription": "Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.",
-    "icon": "VoiceGlass.png",
+    "icon": "Echo.png",
     "category": "utilities",
-    "tintColor": "#9D8CFF"
+    "tintColor": "#A28AEF"
   },
   "com.billy.prism": {
     "name": "Prism",
@@ -24,27 +24,27 @@
     "tintColor": "#FF8C45"
   },
   "com.billy.depthcheck": {
-    "name": "Depth Check",
+    "name": "Facet",
     "subtitle": "Convert photos and videos to 3D",
     "localizedDescription": "Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.",
-    "icon": "DepthCheck.png",
+    "icon": "Facet.png",
     "category": "photo-video",
-    "tintColor": "#4DE8DD"
+    "tintColor": "#32AFE1"
   },
   "com.billy.rinse": {
-    "name": "Rinse",
+    "name": "Veil",
     "subtitle": "Remove metadata from photos and videos",
     "localizedDescription": "Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.",
-    "icon": "Rinse.jpg",
+    "icon": "Veil.png",
     "category": "photo-video",
-    "tintColor": "#0DC2C2"
+    "tintColor": "#20B894"
   },
   "com.billy.lumalift": {
-    "name": "LumaLift",
+    "name": "Lucid",
     "subtitle": "Offline video enhancement · Beta",
     "localizedDescription": "FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.",
-    "icon": "LumaLift.png",
+    "icon": "Lucid.png",
     "category": "photo-video",
-    "tintColor": "#AD78E8"
+    "tintColor": "#CE8CBE"
   }
 }

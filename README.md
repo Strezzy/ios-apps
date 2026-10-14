@@ -7,11 +7,11 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | App | Version | Download | Requires |
 | --- | --- | --- | --- |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Music.png" width="44" alt=""/> **Music** — Offline music player | 0.15 (16) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/music-0.15-build16/Music.ipa) | iOS 16.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png" width="44" alt=""/> **VoiceGlass** — Turn text into speech with your voice | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Echo.png" width="44" alt=""/> **Echo** — Turn text into speech with your voice | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Prism.png" width="44" alt=""/> **Prism** — Generate and edit images with AI | 1.2 (3) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/prism-1.2-build3/Prism.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png" width="44" alt=""/> **Depth Check** — Convert photos and videos to 3D | 1.0 (8) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rinse.jpg" width="44" alt=""/> **Rinse** — Remove metadata from photos and videos | 1.0.0 (5) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/LumaLift.png" width="44" alt=""/> **LumaLift** — Offline video enhancement · Beta | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Facet.png" width="44" alt=""/> **Facet** — Convert photos and videos to 3D | 1.0 (8) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png" width="44" alt=""/> **Veil** — Remove metadata from photos and videos | 1.0.0 (5) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png" width="44" alt=""/> **Lucid** — Offline video enhancement · Beta | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -27,7 +27,7 @@ These are personal passion projects, shared for free. Constructive feedback is w
 
 Play music stored on your iPhone offline. Browse songs, albums, and playlists; explore interactive clear CD cases with spinning artwork; and customize themes, album art, lyrics, and scrolling animations.
 
-### VoiceGlass
+### Echo
 
 Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.
 
@@ -35,15 +35,15 @@ Turn typed text into speech using a short voice recording. Record or import a sa
 
 Create images from a text description, or add reference pictures and describe the edits you want. Download a model before using it offline, then save and export images from the gallery. Image generation in this release still needs testing on a real iPhone.
 
-### Depth Check
+### Facet
 
 Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.
 
-### Rinse
+### Veil
 
 Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.
 
-### LumaLift
+### Lucid
 
 FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.
 

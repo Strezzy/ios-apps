@@ -97,11 +97,11 @@
       "size": 3069818
     },
     {
-      "name": "VoiceGlass",
+      "name": "Echo",
       "subtitle": "Turn text into speech with your voice",
       "localizedDescription": "Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.",
       "category": "utilities",
-      "tintColor": "#9D8CFF",
+      "tintColor": "#A28AEF",
       "bundleIdentifier": "com.billy.voiceglass",
       "developerName": "Strezzy",
       "versions": [
@@ -117,7 +117,7 @@
           "sha256": "033f981c50f0d469f490f00ad520bd30e038f9994f13ad454f2cbf90fb4bcdc0"
         }
       ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/VoiceGlass.png",
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Echo.png",
       "appPermissions": {
         "entitlements": [],
         "privacy": {
@@ -188,11 +188,11 @@
       "size": 9382395
     },
     {
-      "name": "Depth Check",
+      "name": "Facet",
       "subtitle": "Convert photos and videos to 3D",
       "localizedDescription": "Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.",
       "category": "photo-video",
-      "tintColor": "#4DE8DD",
+      "tintColor": "#32AFE1",
       "bundleIdentifier": "com.billy.depthcheck",
       "developerName": "Strezzy",
       "versions": [
@@ -230,7 +230,7 @@
           "sha256": "02d6399498291e343ec0139192c318de49c87cac8acd9e3ba9ee0b73db529551"
         }
       ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/DepthCheck.png",
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Facet.png",
       "appPermissions": {
         "entitlements": [],
         "privacy": {
@@ -244,11 +244,11 @@
       "size": 228724052
     },
     {
-      "name": "Rinse",
+      "name": "Veil",
       "subtitle": "Remove metadata from photos and videos",
       "localizedDescription": "Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.",
       "category": "photo-video",
-      "tintColor": "#0DC2C2",
+      "tintColor": "#20B894",
       "bundleIdentifier": "com.billy.rinse",
       "developerName": "Strezzy",
       "versions": [
@@ -275,7 +275,7 @@
           "sha256": "9028e28fc7ba5ef8d64fb6b6c330b3fa7cc011f0d33de1fbe8aea7d2ee893a07"
         }
       ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rinse.jpg",
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png",
       "appPermissions": {
         "entitlements": [],
         "privacy": {
@@ -289,11 +289,11 @@
       "size": 2319258
     },
     {
-      "name": "LumaLift",
+      "name": "Lucid",
       "subtitle": "Offline video enhancement · Beta",
       "localizedDescription": "FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.",
       "category": "photo-video",
-      "tintColor": "#AD78E8",
+      "tintColor": "#CE8CBE",
       "bundleIdentifier": "com.billy.lumalift",
       "developerName": "Strezzy",
       "versions": [
@@ -309,7 +309,7 @@
           "sha256": "f2799610f29de413b7d855244f773108628229c8e7e5a27731e8214b56bc8889"
         }
       ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/LumaLift.png",
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png",
       "appPermissions": {
         "entitlements": [],
         "privacy": {

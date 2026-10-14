@@ -1,0 +1,37 @@
+{
+  "scope": "Repository branding only; existing IPA bytes are unchanged.",
+  "apps": {
+    "com.billy.depthcheck": {
+      "name": "Facet",
+      "previousName": "Depth Check",
+      "icon": "assets/Facet.png",
+      "nativeIcon": "branding/app-icons/Facet.png",
+      "tintColor": "#32AFE1",
+      "sha256": "4f3768e4e29e932b6b2ae3091da9520f9929471432bb20d58a403cf5b5770672"
+    },
+    "com.billy.rinse": {
+      "name": "Veil",
+      "previousName": "Rinse",
+      "icon": "assets/Veil.png",
+      "nativeIcon": "branding/app-icons/Veil.png",
+      "tintColor": "#20B894",
+      "sha256": "20ce0f0e716fa0b2cc3750d44563ddab8be77582a0573db63f45a249299f73b5"
+    },
+    "com.billy.lumalift": {
+      "name": "Lucid",
+      "previousName": "LumaLift",
+      "icon": "assets/Lucid.png",
+      "nativeIcon": "branding/app-icons/Lucid.png",
+      "tintColor": "#CE8CBE",
+      "sha256": "310621a772b57d2e01f2afdb3f3dd267473ef1d6da47c36aa7970321a25461b5"
+    },
+    "com.billy.voiceglass": {
+      "name": "Echo",
+      "previousName": "VoiceGlass",
+      "icon": "assets/Echo.png",
+      "nativeIcon": "branding/app-icons/Echo.png",
+      "tintColor": "#A28AEF",
+      "sha256": "450c9c6796961379eb102f4495ccff952ce1f9c8c7296b52c2bfecbcb1790155"
+    }
+  }
+}
