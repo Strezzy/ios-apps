@@ -294,19 +294,19 @@
       "localizedDescription": "FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.",
       "category": "photo-video",
       "tintColor": "#CE8CBE",
-      "bundleIdentifier": "com.billy.lumalift",
+      "bundleIdentifier": "com.billy.lucid",
       "developerName": "Strezzy",
       "versions": [
         {
-          "version": "1.0",
-          "buildVersion": "1",
-          "buildNumber": "1",
-          "date": "2026-10-14T05:00:22Z",
-          "localizedDescription": "First beta: native pink-purple Liquid Glass, bundled Real-ESRGAN detail restoration, original-size/2x/4x output, previews, audio preservation and a local library. RIFE 30/60 FPS interpolation is implemented in the device build but NOT device-validated: its two GPU tests cannot run on the hosted simulator and are explicitly skipped. The other 11 simulator tests pass. SDR only; 4K output cap and 1080p input cap for AI motion. Try a short preview. Physical iPhone speed, heat and long-export reliability remain unverified.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa",
-          "size": 15707090,
+          "version": "1.1",
+          "buildVersion": "201",
+          "buildNumber": "201",
+          "date": "2026-10-14T07:20:46Z",
+          "localizedDescription": "Lucid 1.1 (201)\n\nNative rebuild with the approved Lucid icon, installed display name and bundle ID `com.billy.lucid`. The existing interface colors and processing behavior are retained. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. RIFE hardware-only tests remain explicitly skipped, not passed. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.lumalift` to `com.billy.lucid` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build201/Lucid.ipa",
+          "size": 14121161,
           "minOSVersion": "26.0",
-          "sha256": "f2799610f29de413b7d855244f773108628229c8e7e5a27731e8214b56bc8889"
+          "sha256": "72a9dce7a004a76f9dd6305d66049d7b3260e707e0e156f212e9ddd0e8a991a3"
         }
       ],
       "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png",
@@ -316,11 +316,11 @@
           "NSPhotoLibraryAddUsageDescription": "Save the enhanced videos you choose to your photo library."
         }
       },
-      "version": "1.0",
-      "versionDate": "2026-10-14T05:00:22Z",
-      "versionDescription": "First beta: native pink-purple Liquid Glass, bundled Real-ESRGAN detail restoration, original-size/2x/4x output, previews, audio preservation and a local library. RIFE 30/60 FPS interpolation is implemented in the device build but NOT device-validated: its two GPU tests cannot run on the hosted simulator and are explicitly skipped. The other 11 simulator tests pass. SDR only; 4K output cap and 1080p input cap for AI motion. Try a short preview. Physical iPhone speed, heat and long-export reliability remain unverified.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa",
-      "size": 15707090
+      "version": "1.1",
+      "versionDate": "2026-10-14T07:20:46Z",
+      "versionDescription": "Lucid 1.1 (201)\n\nNative rebuild with the approved Lucid icon, installed display name and bundle ID `com.billy.lucid`. The existing interface colors and processing behavior are retained. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. RIFE hardware-only tests remain explicitly skipped, not passed. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.lumalift` to `com.billy.lucid` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build201/Lucid.ipa",
+      "size": 14121161
     }
   ],
   "news": []
