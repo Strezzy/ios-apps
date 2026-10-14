@@ -1,15 +1,9 @@
-name: Build and publish Enter the Third Dimension
+name: Build Enter the Third Dimension (unpublished)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'EnterTheThirdDimension/**'
-      - '.github/workflows/third-dimension.yml'
-
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: enter-third-dimension-build
@@ -38,40 +32,6 @@ jobs:
             EnterTheThirdDimension/Build/Simulator-Launch.png
           if-no-files-found: error
           retention-days: 30
-      - name: Publish or verify the immutable release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 EnterTheThirdDimension/Support/build_release.py
-      - name: Add the verified release to Strezzy's Apps
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git rebase origin/main
-          release_date="$(python3 -c 'import json; print(json.load(open("EnterTheThirdDimension/Build/PUBLICATION.json"))["published_at"])')"
-          release_tag="$(python3 -c 'import json; print(json.load(open("EnterTheThirdDimension/Build/PUBLICATION.json"))["release_tag"])')"
-          python3 scripts/update_catalog.py --tag "$release_tag" --local EnterTheThirdDimension/Build/Published/EnterTheThirdDimension.ipa --date "$release_date" --notes "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved."
-          git add apps.json README.md
-          if git diff --cached --quiet; then
-            echo "The catalog already matches this verified release."
-            exit 0
-          fi
-          git commit -m "Add verified $release_tag release"
-          for attempt in 1 2 3; do
-            if git push origin HEAD:main; then
-              exit 0
-            fi
-            if [ "$attempt" -lt 3 ]; then
-              git fetch origin main
-              git rebase origin/main
-            fi
-          done
-          echo "Catalog push remained busy after three attempts; the published IPA is intact."
-          exit 1
       - name: Preserve native build evidence
         if: always()
         uses: actions/upload-artifact@v7
