@@ -258,12 +258,23 @@
     {
       "name": "Lucid",
       "subtitle": "Offline video enhancement · Beta",
-      "localizedDescription": "FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.",
+      "localizedDescription": "FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.",
       "category": "photo-video",
       "tintColor": "#CE8CBE",
       "bundleIdentifier": "com.billy.lucid",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "1.1",
+          "buildVersion": "204",
+          "buildNumber": "204",
+          "date": "2026-10-14T09:21:03Z",
+          "localizedDescription": "Lucid 1.1 (204)\n\nFixes videos appearing greyed out or unselectable when importing from Files. The picker no longer relies on a file provider labeling a movie with a video-specific type. It allows file selection, then checks the actual video track before accepting it. Non-video files and folders are rejected.\n\nFiles imports now coordinate read access while permission is held and copy into private storage off the main thread. MOV/MP4 files with missing or generic extensions receive a container hint only on the private copy. Originals are not modified, failed imports are cleaned up, and an invalid selection does not replace the current clip.\n\nThe app name, icon and bundle identifier remain Lucid / com.billy.lucid. This is an ordinary update to Lucid, not a new app identity. The enhancement engine, RIFE frame-rate processing, model preparation, UI theme and export settings were not changed.\n\nValidation: 17 simulator-supported tests passed, including six new Files/identity regressions. The two hardware-only motion tests remain explicitly skipped. The real Files-provider interface and LiveContainer behavior still require physical-device confirmation.\n\nBuilt from source revision `63a2b145a9ed811a0cf9a5e6381ce4c27c781580`. The release tag uses the publication branch; the attached report and source archive identify the tested code.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa",
+          "size": 14123866,
+          "minOSVersion": "26.0",
+          "sha256": "50c7ebd481ce931d17faccdd1065591d21792b778e423e6fdafaea90f6cde927"
+        },
         {
           "version": "1.1",
           "buildVersion": "202",
@@ -295,10 +306,10 @@
         }
       },
       "version": "1.1",
-      "versionDate": "2026-10-14T08:58:52Z",
-      "versionDescription": "Lucid 1.1 (202)\n\nNative rebuild with the approved Lucid icon, installed display name and bundle ID `com.billy.lucid`. The existing interface colors and processing behavior are retained. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. RIFE hardware-only tests remain explicitly skipped, not passed. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.lumalift` to `com.billy.lucid` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build202/Lucid.ipa",
-      "size": 14121160
+      "versionDate": "2026-10-14T09:21:03Z",
+      "versionDescription": "Lucid 1.1 (204)\n\nFixes videos appearing greyed out or unselectable when importing from Files. The picker no longer relies on a file provider labeling a movie with a video-specific type. It allows file selection, then checks the actual video track before accepting it. Non-video files and folders are rejected.\n\nFiles imports now coordinate read access while permission is held and copy into private storage off the main thread. MOV/MP4 files with missing or generic extensions receive a container hint only on the private copy. Originals are not modified, failed imports are cleaned up, and an invalid selection does not replace the current clip.\n\nThe app name, icon and bundle identifier remain Lucid / com.billy.lucid. This is an ordinary update to Lucid, not a new app identity. The enhancement engine, RIFE frame-rate processing, model preparation, UI theme and export settings were not changed.\n\nValidation: 17 simulator-supported tests passed, including six new Files/identity regressions. The two hardware-only motion tests remain explicitly skipped. The real Files-provider interface and LiveContainer behavior still require physical-device confirmation.\n\nBuilt from source revision `63a2b145a9ed811a0cf9a5e6381ce4c27c781580`. The release tag uses the publication branch; the attached report and source archive identify the tested code.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa",
+      "size": 14123866
     }
   ],
   "news": []
