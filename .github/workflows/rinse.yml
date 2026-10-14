@@ -1,78 +1,10 @@
-name: Build and publish Rinse
+name: Build Veil via native suite
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'Rinse/**'
-      - '.github/workflows/rinse.yml'
 permissions:
   contents: write
-concurrency:
-  group: rinse-build
-  cancel-in-progress: true
 jobs:
   build:
-    runs-on: macos-26
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v7
-      - name: Verify and restore original artwork bytes
-        run: |
-          python3 Rinse/scripts/prepare.py
-          if ! git diff --quiet -- Rinse/Artwork.jpg; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add Rinse/Artwork.jpg
-            git commit -m "Restore checksum-verified Rinse icon artwork"
-            git push origin HEAD:main
-          fi
-          echo "RINSE_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-      - name: Prepare XcodeGen
-        run: command -v xcodegen || brew install xcodegen
-      - name: Build and run native media tests
-        env:
-          RINSE_BUILD_NUMBER: ${{ github.run_number }}
-          GITHUB_SHA: ${{ env.RINSE_REVISION }}
-        run: python3 Rinse/scripts/build_ios.py
-      - name: Publish verified device build
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: rinse-1.0.0-${{ github.run_number }}
-        run: |
-          gh release create "$RELEASE_TAG" Rinse/Build/Rinse.ipa Rinse/Build/BUILD-REPORT.json Rinse/Build/Simulator-Launch.png --target "$RINSE_REVISION" --title "Rinse 1.0.0 (${{ github.run_number }})" --notes-file Rinse/RELEASE-NOTES.md
-      - name: Add Rinse to the existing app source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: rinse-1.0.0-${{ github.run_number }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git rebase origin/main
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          registry_path = Path('app-registry.json')
-          registry = json.loads(registry_path.read_text())
-          registry['com.billy.rinse'] = json.loads(Path('Rinse/catalog-entry.json').read_text())
-          registry_path.write_text(json.dumps(registry, indent=2, ensure_ascii=False) + '\n')
-          Path('assets/Rinse.jpg').write_bytes(Path('Rinse/Artwork.jpg').read_bytes())
-          PY
-          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local Rinse/Build/Rinse.ipa --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --notes "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details."
-          git add app-registry.json apps.json README.md assets/Rinse.jpg
-          git commit -m "Publish verified Rinse 1.0.0 to app source"
-          git push origin HEAD:main
-      - name: Save build evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: Rinse-Build-Evidence
-          path: |
-            Rinse/Build/Logs
-            Rinse/Build/TestResults.xcresult
-            Rinse/Build/BUILD-REPORT.json
-            Rinse/Build/Simulator-Launch.png
-            Rinse/Build/Rinse.ipa
-          if-no-files-found: ignore
-          retention-days: 14
+    uses: ./.github/workflows/native-suite.yml
+    with:
+      app: Veil
