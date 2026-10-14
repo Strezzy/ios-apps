@@ -64,6 +64,8 @@ jobs:
 
           This publishes the recovered, already-built iPhone artifact, not a new untested rebuild. The attached report records 24 passed simulator checks, 4 skipped simulator checks, and separate native macOS media checks. Physical iPhone testing has not been performed. Read the report for the exact test scope and limitations.
 
+          Build provenance: source revision `32e1d3aff34839770f5f6cbf650cb5475b5090c0`, recovered from artifact `11878258884`. This publication tag points to the current default branch, which includes the recovery workflow. The attached report identifies the original build revision and the exact IPA checksum.
+
           **Migration:** The bundle identifier changed from `com.billy.depthcheck`. Treat this as a new app identity. Keep the previous installation and its data container until your files have been exported/imported and verified. Changing the bundle identifier does not automatically transfer saved files or downloaded models. Music, Prism, and all other app releases are unchanged by this publication.
           NOTES
           if gh release view "$FACET_TAG" --repo Strezzy/ios-apps >/dev/null 2>&1; then
@@ -71,7 +73,7 @@ jobs:
             gh release download "$FACET_TAG" --repo Strezzy/ios-apps --pattern Facet.ipa --dir "$RUNNER_TEMP/facet-existing"
             cmp "$RUNNER_TEMP/facet-existing/Facet.ipa" "$RUNNER_TEMP/facet-native/Facet.ipa"
           else
-            gh release create "$FACET_TAG" "$RUNNER_TEMP/facet-native/Facet.ipa" "$RUNNER_TEMP/facet-native/Facet-BUILD-REPORT.json" "$RUNNER_TEMP/facet-native/Facet-light.png" "$RUNNER_TEMP/facet-native/Facet-dark.png" "$RUNNER_TEMP/facet-native/SHA256SUMS.txt" --repo Strezzy/ios-apps --target 32e1d3aff34839770f5f6cbf650cb5475b5090c0 --title 'Facet 1.1 (301)' --notes-file "$RUNNER_TEMP/facet-native/RELEASE-NOTES.md"
+            gh release create "$FACET_TAG" "$RUNNER_TEMP/facet-native/Facet.ipa" "$RUNNER_TEMP/facet-native/Facet-BUILD-REPORT.json" "$RUNNER_TEMP/facet-native/Facet-light.png" "$RUNNER_TEMP/facet-native/Facet-dark.png" "$RUNNER_TEMP/facet-native/SHA256SUMS.txt" --repo Strezzy/ios-apps --target main --title 'Facet 1.1 (301)' --notes-file "$RUNNER_TEMP/facet-native/RELEASE-NOTES.md"
           fi
           gh release view "$FACET_TAG" --repo Strezzy/ios-apps --json publishedAt > "$RUNNER_TEMP/facet-native/release.json"
       - name: Update only Facet in the live catalog
@@ -97,7 +99,7 @@ jobs:
           target['bundleIdentifier'] = 'com.billy.facet'
           if legacy_id != 'com.billy.facet':
               target['versions'] = []
-          # Run the existing IPA inspector/updater in isolation. No other app metadata can be touched.
+          # Inspect and update only the target product, leaving other metadata untouched.
           isolated = {'apps': [target]}
           date = json.loads((data / 'release.json').read_text())['publishedAt']
           notes = (data / 'RELEASE-NOTES.md').read_text()
