@@ -13,9 +13,8 @@ final class FrameProcessor {
     private var motion: RifeInterpolator?
     private let bundle: Bundle
 
-    /// Do not initialize MPSGraph on the hosted simulator's virtual GPU. Its
-    /// device descriptor raises an Objective-C exception before inference starts.
-    /// The device build retains the real RIFE implementation, not frame blending.
+    /// Avoid the hosted simulator's unsupported MPSGraph device initialization.
+    /// Device builds retain real RIFE inference, not frame-blending substitutes.
     static var motionUnavailableReason: String? {
         #if targetEnvironment(simulator)
         return "RIFE GPU motion is not enabled in simulator builds. Test frame interpolation on a physical iPhone or iPad."
@@ -78,8 +77,10 @@ final class FrameProcessor {
         let output = try makePixelBuffer(width: width * scale, height: height * scale)
         let tile = try makePixelBuffer(width: TileRegion.inputSize, height: TileRegion.inputSize)
         let source = CIImage(cvPixelBuffer: input, options: [.colorSpace: colorSpace])
+        // CIImage is lazy. Cropping this graph per tile does not allocate a full
+        // scaled original, and lets Lanczos sample across tile boundaries.
+        let scaledOriginal = resize(source, factor: Double(scale))
         let pad = TileRegion.padding
-        // Process one padded tile at a time, without a full 4x intermediate frame.
         for region in TileRegion.regions(width: width, height: height) {
             try control.checkpoint(gentle: settings.gentleProcessing, onWait: onWait)
             try autoreleasepool {
@@ -94,19 +95,22 @@ final class FrameProcessor {
                 guard let enhanced = prediction.featureValue(for: "enhanced")?.imageBufferValue else {
                     throw LiftError.message("The enhancement model returned an invalid frame.")
                 }
-                let crop = CGRect(x: pad * 4, y: pad * 4, width: region.width * 4, height: region.height * 4)
-                let restored = CIImage(cvPixelBuffer: enhanced, options: [.colorSpace: colorSpace])
-                    .cropped(to: crop).transformed(by: CGAffineTransform(translationX: -crop.minX, y: -crop.minY))
-                let resized = resize(restored, factor: Double(scale) / 4)
-                let originalRect = CGRect(x: region.x, y: region.y, width: region.width, height: region.height)
-                let original = source.cropped(to: originalRect)
+                // Resize while the restored context is still present, then crop.
+                // Cropping first can introduce dark/transparent filter-edge seams.
+                let restoredTile = CIImage(cvPixelBuffer: enhanced, options: [.colorSpace: colorSpace])
+                let resizedTile = resize(restoredTile, factor: Double(scale) / 4)
+                let crop = CGRect(x: pad * scale, y: pad * scale,
+                                  width: region.width * scale, height: region.height * scale)
+                let resized = resizedTile.cropped(to: crop)
+                    .transformed(by: CGAffineTransform(translationX: -crop.minX, y: -crop.minY))
+                let originalRect = CGRect(x: region.x * scale, y: region.y * scale,
+                                          width: region.width * scale, height: region.height * scale)
+                let originalResized = scaledOriginal.cropped(to: originalRect)
                     .transformed(by: CGAffineTransform(translationX: -originalRect.minX, y: -originalRect.minY))
-                let originalResized = resize(original, factor: Double(scale))
-                let amount = settings.enhance ? settings.strength : 0.5
                 let blend = CIFilter.dissolveTransition()
                 blend.inputImage = originalResized
                 blend.targetImage = resized
-                blend.time = Float(amount)
+                blend.time = Float(settings.enhance ? settings.strength : 0.5)
                 guard let blended = blend.outputImage else { throw LiftError.message("Could not compose the enhanced frame.") }
                 let w = region.width * scale, h = region.height * scale
                 let result = try makePixelBuffer(width: w, height: h)
@@ -120,7 +124,10 @@ final class FrameProcessor {
     }
     private func resize(_ image: CIImage, factor: Double) -> CIImage {
         guard factor != 1 else { return image }
-        return image.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: factor, kCIInputAspectRatioKey: 1.0])
+        let extent = image.extent.applying(CGAffineTransform(scaleX: factor, y: factor))
+        return image.clampedToExtent()
+            .applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: factor, kCIInputAspectRatioKey: 1.0])
+            .cropped(to: extent)
     }
     private func copyTile(_ source: CVPixelBuffer, into destination: CVPixelBuffer, x: Int, top: Int) throws {
         guard x >= 0, top >= 0,
@@ -145,8 +152,6 @@ final class FrameProcessor {
                    src.advanced(by: row * CVPixelBufferGetBytesPerRow(source)), width * 4)
         }
     }
-    /// Conservative cut guard: skip large flashes or very fast movement rather
-    /// than inventing a transition between unrelated images.
     func isSceneCut(_ a: CVPixelBuffer, _ b: CVPixelBuffer) -> Bool {
         func thumbnail(_ buffer: CVPixelBuffer) -> [UInt8] {
             let image = CIImage(cvPixelBuffer: buffer)

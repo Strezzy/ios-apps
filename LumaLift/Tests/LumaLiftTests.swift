@@ -1,5 +1,6 @@
 import XCTest
 import AVFoundation
+import AudioToolbox
 import CoreImage
 @testable import LumaLift
 
@@ -53,6 +54,9 @@ final class LumaLiftTests: XCTestCase {
         let result = try processor.restore(input, settings: settings, control: WorkControl())
         XCTAssertEqual(CVPixelBufferGetWidth(result), 128)
         XCTAssertEqual(CVPixelBufferGetHeight(result), 96)
+        let pixels = bytes(result)
+        XCTAssertTrue(stride(from: 3, to: pixels.count, by: 4).allSatisfy { pixels[$0] == 255 },
+                      "Resizing restored tiles must not introduce transparent edges.")
     }
     func testZeroStrengthPreservesTileLayout() throws {
         let input = try makePixelBuffer(width: 358, height: 190)
@@ -219,12 +223,61 @@ final class LumaLiftTests: XCTestCase {
         let result = try await VideoEngine().export(clip: clip, settings: EnhanceSettings(enhance: false),
             output: output, control: WorkControl(), progress: { _ in })
         XCTAssertEqual(result.frames, 4)
-        let exported = AVURLAsset(url: output)
-        let tracks = try await exported.loadTracks(withMediaType: .audio)
+        let tracks = try await AVURLAsset(url: output).loadTracks(withMediaType: .audio)
         XCTAssertEqual(tracks.count, 1)
-        let range = try await XCTUnwrap(tracks.first).load(.timeRange)
-        XCTAssertEqual(range.start.seconds, 0.02, accuracy: 0.002)
-        XCTAssertEqual(range.duration.seconds, 0.04, accuracy: 0.002)
+        // A track's range can include its leading empty edit. Check the signal
+        // itself instead of incorrectly equating track start with audible onset.
+        let originalSignal = try await audibleRange(in: source)
+        let exportedSignal = try await audibleRange(in: output)
+        XCTAssertEqual(originalSignal.start, 0.02, accuracy: 0.002)
+        XCTAssertEqual(originalSignal.end, 0.06, accuracy: 0.002)
+        XCTAssertEqual(exportedSignal.start, originalSignal.start, accuracy: 0.0005)
+        XCTAssertEqual(exportedSignal.end, originalSignal.end, accuracy: 0.0005)
+        XCTAssertEqual(result.duration, clip.duration, accuracy: 0.0005)
+    }
+    private func audibleRange(in url: URL) async throws -> (start: Double, end: Double) {
+        let asset = AVURLAsset(url: url)
+        let tracks = try await asset.loadTracks(withMediaType: .audio)
+        let track = try XCTUnwrap(tracks.first)
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: 8000,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ])
+        guard reader.canAdd(output) else { throw LiftError.message("Audio test decoder could not start.") }
+        reader.add(output)
+        guard reader.startReading() else { throw reader.error ?? LiftError.message("Audio test could not read the file.") }
+        defer { reader.cancelReading() }
+        var first: Double?, last: Double?
+        while let sample = output.copyNextSampleBuffer() {
+            let count = CMSampleBufferGetNumSamples(sample)
+            guard count > 0 else { continue }
+            let buffer = try XCTUnwrap(CMSampleBufferGetDataBuffer(sample))
+            let length = CMBlockBufferGetDataLength(buffer)
+            guard length >= count * 2 else { throw LiftError.message("Audio test returned an incomplete PCM buffer.") }
+            var pcm = Data(count: length)
+            let status = pcm.withUnsafeMutableBytes { (storage: UnsafeMutableRawBufferPointer) in
+                CMBlockBufferCopyDataBytes(buffer, atOffset: 0, dataLength: length, destination: storage.baseAddress!)
+            }
+            guard status == kCMBlockBufferNoErr else { throw LiftError.message("Audio test could not decode PCM bytes.") }
+            let time = CMSampleBufferGetPresentationTimeStamp(sample).seconds
+            guard time.isFinite else { throw LiftError.message("Audio test received invalid timing.") }
+            for index in 0..<count {
+                let bits = UInt16(pcm[index * 2]) | (UInt16(pcm[index * 2 + 1]) << 8)
+                let amplitude = abs(Int(Int16(bitPattern: bits)))
+                if amplitude > 1000 {
+                    if first == nil { first = time + Double(index) / 8000 }
+                    last = time + Double(index + 1) / 8000
+                }
+            }
+        }
+        guard reader.status == .completed else { throw reader.error ?? LiftError.message("Audio test did not finish decoding.") }
+        return (try XCTUnwrap(first), try XCTUnwrap(last))
     }
     private func bytes(_ buffer: CVPixelBuffer) -> Data {
         CVPixelBufferLockBaseAddress(buffer, .readOnly)
