@@ -1,0 +1,33 @@
+[
+  {
+    "id": "qwen35-4b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello!\",\n    \"The ocean covers about 71% of the Earth's surface and holds over 96% of the planet's water.\"\n  ],\n  \"backend\" : \"macOS Metal\",\n  \"peak_last_footprint\" : 237411264,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741",
+    "backend": "macOS Metal",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen35",
+      "baseline_bytes": 1508352,
+      "bytes": 2707513696,
+      "dimensions": {
+        "attention.head_count": 16,
+        "attention.head_count_kv": 4,
+        "attention.key_length": 256,
+        "attention.value_length": 256,
+        "block_count": 32,
+        "embedding_length": 2560,
+        "full_attention_interval": 4
+      },
+      "growth_bytes": 33391168,
+      "peak_footprint_bytes": 34899520,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 223,
+      "seconds": 55.238410875,
+      "sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741"
+    },
+    "source": "e2a88d422d411081a8606cf862b8e26b84348002"
+  }
+]
