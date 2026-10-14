@@ -26,7 +26,7 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["privacyAlwaysLocal"].firstMatch.exists)
         attach("Rift-settings")
     }
-    func testReplyStylesSwitchAndReplayWithoutAModel() {
+    func testReplyStylesSwitchAndReplayWithoutAModel() throws {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
         app.buttons["More options"].tap(); app.buttons["Settings"].tap()
@@ -44,8 +44,14 @@ final class RiftUITests: XCTestCase {
             XCTAssertEqual(XCTWaiter.wait(for: [done], timeout: 10), .completed)
             attach("Rift-style-" + style)
         }
-        app.buttons["replayAnimation"].tap()
-        XCTAssertTrue(app.staticTexts["Sample text, not an AI response."].exists)
+        // Both the inline and expanded previews deliberately reuse this
+        // component. Interact with the visible sheet, not its covered parent.
+        let replayButton = try XCTUnwrap(app.buttons.matching(identifier: "replayAnimation")
+            .allElementsBoundByIndex.first { $0.isHittable })
+        replayButton.tap()
+        let replayed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Just a little room to think."), object: rendered)
+        XCTAssertEqual(XCTWaiter.wait(for: [replayed], timeout: 10), .completed)
+        XCTAssertTrue(app.staticTexts["Sample text, not an AI response."].firstMatch.exists)
     }
     func testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating() {
         let app = XCUIApplication()
