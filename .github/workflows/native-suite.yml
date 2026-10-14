@@ -137,15 +137,18 @@ jobs:
           DEPTHCHECK_BUILD_NUMBER: ${{ matrix.build }}
           RINSE_BUILD_NUMBER: ${{ matrix.build }}
           LUMALIFT_BUILD_NUMBER: ${{ matrix.build }}
-          GITHUB_SHA: ${{ needs.prepare.outputs.revision }}
-        run: python '${{ matrix.folder }}/scripts/build_ios.py'
+        run: |
+          export GITHUB_SHA="$(git rev-parse HEAD)"
+          python '${{ matrix.folder }}/scripts/build_ios.py'
       - name: Verify installed name, bundle IDs and actual compiled icon pixels
         run: python scripts/native_suite_publish.py verify '${{ matrix.app }}'
       - name: Publish verified native app and migrate only its catalog identity
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ needs.prepare.outputs.revision }}
-        run: python scripts/native_suite_publish.py publish '${{ matrix.app }}'
+          GH_REPO: Strezzy/ios-apps
+        run: |
+          export GITHUB_SHA="$(git rev-parse HEAD)"
+          python scripts/native_suite_publish.py publish '${{ matrix.app }}'
       - name: Store native app and verification evidence
         if: always()
         uses: actions/upload-artifact@v7
