@@ -2,9 +2,108 @@ import XCTest
 import AVFoundation
 import AudioToolbox
 import CoreImage
+import UniformTypeIdentifiers
 @testable import LumaLift
 
 final class LumaLiftTests: XCTestCase {
+    func testFilesPickerAcceptsGenericProviderTypes() {
+        let allowed = VideoFileImportPolicy.allowedContentTypes
+        XCTAssertEqual(allowed, [.item])
+        let generic = UTType(importedAs: "com.billy.lucid.tests.provider-data", conformingTo: .data)
+        for type in [UTType.movie, .video, .mpeg4Movie, .quickTimeMovie, .data, generic] {
+            XCTAssertTrue(allowed.contains { type.conforms(to: $0) }, "Files must allow \(type.identifier)")
+        }
+        XCTAssertFalse([UTType.movie, .video].contains { UTType.data.conforms(to: $0) },
+                       "The old movie-only filter excluded generic provider data.")
+    }
+    func testFilesImportPreservesOriginalMovieAndReadsGenericFiles() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        let fixture = try await makeVideo(at: root.appendingPathComponent("fixture.mov"))
+        let original = try Data(contentsOf: fixture)
+        for name in ["Movie.MOV", "provider-video.bin", "provider-video"] {
+            let source = root.appendingPathComponent(name)
+            try fm.copyItem(at: fixture, to: source)
+            let imported = try LocalFiles.importMovie(source)
+            defer { try? fm.removeItem(at: imported.deletingLastPathComponent()) }
+            XCTAssertNotEqual(imported, source)
+            XCTAssertEqual(try Data(contentsOf: imported), original)
+            XCTAssertEqual(try Data(contentsOf: source), original)
+            let clip = try await ClipInfo.inspect(imported)
+            XCTAssertEqual(clip.width, 64)
+            XCTAssertEqual(clip.height, 48)
+            XCTAssertGreaterThan(clip.duration, 0)
+        }
+    }
+    @MainActor func testFilesImportAcceptsMP4AndKeepsSettings() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        let movie = try await makeVideo(at: root.appendingPathComponent("source.mov"))
+        let mp4 = root.appendingPathComponent("Files video.mp4")
+        let session = try XCTUnwrap(AVAssetExportSession(asset: AVURLAsset(url: movie), presetName: AVAssetExportPresetPassthrough))
+        try await session.export(to: mp4, as: .mp4)
+        let original = try Data(contentsOf: mp4)
+        let store = AppStore()
+        store.settings.fps = 60
+        store.settings.strength = 0.42
+        let settings = store.settings
+        let library = store.library.map(\.id)
+        await store.importFile(mp4)
+        let clip = try XCTUnwrap(store.clip)
+        defer { try? fm.removeItem(at: clip.url.deletingLastPathComponent()) }
+        XCTAssertNil(store.error)
+        XCTAssertFalse(store.importing)
+        XCTAssertNotEqual(clip.url, mp4)
+        XCTAssertEqual(store.settings, settings)
+        XCTAssertEqual(store.library.map(\.id), library)
+        XCTAssertEqual(try Data(contentsOf: clip.url), original)
+        XCTAssertEqual(try Data(contentsOf: mp4), original)
+    }
+    @MainActor func testFilesImportRejectsNonVideoWithoutReplacingClip() async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        let source = try await makeVideo(at: root.appendingPathComponent("source.mov"))
+        let store = AppStore()
+        await store.importFile(source)
+        let clip = try XCTUnwrap(store.clip)
+        defer { try? fm.removeItem(at: clip.url.deletingLastPathComponent()) }
+        let importsBefore = Set(try fm.contentsOfDirectory(atPath: LocalFiles.imports.path))
+        for name in ["not-a-video.txt", "not-a-video.mov"] {
+            let invalid = root.appendingPathComponent(name)
+            let data = Data("This is a text file, not a video.".utf8)
+            try data.write(to: invalid)
+            store.error = nil
+            await store.importFile(invalid)
+            XCTAssertNotNil(store.error)
+            XCTAssertFalse(store.importing)
+            XCTAssertEqual(store.clip?.url, clip.url)
+            XCTAssertTrue(fm.fileExists(atPath: clip.url.path))
+            XCTAssertEqual(try Data(contentsOf: invalid), data)
+            XCTAssertEqual(Set(try fm.contentsOfDirectory(atPath: LocalFiles.imports.path)), importsBefore)
+        }
+    }
+    func testFilesImportRejectsDirectoriesAndMissingFiles() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mov")
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+        try LocalFiles.prepare(LocalFiles.imports)
+        let before = Set(try fm.contentsOfDirectory(atPath: LocalFiles.imports.path))
+        XCTAssertThrowsError(try LocalFiles.importMovie(root))
+        XCTAssertThrowsError(try LocalFiles.importMovie(root.appendingPathComponent("missing.mov")))
+        XCTAssertTrue(fm.fileExists(atPath: root.path))
+        XCTAssertEqual(Set(try fm.contentsOfDirectory(atPath: LocalFiles.imports.path)), before)
+    }
+    func testLucidFilesFixKeepsExistingBundleIdentity() {
+        XCTAssertEqual(Bundle.main.bundleIdentifier, "com.billy.lucid")
+        XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String, "Lucid")
+    }
     func testSettingsAreIndependent() throws {
         var settings = EnhanceSettings()
         settings.fps = 60

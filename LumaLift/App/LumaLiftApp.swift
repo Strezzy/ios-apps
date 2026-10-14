@@ -138,7 +138,7 @@ struct EnhanceView: View {
                 }
             }
             .sheet(isPresented: $showPrivacy) { PrivacyView() }
-            .fileImporter(isPresented: $showFiles, allowedContentTypes: [.movie, .video], allowsMultipleSelection: false) { result in
+            .fileImporter(isPresented: $showFiles, allowedContentTypes: VideoFileImportPolicy.allowedContentTypes, allowsMultipleSelection: false) { result in
                 switch result {
                 case .success(let files): if let url = files.first { Task { await store.importFile(url) } }
                 case .failure(let error): store.error = error.localizedDescription

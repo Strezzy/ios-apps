@@ -42,17 +42,35 @@ enum LocalFiles {
         guard source.isFileURL else { throw LiftError.message("Only local video files can be imported.") }
         let access = source.startAccessingSecurityScopedResource()
         defer { if access { source.stopAccessingSecurityScopedResource() } }
-        let folder = imports.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try prepare(folder)
-        let result = folder.appendingPathComponent(source.lastPathComponent)
-        do {
-            try FileManager.default.copyItem(at: source, to: result)
-            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: result.path)
-            return result
-        } catch {
-            try? FileManager.default.removeItem(at: folder)
-            throw error
+        // Coordinate while permission is held so Files providers can supply a
+        // stable local file. The Files path calls this on a background task.
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        var coordinationError: NSError?
+        var copied: Result<URL, Error>?
+        coordinator.coordinate(readingItemAt: source, options: [], error: &coordinationError) { readable in
+            copied = Result {
+                let values = try readable.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
+                guard values.isRegularFile == true, values.isDirectory != true else {
+                    throw LiftError.message("Choose a video file, not a folder.")
+                }
+                let folder = imports.appendingPathComponent(UUID().uuidString, isDirectory: true)
+                do {
+                    try prepare(folder)
+                    let result = folder.appendingPathComponent(source.lastPathComponent)
+                    try FileManager.default.copyItem(at: readable, to: result)
+                    try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: result.path)
+                    return result
+                } catch {
+                    try? FileManager.default.removeItem(at: folder)
+                    throw error
+                }
+            }
         }
+        if let coordinationError { throw coordinationError }
+        guard let copied else {
+            throw LiftError.message("Files could not provide this video. Make sure it is downloaded and available on your device, then try again.")
+        }
+        return try copied.get()
     }
 }
 
@@ -112,7 +130,7 @@ struct ImportedMovie: Transferable {
         return "\(Int(clip.displaySize.width) * settings.scale) × \(Int(clip.displaySize.height) * settings.scale)"
     }
     func importPhoto(_ item: PhotosPickerItem) async {
-        guard !working else { return }
+        guard !working, !importing else { return }
         importing = true
         defer { importing = false }
         do {
@@ -123,7 +141,7 @@ struct ImportedMovie: Transferable {
         } catch { self.error = error.localizedDescription }
     }
     func importFile(_ source: URL) async {
-        guard !working else { return }
+        guard !working, !importing else { return }
         importing = true
         defer { importing = false }
         do {

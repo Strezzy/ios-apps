@@ -24,6 +24,7 @@ TESTS = ['testSettingsAreIndependent', 'testOutputAndMotionLimits', 'testFrameCl
          'testOriginalTimingAndCancellation', 'testPortraitOrientationIsPreserved', 'testShortAudioDoesNotTruncateVideo',
          'testZeroStrengthPreservesTileLayout', 'testFullEnhancementAtOriginalFPS',
          'testMotionUnavailableFailsWithoutPartialExport']
+TESTS += ['testFilesPickerAcceptsGenericProviderTypes', 'testFilesImportPreservesOriginalMovieAndReadsGenericFiles', 'testFilesImportAcceptsMP4AndKeepsSettings', 'testFilesImportRejectsNonVideoWithoutReplacingClip', 'testFilesImportRejectsDirectoriesAndMissingFiles', 'testLucidFilesFixKeepsExistingBundleIdentity']
 DEVICE_TESTS = ['testBundledRIFERunsOnAppleRuntime', 'testFullEnhancementAnd60FPSExport']
 def run(args, log=None, capture=False):
     args = [str(arg) for arg in args]
