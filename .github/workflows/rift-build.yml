@@ -33,17 +33,28 @@ jobs:
         with:
           path: Rift/Build/Native
           key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+          save-always: true
+      - name: Prepare and preserve recoverable source
+        run: |
+          python Rift/scripts/polish.py
+          python Rift/scripts/prepare.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Rift/Rift Rift/scripts/prepare.py Rift/scripts/build.py
+          if ! git diff --cached --quiet; then
+            git commit -m 'Save Rift reveal integration, compile correction, pinned catalog and icon [skip ci]'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
       - name: Build, run native tests, verify every model and package the iPhone app
         env:
           RIFT_BUILD_NUMBER: ${{ github.run_number }}
         run: python Rift/scripts/build.py
-      - name: Preserve the exact source, pinned catalog and icon
+      - name: Preserve the exact build source
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Rift/Rift Rift/project.yml
           if ! git diff --cached --quiet; then
-            git commit -m 'Record verified Rift source, pinned uncensored catalog and approved artwork [skip ci]'
+            git commit -m 'Record verified Rift build identity [skip ci]'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
