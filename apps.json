@@ -266,6 +266,17 @@
       "versions": [
         {
           "version": "1.1",
+          "buildVersion": "202",
+          "buildNumber": "202",
+          "date": "2026-10-14T08:58:52Z",
+          "localizedDescription": "Lucid 1.1 (202)\n\nNative rebuild with the approved Lucid icon, installed display name and bundle ID `com.billy.lucid`. The existing interface colors and processing behavior are retained. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. RIFE hardware-only tests remain explicitly skipped, not passed. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.lumalift` to `com.billy.lucid` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build202/Lucid.ipa",
+          "size": 14121160,
+          "minOSVersion": "26.0",
+          "sha256": "42f6dca6827945c684256bc8cde33018a2fb39ca420960626678d326185c2964"
+        },
+        {
+          "version": "1.1",
           "buildVersion": "201",
           "buildNumber": "201",
           "date": "2026-10-14T07:20:46Z",
@@ -284,10 +295,10 @@
         }
       },
       "version": "1.1",
-      "versionDate": "2026-10-14T07:20:46Z",
-      "versionDescription": "Lucid 1.1 (201)\n\nNative rebuild with the approved Lucid icon, installed display name and bundle ID `com.billy.lucid`. The existing interface colors and processing behavior are retained. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. RIFE hardware-only tests remain explicitly skipped, not passed. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.lumalift` to `com.billy.lucid` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build201/Lucid.ipa",
-      "size": 14121161
+      "versionDate": "2026-10-14T08:58:52Z",
+      "versionDescription": "Lucid 1.1 (202)\n\nNative rebuild with the approved Lucid icon, installed display name and bundle ID `com.billy.lucid`. The existing interface colors and processing behavior are retained. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. RIFE hardware-only tests remain explicitly skipped, not passed. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.lumalift` to `com.billy.lucid` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build202/Lucid.ipa",
+      "size": 14121160
     }
   ],
   "news": []

@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "source_revision": "395a73fb3031624c5121c5ab1ad543883775a41f",
+  "source_revision": "8c8f34c5afd161a4b19968caf4b422789d083ddb",
   "release_channel": "beta",
   "physical_iphone_validation": "Not performed",
   "motion_inference_validation": "Not performed: hosted simulator GPU cannot initialize MPSGraph. Device tests are retained, not passed.",
@@ -46,8 +46,8 @@
     "tile_context_pixels": 40,
     "app_runtime_network_downloads": false,
     "model_package_sha256": {
-      "Manifest.json": "5ef0294196ca1d206e15e82252bbb791fd0a08e9f3377a3d34475e22eea788e3",
-      "Data/com.apple.CoreML/model.mlmodel": "3cdeac758a0d8f4be52a7f777f7f4eb32c1787de805180330705432dfe276728",
+      "Manifest.json": "8785476f66df41999fff52b0aef8c8e7905c67ed8fa9eb9baeaada5608b1e727",
+      "Data/com.apple.CoreML/model.mlmodel": "d37eb8ac473c1cd35be3c8d8def005b37fed9bf52484aa127ced4252232bed55",
       "Data/com.apple.CoreML/weights/weight.bin": "7a6088b2ee537938f380b9049fae2b85dad57b251d047ab8f5afd256417838ec"
     },
     "rife_patch": "Replace host-targeted shader plugin with destination-aware SwiftPM process(Shaders); omit unused CLI."
@@ -79,11 +79,11 @@
   },
   "simulator_launch": "Passed; screenshot attached.",
   "version": "1.1",
-  "build": "201",
-  "ipa_sha256": "72a9dce7a004a76f9dd6305d66049d7b3260e707e0e156f212e9ddd0e8a991a3",
-  "ipa_bytes": 14121161,
+  "build": "202",
+  "ipa_sha256": "42f6dca6827945c684256bc8cde33018a2fb39ca420960626678d326185c2964",
+  "ipa_bytes": 14121160,
   "signing": "Unsigned arm64 iPhone app. Sign with your sideloading/developer tool.",
-  "original_build_ipa_sha256": "d43c982e0b7a2b00e2e3fa5f5d72c9988e0888ca2e846a899fbde7a0c71e10a1",
+  "original_build_ipa_sha256": "9edb54e90015c1af31e483e52faf9e05291db38f36b4a5cf618fb990395b45a1",
   "native_branding": {
     "status": "passed",
     "name": "Lucid",
