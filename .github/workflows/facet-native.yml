@@ -1,0 +1,81 @@
+name: Verify and publish native Facet
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/facet-native.yml']
+permissions:
+  contents: write
+concurrency:
+  group: facet-native-final
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply bounded buffer-pressure recovery and preserve the exact source
+        run: |
+          python3 scripts/facet_buffer_backpressure.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add DepthCheck/DepthCheck/Imaging/StereoRenderer.swift
+          if ! git diff --cached --quiet; then
+            git commit -m 'Wait for released render buffers without changing the memory cap or export resolution [skip ci]'
+            git push origin HEAD:main
+          fi
+          echo "FACET_SOURCE_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "DEPTHCHECK_BUILD_NUMBER=$((300 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          python -m pip install Pillow==11.1.0
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+      - name: Check the previously failing export before the long native media tests
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0,str(Path('DepthCheck/scripts').resolve()))
+          import build_ios as b
+          b.BUILD.mkdir(exist_ok=True)
+          b.run([sys.executable,b.ROOT/'scripts/prepare_models.py'],name='prepare-models')
+          b.generate()
+          device=b.simulator_device();uid=device['udid']
+          common=['xcodebuild','-project',b.ROOT/'DepthCheck.xcodeproj','-scheme','DepthCheck','-derivedDataPath',b.DERIVED,
+                  '-configuration','Debug','-destination','id='+uid,'ARCHS=arm64','ONLY_ACTIVE_ARCH=YES',
+                  'CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','CODE_SIGN_IDENTITY=','DEVELOPMENT_TEAM=']
+          b.run(common+['build-for-testing'],name='preflight-build')
+          if device.get('state')!='Booted':b.run(['xcrun','simctl','boot',uid])
+          b.run(['xcrun','simctl','bootstatus',uid,'-b'],name='preflight-boot')
+          b.run(common+['-parallel-testing-enabled','NO','-only-testing:DepthCheckTests/MediaExportTests/testVariableTimingAndSeparateEyesStaySynchronized','test-without-building'],name='preflight-buffer-regression')
+          PY
+      - name: Run the complete existing native validation and build the iPhone IPA
+        run: |
+          export GITHUB_SHA="$FACET_SOURCE_REVISION"
+          python DepthCheck/scripts/build_ios.py
+      - name: Verify compiled identity and artwork and publish the new native Facet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Strezzy/ios-apps
+        run: |
+          export GITHUB_SHA="$FACET_SOURCE_REVISION"
+          python scripts/native_suite_publish.py verify Facet
+          python scripts/native_suite_publish.py publish Facet
+      - name: Preserve actual native build and diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Final-Facet
+          path: |
+            DepthCheck/Build/Facet.ipa
+            DepthCheck/Build/Facet-BUILD-REPORT.json
+            DepthCheck/Build/Facet-light.png
+            DepthCheck/Build/Facet-dark.png
+            DepthCheck/Build/BUILD-REPORT.json
+            DepthCheck/Build/Logs
+          if-no-files-found: ignore
+          retention-days: 14
