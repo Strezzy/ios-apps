@@ -1,5 +1,15 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
+
+private enum VeilShareTheme {
+    static let glow = Color(red: 32.0/255, green: 184.0/255, blue: 148.0/255)
+    static let accent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.34, green: 0.86, blue: 0.66, alpha: 1)
+            : UIColor(red: 0.025, green: 0.46, blue: 0.32, alpha: 1)
+    })
+}
 
 final class ShareViewController: UIViewController {
     override func viewDidLoad() {
@@ -37,7 +47,7 @@ final class ShareViewController: UIViewController {
                     do {
                         let input = try await ProviderImporter.copy(provider)
                         defer { try? FileManager.default.removeItem(at: input) }
-                        guard MediaKind.of(input) == .photo else { throw RinseError.message("Use the main Rinse app to clean videos.") }
+                        guard MediaKind.of(input) == .photo else { throw RinseError.message("Use the main Veil app to clean videos.") }
                         var options = CleanOptions(); options.maxPhotoPixels = 16_000_000
                         let worker = Task.detached { try await RinseEngine.clean(input, options: options) }
                         let result = try await withTaskCancellationHandler { try await worker.value } onCancel: { worker.cancel() }
@@ -59,22 +69,24 @@ struct ShareView: View {
     @State private var export = false
     var body: some View {
         NavigationStack {
-            VStack(spacing: 22) {
-                Image(systemName: "drop.fill").font(.system(size: 56)).foregroundStyle(.teal)
-                Text("Clean with Veil").font(.title.bold())
-                Text(model.status).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                if model.busy { ProgressView() }
-                if !model.results.isEmpty && !model.busy {
-                    Label("\(model.results.count) verified copies", systemImage: "checkmark.seal")
-                    Button("Share clean copies", systemImage: "square.and.arrow.up") { export = true }
-                        .buttonStyle(.glassProminent).controlSize(.large)
-                }
-                Text("Creates SDR still photos. Originals stay unchanged. No uploads, accounts or analytics. Visual content is not redacted.")
-                    .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            }.padding(26).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(LinearGradient(colors: [Color.teal.opacity(0.1), Color(.systemBackground)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close", action: close) } }
-                .sheet(isPresented: $export) { ExportSheet(urls: model.results.map(\.output)) }
-        }.tint(.teal)
+            ScrollView {
+                VStack(spacing: 22) {
+                    Image(systemName: "shield.lefthalf.filled").font(.system(size: 56)).foregroundStyle(VeilShareTheme.accent)
+                    Text("Clean with Veil").font(.title.bold())
+                    Text(model.status).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    if model.busy { ProgressView() }
+                    if !model.results.isEmpty && !model.busy {
+                        Label("\(model.results.count) verified copies", systemImage: "checkmark.seal")
+                        Button("Share clean copies", systemImage: "square.and.arrow.up") { export = true }
+                            .buttonStyle(.glassProminent).controlSize(.large)
+                    }
+                    Text("Creates SDR still photos. Originals stay unchanged. No uploads, accounts or analytics. Visual content is not redacted.")
+                        .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }.padding(26).frame(maxWidth: .infinity)
+            }
+            .background(LinearGradient(colors: [VeilShareTheme.glow.opacity(0.1), Color(.systemBackground)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close", action: close) } }
+            .sheet(isPresented: $export) { ExportSheet(urls: model.results.map(\.output)) }
+        }.tint(VeilShareTheme.accent)
     }
 }
