@@ -10,6 +10,8 @@ final class InferenceService: @unchecked Sendable {
     func stop() { engine.cancel() }
     func unload() { engine.cancel(); queue.async { self.engine.unload(); self.loadedID=nil; self.loadedContext=0 } }
     func run(model: InstalledModel, url: URL, messages: [[String:String]], context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws {
+        engine.resetCancellation()
+        engine.resetCancellation()
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in
             queue.async {
                 do {
@@ -49,10 +51,11 @@ final class InferenceService: @unchecked Sendable {
     @AppStorage("rift.maxTokens") var maxTokens=1024
     @AppStorage("rift.temperature") var temperature=0.7
     @AppStorage("rift.thinking") var thinking=false
+    @AppStorage("rift.animateReplies") var animateReplies=true
     @AppStorage("rift.offline") var offline=false
     @AppStorage("rift.cellular") var cellular=false
     @AppStorage("rift.systemPrompt") var systemPrompt="You are Rift, a helpful local assistant. Answer clearly."
-    let storage: LocalStorage?
+    private(set) var storage: LocalStorage?
     let device=DeviceProfile.current
     private let inference=InferenceService()
     private var downloader: DownloadJob?
@@ -67,7 +70,8 @@ final class InferenceService: @unchecked Sendable {
 
     init(storageOverride: URL? = nil) {
         do {
-            let store=try LocalStorage(root:storageOverride); storage=store
+            let store=try LocalStorage(root:storageOverride)
+            storage=store
             guard let url=Bundle.main.url(forResource:"catalog",withExtension:"json") else { throw RiftFailure("The bundled model catalog is missing.") }
             catalog=try JSONDecoder().decode([CatalogModel].self,from:Data(contentsOf:url))
             guard !catalog.isEmpty, catalog.allSatisfy({$0.uncensored && $0.sha256.count == 64 && $0.revision.count == 40 && $0.bytes > 0}) else { throw RiftFailure("The bundled catalog did not pass validation.") }
@@ -76,6 +80,7 @@ final class InferenceService: @unchecked Sendable {
             selectedModelID=UserDefaults.standard.string(forKey:"rift.selectedModel")
             if selectedModel == nil { selectedModelID=installed.first?.id }
             activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id
+            storage=store
         } catch {
             storage=nil; startupError="Rift could not open its local data. Existing files have been left untouched. \(error.localizedDescription)"
         }
@@ -195,7 +200,7 @@ final class InferenceService: @unchecked Sendable {
                 }
             } catch {
                 if pausedID != model.id && !(error is CancellationError) && (error as NSError).code != NSURLErrorCancelled { self.error=error.localizedDescription }
-                if (error as NSError).code == NSURLErrorCannotResume { try? FileManager.default.removeItem(at:resumeURL); self.error="The saved download could not resume. Tap Download to restart it." }
+                if resume != nil && (error as NSError).domain == NSURLErrorDomain && (error as NSError).code != NSURLErrorCancelled { try? FileManager.default.removeItem(at:resumeURL); self.error="The saved download could not resume. Tap Download to restart it." }
                 try? FileManager.default.removeItem(at:destination)
             }
             transferID=nil; downloader=nil; importTask=nil; transferTask=nil

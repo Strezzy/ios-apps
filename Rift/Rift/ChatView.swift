@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum RiftSheet: String, Identifiable { case models, history, settings; var id: String { rawValue } }
 struct ChatView: View {
@@ -102,7 +103,7 @@ struct MessageView: View {
                 if !parts.thought.isEmpty {
                     DisclosureGroup(isStreaming && parts.answer.isEmpty ? "Thinking" : "Thought process") { Text(parts.thought).font(.callout).foregroundStyle(.secondary).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading) }.font(.caption).tint(RiftTheme.accent)
                 }
-                if !parts.answer.isEmpty { MarkdownMessage(text:parts.answer) }
+                if !parts.answer.isEmpty { MarkdownMessage(text:parts.answer, live:isStreaming) }
                 if isStreaming && message.content.isEmpty { HStack(spacing:9) { ProgressView().controlSize(.small); Text(model.status).font(.callout).foregroundStyle(.secondary) } }
                 if !user && !isStreaming {
                     HStack(spacing:18) {
@@ -118,15 +119,16 @@ struct MessageView: View {
 }
 struct MarkdownMessage: View {
     let text: String
+    var live = false
     var body: some View {
         let chunks=text.components(separatedBy:"```")
         VStack(alignment:.leading,spacing:12) {
             ForEach(Array(chunks.enumerated()),id:\.offset) { index, chunk in
-                if index % 2 == 0 { Text(.init(chunk)).textSelection(.enabled).font(.body).lineSpacing(4).frame(maxWidth:.infinity,alignment:.leading) }
+                if index % 2 == 0 { BloomText(text:chunk, live:live).font(.body).lineSpacing(4).frame(maxWidth:.infinity,alignment:.leading) }
                 else {
                     VStack(alignment:.leading,spacing:10) {
                         HStack { Text(chunk.components(separatedBy:"\n").first ?? "Code").font(.caption).foregroundStyle(.secondary); Spacer(); Button { UIPasteboard.general.string=chunk.components(separatedBy:"\n").dropFirst().joined(separator:"\n") } label: { Image(systemName:"document.on.document") }.accessibilityLabel("Copy code") }
-                        ScrollView(.horizontal) { Text(chunk.components(separatedBy:"\n").dropFirst().joined(separator:"\n")).font(.system(.callout,design:.monospaced)).textSelection(.enabled) }
+                        ScrollView(.horizontal) { BloomText(text:chunk.components(separatedBy:"\n").dropFirst().joined(separator:"\n"), live:live, markdown:false).font(.system(.callout,design:.monospaced)).textSelection(.enabled) }
                     }.padding(14).background(.thinMaterial,in:RoundedRectangle(cornerRadius:16))
                 }
             }

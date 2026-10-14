@@ -32,9 +32,10 @@ try:
     choices.sort(key=lambda d:('Pro' in d['name'],'18' in d['name'],'17' in d['name']),reverse=True)
     device=choices[0]; uid=device['udid']; report['simulator_device']=device['name']; save()
     if device['state']!='Booted': run(['xcrun','simctl','boot',uid],'simulator-boot')
-    run(['xcrun','simctl','bootstatus',uid,'-b'],'simulator-ready')
+    # Build while the simulator completes its initial migration.
     common=['xcodebuild','-project',ROOT/'Rift.xcodeproj','-scheme','Rift','-configuration','Debug','-destination','id='+uid,'-derivedDataPath',BUILD/'DerivedData','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','CODE_SIGN_IDENTITY=','DEVELOPMENT_TEAM=']
     run(common+['build-for-testing'],'simulator-build')
+    run(['xcrun','simctl','bootstatus',uid,'-b'],'simulator-ready')
     result=BUILD/'Tests.xcresult'; shutil.rmtree(result,ignore_errors=True)
     run(common+['test-without-building','-parallel-testing-enabled','NO','-resultBundlePath',result],'native-tests')
     report['simulator']='passed'

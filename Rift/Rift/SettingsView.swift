@@ -40,6 +40,11 @@ struct SettingsView: View {
                         Toggle("Allow cellular downloads",isOn:$model.cellular).disabled(model.offline)
                         Text("No account, analytics, cloud inference, or automatic chat uploads. Chats and models are excluded from app-managed iCloud backup. Exporting a chat or choosing a cloud file in Files is your action.").font(.caption).foregroundStyle(.secondary)
                     }
+                    Section("Appearance") {
+                        Toggle("Animated replies",isOn:$model.animateReplies)
+                        ReplyAnimationPreview()
+                        Text("Respects Reduce Motion, VoiceOver, and Low Power Mode.").font(.caption).foregroundStyle(.secondary)
+                    }
                     Section("Conversation") {
                         Picker("Context",selection:$model.context) { Text("2K · lighter").tag(2048); Text("4K · balanced").tag(4096); Text("8K · more memory").tag(8192) }.disabled(model.generating)
                         Picker("Reply length",selection:$model.maxTokens) { Text("Shorter").tag(512); Text("Standard").tag(1024); Text("Longer").tag(2048) }.disabled(model.generating)

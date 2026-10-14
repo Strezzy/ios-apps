@@ -39,6 +39,7 @@ static NSError *failure(const std::string &s) {
     }
     return self;
 }
+- (void)resetCancellation { _cancelled.store(false); }
 - (void)cancel { _cancelled.store(true); }
 - (void)unload {
     if (_context) { llama_free(_context); _context=nullptr; }
@@ -47,7 +48,7 @@ static NSError *failure(const std::string &s) {
 }
 - (void)dealloc { [self unload]; }
 - (BOOL)generateAtPath:(NSString *)path messages:(NSArray<NSDictionary<NSString *,NSString *> *> *)messages context:(int)context maxTokens:(int)maxTokens temperature:(float)temperature thinking:(BOOL)thinking cpu:(BOOL)cpu token:(void (^)(NSString *))token status:(void (^)(NSString *))status error:(NSError **)error {
-    _cancelled.store(false);
+    // Cancellation is reset before enqueueing, never after a queued stop.
     llama_sampler *sampler=nullptr;
     try {
         if (context < 512 || context > 8192 || maxTokens < 1 || maxTokens > 2048) throw std::runtime_error("Unsupported conversation length.");
