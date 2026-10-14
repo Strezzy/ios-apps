@@ -18,7 +18,7 @@ import SwiftUI
                 .onChange(of: phase) { _, value in
                     if value == .background && store.busy {
                         store.cancel()
-                        store.message = "Processing stops when Rinse goes into the background. Keep the app open while cleaning, then retry any cancelled items."
+                        store.message = "Processing stops when Veil goes into the background. Keep the app open while cleaning, then retry any cancelled items."
                     }
                 }
                 .onOpenURL { url in store.importFiles([url]) }
