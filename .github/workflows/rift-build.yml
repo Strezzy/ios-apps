@@ -1,110 +1,184 @@
-name: Build and verify Rift for iPhone
+name: Build, verify and publish Rift
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['Rift/**', '.github/workflows/rift-build.yml']
+    paths: ['Rift/**', '.github/rift-stability/**', '.github/workflows/rift-build.yml']
 permissions:
   contents: write
-  actions: write
+  actions: read
 concurrency:
-  group: rift-native-build-${{ github.ref_name }}
+  group: rift-stability-release
   cancel-in-progress: false
 jobs:
-  build:
-    runs-on: macos-26
-    timeout-minutes: 90
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      source: ${{ steps.source.outputs.source }}
+      build: ${{ steps.source.outputs.build }}
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: main
           fetch-depth: 0
-      - name: Remove only the superseded queued main build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 - <<'PY'
-          import json, subprocess
-          p='repos/Strezzy/ios-apps/actions/runs/38557734123'
-          r=json.loads(subprocess.check_output(['gh','api',p]))
-          if r['head_sha']=='2bdfdb98ad959e8603133e7a21d222164e1636a6' and r['status'] in ('queued','pending','in_progress'):
-              subprocess.run(['gh','api','--method','POST',p+'/cancel'],check=True)
-          PY
+      - name: Apply reviewed changes and preserve exact source
+        id: source
+        run: python3 .github/rift-stability/apply.py
+  native:
+    needs: prepare
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
+      RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
+      RIFT_MAC_METAL: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Prepare tools and start simulator migration early
+      - name: Prepare native tools
         id: tools
         run: |
           xcodebuild -version
+          sysctl hw.memsize hw.ncpu
           echo "xcode=$(xcodebuild -version | tr '\n ' '-')" >> "$GITHUB_OUTPUT"
           python -m pip install Pillow==11.1.0
           if ! command -v xcodegen; then brew install xcodegen; fi
           if ! command -v cmake; then brew install cmake; fi
           if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
-          python - <<'PY'
-          import json, subprocess
-          devices=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json']))['devices']
-          choices=[d for runtime,items in devices.items() if 'iOS' in runtime for d in items if 'iPhone' in d['name'] and d.get('isAvailable')]
-          choices.sort(key=lambda d:('Pro' in d['name'],'18' in d['name'],'17' in d['name']),reverse=True)
-          if choices and choices[0]['state']!='Booted': subprocess.run(['xcrun','simctl','boot',choices[0]['udid']],check=True)
-          PY
       - uses: actions/cache/restore@v4
+        id: cache
         with:
           path: Rift/Build/Native
-          key: rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-${{ github.run_id }}
-          restore-keys: |
-            rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-
-            rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Prepare and verify repeat-safe source
-        run: |
-          python Rift/scripts/polish.py
-          python - <<'PY'
-          import hashlib, pathlib, subprocess
-          paths=list(pathlib.Path('Rift/Rift').rglob('*.swift'))+[pathlib.Path('Rift/scripts/prepare.py')]
-          before={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
-          subprocess.run(['python','Rift/scripts/polish.py'],check=True)
-          assert all(hashlib.sha256(p.read_bytes()).hexdigest()==before[str(p)] for p in paths), 'Preparation changed the source on its second pass'
-          PY
-          python Rift/scripts/prepare.py
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Rift/Rift Rift/scripts/prepare.py Rift/scripts/build.py
-          if ! git diff --cached --quiet; then
-            git commit -m 'Save repeat-safe Rift source and final reply delivery [skip ci]'
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-      - name: Build, run native tests, verify every model and package the iPhone app
-        env:
-          RIFT_BUILD_NUMBER: ${{ github.run_number }}
-        run: python Rift/scripts/build.py
-      - name: Preserve the exact build source
-        run: |
-          git add Rift/Rift Rift/project.yml
-          if ! git diff --cached --quiet; then
-            git commit -m 'Record verified Rift build identity [skip ci]'
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
-          git rev-parse HEAD > Rift/Build/SOURCE-REVISION.txt
+          key: rift-8345f333-stability-metal-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+      - name: Prepare pinned dependency sources
+        run: python Rift/scripts/build.py prepare
+      - name: Compile the native inference runtimes
+        run: python Rift/scripts/native.py iphonesimulator iphoneos macosx
       - uses: actions/cache/save@v4
-        if: always() && hashFiles('Rift/Build/Native/**/libruntime.a') != ''
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: Rift/Build/Native
-          key: rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-${{ github.run_id }}
-      - name: Preserve build evidence and the real IPA
+          key: rift-8345f333-stability-metal-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+      - name: Test startup, six-GiB hashing, memory planning and keyboard layout
+        run: python Rift/scripts/build.py simulator
+      - name: Compile the arm64 iPhone app
+        run: python Rift/scripts/build.py iphone
+      - name: Exercise 4B through the production Swift downloader and Metal backend
+        env:
+          RIFT_MODEL_IDS: qwen35-4b
+          RIFT_PROBE_BACKEND: metal
+        run: |
+          set -o pipefail
+          python Rift/scripts/smoke.py 2>&1 | tee Rift/Build/Logs/metal-inference.log
+      - name: Package iPhone candidate with requested memory entitlements
+        run: python Rift/scripts/build.py candidate
+      - uses: actions/upload-artifact@v7
         if: always()
-        uses: actions/upload-artifact@v7
         with:
-          name: Rift-iPhone
+          name: Rift-Native-Candidate
           path: |
             Rift/Build/Rift.ipa
             Rift/Build/Rift-Source.zip
             Rift/Build/BUILD-REPORT.json
-            Rift/Build/MODEL-SMOKE.json
-            Rift/Build/catalog-resolution.json
-            Rift/Build/SOURCE-REVISION.txt
+            Rift/Build/METAL-SMOKE.json
             Rift/Build/Screenshots
             Rift/Build/Logs
-          if-no-files-found: warn
+          retention-days: 14
+  models:
+    needs: prepare
+    runs-on: macos-26-intel
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: A
+            ids: qwen35-2b,qwen35-4b,qwen35-9b
+          - group: B
+            ids: gemma4-e2b,gemma4-e4b,lfm25-26b
+          - group: C
+            ids: heretic-qwen3-8b,heretic-qwen35-9b
+          - group: D
+            ids: heretic-qwen3-14b-compact,heretic-qwen3-14b-quality
+    env:
+      RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
+      RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
+      RIFT_MODEL_IDS: ${{ matrix.ids }}
+      RIFT_MAC_METAL: '0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare standard higher-memory model test host
+        id: tools
+        run: |
+          xcodebuild -version
+          sysctl hw.memsize hw.ncpu
+          echo "xcode=$(xcodebuild -version | tr '\n ' '-')" >> "$GITHUB_OUTPUT"
+          python -m pip install Pillow==11.1.0
+          if ! command -v cmake; then brew install cmake; fi
+      - uses: actions/cache@v4
+        with:
+          path: Rift/Build/Native/macosx
+          key: rift-8345f333-stability-cpu-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+      - name: Prepare actual pinned native source
+        run: |
+          python Rift/scripts/prepare.py
+          python Rift/scripts/native.py macosx
+      - name: Download, checksum and generate two-turn replies for each quantization
+        run: |
+          mkdir -p Rift/Build/Logs
+          set -o pipefail
+          python Rift/scripts/smoke.py 2>&1 | tee Rift/Build/Logs/models-${{ matrix.group }}.log
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: models-${{ matrix.group }}
+          path: |
+            Rift/Build/MODEL-SMOKE.json
+            Rift/Build/Logs
+          retention-days: 14
+  publish:
+    needs: [prepare, native, models]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Strezzy/ios-apps
+      RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v6
+        with:
+          name: Rift-Native-Candidate
+          path: RiftRelease
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: models-*
+          path: RiftRelease
+          merge-multiple: false
+      - name: Verify every test and publish the exact IPA and source listing
+        run: python3 Rift/scripts/publish_update.py RiftRelease
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Rift-Verified-Release
+          path: |
+            RiftRelease/Rift.ipa
+            RiftRelease/Rift-Source.zip
+            RiftRelease/BUILD-REPORT.json
+            RiftRelease/MODEL-SMOKE.json
+            RiftRelease/METAL-SMOKE.json
+            RiftRelease/SHA256SUMS.txt
           retention-days: 14
