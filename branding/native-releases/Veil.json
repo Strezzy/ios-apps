@@ -1,0 +1,85 @@
+{
+  "status": "passed",
+  "physical_iphone_testing": "Not performed",
+  "source_revision": "395a73fb3031624c5121c5ab1ad543883775a41f",
+  "required_tests": [
+    "testJPEGRemovesMetadataAndAppliesOrientation",
+    "testPNGHasUniqueFingerprintsWithoutPixelChanges",
+    "testHEICRoundTrip",
+    "testPNGWithoutFingerprintPadding",
+    "testCorruptInputIsRejected",
+    "testExtensionPixelLimitIsEnforced",
+    "testCancellationIsNotASuccess",
+    "testCRC32KnownVector",
+    "testVideoMetadataAndAllFrames",
+    "testEarlyAudioEOFKeepsAllVideoFrames",
+    "testColorModelIsTechnicalButCameraModelIsSensitive"
+  ],
+  "source_hashes": {
+    "Core/PhotoCleaner.swift": "d8a6deaaf60050a1ba8c73f37badbcbd38ab5852b6a3a8ce33652b72eab530e9",
+    "Core/Models.swift": "7374a1ddc989c31de62c656b963db333c09a0ac0d75c841f352e60cfdd032583",
+    "Core/RinseEngine.swift": "358dd808eb8fe59ddf64fb3c99cdfcbe826b40a472d51e76b0b92bfe7baaa595",
+    "Core/VideoCleaner.swift": "06bf98070b9717d25f5b018ebdd71444acaf93395e46b0e639de7f48ece5ecd1",
+    "Core/Fingerprint.swift": "f9cf91f258304d04a761f3f8dee9347083c7309996720833d4ab1856c85c0911",
+    "App/Importers.swift": "09b5739f6b2d8a8a887bc7019c8fffa89c8cb8d1e14ce8e98ad35c3556ec1368",
+    "App/RinseView.swift": "65d4e15ea7d8e85b953c36adcde147360b1d89127d22a01f3592aac61507e4ff",
+    "App/RinseApp.swift": "d747c04f7b87016a910131f45cff31ea63ec12e9319e4568d20a6b96def8bb50",
+    "App/RinseStore.swift": "08d335f4b13117a42db0328aa6b0da253d0352864472461a5c8f2fbb67888bb8",
+    "Tests/VeilBrandingTests.swift": "abc0a815114b1e81d79df0b5390be189bb1925e74ec6993a0d92afa842368e24",
+    "Tests/RinseTests.swift": "f81fc822bfe780b3d4ee37d6884e36fb39c2cb0808ba762e5197d6414728a080",
+    "Share/ShareViewController.swift": "67fa31b3cf4fd490e5363af631cc550a10d89432b82a7c50fa16e1cde9901dca"
+  },
+  "xcode": "Xcode 26.6\nBuild version 17F113",
+  "sdk": "26.5",
+  "static_network_audit": "passed; no listed network APIs or web URLs in shipping Swift code",
+  "artwork_sha256": "dc559c74e3cfba2ed333929bbc9d5c5ee4b52945f8d61fef490feb4d865471a4",
+  "xcodegen": "Version: 2.46.0",
+  "simulator": "iPhone 17 Pro",
+  "native_tests": {
+    "status": "passed",
+    "count": 11,
+    "tests": [
+      "testJPEGRemovesMetadataAndAppliesOrientation",
+      "testPNGHasUniqueFingerprintsWithoutPixelChanges",
+      "testHEICRoundTrip",
+      "testPNGWithoutFingerprintPadding",
+      "testCorruptInputIsRejected",
+      "testExtensionPixelLimitIsEnforced",
+      "testCancellationIsNotASuccess",
+      "testCRC32KnownVector",
+      "testVideoMetadataAndAllFrames",
+      "testEarlyAudioEOFKeepsAllVideoFrames",
+      "testColorModelIsTechnicalButCameraModelIsSensitive"
+    ]
+  },
+  "simulator_launch": "passed; see Simulator-Launch.png",
+  "version": "1.1",
+  "build": "201",
+  "ipa_sha256": "1c99b96327a043279a3d42f665015293d90b6b9977f4f4864eb4d5564f0340c1",
+  "ipa_bytes": 1254369,
+  "signing": "Unsigned device IPA; sign with your own sideloading/developer tool",
+  "original_build_ipa_sha256": "5f8fa15658e7094eaee13b78b8a3fcadd3d1d953870217cc3e56688b5087c462",
+  "native_branding": {
+    "status": "passed",
+    "name": "Veil",
+    "bundleIdentifier": "com.billy.veil",
+    "archiveRoot": "Veil.app",
+    "compiled_icons": [
+      {
+        "file": "Payload/Rinse.app/AppIcon60x60@2x.png",
+        "dimensions": [
+          120,
+          120
+        ],
+        "mean_pixel_difference": 0.698
+      }
+    ],
+    "extensions": [
+      {
+        "bundleIdentifier": "com.billy.veil.share",
+        "displayName": "Clean with Veil"
+      }
+    ],
+    "physical_device": "Not tested"
+  }
+}

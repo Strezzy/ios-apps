@@ -249,30 +249,19 @@
       "localizedDescription": "Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.",
       "category": "photo-video",
       "tintColor": "#20B894",
-      "bundleIdentifier": "com.billy.rinse",
+      "bundleIdentifier": "com.billy.veil",
       "developerName": "Strezzy",
       "versions": [
         {
-          "version": "1.0.0",
-          "buildVersion": "5",
-          "buildNumber": "5",
-          "date": "2026-10-13T00:56:20Z",
-          "localizedDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa",
-          "size": 2319258,
+          "version": "1.1",
+          "buildVersion": "201",
+          "buildNumber": "201",
+          "date": "2026-10-14T07:28:23Z",
+          "localizedDescription": "Veil 1.1 (201)\n\nNative rebuild with the approved Veil icon, installed display name and bundle ID `com.billy.veil`. Veil now uses an emerald/mint interface, simpler import controls, adaptive large-text layout and reduced-transparency surfaces. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.rinse` to `com.billy.veil` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa",
+          "size": 1254369,
           "minOSVersion": "26.0",
-          "sha256": "0443813bce0b0d3fc6074a34b31f0a92e6ca3768a9399afd19e1db28cec21180"
-        },
-        {
-          "version": "1.0",
-          "buildVersion": "1",
-          "buildNumber": "1",
-          "date": "2026-10-13T00:41:32Z",
-          "localizedDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-4/Rinse.ipa",
-          "size": 2319256,
-          "minOSVersion": "26.0",
-          "sha256": "9028e28fc7ba5ef8d64fb6b6c330b3fa7cc011f0d33de1fbe8aea7d2ee893a07"
+          "sha256": "1c99b96327a043279a3d42f665015293d90b6b9977f4f4864eb4d5564f0340c1"
         }
       ],
       "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png",
@@ -282,11 +271,11 @@
           "NSPhotoLibraryAddUsageDescription": "Save the clean photos you choose to your library."
         }
       },
-      "version": "1.0.0",
-      "versionDate": "2026-10-13T00:56:20Z",
-      "versionDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa",
-      "size": 2319258
+      "version": "1.1",
+      "versionDate": "2026-10-14T07:28:23Z",
+      "versionDescription": "Veil 1.1 (201)\n\nNative rebuild with the approved Veil icon, installed display name and bundle ID `com.billy.veil`. Veil now uses an emerald/mint interface, simpler import controls, adaptive large-text layout and reduced-transparency surfaces. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.rinse` to `com.billy.veil` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa",
+      "size": 1254369
     },
     {
       "name": "Lucid",
