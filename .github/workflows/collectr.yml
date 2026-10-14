@@ -1,11 +1,8 @@
-name: Build and publish Collectr
+name: Build Collectr (unpublished)
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['Collectr/**', '.github/workflows/collectr.yml']
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: collectr-build
   cancel-in-progress: true
@@ -21,33 +18,6 @@ jobs:
         env:
           COLLECTR_BUILD_NUMBER: ${{ github.run_number }}
         run: python3 Collectr/scripts/build_ios.py
-      - name: Publish verified iPhone package
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: collectr-0.1.0-${{ github.run_number }}
-        run: gh release create "$RELEASE_TAG" Collectr/Build/Collectr.ipa Collectr/Build/BUILD-REPORT.json Collectr/Build/Simulator-Launch.png Collectr/Build/Preview-*.png --target "$GITHUB_SHA" --title "Collectr 0.1.0 (${{ github.run_number }})" --notes-file Collectr/RELEASE-NOTES.md
-      - name: Add Collectr to Strezzy's app source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: collectr-0.1.0-${{ github.run_number }}
-        run: |
-          git fetch origin main
-          git rebase origin/main
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          path=Path('app-registry.json')
-          registry=json.loads(path.read_text())
-          registry['com.billy.collectr']=json.loads(Path('Collectr/catalog-entry.json').read_text())
-          path.write_text(json.dumps(registry,indent=2,ensure_ascii=False)+'\n')
-          Path('assets/Collectr.png').write_bytes(Path('Collectr/Assets.xcassets/AppIcon.appiconset/AppIcon.png').read_bytes())
-          PY
-          python3 scripts/update_catalog.py --tag "$RELEASE_TAG" --local Collectr/Build/Collectr.ipa --date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --notes "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits."
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app-registry.json apps.json README.md assets/Collectr.png
-          git commit -m "Add verified Collectr release to Strezzy's app source"
-          git push origin HEAD:main
       - name: Save build evidence
         if: always()
         uses: actions/upload-artifact@v7
