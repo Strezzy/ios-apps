@@ -50,7 +50,7 @@
   "com.billy.rift": {
     "name": "Rift",
     "subtitle": "Private offline AI chat",
-    "localizedDescription": "Chat locally on your iPhone with quantized uncensored community models or a GGUF imported from Files. Includes a compact iPhone-organized model picker, Heretic 8B/9B and experimental 14B choices, Bloom text animations, saved chats, and local search. Version 1.1 adds keyboard and startup fixes, bounded large-file verification, adaptive memory/context handling, and clearer retry errors. No accounts, analytics, or cloud inference. Model downloads use the internet. Larger models depend on the signing/LiveContainer host memory allowance; physical-iPhone performance remains unverified.",
+    "localizedDescription": "Chat locally on your iPhone with quantized uncensored community models or a GGUF imported from Files. Includes a compact iPhone-organized model picker, Heretic 8B/9B and experimental 14B choices, Bloom text animations, saved chats, and local search. Version 1.2 fixes live text animation and keyboard-follow scrolling, adds replaying style previews, removes the offline switch, and explains remaining memory versus the host process budget. No accounts, analytics, or cloud inference. Model downloads use the internet. Larger models depend on the signing/LiveContainer host memory allowance; physical-iPhone performance remains unverified.",
     "icon": "Rift.png",
     "category": "utilities",
     "tintColor": "#D62947"
