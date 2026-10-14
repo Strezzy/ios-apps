@@ -12,7 +12,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Facet.png" width="44" alt=""/> **Facet** — Convert photos and videos to 3D | 1.1 (301) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/facet-1.1-build301/Facet.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png" width="44" alt=""/> **Veil** — Remove metadata from photos and videos | 1.1 (201) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png" width="44" alt=""/> **Lucid** — Offline video enhancement · Beta | 1.1 (204) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat · Beta | 1.0 (10) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.0-build10/Rift.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.1 (122) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.1-build122/Rift.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -50,7 +50,7 @@ FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x wit
 
 ### Rift
 
-Chat with AI on your iPhone without an account, analytics, or cloud inference. Download a curated uncensored community model, or import a compatible GGUF from Files. Includes an iPhone-organized model library, small model-benefit badges, Bloom and Soft Fade reply animations, an Instant option, saved chats, local search, and transcript export. Downloads require internet; chat works offline afterward. Uncensored does not guarantee zero refusals or accurate answers. First beta: physical iPhone performance, heat, and LiveContainer compatibility remain unverified.
+Chat locally on your iPhone with quantized uncensored community models or a GGUF imported from Files. Includes a compact iPhone-organized model picker, Heretic 8B/9B and experimental 14B choices, Bloom text animations, saved chats, and local search. Version 1.1 adds keyboard and startup fixes, bounded large-file verification, adaptive memory/context handling, and clearer retry errors. No accounts, analytics, or cloud inference. Model downloads use the internet. Larger models depend on the signing/LiveContainer host memory allowance; physical-iPhone performance remains unverified.
 
 ## Add my apps to LiveContainer
 
