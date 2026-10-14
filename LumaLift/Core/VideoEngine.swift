@@ -1,5 +1,5 @@
 import Foundation
-import AVFoundation
+@preconcurrency import AVFoundation
 import CryptoKit
 
 struct ExportResult: Sendable {
@@ -17,10 +17,12 @@ final class VideoEngine: @unchecked Sendable {
                 progress: @escaping @Sendable (WorkProgress) -> Void) async throws -> ExportResult {
         try settings.validate(width: clip.width, height: clip.height, sourceFPS: clip.fps)
         try control.checkpoint(gentle: settings.gentleProcessing)
+        if settings.fps != 0 { try FrameProcessor.requireMotionSupport() }
         guard output.isFileURL, !FileManager.default.fileExists(atPath: output.path) else {
             throw LiftError.message("The export destination is not a new local file.")
         }
         let length = min(clip.duration, previewSeconds ?? clip.duration)
+        guard length.isFinite, length > 0 else { throw LiftError.message("The export duration is invalid.") }
         let duration = CMTime(seconds: length, preferredTimescale: 60000)
         let range = CMTimeRange(start: clip.timeRange.start, duration: duration)
         let work = FileManager.default.temporaryDirectory.appendingPathComponent("LumaLift-" + UUID().uuidString, isDirectory: true)
@@ -100,17 +102,19 @@ final class VideoEngine: @unchecked Sendable {
             progress(WorkProgress(fraction: latestFraction, stage: message, frames: frames))
         }
         func readFrame() throws -> Frame? {
-            guard let sample = readerOutput.copyNextSampleBuffer() else {
-                if reader.status == .failed { throw reader.error ?? LiftError.message("Video decoding failed.") }
-                return nil
+            while let sample = readerOutput.copyNextSampleBuffer() {
+                // AVFoundation may emit empty timing markers; they are not frames.
+                guard CMSampleBufferGetNumSamples(sample) > 0 else { continue }
+                guard let buffer = CMSampleBufferGetImageBuffer(sample) else { throw LiftError.message("A decoded video frame is missing.") }
+                let time = CMTimeSubtract(CMSampleBufferGetPresentationTimeStamp(sample), range.start)
+                guard time.isNumeric, time >= .zero, !lastInputTime.isValid || time > lastInputTime else {
+                    throw LiftError.message("The source has invalid or non-increasing frame timestamps.")
+                }
+                lastInputTime = time
+                return Frame(buffer: buffer, time: time)
             }
-            guard let buffer = CMSampleBufferGetImageBuffer(sample) else { throw LiftError.message("A decoded video frame is missing.") }
-            let time = CMTimeSubtract(CMSampleBufferGetPresentationTimeStamp(sample), range.start)
-            guard time.isNumeric, time >= .zero, !lastInputTime.isValid || time > lastInputTime else {
-                throw LiftError.message("The source has invalid or non-increasing frame timestamps.")
-            }
-            lastInputTime = time
-            return Frame(buffer: buffer, time: time)
+            if reader.status == .failed { throw reader.error ?? LiftError.message("Video decoding failed.") }
+            return nil
         }
         func append(_ buffer: CVPixelBuffer, at time: CMTime) async throws {
             try control.checkpoint(gentle: settings.gentleProcessing, onWait: onWait)
@@ -120,12 +124,14 @@ final class VideoEngine: @unchecked Sendable {
             let restored = try autoreleasepool {
                 try processor.restore(buffer, settings: settings, control: control, onWait: onWait)
             }
-            let waitingSince = ProcessInfo.processInfo.systemUptime
+            var stalled = 0.0
             while !input.isReadyForMoreMediaData {
                 try control.checkpoint(gentle: settings.gentleProcessing, onWait: onWait)
                 guard writer.status == .writing else { throw writer.error ?? LiftError.message("The encoder stopped unexpectedly.") }
-                guard ProcessInfo.processInfo.systemUptime - waitingSince < 120 else { throw LiftError.message("The encoder stopped responding.") }
+                guard stalled < 120 else { throw LiftError.message("The encoder stopped responding.") }
+                let start = ProcessInfo.processInfo.systemUptime
                 try await Task.sleep(nanoseconds: 5_000_000)
+                stalled += ProcessInfo.processInfo.systemUptime - start
             }
             guard adaptor.append(restored, withPresentationTime: time) else {
                 throw writer.error ?? LiftError.message("The encoder rejected a video frame.")
@@ -233,7 +239,13 @@ final class VideoEngine: @unchecked Sendable {
             throw LiftError.message("The exported dimensions, timing or audio did not match the requested settings.")
         }
         let reader = try AVAssetReader(asset: asset)
-        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        // Decode for presentation-order validation. Compressed samples can be
+        // returned in decode order and can include empty timing markers.
+        // The streaming 420v path also verifies that the finished video decodes.
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+        ])
+        output.alwaysCopiesSampleData = false
         guard reader.canAdd(output) else { throw LiftError.message("Cannot verify the exported frames.") }
         reader.add(output)
         guard reader.startReading() else { throw reader.error ?? LiftError.message("Cannot inspect the finished video.") }
@@ -242,13 +254,17 @@ final class VideoEngine: @unchecked Sendable {
         var last = CMTime.invalid
         while let sample = output.copyNextSampleBuffer() {
             try control.checkpoint()
+            guard CMSampleBufferGetNumSamples(sample) > 0 else { continue }
+            guard CMSampleBufferGetImageBuffer(sample) != nil else { throw LiftError.message("An exported frame could not be decoded.") }
             let timestamp = CMSampleBufferGetPresentationTimeStamp(sample)
-            guard !last.isValid || timestamp > last else { throw LiftError.message("The exported video has invalid frame ordering.") }
+            guard timestamp.isNumeric, timestamp >= .zero, !last.isValid || timestamp > last else {
+                throw LiftError.message("The exported video has invalid presentation timing.")
+            }
             last = timestamp
-            count += CMSampleBufferGetNumSamples(sample)
+            count += 1
         }
         guard reader.status == .completed, count == frames else {
-            throw LiftError.message("Export verification found missing video frames. The incomplete output was discarded.")
+            throw reader.error ?? LiftError.message("Export verification found missing video frames. The incomplete output was discarded.")
         }
     }
     private func fingerprint(_ url: URL, control: WorkControl) throws -> String {

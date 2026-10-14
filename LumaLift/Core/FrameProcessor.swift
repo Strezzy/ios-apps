@@ -3,6 +3,7 @@ import CoreML
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import Metal
+import MetalPerformanceShaders
 import RifeMetal
 
 final class FrameProcessor {
@@ -11,6 +12,23 @@ final class FrameProcessor {
     private var restoration: MLModel?
     private var motion: RifeInterpolator?
     private let bundle: Bundle
+
+    /// Do not initialize MPSGraph on the hosted simulator's virtual GPU. Its
+    /// device descriptor raises an Objective-C exception before inference starts.
+    /// The device build retains the real RIFE implementation, not frame blending.
+    static var motionUnavailableReason: String? {
+        #if targetEnvironment(simulator)
+        return "RIFE GPU motion is not enabled in simulator builds. Test frame interpolation on a physical iPhone or iPad."
+        #else
+        guard let device = MTLCreateSystemDefaultDevice(), MPSSupportsMTLDevice(device) else {
+            return "This device does not provide the Metal Performance Shaders support required for AI motion. Choose Original FPS."
+        }
+        return nil
+        #endif
+    }
+    static func requireMotionSupport() throws {
+        if let reason = motionUnavailableReason { throw LiftError.message(reason) }
+    }
     init(bundle: Bundle = .main) throws {
         guard let device = MTLCreateSystemDefaultDevice() else {
             throw LiftError.message("This device could not start Metal. No cloud or fake-processing fallback is used.")
@@ -36,11 +54,19 @@ final class FrameProcessor {
         restoration = model
     }
     func interpolate(_ a: CVPixelBuffer, _ b: CVPixelBuffer, fraction: Float) throws -> CVPixelBuffer {
+        guard fraction.isFinite, (0...1).contains(fraction),
+              CVPixelBufferGetWidth(a) == CVPixelBufferGetWidth(b),
+              CVPixelBufferGetHeight(a) == CVPixelBufferGetHeight(b) else {
+            throw LiftError.message("AI motion received incompatible frames or an invalid timestamp.")
+        }
         if fraction <= 0.00001 { return a }
         if fraction >= 0.99999 { return b }
+        try Self.requireMotionSupport()
         if motion == nil { motion = try RifeInterpolator(configuration: .bundled(qualityTier: .fast)) }
         guard let motion else { throw LiftError.message("The motion model could not start.") }
-        return try motion.interpolate(previous: a, current: b, timesteps: [fraction])[0]
+        let results = try motion.interpolate(previous: a, current: b, timesteps: [fraction])
+        guard let result = results.first else { throw LiftError.message("The motion model returned no frame.") }
+        return result
     }
     func restore(_ input: CVPixelBuffer, settings: EnhanceSettings, control: WorkControl,
                  onWait: ((String) -> Void)? = nil) throws -> CVPixelBuffer {
@@ -53,8 +79,7 @@ final class FrameProcessor {
         let tile = try makePixelBuffer(width: TileRegion.inputSize, height: TileRegion.inputSize)
         let source = CIImage(cvPixelBuffer: input, options: [.colorSpace: colorSpace])
         let pad = TileRegion.padding
-        // No full 4x intermediate video frame is allocated. Each restored tile is
-        // cropped and reduced directly to the selected output resolution.
+        // Process one padded tile at a time, without a full 4x intermediate frame.
         for region in TileRegion.regions(width: width, height: height) {
             try control.checkpoint(gentle: settings.gentleProcessing, onWait: onWait)
             try autoreleasepool {
@@ -98,6 +123,11 @@ final class FrameProcessor {
         return image.applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: factor, kCIInputAspectRatioKey: 1.0])
     }
     private func copyTile(_ source: CVPixelBuffer, into destination: CVPixelBuffer, x: Int, top: Int) throws {
+        guard x >= 0, top >= 0,
+              x + CVPixelBufferGetWidth(source) <= CVPixelBufferGetWidth(destination),
+              top + CVPixelBufferGetHeight(source) <= CVPixelBufferGetHeight(destination) else {
+            throw LiftError.message("An enhanced tile exceeded the output bounds.")
+        }
         guard CVPixelBufferLockBaseAddress(source, .readOnly) == kCVReturnSuccess else {
             throw LiftError.message("Could not read an enhanced tile.")
         }

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Compile device and simulator apps, execute native AI tests, then package verified outputs."""
+"""Build iPhone binaries and gate beta publication on supported simulator tests.
+
+Physical GPU tests remain in XCTest for device execution. Their explicit skips
+are recorded separately; neither is counted as an inference or export pass.
+"""
 import hashlib
 import json
 import os
@@ -17,8 +21,10 @@ BUILD = ROOT / 'Build'
 LOGS = BUILD / 'Logs'
 TESTS = ['testSettingsAreIndependent', 'testOutputAndMotionLimits', 'testFrameClockAndArbitraryTimesteps',
          'testTilesCoverEveryPixelExactlyOnce', 'testBundledCoreMLRestorationExecutes',
-         'testBundledRIFERunsOnAppleRuntime', 'testFullEnhancementAnd60FPSExport', 'testOriginalTimingAndCancellation',
-         'testPortraitOrientationIsPreserved', 'testShortAudioDoesNotTruncateVideo']
+         'testOriginalTimingAndCancellation', 'testPortraitOrientationIsPreserved', 'testShortAudioDoesNotTruncateVideo',
+         'testZeroStrengthPreservesTileLayout', 'testFullEnhancementAtOriginalFPS',
+         'testMotionUnavailableFailsWithoutPartialExport']
+DEVICE_TESTS = ['testBundledRIFERunsOnAppleRuntime', 'testFullEnhancementAnd60FPSExport']
 def run(args, log=None, capture=False):
     args = [str(arg) for arg in args]
     print('+', ' '.join(args), flush=True)
@@ -27,17 +33,19 @@ def run(args, log=None, capture=False):
             process = subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             for line in process.stdout:
                 handle.write(line)
-                if not line.startswith(('    /', '    builtin-', '    cd ', '    export ')):
+                if not line.startswith(('    /', '    builtin-', '    cd ', '    export ', 'SwiftExplicitDependencyGeneratePcm')) and len(line) < 3000:
                     print(line, end='', flush=True)
             if process.wait(): raise RuntimeError(log + ' failed; see its build log.')
         return None
     return subprocess.run(args, cwd=ROOT, text=True, check=True, capture_output=capture).stdout
 
 def main():
-    if sys.platform != 'darwin': raise SystemExit('Use the GitHub Actions workflow or macOS with Xcode 26 or newer.')
+    if sys.platform != 'darwin': raise SystemExit('Use GitHub Actions or macOS with Xcode 26 or newer.')
     LOGS.mkdir(parents=True, exist_ok=True)
     report = {'status': 'in progress', 'source_revision': os.environ.get('GITHUB_SHA'),
-              'physical_iphone_validation': 'Not performed', 'required_native_tests': TESTS}
+              'release_channel': 'beta', 'physical_iphone_validation': 'Not performed',
+              'motion_inference_validation': 'Not performed: hosted simulator GPU cannot initialize MPSGraph. Device tests are retained, not passed.',
+              'required_simulator_tests': TESTS, 'required_device_tests_pending': DEVICE_TESTS}
     try:
         report['xcode'] = run(['xcodebuild', '-version'], capture=True).strip()
         report['sdk'] = run(['xcrun', '--sdk', 'iphoneos', '--show-sdk-version'], capture=True).strip()
@@ -45,7 +53,7 @@ def main():
         forbidden = re.compile(r'URLSession|URLRequest|import\s+(Network|WebKit|CFNetwork)|https?://')
         shipping = list((ROOT / 'App').glob('*.swift')) + list((ROOT / 'Core').glob('*.swift'))
         assert not any(forbidden.search(p.read_text()) for p in shipping), 'Network API audit failed.'
-        report['network_api_scan'] = 'Passed for app-owned Swift sources; no app network or telemetry code.'
+        report['network_api_scan'] = 'Passed for app-owned Swift sources; not a network traffic capture.'
         report['source_hashes'] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in shipping}
         report['models'] = json.loads((ROOT / 'Resources/MODEL-PROVENANCE.json').read_text())
         assert report['models']['conversion_verified']
@@ -57,6 +65,7 @@ def main():
                   'CODE_SIGNING_REQUIRED=NO', 'CODE_SIGN_IDENTITY=', 'DEVELOPMENT_TEAM=',
                   'CURRENT_PROJECT_VERSION=' + build]
         run(common + ['-configuration', 'Release', '-destination', 'generic/platform=iOS', 'build'], log='iphone-build')
+        report['iphone_compilation'] = 'passed'
         devices = json.loads(run(['xcrun', 'simctl', 'list', 'devices', 'available', '--json'], capture=True))['devices']
         candidates = []
         for runtime, entries in devices.items():
@@ -79,9 +88,15 @@ def main():
                    '-default-test-execution-time-allowance', '600', '-maximum-test-execution-time-allowance', '600',
                    '-resultBundlePath', result, 'test-without-building'], log='native-tests')
         transcript = (LOGS / 'native-tests.log').read_text()
-        passed = [name for name in TESTS if re.search(r"Test Case '[^\n]*\b" + re.escape(name) + r"\b[^\n]*' passed", transcript)]
-        if passed != TESTS: raise RuntimeError('Required native tests missing: ' + str(set(TESTS) - set(passed)))
-        report['native_tests'] = {'status': 'passed', 'count': len(passed), 'tests': passed}
+        def has_result(name, state):
+            return bool(re.search(r"Test Case '[^\n]*\b" + re.escape(name) + r"\b[^\n]*' " + state, transcript))
+        passed = [name for name in TESTS if has_result(name, 'passed')]
+        skipped = [name for name in DEVICE_TESTS if has_result(name, 'skipped')]
+        if passed != TESTS: raise RuntimeError('Required simulator tests missing: ' + str(set(TESTS) - set(passed)))
+        if skipped != DEVICE_TESTS: raise RuntimeError('Hardware-dependent tests must be explicitly recorded as skipped on this simulator.')
+        report['native_tests'] = {'status': 'passed', 'count': len(passed), 'tests': passed,
+                                  'skipped_count': len(skipped), 'skipped': skipped,
+                                  'coverage': 'Simulator-supported tests only. Real RIFE inference and combined 60 FPS export remain unverified.'}
         sim_app = BUILD / 'DerivedData/Build/Products/Debug-iphonesimulator/LumaLift.app'
         run(['xcrun', 'simctl', 'install', udid, sim_app])
         run(['xcrun', 'simctl', 'launch', udid, 'com.billy.lumalift'], log='simulator-launch')

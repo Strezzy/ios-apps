@@ -54,7 +54,34 @@ final class LumaLiftTests: XCTestCase {
         XCTAssertEqual(CVPixelBufferGetWidth(result), 128)
         XCTAssertEqual(CVPixelBufferGetHeight(result), 96)
     }
+    func testZeroStrengthPreservesTileLayout() throws {
+        let input = try makePixelBuffer(width: 358, height: 190)
+        let base = CIImage(color: CIColor(red: 0.16, green: 0.30, blue: 0.50))
+            .cropped(to: CGRect(x: 0, y: 0, width: 358, height: 190))
+        let left = CIImage(color: CIColor(red: 0.85, green: 0.20, blue: 0.35))
+            .cropped(to: CGRect(x: 0, y: 0, width: 110, height: 95))
+        let right = CIImage(color: CIColor(red: 0.25, green: 0.80, blue: 0.15))
+            .cropped(to: CGRect(x: 220, y: 115, width: 138, height: 75))
+        let context = CIContext(options: [.useSoftwareRenderer: true])
+        context.render(right.composited(over: left.composited(over: base)), to: input,
+                       bounds: CGRect(x: 0, y: 0, width: 358, height: 190),
+                       colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        var settings = EnhanceSettings(); settings.strength = 0
+        let output = try FrameProcessor().restore(input, settings: settings, control: WorkControl())
+        let before = bytes(input), after = bytes(output)
+        XCTAssertEqual(before.count, after.count)
+        let maximumDifference = zip(before, after).map { abs(Int($0.0) - Int($0.1)) }.max() ?? 256
+        XCTAssertLessThanOrEqual(maximumDifference, 3, "Tile composition must preserve orientation and color at zero strength.")
+    }
+    private func requirePhysicalMotion() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("Physical-device test pending: hosted simulator MPSGraph GPU initialization is unsupported. This skip is recorded in the beta build report, never reported as an inference pass.")
+        #else
+        try FrameProcessor.requireMotionSupport()
+        #endif
+    }
     func testBundledRIFERunsOnAppleRuntime() throws {
+        try requirePhysicalMotion()
         let processor = try FrameProcessor()
         let a = try sampleFrame(index: 0), b = try sampleFrame(index: 2)
         let result = try processor.interpolate(a, b, fraction: 0.5)
@@ -64,6 +91,7 @@ final class LumaLiftTests: XCTestCase {
         XCTAssertNotEqual(bytes(result), bytes(b), "Interpolation must not just duplicate the second input.")
     }
     func testFullEnhancementAnd60FPSExport() async throws {
+        try requirePhysicalMotion()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -82,6 +110,47 @@ final class LumaLiftTests: XCTestCase {
         XCTAssertEqual(exported.height, 96)
         XCTAssertEqual(exported.fps, 60, accuracy: 0.1)
         XCTAssertEqual(exported.duration, clip.duration, accuracy: 0.04)
+    }
+    func testFullEnhancementAtOriginalFPS() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = try await makeVideo(at: root.appendingPathComponent("source.mov"))
+        let clip = try await ClipInfo.inspect(source)
+        var settings = EnhanceSettings(); settings.scale = 2
+        let output = root.appendingPathComponent("restored.mov")
+        let result = try await VideoEngine().export(clip: clip, settings: settings, output: output,
+                                                     control: WorkControl(), progress: { _ in })
+        XCTAssertEqual(result.frames, 4)
+        XCTAssertEqual(result.sha256.count, 64)
+        XCTAssertGreaterThan(result.bytes, 0)
+        let exported = try await ClipInfo.inspect(output)
+        XCTAssertEqual(exported.width, 128); XCTAssertEqual(exported.height, 96)
+        XCTAssertEqual(exported.fps, clip.fps, accuracy: 0.1)
+        XCTAssertEqual(exported.duration, clip.duration, accuracy: 0.04)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+    }
+    func testMotionUnavailableFailsWithoutPartialExport() async throws {
+        #if targetEnvironment(simulator)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let source = try await makeVideo(at: root.appendingPathComponent("source.mov"))
+        let clip = try await ClipInfo.inspect(source)
+        var settings = EnhanceSettings(); settings.fps = 60
+        let output = root.appendingPathComponent("unavailable.mov")
+        do {
+            _ = try await VideoEngine().export(clip: clip, settings: settings, output: output,
+                                                control: WorkControl(), progress: { _ in })
+            XCTFail("An unavailable GPU must not produce a fake success or duplicate-frame output.")
+        } catch let error as LiftError {
+            XCTAssertTrue(error.localizedDescription.contains("simulator"))
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        #else
+        XCTAssertNil(FrameProcessor.motionUnavailableReason)
+        #endif
     }
     func testOriginalTimingAndCancellation() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
