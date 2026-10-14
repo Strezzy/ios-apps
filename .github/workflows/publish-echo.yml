@@ -1,0 +1,23 @@
+name: Publish verified native Echo
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['branding/transfers/echo.json']
+permissions:
+  contents: write
+concurrency:
+  group: echo-native-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify intended public files and publish Echo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish_echo_binary.py
