@@ -1,0 +1,79 @@
+name: Verify final Veil and Lucid native builds
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/veil-lucid-native.yml']
+permissions:
+  contents: write
+concurrency:
+  group: veil-lucid-native-final
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: Veil
+            folder: Rinse
+          - app: Lucid
+            folder: LumaLift
+    name: Final native ${{ matrix.app }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set new native build number and prepare Apple tools
+        env:
+          APP_NAME: ${{ matrix.app }}
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          python - <<'PY'
+          import json, os
+          catalog=json.load(open('apps.json'))
+          bundle='com.billy.'+os.environ['APP_NAME'].lower()
+          builds=[int(v['buildVersion']) for a in catalog['apps'] if a['bundleIdentifier']==bundle for v in a['versions'] if v['buildVersion'].isdigit()]
+          value=max(200+int(os.environ['GITHUB_RUN_NUMBER']),max(builds or [0])+1)
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write('RINSE_BUILD_NUMBER='+str(value)+'\nLUMALIFT_BUILD_NUMBER='+str(value)+'\n')
+          PY
+          python -m pip install Pillow==11.1.0
+          command -v xcodegen || brew install xcodegen
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+      - name: Prepare Lucid offline models
+        if: matrix.app == 'Lucid'
+        run: |
+          python -m pip install numpy==1.26.4 torch==2.5.0 coremltools==8.3.0
+          python LumaLift/scripts/prepare_models.py
+      - name: Native compilation and tests
+        run: |
+          export GITHUB_SHA="$(git rev-parse HEAD)"
+          python '${{ matrix.folder }}/scripts/build_ios.py'
+      - name: Inspect actual IPA branding and publish only after verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export GITHUB_SHA="$(git rev-parse HEAD)"
+          python scripts/native_suite_publish.py verify '${{ matrix.app }}'
+          python scripts/native_suite_publish.py publish '${{ matrix.app }}'
+      - name: Save native evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Final-${{ matrix.app }}
+          path: |
+            ${{ matrix.folder }}/Build/${{ matrix.app }}.ipa
+            ${{ matrix.folder }}/Build/${{ matrix.app }}-BUILD-REPORT.json
+            ${{ matrix.folder }}/Build/${{ matrix.app }}-light.png
+            ${{ matrix.folder }}/Build/${{ matrix.app }}-dark.png
+            ${{ matrix.folder }}/Build/BUILD-REPORT.json
+            ${{ matrix.folder }}/Build/Simulator-Launch.png
+            ${{ matrix.folder }}/Build/Logs
+          if-no-files-found: ignore
+          retention-days: 14
