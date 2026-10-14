@@ -310,6 +310,38 @@
       "versionDescription": "Lucid 1.1 (204)\n\nFixes videos appearing greyed out or unselectable when importing from Files. The picker no longer relies on a file provider labeling a movie with a video-specific type. It allows file selection, then checks the actual video track before accepting it. Non-video files and folders are rejected.\n\nFiles imports now coordinate read access while permission is held and copy into private storage off the main thread. MOV/MP4 files with missing or generic extensions receive a container hint only on the private copy. Originals are not modified, failed imports are cleaned up, and an invalid selection does not replace the current clip.\n\nThe app name, icon and bundle identifier remain Lucid / com.billy.lucid. This is an ordinary update to Lucid, not a new app identity. The enhancement engine, RIFE frame-rate processing, model preparation, UI theme and export settings were not changed.\n\nValidation: 17 simulator-supported tests passed, including six new Files/identity regressions. The two hardware-only motion tests remain explicitly skipped. The real Files-provider interface and LiveContainer behavior still require physical-device confirmation.\n\nBuilt from source revision `63a2b145a9ed811a0cf9a5e6381ce4c27c781580`. The release tag uses the publication branch; the attached report and source archive identify the tested code.\n",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa",
       "size": 14123866
+    },
+    {
+      "name": "Rift",
+      "subtitle": "Private offline AI chat · Beta",
+      "localizedDescription": "Chat with AI on your iPhone without an account, analytics, or cloud inference. Download a curated uncensored community model, or import a compatible GGUF from Files. Includes an iPhone-organized model library, small model-benefit badges, Bloom and Soft Fade reply animations, an Instant option, saved chats, local search, and transcript export. Downloads require internet; chat works offline afterward. Uncensored does not guarantee zero refusals or accurate answers. First beta: physical iPhone performance, heat, and LiveContainer compatibility remain unverified.",
+      "category": "utilities",
+      "tintColor": "#D62947",
+      "bundleIdentifier": "com.billy.rift",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "10",
+          "buildNumber": "10",
+          "date": "2026-10-14T18:01:22Z",
+          "localizedDescription": "Rift 1.0 (10) · First beta\n\nPrivate, on-device AI chat with a native crimson SwiftUI and Liquid Glass interface.\n\nIncludes Bloom and Soft Fade streaming animations, an Instant option, an animation preview, saved conversations, local search, copy/regenerate/export, custom GGUF imports through Files, model-benefit badges, and iPhone-organized model profiles including iPhone 18 Pro and Pro Max.\n\nThe curated catalog contains six uncensored community variants: Qwen3.5 2B, 4B, and 9B; Gemma 4 E2B and E4B; and LFM2.5 2.6B. Model weights are downloaded separately. No account, analytics, or hosted inference. An uncensored label does not guarantee zero refusals or accuracy.\n\n## Verification\n\n29 native simulator tests passed, with zero failures and zero skips. All six catalog models passed actual macOS CPU inference smoke checks. The arm64 iPhone application compiled, and its package, model hashes, and release checksums were verified.\n\nPhysical iPhone inference speed, Metal behavior, peak memory, heat, and LiveContainer compatibility remain untested. Simulator and Mac results are not physical-iPhone benchmarks. Larger models depend on the memory available to the installation.\n\n## Install\n\nDownload Rift.ipa and use your existing LiveContainer or signing setup. This is an unsigned arm64 iPhone app for iOS 26.0 or later, bundle ID com.billy.rift. Download a model in the app, or import a compatible single-file GGUF from Files.\n\n## Provenance\n\nThis release reuses the completed build without rebuilding or changing its IPA bytes. The release tag points to the publication snapshot containing the exact app sources from the attached build-source archive.\n\nOriginal build source: 8061df14caac05e62dc9c454f2b135efd1c75b21\nPublication snapshot: 8ffa3a56a301aa1e9bdfc69921db41f070f91a08\nBuild run: https://github.com/Strezzy/ios-apps/actions/runs/38561858483\nIPA size: 5516060 bytes\nIPA SHA-256: f8171166137d602d4f0ab275222f60bfe678cdbba3c5c594e76b6c09bb820860\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.0-build10/Rift.ipa",
+          "size": 5516060,
+          "minOSVersion": "26.0",
+          "sha256": "f8171166137d602d4f0ab275222f60bfe678cdbba3c5c594e76b6c09bb820860"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-14T18:01:22Z",
+      "versionDescription": "Rift 1.0 (10) · First beta\n\nPrivate, on-device AI chat with a native crimson SwiftUI and Liquid Glass interface.\n\nIncludes Bloom and Soft Fade streaming animations, an Instant option, an animation preview, saved conversations, local search, copy/regenerate/export, custom GGUF imports through Files, model-benefit badges, and iPhone-organized model profiles including iPhone 18 Pro and Pro Max.\n\nThe curated catalog contains six uncensored community variants: Qwen3.5 2B, 4B, and 9B; Gemma 4 E2B and E4B; and LFM2.5 2.6B. Model weights are downloaded separately. No account, analytics, or hosted inference. An uncensored label does not guarantee zero refusals or accuracy.\n\n## Verification\n\n29 native simulator tests passed, with zero failures and zero skips. All six catalog models passed actual macOS CPU inference smoke checks. The arm64 iPhone application compiled, and its package, model hashes, and release checksums were verified.\n\nPhysical iPhone inference speed, Metal behavior, peak memory, heat, and LiveContainer compatibility remain untested. Simulator and Mac results are not physical-iPhone benchmarks. Larger models depend on the memory available to the installation.\n\n## Install\n\nDownload Rift.ipa and use your existing LiveContainer or signing setup. This is an unsigned arm64 iPhone app for iOS 26.0 or later, bundle ID com.billy.rift. Download a model in the app, or import a compatible single-file GGUF from Files.\n\n## Provenance\n\nThis release reuses the completed build without rebuilding or changing its IPA bytes. The release tag points to the publication snapshot containing the exact app sources from the attached build-source archive.\n\nOriginal build source: 8061df14caac05e62dc9c454f2b135efd1c75b21\nPublication snapshot: 8ffa3a56a301aa1e9bdfc69921db41f070f91a08\nBuild run: https://github.com/Strezzy/ios-apps/actions/runs/38561858483\nIPA size: 5516060 bytes\nIPA SHA-256: f8171166137d602d4f0ab275222f60bfe678cdbba3c5c594e76b6c09bb820860\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.0-build10/Rift.ipa",
+      "size": 5516060
     }
   ],
   "news": []
