@@ -31,14 +31,6 @@
     "category": "photo-video",
     "tintColor": "#4DE8DD"
   },
-  "com.billy.moonhop": {
-    "name": "Enter the Third Dimension",
-    "subtitle": "Become the creatures of a magical rainforest",
-    "localizedDescription": "Play as a living raindrop in a mystical rainforest. Touch creatures to learn their forms, become a translucent girl, frog or fox, and shift between 2D and 3D to explore hidden paths. Includes an animated origin story, a playable first chapter, simple landscape touch controls, checkpoints, and offline play.",
-    "icon": "ThirdDimension-Rain.png",
-    "category": "games",
-    "tintColor": "#7FE6E3"
-  },
   "com.billy.rinse": {
     "name": "Rinse",
     "subtitle": "Remove metadata from photos and videos",
@@ -46,14 +38,6 @@
     "icon": "Rinse.jpg",
     "category": "photo-video",
     "tintColor": "#0DC2C2"
-  },
-  "com.billy.collectr": {
-    "name": "Collectr",
-    "subtitle": "Turn moments into numbered collector cards",
-    "localizedDescription": "Create gently rounded photo cards with on-device Depth Anything 3, subtle motion and clear protective sleeves. Set a fixed edition size and rarity, collect numbered copies and transfer them between nearby phones. Includes native Liquid Glass and photo-matched ambient colors. Sealing requires confirmation to remove the original from Photos. Nearby edition records are local, without a global scarcity server. Physical iPhone motion and two-phone trading still need device testing.",
-    "icon": "Collectr.png",
-    "category": "photo-video",
-    "tintColor": "#B5C9EA"
   },
   "com.billy.lumalift": {
     "name": "LumaLift",
