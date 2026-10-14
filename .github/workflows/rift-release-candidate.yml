@@ -1,0 +1,130 @@
+name: Verify Rift release candidate
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['scripts/rift_candidate.py', '.github/workflows/rift-release-candidate.yml']
+permissions:
+  contents: read
+concurrency:
+  group: rift-release-candidate
+  cancel-in-progress: false
+jobs:
+  native:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare native build tools
+        id: tools
+        run: |
+          echo "xcode=$(xcodebuild -version | tr '\n ' '-')" >> "$GITHUB_OUTPUT"
+          python -m pip install Pillow==11.1.0
+          if ! command -v xcodegen; then brew install xcodegen; fi
+          if ! command -v cmake; then brew install cmake; fi
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+          python - <<'PY'
+          import subprocess,json
+          devices=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json']))['devices']
+          choices=[d for r,items in devices.items() if 'iOS' in r for d in items if 'iPhone' in d['name'] and d.get('isAvailable')]
+          choices.sort(key=lambda d:('Pro' in d['name'],'18' in d['name'],'17' in d['name']),reverse=True)
+          if choices and choices[0]['state']!='Booted': subprocess.run(['xcrun','simctl','boot',choices[0]['udid']],check=True)
+          PY
+      - uses: actions/cache/restore@v4
+        with:
+          path: Rift/Build/Native
+          key: rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-${{ github.run_id }}
+          restore-keys: |
+            rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-
+            rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+      - name: Run native UI tests and build the actual iPhone app
+        run: python scripts/rift_candidate.py native
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Rift-Native-Candidate
+          path: |
+            Rift/Build/Rift.ipa
+            Rift/Build/Rift-Source.zip
+            Rift/Build/NATIVE-REPORT.json
+            Rift/Build/SOURCE-REVISION.txt
+            Rift/Build/FAILURE.json
+            Rift/Build/Screenshots
+            Rift/Build/Logs
+          retention-days: 14
+  models:
+    runs-on: macos-26-intel
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare standard higher-memory CPU test host
+        run: |
+          sysctl hw.memsize hw.ncpu
+          python -m pip install Pillow==11.1.0
+          if ! command -v cmake; then brew install cmake; fi
+      - uses: actions/cache@v4
+        with:
+          path: Rift/Build/Native/macosx
+          key: rift-model-runtime-8345f333-intel-v1
+      - name: Run every curated model through the production native wrapper
+        run: python scripts/rift_candidate.py models
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Rift-Model-Checks
+          path: |
+            Rift/Build/MODEL-SMOKE.json
+            Rift/Build/MODEL-IDENTITY.json
+            Rift/Build/FAILURE.json
+            Rift/Build/Logs
+          retention-days: 14
+  verify:
+    needs: [native, models]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v6
+        with:
+          name: Rift-Native-Candidate
+          path: RiftRelease
+      - uses: actions/download-artifact@v6
+        with:
+          name: Rift-Model-Checks
+          path: RiftRelease
+      - name: Require matching source identities, model checks and native executable
+        run: |
+          python3 scripts/rift_candidate.py combine RiftRelease
+          python3 scripts/publish_rift.py RiftRelease --verify-only
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Rift-Verified-iPhone
+          path: RiftRelease
+          retention-days: 14
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Strezzy/ios-apps
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v6
+        with:
+          name: Rift-Verified-iPhone
+          path: RiftRelease
+      - name: Publish only the verified IPA and update Rift in the app source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 scripts/publish_rift.py RiftRelease
