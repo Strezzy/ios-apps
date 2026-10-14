@@ -12,7 +12,7 @@ else:
     compressed=base64.b64decode(''.join((HERE/f'part{i}.b64').read_text().strip() for i in range(4)),validate=True)
     assert hashlib.sha256(compressed).hexdigest()==DIGEST, 'Patch transport was corrupted'
     patch=gzip.decompress(compressed)
-    assert len(patch)==125045, 'Unexpected patch length'
+    assert len(patch)==125075, 'Unexpected patch byte length'
     with tempfile.NamedTemporaryFile(suffix='.diff') as f:
         f.write(patch);f.flush()
         summary=run('git','apply','--numstat',f.name)
