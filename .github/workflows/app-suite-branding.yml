@@ -1,0 +1,54 @@
+name: Publish approved app-suite branding
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/suite_branding.py'
+      - '.github/workflows/app-suite-branding.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-suite-branding
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare renderer
+        run: |
+          python3 -m venv "$RUNNER_TEMP/branding-env"
+          "$RUNNER_TEMP/branding-env/bin/pip" install Pillow==11.3.0 numpy==2.3.3
+      - name: Apply the approved names and icons
+        run: |
+          git fetch origin main
+          git merge --ff-only origin/main
+          "$RUNNER_TEMP/branding-env/bin/python" scripts/suite_branding.py
+      - name: Verify preserved apps and publish
+        run: |
+          git diff --exit-code -- Music assets/Music.png assets/Prism.png
+          git add app-registry.json apps.json README.md Rinse/catalog-entry.json assets/Facet.png assets/Veil.png assets/Lucid.png assets/Echo.png branding/app-icons branding/verification.json
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Publish Facet, Veil, Lucid and Echo suite names and icons"
+            git push origin HEAD:main
+          fi
+      - name: Preserve brand assets and verification
+        uses: actions/upload-artifact@v7
+        with:
+          name: Approved-App-Suite-Branding
+          path: |
+            branding/
+            assets/Facet.png
+            assets/Veil.png
+            assets/Lucid.png
+            assets/Echo.png
+          if-no-files-found: error
+          retention-days: 30
