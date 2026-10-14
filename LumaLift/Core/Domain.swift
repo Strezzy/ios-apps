@@ -64,7 +64,12 @@ struct ClipInfo: @unchecked Sendable {
         let descriptions = try await track.load(.formatDescriptions)
         guard let description = descriptions.first else { throw LiftError.message("The video format could not be read.") }
         for format in descriptions {
-            let ext = CMFormatDescriptionGetExtensions(format) as NSDictionary
+            let ext: NSDictionary
+            if let metadata = CMFormatDescriptionGetExtensions(format) {
+                ext = metadata as NSDictionary
+            } else {
+                ext = NSDictionary()
+            }
             let transfer = ext[kCMFormatDescriptionExtension_TransferFunction] as? String ?? ""
             let primaries = ext[kCMFormatDescriptionExtension_ColorPrimaries] as? String ?? ""
             guard !transfer.contains("2084"), !transfer.contains("HLG"), !transfer.contains("2100"),
@@ -76,8 +81,9 @@ struct ClipInfo: @unchecked Sendable {
         let range = try await track.load(.timeRange)
         let duration = range.duration.seconds
         let nominal = Double(try await track.load(.nominalFrameRate))
-        guard duration.isFinite, duration > 0, nominal.isFinite, nominal > 0 else {
-            throw LiftError.message("The video has invalid timing.")
+        guard duration.isFinite, duration > 0, duration <= 86400,
+              nominal.isFinite, nominal > 0 else {
+            throw LiftError.message("The video has invalid timing or exceeds the 24-hour input limit.")
         }
         let audio = try await asset.loadTracks(withMediaType: .audio)
         return ClipInfo(url: url, title: url.deletingPathExtension().lastPathComponent,
