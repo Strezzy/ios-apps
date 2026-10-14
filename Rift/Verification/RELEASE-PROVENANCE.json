@@ -1,0 +1,14 @@
+{
+  "build_run": 38561858483,
+  "artifact_id": 11896592672,
+  "build_source": "8061df14caac05e62dc9c454f2b135efd1c75b21",
+  "release_tag": "rift-1.0-build10",
+  "sha256": {
+    "Rift.ipa": "f8171166137d602d4f0ab275222f60bfe678cdbba3c5c594e76b6c09bb820860",
+    "Rift-Source.zip": "7e5ef688312d9245e0cc4d147a631e8463fa5b243586108a6ea99291dbbe4459",
+    "BUILD-REPORT.json": "12f0189c349e1833b56a68f8036771b0f70e3c8ea228e44e182fbdf4f8cdad0a",
+    "MODEL-SMOKE.json": "b7115910e7e5d07c812bab50278c7c59e4bf7d7be3138ace72591c5ca8fdb49b"
+  },
+  "physical_iPhone_tested": false,
+  "LiveContainer_tested": false
+}

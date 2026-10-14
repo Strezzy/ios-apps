@@ -2,41 +2,24 @@
 
 **Private AI. On your terms.**
 
-Rift is a native SwiftUI iPhone chatbot with a crimson and garnet Liquid Glass interface. Messages and inference stay on the device. Model downloads are optional, explicit network requests; there is no hosted inference fallback, account, analytics SDK, or chat upload.
+A native SwiftUI local chatbot with crimson/garnet Liquid Glass, a small device-organized uncensored model catalog, and soft animated replies.
 
-## The app
+## Features
 
-Open Rift, choose a model, download it once, and start a conversation. The model picker groups choices by iPhone, then by family, with at most two models inside each family. Small benefit badges explain the tradeoff without exposing a wall of quantization settings. iPhone 18 Pro and Pro Max profiles are included. The app measures actual memory before loading: choosing a different browsing profile never bypasses the device's limits.
+- Streaming local conversations, saved history, search, copying, regeneration, Markdown/code display, and transcript export.
+- Native Bloom reply rendering: new glyphs fade, gently lift, and settle with a slight spring. A bounded presentation buffer smooths uneven model output without delaying inference. Saved text does not replay. Reduce Motion and Low Power Mode use lighter effects; Soft Fade and Instant are also available.
+- iPhone-first model picker, including iPhone 18 Pro and Pro Max, then Qwen, Gemma, and Liquid families. At most two models per family for each device, with small benefit badges explaining the tradeoff.
+- Explicit model downloads with pinned revisions, byte sizes and SHA-256 checks; pause/resume; compatible single-file GGUF imports from Files.
+- No account, analytics, remote inference, or chat uploads. Network access is for explicit model downloads. Offline mode disables those downloads. Opening a source link or selecting a cloud-backed Files item is a user action.
+- Actual-memory preflight, context limits, cancellation, background release and thermal handling. Device profiles are browsing recommendations, not guarantees that an app's available memory equals the phone's installed RAM.
 
-Saved conversations, streaming replies, Markdown/code display, copying, regeneration, local search, transcript export, model removal, Files imports, download progress, pause/resume, offline mode, thermal cancellation, and memory-pressure handling are included. Chats and models are excluded from app-managed backup. The app covers the chat when inactive and stops generation when backgrounded.
+## Curated models
 
-## Uncensored-only curated catalog
+The reviewed candidates are Qwen3.5 2B/4B/9B Uncensored Aggressive, Gemma 4 E2B/E4B Uncensored Aggressive, and LFM2.5 2.6B Heretic Uncensored. Only explicitly uncensored variants are eligible. An unavailable or unverifiable candidate is excluded, never silently replaced by a stock aligned model.
 
-Only explicitly uncensored community variants are included, never the stock aligned checkpoints. Current candidates are Qwen3.5 2B/4B/9B Aggressive, Gemma 4 E2B/E4B Aggressive, and LFM2.5 2.6B Heretic. The build resolves exact GGUF filenames, commit revisions, byte sizes, and SHA-256 hashes. An unavailable or unverifiable candidate is excluded, not replaced with a regular model.
+Uncensored describes the publishers' community modifications. It cannot guarantee zero refusals or unchanged capabilities. Rift does not add a content-filtering layer, refusal rewriting, or remote moderation. Custom imports keep their own behavior and are marked unverified rather than falsely certified uncensored. All model licenses remain in force.
 
-**Uncensored is not a guarantee of zero refusals or unchanged quality.** Rift adds no content-filtering layer, refusal rewriting, or remote moderation request. The underlying model determines its behavior. Custom Files imports are marked unverified rather than falsely certified uncensored. All model licenses remain in force.
-
-Every included model must pass actual macOS CPU inference before an IPA is packaged by the verification workflow. Those tests do not establish iPhone Metal speed, heat, memory use, conversation quality, or LiveContainer behavior. Device profiles and benefit badges are engineering recommendations, not comparative performance benchmarks.
-
-## Build
-
-Use **Build and verify Rift for iPhone** in GitHub Actions, or on a Mac with Xcode 26+, CMake, XcodeGen, Python 3.12, and Pillow 11.1.0:
-
-```sh
-python3 Rift/scripts/build.py
-```
-
-The script fetches llama.cpp at the pinned commit `8345f333951c661d166b00e6f9362e553768f292`, compiles the actual native runtime for simulator, iPhone, and macOS, runs XCTest and UI tests, performs CPU inference for every catalog entry, builds the arm64 iPhone app, and packages `Build/Rift.ipa` with reports and a source archive. Model weights are not bundled with the app or source archive.
-
-The IPA is unsigned for the user's signing/sideloading installer. Bundle ID: `com.billy.rift`. Minimum OS: iOS 26. Do not claim App Store approval, zero-refusal behavior, or physical-device validation from a successful CI run.
-
-## Imports
-
-Import single-file GGUF instruction/chat models with a supported architecture and an embedded chat template. Rift validates bounded metadata, copies the model into private app storage, and records a SHA-256 digest. Unsupported architectures, split files, vision projectors, missing templates, and malformed files receive an explanation. A valid GGUF container is not proof that an arbitrary model will run well; loading and live memory checks still apply.
-
-## Research snapshot: October 14, 2026
-
-The small-model catalog intentionally does not include 27B Qwen3.8 or large mixture-of-experts releases whose complete weights do not fit a sensible iPhone memory budget. Larger parameter counts are not a guarantee of better on-phone results. The sources below are author/model-maintainer references, not independent performance verification:
+The catalog was researched October 14, 2026. The model authors' primary sources are:
 
 - https://huggingface.co/HauhauCS/Qwen3.5-2B-Uncensored-HauhauCS-Aggressive
 - https://huggingface.co/HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive
@@ -45,7 +28,24 @@ The small-model catalog intentionally does not include 27B Qwen3.8 or large mixt
 - https://huggingface.co/HauhauCS/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive
 - https://huggingface.co/noctrex/LFM2.5-2.6B-heretic-uncensored-GGUF
 - https://github.com/p-e-w/heretic
-- https://github.com/ggml-org/llama.cpp
-- https://www.apple.com/iphone-18-pro/specs/
 
-Heretic is an uncensoring method, not a separate base-model architecture. The UI groups by actual family and identifies the modification inside that group.
+Newer Ornith 1.5 9B variants and Qwen3.8 releases were also checked. An uncensored label or newer upload date is not comparative phone-performance evidence. Large 27B models and full-weight MoE models were not selected merely for headline benchmark scores. Initial catalog choices prioritize supported native architectures, manageable complete weights, distinct alternatives, and reproducible tests rather than an unverified 'best model' claim.
+
+## Build and verification
+
+Run the **Build and verify Rift for iPhone** GitHub Actions workflow. It builds pinned llama.cpp revision `8345f333951c661d166b00e6f9362e553768f292`, native simulator tests, the iPhone Metal runtime, and an arm64 iPhone app. Every catalog entry must pass actual macOS CPU inference before the pipeline packages `Rift.ipa`. Model weights are downloaded separately, not bundled.
+
+On a Mac with Xcode 26+, XcodeGen, CMake, Python 3.12 and Pillow 11.1.0:
+
+```sh
+python3 Rift/scripts/build.py
+```
+
+Bundle identifier: `com.billy.rift`. Minimum OS: iOS 26. The IPA is unsigned for the user's signing/sideloading installer. `Verification/BUILD-REPORT.json` records actual results and remaining gaps. A successful compile or CPU smoke test is not evidence of iPhone Metal performance, long-chat stability, thermal behavior, or LiveContainer compatibility. Those require physical-device testing.
+
+## Animation implementation
+
+`RevealSchedule.swift` preserves Unicode grapheme clusters and bounds the presentation lead to 180 ms. `StreamingText.swift` uses native SwiftUI TextRenderer, not a WebView or a separate view for every letter. It draws settled runs normally and applies effects only to arriving glyphs. The same renderer powers the clearly labeled animation preview in Settings. Tests cover bursts, catch-up, corrections, stops, emoji, and history restoration.
+
+Native API reference: https://developer.apple.com/documentation/swiftui/textrenderer
+Device reference: https://www.apple.com/iphone-18-pro/specs/

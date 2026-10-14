@@ -48,7 +48,6 @@ static NSError *failure(const std::string &s) {
 }
 - (void)dealloc { [self unload]; }
 - (BOOL)generateAtPath:(NSString *)path messages:(NSArray<NSDictionary<NSString *,NSString *> *> *)messages context:(int)context maxTokens:(int)maxTokens temperature:(float)temperature thinking:(BOOL)thinking cpu:(BOOL)cpu token:(void (^)(NSString *))token status:(void (^)(NSString *))status error:(NSError **)error {
-    // Cancellation is reset before enqueueing, never after a queued stop.
     llama_sampler *sampler=nullptr;
     try {
         if (context < 512 || context > 8192 || maxTokens < 1 || maxTokens > 2048) throw std::runtime_error("Unsupported conversation length.");
@@ -129,6 +128,7 @@ static NSError *failure(const std::string &s) {
             if(llama_vocab_is_eog(vocab,next)) break;
             std::vector<char> piece(256);
             int count=llama_token_to_piece(vocab,next,piece.data(),(int)piece.size(),0,true);
+            if(count < -1048576) throw std::runtime_error("Invalid tokenizer piece length.");
             if(count<0) { piece.resize((size_t)-count); count=llama_token_to_piece(vocab,next,piece.data(),(int)piece.size(),0,true); }
             if(count<0 || count>1024*1024) throw std::runtime_error("Invalid tokenizer output.");
             output.append(piece.data(),(size_t)count);

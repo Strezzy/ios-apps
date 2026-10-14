@@ -46,7 +46,7 @@ def catalog():
                 match=next(f for f in tree if f.get('path')==selected['rfilename'])
                 lfs=match.get('lfs',{}); sha=lfs.get('oid') or lfs.get('sha256'); size=lfs.get('size') or match.get('size')
             assert re.fullmatch('[0-9a-f]{64}',sha or '') and 10_000_000 < int(size) < 10_000_000_000
-            license=info.get('cardData',{}).get('license','See model source')
+            license=(info.get('cardData') or {}).get('license') or 'See model source'
             if isinstance(license,list): license=', '.join(license)
             item=dict(spec,revision=revision,filename=selected['rfilename'],bytes=int(size),sha256=sha,variant=quant,license=license,licenseText='The model remains under its publisher\'s and base model\'s license. Review the source and license before downloading. Rift does not bundle model weights.',uncensored=True)
             models.append(item)
@@ -80,6 +80,8 @@ def icon():
     Image.open(image).convert('RGB').resize((1024,1024),Image.Resampling.LANCZOS).save(app/'Rift.png')
     (assets/'Contents.json').write_text(json.dumps({'info':{'version':1,'author':'xcode'}}))
     (app/'Contents.json').write_text(json.dumps({'images':[{'idiom':'universal','platform':'ios','size':'1024x1024','filename':'Rift.png'}],'info':{'version':1,'author':'xcode'}},indent=2))
+def source_corrections():
+    pass
 if __name__=='__main__':
     BUILD.mkdir(exist_ok=True); RES.mkdir(parents=True,exist_ok=True)
-    catalog(); source(); icon()
+    source_corrections(); catalog(); source(); icon()

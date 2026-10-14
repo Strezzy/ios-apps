@@ -27,6 +27,8 @@ struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var clearConfirmation=false
+    @State private var animationPreview=false
+    @AppStorage("rift.replyAnimation") private var replyAnimation="bloom"
     var body: some View {
         NavigationStack {
             ZStack {
@@ -40,10 +42,10 @@ struct SettingsView: View {
                         Toggle("Allow cellular downloads",isOn:$model.cellular).disabled(model.offline)
                         Text("No account, analytics, cloud inference, or automatic chat uploads. Chats and models are excluded from app-managed iCloud backup. Exporting a chat or choosing a cloud file in Files is your action.").font(.caption).foregroundStyle(.secondary)
                     }
-                    Section("Appearance") {
-                        Toggle("Animated replies",isOn:$model.animateReplies)
-                        ReplyAnimationPreview()
-                        Text("Respects Reduce Motion, VoiceOver, and Low Power Mode.").font(.caption).foregroundStyle(.secondary)
+                    Section("Reply animation") {
+                        Picker("Style", selection: $replyAnimation) { Text("Bloom").tag("bloom"); Text("Soft fade").tag("fade"); Text("Instant").tag("instant") }
+                        Button("Preview animation", systemImage: "sparkles") { animationPreview=true }
+                        Text("New letters softly appear and settle into place. Reduce Motion removes the lift, scale and blur. Low Power Mode uses a lighter fade.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Conversation") {
                         Picker("Context",selection:$model.context) { Text("2K · lighter").tag(2048); Text("4K · balanced").tag(4096); Text("8K · more memory").tag(8192) }.disabled(model.generating)
@@ -76,6 +78,7 @@ struct SettingsView: View {
                     }
                 }.scrollContentBackground(.hidden)
             }.navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarTrailing) { Button("Done") { dismiss() } } }
+                .sheet(isPresented: $animationPreview) { ReplyAnimationPreview() }
                 .confirmationDialog("Delete every conversation on this iPhone? This cannot be undone.",isPresented:$clearConfirmation,titleVisibility:.visible) { Button("Delete all conversations",role:.destructive) { model.clearChats() } }
         }
     }

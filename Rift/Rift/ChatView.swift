@@ -7,6 +7,7 @@ struct ChatView: View {
     @State private var draft=""
     @State private var sheet: RiftSheet?
     @FocusState private var composing: Bool
+    @State private var followsBottom = true
     var body: some View {
         NavigationStack {
             ZStack {
@@ -67,7 +68,10 @@ struct ChatView: View {
                     Color.clear.frame(height:1).id("bottom")
                 }.padding(.horizontal,20).padding(.vertical,20)
             }.scrollDismissesKeyboard(.interactively)
-                .onChange(of:model.activeChat?.messages.last?.content) { _, _ in proxy.scrollTo("bottom",anchor:.bottom) }
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentSize.height - geometry.contentOffset.y - geometry.containerSize.height < 100
+                } action: { _, value in followsBottom = value }
+                .onChange(of:model.activeChat?.messages.last?.content) { _, _ in if followsBottom { withAnimation(.easeOut(duration: 0.14)) { proxy.scrollTo("bottom",anchor:.bottom) } } }
                 .onChange(of:model.activeChatID) { _, _ in proxy.scrollTo("bottom",anchor:.bottom) }
                 .onAppear { proxy.scrollTo("bottom",anchor:.bottom) }
         }
@@ -103,7 +107,7 @@ struct MessageView: View {
                 if !parts.thought.isEmpty {
                     DisclosureGroup(isStreaming && parts.answer.isEmpty ? "Thinking" : "Thought process") { Text(parts.thought).font(.callout).foregroundStyle(.secondary).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading) }.font(.caption).tint(RiftTheme.accent)
                 }
-                if !parts.answer.isEmpty { MarkdownMessage(text:parts.answer, live:isStreaming) }
+                if !parts.answer.isEmpty || isStreaming { MarkdownMessage(text:parts.answer, isStreaming:isStreaming, interrupted:message.interrupted) }
                 if isStreaming && message.content.isEmpty { HStack(spacing:9) { ProgressView().controlSize(.small); Text(model.status).font(.callout).foregroundStyle(.secondary) } }
                 if !user && !isStreaming {
                     HStack(spacing:18) {
@@ -119,17 +123,26 @@ struct MessageView: View {
 }
 struct MarkdownMessage: View {
     let text: String
-    var live = false
+    var isStreaming = false
+    var interrupted = false
     var body: some View {
-        let chunks=text.components(separatedBy:"```")
-        VStack(alignment:.leading,spacing:12) {
-            ForEach(Array(chunks.enumerated()),id:\.offset) { index, chunk in
-                if index % 2 == 0 { BloomText(text:chunk, live:live).font(.body).lineSpacing(4).frame(maxWidth:.infinity,alignment:.leading) }
-                else {
-                    VStack(alignment:.leading,spacing:10) {
-                        HStack { Text(chunk.components(separatedBy:"\n").first ?? "Code").font(.caption).foregroundStyle(.secondary); Spacer(); Button { UIPasteboard.general.string=chunk.components(separatedBy:"\n").dropFirst().joined(separator:"\n") } label: { Image(systemName:"document.on.document") }.accessibilityLabel("Copy code") }
-                        ScrollView(.horizontal) { BloomText(text:chunk.components(separatedBy:"\n").dropFirst().joined(separator:"\n"), live:live, markdown:false).font(.system(.callout,design:.monospaced)).textSelection(.enabled) }
-                    }.padding(14).background(.thinMaterial,in:RoundedRectangle(cornerRadius:16))
+        let chunks = text.components(separatedBy: "```")
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(chunks.enumerated()), id: \.offset) { index, chunk in
+                if index % 2 == 0 {
+                    StreamingText(text: chunk, isStreaming: isStreaming, interrupted: interrupted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text(chunk.components(separatedBy: "\n").first ?? "Code").font(.caption).foregroundStyle(.secondary)
+                            Spacer()
+                            Button { UIPasteboard.general.string = chunk.components(separatedBy: "\n").dropFirst().joined(separator: "\n") } label: { Image(systemName: "document.on.document") }.accessibilityLabel("Copy code")
+                        }
+                        ScrollView(.horizontal) {
+                            StreamingText(text: chunk.components(separatedBy: "\n").dropFirst().joined(separator: "\n"), isStreaming: isStreaming, interrupted: interrupted, monospaced: true)
+                        }
+                    }.padding(14).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
             }
         }

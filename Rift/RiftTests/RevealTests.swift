@@ -2,48 +2,57 @@ import XCTest
 @testable import Rift
 
 final class RevealTests: XCTestCase {
-    func testBurstIsSpreadWithoutChangingText() {
-        var b = RevealBuffer(); b.ingest("Beautiful words appear softly.", at: 10, animated: true)
-        XCTAssertEqual(b.visibleCount(at: 10), 1)
-        XCTAssertEqual(b.plainText, "Beautiful words appear softly.")
-        XCTAssertLessThanOrEqual(b.glyphs.last!.birth, 10.18)
-        XCTAssertTrue(b.isSettled(at: 11))
+    func testBurstsAreSpreadAndLeadIsBounded() {
+        var schedule = RevealSchedule()
+        schedule.ingest("Hello, this arrived in one very large backend chunk.", now: 10, animate: true)
+        XCTAssertEqual(schedule.text, "Hello, this arrived in one very large backend chunk.")
+        XCTAssertGreaterThan(Set(schedule.arrivals).count, 1)
+        XCTAssertLessThanOrEqual(schedule.arrivals.last!, 10 + RevealSchedule.maximumLead)
     }
-    func testEmojiAndCombiningMarksAreNotSplit() {
-        var b = RevealBuffer(); let text = "👩🏽‍💻 café 🇺🇸 e\u{301}"
-        b.ingest(text, at: 1, animated: true)
-        XCTAssertEqual(b.glyphs.count, text.count); XCTAssertEqual(b.plainText, text)
-        b.ingest("e", at: 2, animated: true); b.ingest("e\u{301}", at: 2.01, animated: true)
-        XCTAssertEqual(b.glyphs.count, 1)
+    func testOldCharactersNeverReplay() {
+        var schedule = RevealSchedule()
+        schedule.ingest("Hello", now: 1, animate: true)
+        let old = schedule.arrivals
+        schedule.ingest("Hello there", now: 2, animate: true)
+        XCTAssertEqual(Array(schedule.arrivals.prefix(5)), old)
     }
-    func testOldLettersDoNotReplay() {
-        var b = RevealBuffer(); b.ingest("Hello", at: 1, animated: true)
-        let births = b.glyphs.map(\.birth)
-        b.ingest("Hello again", at: 2, animated: true)
-        XCTAssertEqual(Array(b.glyphs.prefix(5).map(\.birth)), births)
+    func testLargeBurstsCatchUpWithoutSecondsOfDelay() {
+        var schedule = RevealSchedule()
+        schedule.ingest(String(repeating: "a", count: 10_000), now: 0, animate: true)
+        XCTAssertEqual(schedule.arrivals.count, 10_000)
+        XCTAssertLessThanOrEqual(schedule.completion, 0.18 + 0.28)
     }
-    func testRepeatedBurstsStayWithinLatencyBudget() {
-        var b = RevealBuffer(), text = ""
-        for i in 0..<500 {
-            let now = 1 + Double(i) * 0.03
-            text += "more "
-            b.ingest(text, at: now, animated: true)
-            XCTAssertLessThanOrEqual(b.glyphs.last!.birth, now + RevealBuffer.maximumLead)
-            XCTAssertEqual(b.plainText, text)
-        }
+    func testEmojiAndCombiningMarksRemainWhole() {
+        let text = "👨‍👩‍👧‍👦 cafe\u{301} 日本語 مرحباً"
+        var schedule = RevealSchedule()
+        schedule.ingest(text, now: 1, animate: true)
+        XCTAssertEqual(schedule.text, text)
+        XCTAssertEqual(schedule.arrivals.count, text.count)
+        XCTAssertEqual(schedule.characters.first, "👨‍👩‍👧‍👦")
     }
-    func testReducedMotionAndSavedMessagesAreImmediate() {
-        var b = RevealBuffer(); b.ingest("No animation", at: 3, animated: false)
-        XCTAssertEqual(b.visibleCount(at: 3), b.glyphs.count); XCTAssertTrue(b.isSettled(at: 3))
+    func testCorrectionsAndShorterSnapshotsStayExact() {
+        var schedule = RevealSchedule()
+        schedule.ingest("Hello world", now: 1, animate: true)
+        schedule.ingest("Hello 🌸", now: 2, animate: true)
+        XCTAssertEqual(schedule.text, "Hello 🌸")
+        XCTAssertEqual(schedule.arrivals.count, "Hello 🌸".count)
     }
-    func testCancellationCanFlushWithoutLosingGeneratedText() {
-        var b = RevealBuffer(); b.ingest("Partial reply", at: 5, animated: true); b.revealImmediately(at: 5)
-        XCTAssertEqual(b.plainText, "Partial reply"); XCTAssertTrue(b.isSettled(at: 5))
+    func testStopFlushesWithoutChangingText() {
+        var schedule = RevealSchedule()
+        schedule.ingest("Stop here", now: 1, animate: true)
+        schedule.finishImmediately(now: 1.01)
+        XCTAssertEqual(schedule.text, "Stop here")
+        XCTAssertLessThan(schedule.completion, 1.01)
     }
-    func testRevisedSuffixDoesNotLeaveStaleLetters() {
-        var b = RevealBuffer(); b.ingest("Hello wrong suffix", at: 1, animated: true)
-        b.ingest("Hello corrected", at: 2, animated: true)
-        XCTAssertEqual(b.plainText, "Hello corrected")
-        b.ingest("", at: 3, animated: true); XCTAssertTrue(b.isSettled(at: 3)); XCTAssertEqual(b.visibleCount(at: 3), 0)
+    func testHistoryIsInstant() {
+        var schedule = RevealSchedule()
+        schedule.ingest("Saved conversation", now: 20, animate: false)
+        XCTAssertLessThan(schedule.completion, 20)
+    }
+    func testEmptyOutputIsSafe() {
+        var schedule = RevealSchedule()
+        schedule.ingest("", now: 1, animate: true)
+        XCTAssertEqual(schedule.text, "")
+        XCTAssertTrue(schedule.arrivals.isEmpty)
     }
 }

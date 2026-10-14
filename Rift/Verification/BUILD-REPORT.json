@@ -1,0 +1,67 @@
+{
+  "app": "Rift",
+  "version": "1.0",
+  "build": "10",
+  "source": "8061df14caac05e62dc9c454f2b135efd1c75b21",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "passed",
+  "model_inference": "all catalog entries passed actual macOS CPU smoke",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "d5dca8d4f76643b0d89dabcd64932be4d92a964e42bd2d478e397af955807890",
+  "simulator_device": "iPhone 17 Pro",
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "x86_64",
+          "deviceId": "A6574FEC-AE06-46C2-92CC-F2BBAB2A5601",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 29,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift \u00b7 Built with macOS 26.6.1",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1791981276.443,
+    "passedTests": 29,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1791980985.153,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 29
+  },
+  "iphone_compilation": "passed",
+  "executable_architecture": "Non-fat file: /Users/runner/work/ios-apps/ios-apps/Rift/Build/DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app/Rift is architecture: arm64",
+  "ipa_sha256": "f8171166137d602d4f0ab275222f60bfe678cdbba3c5c594e76b6c09bb820860",
+  "ipa_bytes": 5516060,
+  "build_result": "passed"
+}

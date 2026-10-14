@@ -1,0 +1,56 @@
+[
+  {
+    "id": "qwen35-2b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am your helpful AI assistant, ready to help you with whatever you need.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "be3ccca13a9d1bc8b67165ea80bd103cd6151a37ad131183cc7ca388f78d9517",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  },
+  {
+    "id": "qwen35-4b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am Qwen3.5, an advanced large language model designed to assist with a wide range of tasks.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  },
+  {
+    "id": "qwen35-9b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am Qwen3.5, your AI assistant developed by Alibaba Cloud.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "2ca636d9e81d3d23ca9b60c234fe185d30ec082eeba69ce770fdb0c76559a4f5",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  },
+  {
+    "id": "gemma4-e2b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am Gemma 4, a large language model developed by Google DeepMind.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\ncommon_chat_try_specialized_template: detected an outdated gemma4 chat template, applying compatibility workarounds. Consider updating to the official template.\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "0796d58372742ef8ddc76dd64cd2fde217b7ef32e3dc58e10873253e569cad6b",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  },
+  {
+    "id": "gemma4-e4b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am Gemma 4, a large language model developed by Google DeepMind.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\ncommon_chat_try_specialized_template: detected an outdated gemma4 chat template, applying compatibility workarounds. Consider updating to the official template.\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "d0027dd3a9128d9323e9f282c8bf010a8526c46477584535991dc1a869b56e96",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  },
+  {
+    "id": "lfm25-26b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"\\nThe user wants a short sentence introducing myself. I need to follow the identity instructions: I am LFM by Liquid AI. I should introduce myself with one short sentence, and I should not add extra formatting unless asked. The instruction says\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "604623b276af2cab17ebbeed76f70499ca12bb092326117f6cc21cdb8a5ac193",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  }
+]

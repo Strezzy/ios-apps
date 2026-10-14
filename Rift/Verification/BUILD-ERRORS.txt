@@ -1,0 +1,6 @@
+native-runtimes.log
+-- Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E - Failed
+-- Performing Test HAVE_DOTPROD - Failed
+-- Performing Test HAVE_SVE - Failed
+-- Performing Test HAVE_MATMUL_INT8 - Failed
+-- Performing Test HAVE_SME - Failed

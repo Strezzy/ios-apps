@@ -1,7 +1,12 @@
 import SwiftUI
+import UIKit
 
 enum RiftTheme {
-    static let accent=Color(red:0.84,green:0.16,blue:0.28)
+    static let accent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1, green: 0.43, blue: 0.48, alpha: 1)
+            : UIColor(red: 0.73, green: 0.08, blue: 0.20, alpha: 1)
+    })
     static let rose=Color(red:1,green:0.43,blue:0.48)
     static let wine=Color(red:0.30,green:0.035,blue:0.095)
 }
@@ -40,7 +45,7 @@ struct RiftMark: View {
 struct BenefitBadge: View {
     let text: String
     var body: some View {
-        Text(text).font(.system(size:10,weight:.semibold,design:.rounded)).foregroundStyle(RiftTheme.accent)
+        Text(text).font(.system(.caption2,design:.rounded,weight:.semibold)).foregroundStyle(RiftTheme.accent)
             .padding(.horizontal,8).padding(.vertical,5)
             .background(RiftTheme.accent.opacity(0.09),in:Capsule())
             .overlay { Capsule().strokeBorder(RiftTheme.accent.opacity(0.13),lineWidth:0.5) }
@@ -54,7 +59,7 @@ struct ErrorBanner: View {
             HStack(alignment:.top,spacing:12) {
                 Image(systemName:"exclamationmark.circle").foregroundStyle(RiftTheme.accent)
                 Text(error).font(.callout).frame(maxWidth:.infinity,alignment:.leading)
-                Button { model.dismissError() } label: { Image(systemName:"xmark").frame(width:30,height:30) }.accessibilityLabel("Dismiss error")
+                Button { model.dismissError() } label: { Image(systemName:"xmark").frame(width:44,height:44) }.accessibilityLabel("Dismiss error")
             }.padding(14).background(.regularMaterial,in:RoundedRectangle(cornerRadius:20)).padding(.horizontal).padding(.top,8)
         }
     }
