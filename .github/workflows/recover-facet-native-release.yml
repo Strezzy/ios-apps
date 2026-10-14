@@ -1,0 +1,129 @@
+name: Recover verified Facet native release
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/recover-facet-native-release.yml'
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: recover-facet-native-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FACET_TAG: facet-1.1-build301
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover and verify the already-built iPhone artifact
+        run: |
+          mkdir -p "$RUNNER_TEMP/facet-native"
+          gh api repos/Strezzy/ios-apps/actions/artifacts/11878258884/zip > "$RUNNER_TEMP/facet-native.zip"
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, plistlib, zipfile
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'facet-native'
+          wanted = {'Facet.ipa', 'Facet-BUILD-REPORT.json', 'Facet-light.png', 'Facet-dark.png'}
+          with zipfile.ZipFile(root.parent / 'facet-native.zip') as archive:
+              for name in wanted:
+                  matches = [n for n in archive.namelist() if pathlib.PurePosixPath(n).name == name]
+                  assert len(matches) == 1, (name, matches)
+                  (root / name).write_bytes(archive.read(matches[0]))
+          ipa = root / 'Facet.ipa'
+          digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
+          assert digest == '96c885382002ab015d0d9a078f9e17d9e3ad682bc8a0bb5994100761f4a6dc01', digest
+          with zipfile.ZipFile(ipa) as archive:
+              names = [n for n in archive.namelist() if n.startswith('Payload/') and n.endswith('.app/Info.plist') and n.count('/') == 2]
+              assert len(names) == 1
+              info = plistlib.loads(archive.read(names[0]))
+              assert info['CFBundleDisplayName'] == 'Facet'
+              assert info['CFBundleName'] == 'Facet'
+              assert info['CFBundleIdentifier'] == 'com.billy.facet'
+              assert info['CFBundleShortVersionString'] == '1.1'
+              assert info['CFBundleVersion'] == '301'
+              assert 'iPhoneOS' in info['CFBundleSupportedPlatforms']
+              assert archive.testzip() is None
+          report = json.loads((root / 'Facet-BUILD-REPORT.json').read_text())
+          assert report['status'] == 'passed'
+          assert report['ipa_sha256'] == digest
+          assert report['native_branding']['status'] == 'passed'
+          assert report['native_branding']['bundleIdentifier'] == 'com.billy.facet'
+          assert report['native_branding']['name'] == 'Facet'
+          assert report['tests']['failedTests'] == 0
+          (root / 'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in sorted(root.iterdir()) if p.is_file()))
+          print('Verified Facet 1.1 (301), com.billy.facet, device IPA and native branding report.')
+          PY
+      - name: Publish without replacing any existing release bytes
+        run: |
+          cat > "$RUNNER_TEMP/facet-native/RELEASE-NOTES.md" <<'NOTES'
+          Facet 1.1 (301) installs with the Facet name, approved blue suite icon, and bundle identifier `com.billy.facet`. Its blue UI and processing features are retained.
+
+          This publishes the recovered, already-built iPhone artifact, not a new untested rebuild. The attached report records 24 passed simulator checks, 4 skipped simulator checks, and separate native macOS media checks. Physical iPhone testing has not been performed. Read the report for the exact test scope and limitations.
+
+          **Migration:** The bundle identifier changed from `com.billy.depthcheck`. Treat this as a new app identity. Keep the previous installation and its data container until your files have been exported/imported and verified. Changing the bundle identifier does not automatically transfer saved files or downloaded models. Music, Prism, and all other app releases are unchanged by this publication.
+          NOTES
+          if gh release view "$FACET_TAG" --repo Strezzy/ios-apps >/dev/null 2>&1; then
+            mkdir -p "$RUNNER_TEMP/facet-existing"
+            gh release download "$FACET_TAG" --repo Strezzy/ios-apps --pattern Facet.ipa --dir "$RUNNER_TEMP/facet-existing"
+            cmp "$RUNNER_TEMP/facet-existing/Facet.ipa" "$RUNNER_TEMP/facet-native/Facet.ipa"
+          else
+            gh release create "$FACET_TAG" "$RUNNER_TEMP/facet-native/Facet.ipa" "$RUNNER_TEMP/facet-native/Facet-BUILD-REPORT.json" "$RUNNER_TEMP/facet-native/Facet-light.png" "$RUNNER_TEMP/facet-native/Facet-dark.png" "$RUNNER_TEMP/facet-native/SHA256SUMS.txt" --repo Strezzy/ios-apps --target 32e1d3aff34839770f5f6cbf650cb5475b5090c0 --title 'Facet 1.1 (301)' --notes-file "$RUNNER_TEMP/facet-native/RELEASE-NOTES.md"
+          fi
+          gh release view "$FACET_TAG" --repo Strezzy/ios-apps --json publishedAt > "$RUNNER_TEMP/facet-native/release.json"
+      - name: Update only Facet in the live catalog
+        run: |
+          cat > "$RUNNER_TEMP/recover_facet_catalog.py" <<'PY'
+          import copy, hashlib, json, os, pathlib, sys
+          root = pathlib.Path.cwd()
+          sys.path.insert(0, str(root / 'scripts'))
+          from update_catalog import update, render_readme
+          data = pathlib.Path(os.environ['RUNNER_TEMP']) / 'facet-native'
+          registry = json.loads((root / 'app-registry.json').read_text())
+          catalog = json.loads((root / 'apps.json').read_text())
+          before = copy.deepcopy(catalog)
+          before_registry = copy.deepcopy(registry)
+          target_ids = {'com.billy.depthcheck', 'com.billy.facet'}
+          candidates = [(i, app) for i, app in enumerate(catalog['apps']) if app['bundleIdentifier'] in target_ids]
+          assert len(candidates) == 1, 'Expected exactly one Facet product; reconcile concurrent migrations before publication.'
+          index, old = candidates[0]
+          legacy_id = old['bundleIdentifier']
+          metadata = copy.deepcopy(registry[legacy_id])
+          metadata.update(name='Facet', icon='Facet.png', tintColor='#32AFE1')
+          target = copy.deepcopy(old)
+          target['bundleIdentifier'] = 'com.billy.facet'
+          if legacy_id != 'com.billy.facet':
+              target['versions'] = []
+          # Run the existing IPA inspector/updater in isolation. No other app metadata can be touched.
+          isolated = {'apps': [target]}
+          date = json.loads((data / 'release.json').read_text())['publishedAt']
+          notes = (data / 'RELEASE-NOTES.md').read_text()
+          update(isolated, {'com.billy.facet': metadata}, [data / 'Facet.ipa'], os.environ['FACET_TAG'], date, notes)
+          catalog['apps'][index] = isolated['apps'][0]
+          registry = {('com.billy.facet' if key == legacy_id else key): (metadata if key == legacy_id else value) for key, value in registry.items()}
+          assert {a['bundleIdentifier']: a for a in before['apps'] if a['bundleIdentifier'] not in target_ids} == {a['bundleIdentifier']: a for a in catalog['apps'] if a['bundleIdentifier'] not in target_ids}, 'Unrelated catalog entry changed'
+          assert {k:v for k,v in before_registry.items() if k not in target_ids} == {k:v for k,v in registry.items() if k not in target_ids}, 'Unrelated registry entry changed'
+          app = catalog['apps'][index]
+          assert app['versions'][0]['sha256'] == hashlib.sha256((data / 'Facet.ipa').read_bytes()).hexdigest()
+          assert app['versions'][0]['buildVersion'] == '301'
+          for name, value in [('apps.json', catalog), ('app-registry.json', registry)]:
+              (root / name).write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n')
+          render_readme(catalog)
+          print('Facet now points to the verified native IPA. Every other catalog and registry entry is unchanged.')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4; do
+            git fetch origin main
+            git reset --hard origin/main
+            python3 "$RUNNER_TEMP/recover_facet_catalog.py"
+            git add apps.json app-registry.json README.md
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m 'Publish verified Facet 1.1 (301) native name, icon and identity'
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          echo 'Release is published but catalog push conflicted four times.' >&2
+          exit 1
