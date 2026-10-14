@@ -1,0 +1,8 @@
+{
+  "name": "LumaLift",
+  "subtitle": "Enhance videos and make motion smoother",
+  "localizedDescription": "Enhance video detail at its original resolution, upscale 2x or 4x, and independently generate 30 or 60 FPS with AI. Both models are bundled and run entirely on-device, with no accounts, uploads, analytics or model downloads. Includes a native pink-purple Liquid Glass interface, a 2-second preview, adjustable enhancement strength, original audio preservation, pause/cancel and a local export library. Supports standard-color SDR videos, up to 4K output, and up to 1080p input for AI frame interpolation. Exports H.264 MOV files. Originals remain untouched. Physical iPhone performance and long-export reliability still need testing.",
+  "icon": "LumaLift.png",
+  "category": "photo-video",
+  "tintColor": "#AD78E8"
+}

@@ -1,0 +1,11 @@
+Build/
+Vendor/
+Models/
+LumaLift.xcodeproj/
+App/Info.plist
+Resources/Assets.xcassets/
+Resources/PrivacyInfo.xcprivacy
+Resources/ThirdParty.txt
+Resources/MODEL-PROVENANCE.json
+__pycache__/
+.DS_Store

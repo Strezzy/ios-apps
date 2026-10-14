@@ -1,0 +1,61 @@
+name: Build and publish LumaLift
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'LumaLift/**'
+      - '.github/workflows/lumalift.yml'
+permissions:
+  contents: write
+concurrency:
+  group: lumalift-build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Prepare Apple build tools
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          command -v xcodegen || brew install xcodegen
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+      - name: Prepare pretrained models for the offline app
+        run: |
+          python -m pip install numpy==1.26.4 torch==2.5.0 coremltools==8.3.0 pillow==11.1.0
+          python LumaLift/scripts/prepare_models.py
+      - name: Build device app and execute native AI tests
+        env:
+          LUMALIFT_BUILD_NUMBER: ${{ github.run_number }}
+        run: python LumaLift/scripts/build_ios.py
+      - name: Publish verified iPhone build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: lumalift-1.0.0-${{ github.run_number }}
+        run: |
+          gh release create "$RELEASE_TAG" LumaLift/Build/LumaLift.ipa LumaLift/Build/LumaLift-Source.zip LumaLift/Build/LumaLift-Icon.png LumaLift/Build/BUILD-REPORT.json LumaLift/Build/SHA256SUMS.txt LumaLift/Build/Simulator-Launch.png --target "$GITHUB_SHA" --title "LumaLift 1.0.0 (${{ github.run_number }})" --notes-file LumaLift/RELEASE-NOTES.md
+      - name: Add verified release to the existing app source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: lumalift-1.0.0-${{ github.run_number }}
+        run: python LumaLift/scripts/publish_catalog.py
+      - name: Save build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LumaLift-Build-Evidence
+          path: |
+            LumaLift/Build/Logs
+            LumaLift/Build/TestResults.xcresult
+            LumaLift/Build/BUILD-REPORT.json
+            LumaLift/Build/Simulator-Launch.png
+            LumaLift/Build/LumaLift.ipa
+            LumaLift/Resources/MODEL-PROVENANCE.json
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,65 @@
+name: LumaLift
+options:
+  bundleIdPrefix: com.billy
+  deploymentTarget:
+    iOS: '26.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+packages:
+  RifeMetal:
+    path: Vendor/rife-metal
+targets:
+  LumaLift:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Core
+      - Resources
+      - Models
+    dependencies:
+      - package: RifeMetal
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: LumaLift
+        LSRequiresIPhoneOS: true
+        NSPhotoLibraryAddUsageDescription: Save the enhanced videos you choose to your photo library.
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.lumalift
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_TESTABILITY: YES
+  LumaLiftTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: LumaLift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.lumalift.tests
+schemes:
+  LumaLift:
+    build:
+      targets:
+        LumaLift: all
+        LumaLiftTests: [test]
+    test:
+      targets: [LumaLiftTests]
