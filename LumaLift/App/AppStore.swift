@@ -56,7 +56,7 @@ enum LocalFiles {
                 let folder = imports.appendingPathComponent(UUID().uuidString, isDirectory: true)
                 do {
                     try prepare(folder)
-                    let result = folder.appendingPathComponent(source.lastPathComponent)
+                    let result = folder.appendingPathComponent(try VideoFileImportPolicy.stagingFilename(for: readable, originalName: source.lastPathComponent))
                     try FileManager.default.copyItem(at: readable, to: result)
                     try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: result.path)
                     return result

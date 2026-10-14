@@ -9,7 +9,8 @@ final class LumaLiftTests: XCTestCase {
     func testFilesPickerAcceptsGenericProviderTypes() {
         let allowed = VideoFileImportPolicy.allowedContentTypes
         XCTAssertEqual(allowed, [.item])
-        let generic = UTType(importedAs: "com.billy.lucid.tests.provider-data", conformingTo: .data)
+        let generic = UTType(filenameExtension: "lucid-provider-opaque-fixture", conformingTo: .data)!
+        XCTAssertTrue(generic.conforms(to: .data))
         for type in [UTType.movie, .video, .mpeg4Movie, .quickTimeMovie, .data, generic] {
             XCTAssertTrue(allowed.contains { type.conforms(to: $0) }, "Files must allow \(type.identifier)")
         }
@@ -61,6 +62,18 @@ final class LumaLiftTests: XCTestCase {
         XCTAssertEqual(store.settings, settings)
         XCTAssertEqual(store.library.map(\.id), library)
         XCTAssertEqual(try Data(contentsOf: clip.url), original)
+        XCTAssertEqual(try Data(contentsOf: mp4), original)
+        let opaque = root.appendingPathComponent("provider-movie.data")
+        try fm.copyItem(at: mp4, to: opaque)
+        await store.importFile(opaque)
+        let opaqueClip = try XCTUnwrap(store.clip)
+        defer { try? fm.removeItem(at: opaqueClip.url.deletingLastPathComponent()) }
+        XCTAssertNil(store.error)
+        XCTAssertNotEqual(opaqueClip.url, clip.url)
+        XCTAssertEqual(store.settings, settings)
+        XCTAssertEqual(store.library.map(\.id), library)
+        XCTAssertEqual(try Data(contentsOf: opaqueClip.url), original)
+        XCTAssertEqual(try Data(contentsOf: opaque), original)
         XCTAssertEqual(try Data(contentsOf: mp4), original)
     }
     @MainActor func testFilesImportRejectsNonVideoWithoutReplacingClip() async throws {
