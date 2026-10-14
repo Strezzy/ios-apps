@@ -13,6 +13,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension-Rain.png" width="44" alt=""/> **Enter the Third Dimension** — Become the creatures of a magical rainforest | 2.3 (5) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.3-build5/EnterTheThirdDimension.ipa) | iOS 16.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rinse.jpg" width="44" alt=""/> **Rinse** — Remove metadata from photos and videos | 1.0.0 (5) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Collectr.png" width="44" alt=""/> **Collectr** — Turn moments into numbered collector cards | 0.1.0 (9) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-9/Collectr.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/LumaLift.png" width="44" alt=""/> **LumaLift** — Offline video enhancement · Beta | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -51,6 +52,10 @@ Clean photos and videos on your iPhone without accounts, uploads or analytics. I
 ### Collectr
 
 Create gently rounded photo cards with on-device Depth Anything 3, subtle motion and clear protective sleeves. Set a fixed edition size and rarity, collect numbered copies and transfer them between nearby phones. Includes native Liquid Glass and photo-matched ambient colors. Sealing requires confirmation to remove the original from Photos. Nearby edition records are local, without a global scarcity server. Physical iPhone motion and two-phone trading still need device testing.
+
+### LumaLift
+
+FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.
 
 ## Add my apps to LiveContainer
 

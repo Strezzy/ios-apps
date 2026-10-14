@@ -410,6 +410,40 @@
       "versionDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-9/Collectr.ipa",
       "size": 183034072
+    },
+    {
+      "name": "LumaLift",
+      "subtitle": "Offline video enhancement · Beta",
+      "localizedDescription": "FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x with bundled Real-ESRGAN. Native pastel pink-purple SwiftUI and Liquid Glass controls, adjustable strength, a 2-second preview, original audio preservation, pause/cancel, thermal safeguards, and a private local export library. RIFE 30/60 FPS motion interpolation is implemented and bundled in the iPhone build, but its two GPU tests require physical-device testing and are explicitly not reported as passed. Eleven other simulator tests cover restoration, exports, audio timing, orientation, cancellation and error handling. No accounts, uploads, analytics or model downloads. Standard-color SDR input only; up to 4K output and 1080p input for motion. H.264 MOV exports; originals stay untouched. Physical iPhone performance, heat, LiveContainer compatibility and long-export reliability remain unverified.",
+      "category": "photo-video",
+      "tintColor": "#AD78E8",
+      "bundleIdentifier": "com.billy.lumalift",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "buildNumber": "1",
+          "date": "2026-10-14T05:00:22Z",
+          "localizedDescription": "First beta: native pink-purple Liquid Glass, bundled Real-ESRGAN detail restoration, original-size/2x/4x output, previews, audio preservation and a local library. RIFE 30/60 FPS interpolation is implemented in the device build but NOT device-validated: its two GPU tests cannot run on the hosted simulator and are explicitly skipped. The other 11 simulator tests pass. SDR only; 4K output cap and 1080p input cap for AI motion. Try a short preview. Physical iPhone speed, heat and long-export reliability remain unverified.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa",
+          "size": 15707090,
+          "minOSVersion": "26.0",
+          "sha256": "f2799610f29de413b7d855244f773108628229c8e7e5a27731e8214b56bc8889"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/LumaLift.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Save the enhanced videos you choose to your photo library."
+        }
+      },
+      "version": "1.0",
+      "versionDate": "2026-10-14T05:00:22Z",
+      "versionDescription": "First beta: native pink-purple Liquid Glass, bundled Real-ESRGAN detail restoration, original-size/2x/4x output, previews, audio preservation and a local library. RIFE 30/60 FPS interpolation is implemented in the device build but NOT device-validated: its two GPU tests cannot run on the hosted simulator and are explicitly skipped. The other 11 simulator tests pass. SDR only; 4K output cap and 1080p input cap for AI motion. Try a short preview. Physical iPhone speed, heat and long-export reliability remain unverified.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/lumalift-1.0.0-5/LumaLift.ipa",
+      "size": 15707090
     }
   ],
   "news": []

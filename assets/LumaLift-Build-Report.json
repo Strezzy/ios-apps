@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "source_revision": "3988ef1e31061135d016b150fb1eb03a3775ee03",
+  "release_channel": "beta",
+  "physical_iphone_validation": "Not performed",
+  "motion_inference_validation": "Not performed: hosted simulator GPU cannot initialize MPSGraph. Device tests are retained, not passed.",
+  "required_simulator_tests": [
+    "testSettingsAreIndependent",
+    "testOutputAndMotionLimits",
+    "testFrameClockAndArbitraryTimesteps",
+    "testTilesCoverEveryPixelExactlyOnce",
+    "testBundledCoreMLRestorationExecutes",
+    "testOriginalTimingAndCancellation",
+    "testPortraitOrientationIsPreserved",
+    "testShortAudioDoesNotTruncateVideo",
+    "testZeroStrengthPreservesTileLayout",
+    "testFullEnhancementAtOriginalFPS",
+    "testMotionUnavailableFailsWithoutPartialExport"
+  ],
+  "required_device_tests_pending": [
+    "testBundledRIFERunsOnAppleRuntime",
+    "testFullEnhancementAnd60FPSExport"
+  ],
+  "xcode": "Xcode 26.6\nBuild version 17F113",
+  "sdk": "26.5",
+  "network_api_scan": "Passed for app-owned Swift sources; not a network traffic capture.",
+  "source_hashes": {
+    "App/LumaLiftApp.swift": "7ff471794efe688be29fefe0590a33417dcbc8b2f6cf3484bcaa5dcd97e6c779",
+    "App/LibraryAndSettings.swift": "aa4c3940ba02210864a5605553f1f26046ea01e3956fa4ddcfbc14ca399412f9",
+    "App/AppStore.swift": "7c16733a0118f36864a8f726a6f8e2d8aaa3e5b255f8229d3f107a67f6c6c009",
+    "Core/VideoEngine.swift": "f48050983bfdeaad1d01960eac2c5d9c580fe7b72e9fa785302685f42e0d9635",
+    "Core/Domain.swift": "96ad2a6d9b62f02d7f2433d9748dc12f452ee4d5a4ade61d00d3af762272b93a",
+    "Core/FrameProcessor.swift": "b64fe99445dd6ff33b9012293bf8344b066c034b83036a8cfe04716fa8e8c09e"
+  },
+  "models": {
+    "restoration": "Real-ESRGAN General x4v3",
+    "weights_source": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
+    "weights_sha256": "8dc7edb9ac80ccdc30c3a5dca6616509367f05fbc184ad95b731f05bece96292",
+    "rife_revision": "1fef4869a44fca32848102b9f6a774a20eb50db6",
+    "rife_weights_sha256": "01c6ce74e26a3b2eb3430eb2c0bdb490e2725cb2f2bf6136c2b0e98148bc0ee1",
+    "conversion_mae_8bit": 0.8554100394248962,
+    "conversion_verified": true,
+    "coremltools": "8.3.0",
+    "torch": "2.5.0",
+    "tile_input": 256,
+    "tile_context_pixels": 40,
+    "app_runtime_network_downloads": false,
+    "model_package_sha256": {
+      "Manifest.json": "996631f9dd96f3b01adcc03708d8470a8a7fb3f8025748b018f64a7c16298efb",
+      "Data/com.apple.CoreML/model.mlmodel": "221bcc99c0256c8df645fec1c24f47125c1756f19c91660b64cb8b31b4c08d1e",
+      "Data/com.apple.CoreML/weights/weight.bin": "7a6088b2ee537938f380b9049fae2b85dad57b251d047ab8f5afd256417838ec"
+    },
+    "rife_patch": "Replace host-targeted shader plugin with destination-aware SwiftPM process(Shaders); omit unused CLI."
+  },
+  "iphone_compilation": "passed",
+  "simulator": "iPhone 17 Pro Max",
+  "native_tests": {
+    "status": "passed",
+    "count": 11,
+    "tests": [
+      "testSettingsAreIndependent",
+      "testOutputAndMotionLimits",
+      "testFrameClockAndArbitraryTimesteps",
+      "testTilesCoverEveryPixelExactlyOnce",
+      "testBundledCoreMLRestorationExecutes",
+      "testOriginalTimingAndCancellation",
+      "testPortraitOrientationIsPreserved",
+      "testShortAudioDoesNotTruncateVideo",
+      "testZeroStrengthPreservesTileLayout",
+      "testFullEnhancementAtOriginalFPS",
+      "testMotionUnavailableFailsWithoutPartialExport"
+    ],
+    "skipped_count": 2,
+    "skipped": [
+      "testBundledRIFERunsOnAppleRuntime",
+      "testFullEnhancementAnd60FPSExport"
+    ],
+    "coverage": "Simulator-supported tests only. Real RIFE inference and combined 60 FPS export remain unverified."
+  },
+  "simulator_launch": "Passed; screenshot attached.",
+  "version": "1.0",
+  "build": "1",
+  "ipa_sha256": "f2799610f29de413b7d855244f773108628229c8e7e5a27731e8214b56bc8889",
+  "ipa_bytes": 15707090,
+  "signing": "Unsigned arm64 iPhone app. Sign with your sideloading/developer tool."
+}
