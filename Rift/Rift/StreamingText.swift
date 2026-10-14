@@ -66,9 +66,7 @@ struct BloomTextRenderer: TextRenderer {
     }
 }
 
-/// Keep native selection out of the animated drawing path. On affected iOS
-/// runtimes selectable Text bypasses the custom renderer entirely. Selection
-/// returns only after a reply and its last reveal have both finished.
+/// Selection returns after streaming and its final reveal have both finished.
 struct ReplyRenderSurface: View {
     let text: Text
     let now: TimeInterval
@@ -155,8 +153,6 @@ struct StreamingText: View {
         if monospaced { richText = AttributedString(text) }
         else { richText = (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text) }
         let now = Date.timeIntervalSinceReferenceDate
-        // Include the first live fragment; new Markdown/code segments also arrive
-        // as new views. Archived messages, by contrast, never animate on opening.
         let animate = (isStreaming || hasStreamed) && !interrupted && style != .instant
         schedule.ingest(String(richText.characters), now: now, animate: animate)
         assembled = ReplyTextComposition.make(richText, arrivals: schedule.arrivals)
@@ -171,6 +167,7 @@ struct StreamingText: View {
 }
 
 struct ReplyStylePicker: View {
+    var contextID = "inline"
     @AppStorage("rift.replyAnimation") private var style = "bloom"
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
@@ -183,15 +180,16 @@ struct ReplyStylePicker: View {
                         .foregroundStyle(style == item.rawValue ? RiftTheme.accent : .primary)
                         .background(RiftTheme.accent.opacity(style == item.rawValue ? 0.15 : 0.035), in: RoundedRectangle(cornerRadius: 16))
                         .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(RiftTheme.accent.opacity(style == item.rawValue ? 0.65 : 0.08), lineWidth: 1) }
-                }.buttonStyle(.plain).accessibilityIdentifier("replyStyle-" + item.rawValue)
+                }.buttonStyle(.plain).accessibilityIdentifier("replyStyle-" + contextID + "-" + item.rawValue)
                     .accessibilityLabel(item.title).accessibilityHint(item.detail)
                     .accessibilityAddTraits(style == item.rawValue ? .isSelected : [])
             }
-        }.accessibilityIdentifier("replyStylePicker")
+        }.accessibilityIdentifier("replyStylePicker-" + contextID)
     }
 }
 
 struct ReplyAnimationSample: View {
+    var contextID = "inline"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @AppStorage("rift.replyAnimation") private var style = "bloom"
@@ -208,14 +206,21 @@ struct ReplyAnimationSample: View {
                 Label("Live preview", systemImage: "sparkle").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button { replay = UUID() } label: { Label("Replay", systemImage: "arrow.clockwise") }
-                    .font(.caption).accessibilityIdentifier("replayAnimation")
+                    .font(.caption).accessibilityIdentifier("replayAnimation-" + contextID)
             }
             ZStack(alignment: .topLeading) {
                 Text(sample).font(.body).lineSpacing(4).hidden().accessibilityHidden(true)
                 StreamingText(text: text, isStreaming: playing).id(playbackID)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("animationPreviewText")
-            }.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Keep a stable accessible surface while the animated Text changes
+            // rendering branches. The expanded sheet has a separate identity
+            // from the Settings preview underneath it.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(text)
+            .accessibilityValue(playing ? "Playing preview" : "Preview complete")
+            .accessibilityIdentifier("animationPreview-" + contextID)
             if voiceOver { Text("VoiceOver is on. Text appears instantly.").font(.caption).foregroundStyle(.secondary) }
             else if reduceMotion || lowPower {
                 Text(reduceMotion ? "Reduce Motion is on. Expressive effects use a gentle fade." : "Low Power Mode is on. Expressive effects use a lighter fade.")
@@ -251,10 +256,10 @@ struct ReplyAnimationPreview: View {
                 RiftBackground()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        ReplyStylePicker()
-                        ReplyAnimationSample()
+                        ReplyStylePicker(contextID: "expanded")
+                        ReplyAnimationSample(contextID: "expanded")
                     }.padding(24)
-                }
+                }.accessibilityIdentifier("expandedAnimationPreview")
             }.navigationTitle("Reply animation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }

@@ -1,6 +1,13 @@
 import XCTest
 
 final class RiftUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+    }
+    override func tearDownWithError() throws {
+        XCUIDevice.shared.orientation = .portrait
+    }
     func testWelcomeAndModelPicker() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["modelPicker"].waitForExistence(timeout: 15))
@@ -34,32 +41,36 @@ final class RiftUITests: XCTestCase {
         for _ in 0..<5 { if larger.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(larger.isHittable); larger.tap()
         XCTAssertTrue(app.navigationBars["Reply animation"].waitForExistence(timeout: 5))
-        let picker = app
-        let rendered = app.descendants(matching: .any)["animationPreviewText"].firstMatch
         for style in ["bloom", "fade", "instant", "starlight", "wave", "bounce"] {
-            let button = picker.buttons["replyStyle-" + style].firstMatch
+            let button = app.buttons["replyStyle-expanded-" + style]
+            XCTAssertTrue(button.waitForExistence(timeout: 5))
             if !button.isHittable { app.swipeDown() }
             button.tap()
             XCTAssertTrue(button.isSelected)
-            let complete = NSPredicate(format: "label CONTAINS %@", "Just a little room to think.")
-            let done = XCTNSPredicateExpectation(predicate: complete, object: rendered)
-            XCTAssertEqual(XCTWaiter.wait(for: [done], timeout: 10), .completed)
+            waitForVisiblePreview(in: app)
             attach("Rift-style-" + style)
         }
-        // Both the inline and expanded previews deliberately reuse this
-        // component. Interact with the visible sheet, not its covered parent.
-        let replayButton = try XCTUnwrap(app.buttons.matching(identifier: "replayAnimation")
-            .allElementsBoundByIndex.first { $0.isHittable })
-        replayButton.tap()
-        let replayed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Just a little room to think."), object: rendered)
-        XCTAssertEqual(XCTWaiter.wait(for: [replayed], timeout: 10), .completed)
+        let replay = app.buttons["replayAnimation-expanded"]
+        XCTAssertTrue(replay.isHittable); replay.tap()
+        waitForVisiblePreview(in: app)
         XCTAssertTrue(app.staticTexts["Sample text, not an AI response."].firstMatch.exists)
+    }
+    private func waitForVisiblePreview(in app: XCUIApplication) {
+        let completed = NSPredicate { _, _ in
+            // Re-query the stable expanded surface, not a Text branch which was
+            // replaced during streaming or the covered inline Settings sample.
+            let sample = app.descendants(matching: .any)["animationPreview-expanded"].firstMatch
+            return sample.exists && sample.isHittable &&
+                sample.label.contains("Just a little room to think.") &&
+                (sample.value as? String) == "Preview complete"
+        }
+        let result = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: completed, object: app)], timeout: 12)
+        XCTAssertEqual(result, .completed, "Visible selected-style preview must actually finish")
     }
     func testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating() {
         let app = XCUIApplication()
         app.launchArguments = ["--rift-ui-fixture", "--rift-ui-stream"]
         app.launch()
-        defer { XCUIDevice.shared.orientation = .portrait }
         let field = app.descendants(matching: .any)["messageInput"].firstMatch
         let last = app.descendants(matching: .any)["chatMessage-00000000-0000-0000-0000-000000000099"].firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10))
@@ -67,23 +78,47 @@ final class RiftUITests: XCTestCase {
         field.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         field.typeText("A reply while reading")
-        assertTailIsVisible(last, above: field, in: app)
+        assertTailIsVisible(in: app)
         attach("Rift-latest-above-keyboard")
         XCUIDevice.shared.orientation = .landscapeLeft
-        assertTailIsVisible(last, above: field, in: app)
+        assertTailIsVisible(in: app)
         attach("Rift-latest-landscape")
         XCUIDevice.shared.orientation = .portrait
-        assertTailIsVisible(last, above: field, in: app)
+        assertTailIsVisible(in: app)
     }
-    private func assertTailIsVisible(_ last: XCUIElement, above field: XCUIElement, in app: XCUIApplication) {
+    private func assertTailIsVisible(in app: XCUIApplication) {
+        var geometry = "No complete accessibility geometry"
         let visible = NSPredicate { _, _ in
-            last.exists && last.frame.maxY <= field.frame.minY + 2 &&
-            last.frame.maxY > app.navigationBars.firstMatch.frame.maxY &&
-            field.frame.maxY <= app.keyboards.firstMatch.frame.minY + 2
+            let last = app.descendants(matching: .any)["chatMessage-00000000-0000-0000-0000-000000000099"].firstMatch
+            let field = app.descendants(matching: .any)["messageInput"].firstMatch
+            let scroll = app.scrollViews["chatScrollView"]
+            let keyboard = app.keyboards.firstMatch
+            guard last.exists, field.exists, scroll.exists, keyboard.exists else { return false }
+            let reply = last.frame, composer = field.frame, viewport = scroll.frame, keys = keyboard.frame
+            geometry = "reply=\(reply), composer=\(composer), viewport=\(viewport), keyboard=\(keys), orientation=\(XCUIDevice.shared.orientation.rawValue)"
+            guard !reply.isEmpty, !composer.isEmpty, !viewport.isEmpty, !keys.isEmpty else { return false }
+            // XCTest can retain portrait screen coordinates during rotation.
+            // Project onto the keyboard-facing axis instead of assuming that
+            // screen-coordinate +Y is always visually down. In either space,
+            // the reply tail must be inside the viewport and before the composer,
+            // and the entire text field must remain before the keyboard.
+            if keys.width >= keys.height {
+                if keys.midY >= viewport.midY {
+                    return reply.maxY > viewport.minY && reply.maxY <= min(viewport.maxY + 2, composer.minY + 2) && composer.maxY <= keys.minY + 2
+                }
+                return reply.minY < viewport.maxY && reply.minY >= max(viewport.minY - 2, composer.maxY - 2) && composer.minY >= keys.maxY - 2
+            }
+            if keys.midX >= viewport.midX {
+                return reply.maxX > viewport.minX && reply.maxX <= min(viewport.maxX + 2, composer.minX + 2) && composer.maxX <= keys.minX + 2
+            }
+            return reply.minX < viewport.maxX && reply.minX >= max(viewport.minX - 2, composer.maxX - 2) && composer.minX >= keys.maxX - 2
         }
-        let check = XCTNSPredicateExpectation(predicate: visible, object: last)
-        XCTAssertEqual(XCTWaiter.wait(for: [check], timeout: 10), .completed,
-            "Latest reply tail must remain visible, not only the input field")
+        let result = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: visible, object: app)], timeout: 12)
+        if result != .completed {
+            let diagnostic = XCTAttachment(string: geometry + "\n\n" + app.debugDescription)
+            diagnostic.name = "Rift-keyboard-geometry"; diagnostic.lifetime = .keepAlways; add(diagnostic)
+        }
+        XCTAssertEqual(result, .completed, "Latest reply tail must remain visible, not only the input field. " + geometry)
     }
     func testComposerStaysAboveKeyboardInPortraitAndLandscape() {
         let app = XCUIApplication(); app.launch()
@@ -98,7 +133,6 @@ final class RiftUITests: XCTestCase {
         expectation(for: visible, evaluatedWith: field)
         waitForExpectations(timeout: 8)
         attach("Rift-keyboard-landscape")
-        XCUIDevice.shared.orientation = .portrait
     }
     func testHereticHasMoreSizesAnd14BChoices() {
         let app = XCUIApplication(); app.launch()
