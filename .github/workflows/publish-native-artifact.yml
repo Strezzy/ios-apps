@@ -1,0 +1,91 @@
+name: Publish verified native artifact
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['branding/publish-request.json']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: native-artifact-publish
+  cancel-in-progress: false
+jobs:
+  request:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      app: ${{ steps.request.outputs.app }}
+      folder: ${{ steps.request.outputs.folder }}
+      artifact: ${{ steps.request.outputs.artifact }}
+      run: ${{ steps.request.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: request
+        name: Validate the exact public native artifact request
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          r=json.loads(Path('branding/publish-request.json').read_text())
+          folders={'Facet':'DepthCheck','Veil':'Rinse','Lucid':'LumaLift'}
+          assert r['app'] in folders
+          assert isinstance(r['run'],int) and r['run']>0
+          assert r['artifact'] in ['Native-'+r['app'],'Final-'+r['app']]
+          assert re.fullmatch('[a-f0-9]{40}',r['source_revision'])
+          assert re.fullmatch('[a-f0-9]{64}',r['ipa_sha256'])
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              for k,v in {'app':r['app'],'folder':folders[r['app']],'artifact':r['artifact'],'run':r['run']}.items(): out.write(f'{k}={v}\n')
+          PY
+  publish:
+    needs: request
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        with:
+          repository: Strezzy/ios-apps
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.request.outputs.run }}
+          name: ${{ needs.request.outputs.artifact }}
+          path: ${{ needs.request.outputs.folder }}/Build
+      - name: Verify existing device IPA and publish its original bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Strezzy/ios-apps
+        run: |
+          python3 -m venv "$RUNNER_TEMP/native-publish"
+          "$RUNNER_TEMP/native-publish/bin/pip" install Pillow==11.1.0
+          "$RUNNER_TEMP/native-publish/bin/python" - <<'PY'
+          import hashlib,json,os,plistlib,re,subprocess,sys,zipfile
+          from pathlib import Path
+          r=json.loads(Path('branding/publish-request.json').read_text())
+          app=r['app'];folder={'Facet':'DepthCheck','Veil':'Rinse','Lucid':'LumaLift'}[app]
+          build=Path(folder)/'Build';ipa=build/(app+'.ipa')
+          report_path=build/(app+'-BUILD-REPORT.json');report=json.loads(report_path.read_text())
+          assert report['status']=='passed' and report['native_branding']['status']=='passed'
+          assert hashlib.sha256(ipa.read_bytes()).hexdigest()==r['ipa_sha256']==report['ipa_sha256']
+          assert report['native_branding']['compiled_icons']
+          assert all(i['mean_pixel_difference']<8 for i in report['native_branding']['compiled_icons'])
+          with zipfile.ZipFile(ipa) as z:
+              assert z.testzip() is None
+              info=plistlib.loads(z.read('Payload/'+app+'.app/Info.plist'))
+              for k,v in [('CFBundleIdentifier','com.billy.'+app.lower()),('CFBundleName',app),('CFBundleDisplayName',app)]: assert info[k]==v
+              assert info['CFBundleShortVersionString']==report['version']=='1.1'
+              assert info['CFBundleVersion']==report['build']
+              assert 'iPhoneOS' in info['CFBundleSupportedPlatforms']
+          subprocess.run(['git','cat-file','-e',r['source_revision']+'^{commit}'],check=True)
+          if report.get('source_revision')!=r['source_revision']:
+              report['workflow_trigger_revision']=report.get('source_revision')
+              report['source_revision']=r['source_revision']
+              report['source_revision_note']='Corrected to the prepare job output actually checked out by the native build; the IPA bytes are unchanged.'
+              report_path.write_text(json.dumps(report,indent=2)+'\n')
+          (build/'SHA256SUMS-native.txt').write_text(r['ipa_sha256']+'  '+ipa.name+'\n')
+          os.environ['GITHUB_SHA']=r['source_revision']
+          sys.path.insert(0,'scripts')
+          from native_suite_publish import publish
+          publish(app)
+          PY
