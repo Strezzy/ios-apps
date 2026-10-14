@@ -1,0 +1,207 @@
+name: Publish completed Rift build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/rift-publish-ready.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: app-catalog
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Strezzy/ios-apps
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify and publish the completed IPA and app-source entry
+        run: |
+          python3 - <<'PY'
+          """Publish the completed Rift build without rebuilding or changing IPA bytes."""
+          import copy
+          import hashlib
+          import json
+          import os
+          from pathlib import Path, PurePosixPath
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+          import zipfile
+          
+          REPO = 'Strezzy/ios-apps'
+          RUN = 38561858483
+          ARTIFACT = 11896592672
+          SOURCE = '8061df14caac05e62dc9c454f2b135efd1c75b21'
+          TAG = 'rift-1.0-build10'
+          HASHES = {
+              'Rift.ipa': 'f8171166137d602d4f0ab275222f60bfe678cdbba3c5c594e76b6c09bb820860',
+              'Rift-Source.zip': '7e5ef688312d9245e0cc4d147a631e8463fa5b243586108a6ea99291dbbe4459',
+              'BUILD-REPORT.json': '12f0189c349e1833b56a68f8036771b0f70e3c8ea228e44e182fbdf4f8cdad0a',
+              'MODEL-SMOKE.json': 'b7115910e7e5d07c812bab50278c7c59e4bf7d7be3138ace72591c5ca8fdb49b',
+          }
+          ROOT = Path.cwd()
+          OUT = Path(os.environ['RUNNER_TEMP']) / 'RiftRelease10'
+          
+          def cmd(*args):
+              return subprocess.check_output([str(a) for a in args], text=True).strip()
+          
+          def api(path):
+              return json.loads(cmd('gh', 'api', f'repos/{REPO}/{path}'))
+          
+          def sha(path):
+              with Path(path).open('rb') as handle:
+                  return hashlib.file_digest(handle, 'sha256').hexdigest()
+          
+          def save(path, data):
+              Path(path).write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n')
+          
+          def commit_and_push(message, *paths):
+              cmd('git', 'add', *paths)
+              check = subprocess.run(['git', 'diff', '--cached', '--quiet'])
+              if check.returncode == 1:
+                  cmd('git', 'commit', '-m', message)
+                  # A concurrent change is a conflict, never permission to force-push.
+                  cmd('git', 'push', 'origin', 'HEAD:main')
+              elif check.returncode != 0:
+                  raise RuntimeError('Cannot inspect the staged changes')
+          
+          run = api(f'actions/runs/{RUN}')
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert run['head_sha'] == SOURCE and run['head_branch'] == 'rift-v1'
+          assert run['head_repository']['full_name'] == REPO
+          artifact = api(f'actions/artifacts/{ARTIFACT}')
+          assert artifact['name'] == 'Rift-iPhone' and not artifact['expired']
+          assert artifact['workflow_run']['id'] == RUN
+          assert artifact['digest'] == 'sha256:5c4d0dd90b7674a4c54914cc8417963aa23f062ced3b1f6989e95b58497c1564'
+          OUT.mkdir(parents=True, exist_ok=True)
+          cmd('gh', 'run', 'download', RUN, '--repo', REPO, '--name', 'Rift-iPhone', '--dir', OUT)
+          for name, digest in HASHES.items():
+              assert sha(OUT / name) == digest, f'Artifact identity mismatch: {name}'
+          report = json.loads((OUT / 'BUILD-REPORT.json').read_text())
+          assert report['source'] == SOURCE and report['build'] == '10'
+          assert report['iphone_compilation'] == 'passed'
+          assert report['test_summary']['passedTests'] == 29
+          assert report['test_summary']['failedTests'] == 0
+          (OUT / 'SOURCE-REVISION.txt').write_text(SOURCE + '\n')
+          sys.path.insert(0, str(ROOT / 'scripts'))
+          from publish_rift import verify
+          _, ipa, models, source = verify(OUT)
+          assert source == SOURCE and len(models) == 6
+          print('Verified existing IPA, original source, 29 tests, and all six model checks.', flush=True)
+          
+          # Put the exact tested app source on main before tagging the release. The
+          # workflow files remain those of main, avoiding unauthorized workflow changes
+          # through GitHub Actions' release-creation token.
+          cmd('git', 'restore', '--source=' + SOURCE, '--staged', '--worktree', '--', 'Rift')
+          with zipfile.ZipFile(OUT / 'Rift-Source.zip') as archive:
+              for entry in archive.infolist():
+                  path = PurePosixPath(entry.filename)
+                  assert path.parts and path.parts[0] == 'Rift'
+                  assert not path.is_absolute() and '..' not in path.parts
+                  assert (entry.external_attr >> 16) & 0o170000 != 0o120000
+                  if entry.is_dir() or 'Verification' in path.parts:
+                      continue
+                  target = ROOT.joinpath(*path.parts)
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(archive.read(entry))
+                  assert sha(target) == hashlib.sha256(archive.read(entry)).hexdigest()
+          verification = ROOT / 'Rift' / 'Verification'
+          verification.mkdir(parents=True, exist_ok=True)
+          for name in ['BUILD-REPORT.json', 'MODEL-SMOKE.json', 'HOST.txt', 'BUILD-ERRORS.txt', 'SOURCE-REVISION.txt']:
+              shutil.copy2(OUT / name, verification / name)
+          save(verification / 'RELEASE-PROVENANCE.json', {
+              'build_run': RUN, 'artifact_id': ARTIFACT, 'build_source': SOURCE,
+              'release_tag': TAG, 'sha256': HASHES,
+              'physical_iPhone_tested': False, 'LiveContainer_tested': False,
+          })
+          metadata = {
+              'name': 'Rift', 'subtitle': 'Private offline AI chat · Beta',
+              'localizedDescription': 'Chat with AI on your iPhone without an account, analytics, or cloud inference. Download a curated uncensored community model, or import a compatible GGUF from Files. Includes an iPhone-organized model library, small model-benefit badges, Bloom and Soft Fade reply animations, an Instant option, saved chats, local search, and transcript export. Downloads require internet; chat works offline afterward. Uncensored does not guarantee zero refusals or accurate answers. First beta: physical iPhone performance, heat, and LiveContainer compatibility remain unverified.',
+              'icon': 'Rift.png', 'category': 'utilities', 'tintColor': '#D62947',
+          }
+          registry = json.loads((ROOT / 'app-registry.json').read_text())
+          registry['com.billy.rift'] = metadata
+          save(ROOT / 'app-registry.json', registry)
+          shutil.copy2(ROOT / 'Rift/Rift/Assets.xcassets/AppIcon.appiconset/Rift.png', ROOT / 'assets/Rift.png')
+          cmd('git', 'config', 'user.name', 'github-actions[bot]')
+          cmd('git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
+          commit_and_push('Preserve verified Rift build 10 source and release provenance [skip ci]', 'Rift', 'app-registry.json', 'assets/Rift.png')
+          snapshot = cmd('git', 'rev-parse', 'HEAD')
+          assert api('git/ref/heads/main')['object']['sha'] == snapshot
+          notes = f'''Rift 1.0 (10) · First beta
+          
+          Private, on-device AI chat with a native crimson SwiftUI and Liquid Glass interface.
+          
+          Includes Bloom and Soft Fade streaming animations, an Instant option, an animation preview, saved conversations, local search, copy/regenerate/export, custom GGUF imports through Files, model-benefit badges, and iPhone-organized model profiles including iPhone 18 Pro and Pro Max.
+          
+          The curated catalog contains six uncensored community variants: Qwen3.5 2B, 4B, and 9B; Gemma 4 E2B and E4B; and LFM2.5 2.6B. Model weights are downloaded separately. No account, analytics, or hosted inference. An uncensored label does not guarantee zero refusals or accuracy.
+          
+          ## Verification
+          
+          29 native simulator tests passed, with zero failures and zero skips. All six catalog models passed actual macOS CPU inference smoke checks. The arm64 iPhone application compiled, and its package, model hashes, and release checksums were verified.
+          
+          Physical iPhone inference speed, Metal behavior, peak memory, heat, and LiveContainer compatibility remain untested. Simulator and Mac results are not physical-iPhone benchmarks. Larger models depend on the memory available to the installation.
+          
+          ## Install
+          
+          Download Rift.ipa and use your existing LiveContainer or signing setup. This is an unsigned arm64 iPhone app for iOS 26.0 or later, bundle ID com.billy.rift. Download a model in the app, or import a compatible single-file GGUF from Files.
+          
+          ## Provenance
+          
+          This release reuses the completed build without rebuilding or changing its IPA bytes. The release tag points to the publication snapshot containing the exact app sources from the attached build-source archive.
+          
+          Original build source: {SOURCE}
+          Publication snapshot: {snapshot}
+          Build run: https://github.com/{REPO}/actions/runs/{RUN}
+          IPA size: {report['ipa_bytes']} bytes
+          IPA SHA-256: {HASHES['Rift.ipa']}
+          '''
+          (OUT / 'RELEASE-NOTES.md').write_text(notes)
+          (OUT / 'SHA256SUMS.txt').write_text(''.join(f'{digest}  {name}\n' for name, digest in HASHES.items()))
+          existing = subprocess.run(['gh', 'release', 'view', TAG, '--repo', REPO, '--json', 'isDraft,url'], capture_output=True, text=True)
+          if existing.returncode:
+              if 'release not found' not in existing.stderr.lower():
+                  raise RuntimeError(existing.stderr)
+              files = [OUT / name for name in HASHES] + [OUT / 'SHA256SUMS.txt']
+              cmd('gh', 'release', 'create', TAG, *files, '--repo', REPO, '--target', snapshot,
+                  '--title', 'Rift 1.0 (10) · First beta', '--notes-file', OUT / 'RELEASE-NOTES.md', '--draft')
+          with tempfile.TemporaryDirectory() as directory:
+              cmd('gh', 'release', 'download', TAG, '--repo', REPO, '--pattern', 'Rift.ipa', '--pattern', 'Rift-Source.zip', '--dir', directory)
+              for name in ['Rift.ipa', 'Rift-Source.zip']:
+                  assert sha(Path(directory) / name) == HASHES[name], 'Existing release bytes differ; refusing replacement'
+          release = api('releases/tags/' + TAG)
+          if release['draft']:
+              cmd('gh', 'release', 'edit', TAG, '--repo', REPO, '--draft=false')
+          release = api('releases/tags/' + TAG)
+          assert not release['draft'] and not release['prerelease']
+          asset = next(a for a in release['assets'] if a['name'] == 'Rift.ipa')
+          assert asset['size'] == report['ipa_bytes'] and asset['state'] == 'uploaded'
+          assert asset.get('digest') == 'sha256:' + HASHES['Rift.ipa']
+          
+          # Update only Rift, leaving every other app and its versions untouched.
+          from update_catalog import update, render_readme
+          catalog = json.loads((ROOT / 'apps.json').read_text())
+          old_others = copy.deepcopy([app for app in catalog['apps'] if app['bundleIdentifier'] != 'com.billy.rift'])
+          old_rift = next((app for app in catalog['apps'] if app['bundleIdentifier'] == 'com.billy.rift'), None)
+          isolated = {'apps': [copy.deepcopy(old_rift)] if old_rift else []}
+          update(isolated, {'com.billy.rift': metadata}, [ipa], TAG, release['published_at'], notes)
+          catalog['apps'] = old_others + isolated['apps']
+          assert [app for app in catalog['apps'] if app['bundleIdentifier'] != 'com.billy.rift'] == old_others
+          save(ROOT / 'apps.json', catalog)
+          render_readme(catalog)
+          commit_and_push('Publish Rift 1.0 (10) in the app source and download page [skip ci]', 'apps.json', 'README.md')
+          print('PUBLISHED:', release['html_url'], flush=True)
+          print('IPA:', asset['browser_download_url'], flush=True)
+          print('CATALOG:', 'https://raw.githubusercontent.com/' + REPO + '/main/apps.json', flush=True)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f'## Rift published\n\n[Release]({release["html_url"]}) · [Download IPA]({asset["browser_download_url"]})\n\n29 native tests and all 6 model checks passed. Physical-iPhone and LiveContainer testing remain pending.\n')
+          PY
