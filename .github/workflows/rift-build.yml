@@ -5,20 +5,18 @@ on:
     branches: [main, rift-v1]
     paths: ['Rift/**', '.github/workflows/rift-build.yml']
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: rift-native-build
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   build:
-    runs-on: macos-26
+    runs-on: macos-26-intel
     timeout-minutes: 90
     env:
       RIFT_BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -37,18 +35,18 @@ jobs:
         with:
           path: Rift/Build/Native
           key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Prepare approved artwork, source and pinned uncensored catalog
+      - name: Prepare approved artwork, pinned models and dependency notices
         run: python Rift/scripts/build.py prepare
-      - name: Build real simulator, iPhone Metal and macOS inference runtimes
+      - name: Build simulator, iPhone Metal and macOS inference runtimes
         id: native
         run: python Rift/scripts/build.py native
-      - name: Keep completed native runtimes even when a later test fails
+      - name: Keep completed native runtimes
         uses: actions/cache/save@v4
         if: steps.native-cache.outputs.cache-hit != 'true'
         with:
           path: Rift/Build/Native
           key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Compile SwiftUI app and run native core, animation and UI tests
+      - name: Compile SwiftUI app and run core, animation, cancellation and UI tests
         run: python Rift/scripts/build.py simulator
       - name: Compile arm64 iPhone application
         run: python Rift/scripts/build.py iphone
@@ -56,37 +54,21 @@ jobs:
         run: python Rift/scripts/build.py smoke
       - name: Verify and package IPA
         run: python Rift/scripts/build.py package
-      - name: Preserve exact source and diagnostic evidence
+      - name: Collect diagnostic evidence without rewriting source history
         if: always()
         run: |
           python3 - <<'PY'
           import pathlib, subprocess
-          from PIL import Image
-          root=pathlib.Path('Rift'); out=root/'Verification'; out.mkdir(exist_ok=True)
-          for name in ['BUILD-REPORT.json','MODEL-SMOKE.json','catalog-resolution.json']:
-            p=root/'Build'/name
-            if p.exists(): (out/name).write_bytes(p.read_bytes())
-          (out/'HOST.txt').write_text(subprocess.check_output(['sysctl','hw.memsize','hw.ncpu'],text=True))
+          root=pathlib.Path('Rift/Build'); root.mkdir(exist_ok=True)
+          (root/'HOST.txt').write_text(subprocess.check_output(['sysctl','hw.memsize','hw.ncpu'],text=True))
           errors=[]
-          for p in (root/'Build/Logs').glob('*.log'):
+          for p in (root/'Logs').glob('*.log'):
             lines=p.read_text(errors='replace').splitlines()
             matched=[s for s in lines if 'error:' in s.lower() or 'failed' in s.lower() or 'traceback' in s.lower()]
             if matched: errors += [p.name]+matched[-30:]
-          (out/'BUILD-ERRORS.txt').write_text('\n'.join(errors)[-25000:])
-          for p in (root/'Build/Screenshots').rglob('*.png'):
-            image=Image.open(p).convert('RGB'); image.thumbnail((440,956))
-            image.save(out/(p.stem+'.webp'),quality=75)
+          (root/'BUILD-ERRORS.txt').write_text('\n'.join(errors)[-25000:])
           PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add Rift/Rift Rift/project.yml Rift/scripts/prepare.py Rift/Verification
-          if test -f Rift/RECOVERY-APPLIED; then git add Rift/RECOVERY-APPLIED; fi
-          if ! git diff --cached --quiet; then
-            git commit -m 'Preserve Rift build source and native verification evidence [skip ci]'
-            git pull --rebase origin "$GITHUB_REF_NAME"
-            git push origin HEAD:"$GITHUB_REF_NAME"
-          fi
-      - name: Preserve the real IPA and full build evidence
+      - name: Preserve the real IPA and complete build evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -97,6 +79,8 @@ jobs:
             Rift/Build/BUILD-REPORT.json
             Rift/Build/MODEL-SMOKE.json
             Rift/Build/catalog-resolution.json
+            Rift/Build/HOST.txt
+            Rift/Build/BUILD-ERRORS.txt
             Rift/Build/Screenshots
             Rift/Build/Logs
           if-no-files-found: warn
