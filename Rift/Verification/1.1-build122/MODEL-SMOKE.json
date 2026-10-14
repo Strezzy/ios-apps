@@ -1,0 +1,303 @@
+[
+  {
+    "id": "qwen35-2b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello! How can I help you today?\",\n    \"The ocean covers more than 70% of the Earth's surface and is home to over 20,000 known species of marine life.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 119267328,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "be3ccca13a9d1bc8b67165ea80bd103cd6151a37ad131183cc7ca388f78d9517",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen35",
+      "baseline_bytes": 737280,
+      "bytes": 1270808032,
+      "dimensions": {
+        "attention.head_count": 8,
+        "attention.head_count_kv": 2,
+        "attention.key_length": 256,
+        "attention.value_length": 256,
+        "block_count": 24,
+        "embedding_length": 2048,
+        "full_attention_interval": 4
+      },
+      "growth_bytes": 36630528,
+      "peak_footprint_bytes": 37367808,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 96,
+      "seconds": 34.28782399199997,
+      "sha256": "be3ccca13a9d1bc8b67165ea80bd103cd6151a37ad131183cc7ca388f78d9517"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "qwen35-4b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello! I'm Rift, your helpful local assistant.\",\n    \"The ocean covers about 71% of the Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 183136256,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen35",
+      "baseline_bytes": 790528,
+      "bytes": 2707513696,
+      "dimensions": {
+        "attention.head_count": 16,
+        "attention.head_count_kv": 4,
+        "attention.key_length": 256,
+        "attention.value_length": 256,
+        "block_count": 32,
+        "embedding_length": 2560,
+        "full_attention_interval": 4
+      },
+      "growth_bytes": 31387648,
+      "peak_footprint_bytes": 32178176,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 269,
+      "seconds": 83.11969728899999,
+      "sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "qwen35-9b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello! I'm Rift, your helpful local assistant.\",\n    \"The ocean covers more than 70% of Earth's surface and produces over 50% of the planet's oxygen.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 183816192,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "2ca636d9e81d3d23ca9b60c234fe185d30ec082eeba69ce770fdb0c76559a4f5",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen35",
+      "baseline_bytes": 737280,
+      "bytes": 5627044224,
+      "dimensions": {
+        "attention.head_count": 16,
+        "attention.head_count_kv": 4,
+        "attention.key_length": 256,
+        "attention.value_length": 256,
+        "block_count": 32,
+        "embedding_length": 4096,
+        "full_attention_interval": 4
+      },
+      "growth_bytes": 30208000,
+      "peak_footprint_bytes": 30945280,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 390,
+      "seconds": 151.82291451999993,
+      "sha256": "2ca636d9e81d3d23ca9b60c234fe185d30ec082eeba69ce770fdb0c76559a4f5"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "gemma4-e2b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello, how can I help you today?\",\n    \"The ocean covers over 70% of the Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 107761664,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\ncommon_chat_try_specialized_template: detected an outdated gemma4 chat template, applying compatibility workarounds. Consider updating to the official template.\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\ncommon_chat_try_specialized_template: detected an outdated gemma4 chat template, applying compatibility workarounds. Consider updating to the official template.\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "0796d58372742ef8ddc76dd64cd2fde217b7ef32e3dc58e10873253e569cad6b",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "gemma4",
+      "baseline_bytes": 720896,
+      "bytes": 3134964672,
+      "dimensions": {
+        "attention.head_count": 8,
+        "attention.head_count_kv": 1,
+        "attention.key_length": 512,
+        "attention.value_length": 512,
+        "block_count": 35,
+        "embedding_length": 1536
+      },
+      "growth_bytes": 33345536,
+      "peak_footprint_bytes": 34066432,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 181,
+      "seconds": 77.94493280400002,
+      "sha256": "0796d58372742ef8ddc76dd64cd2fde217b7ef32e3dc58e10873253e569cad6b"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "gemma4-e4b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello there!\",\n    \"The ocean covers over 70% of the Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 147861504,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\ncommon_chat_try_specialized_template: detected an outdated gemma4 chat template, applying compatibility workarounds. Consider updating to the official template.\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\ncommon_chat_try_specialized_template: detected an outdated gemma4 chat template, applying compatibility workarounds. Consider updating to the official template.\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "d0027dd3a9128d9323e9f282c8bf010a8526c46477584535991dc1a869b56e96",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "gemma4",
+      "baseline_bytes": 700416,
+      "bytes": 5335285728,
+      "dimensions": {
+        "attention.head_count": 8,
+        "attention.head_count_kv": 2,
+        "attention.key_length": 512,
+        "attention.value_length": 512,
+        "block_count": 42,
+        "embedding_length": 2560
+      },
+      "growth_bytes": 35500032,
+      "peak_footprint_bytes": 36200448,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 884,
+      "seconds": 237.40303187900008,
+      "sha256": "d0027dd3a9128d9323e9f282c8bf010a8526c46477584535991dc1a869b56e96"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "lfm25-26b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"The user is asking me to say hello in one short sentence. This is a simple, straightforward request. I should respond with a greeting in exactly one short sentence.<\\/think>Hello! How can I help you today?\",\n    \"The user is asking for one fact about the ocean in one short sentence. I need to provide a concise, accurate fact about the ocean. I should keep it to one short sentence as requested.<\\/think>The ocean covers about 71% of Earth's surface and contains over 90% of the planet's water.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 84029440,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "604623b276af2cab17ebbeed76f70499ca12bb092326117f6cc21cdb8a5ac193",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "lfm2",
+      "baseline_bytes": 741376,
+      "bytes": 1674454688,
+      "dimensions": {
+        "attention.head_count": 32,
+        "block_count": 30,
+        "embedding_length": 2048
+      },
+      "growth_bytes": 23003136,
+      "peak_footprint_bytes": 23744512,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 116,
+      "seconds": 34.24440087000016,
+      "sha256": "604623b276af2cab17ebbeed76f70499ca12bb092326117f6cc21cdb8a5ac193"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "heretic-qwen3-8b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello!\",\n    \"The ocean covers more than 70% of the Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 211460096,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "ce36c25cfcd420f2da4e19f8b246eeca5f8ba482c83a4b5c1edb95b854fdc6aa",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen3",
+      "baseline_bytes": 778240,
+      "bytes": 5027784480,
+      "dimensions": {
+        "attention.head_count": 32,
+        "attention.head_count_kv": 8,
+        "attention.key_length": 128,
+        "attention.value_length": 128,
+        "block_count": 36,
+        "embedding_length": 4096
+      },
+      "growth_bytes": 33345536,
+      "peak_footprint_bytes": 34123776,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 603,
+      "seconds": 198.17067562600005,
+      "sha256": "ce36c25cfcd420f2da4e19f8b246eeca5f8ba482c83a4b5c1edb95b854fdc6aa"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "heretic-qwen35-9b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello!\",\n    \"The ocean covers more than 70% of Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 183787520,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "a22e706797f1fb976cc2274c8406321b049ed7f56f5886bbbaac6cf8d9ece6a0",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen35",
+      "baseline_bytes": 745472,
+      "bytes": 5627045280,
+      "dimensions": {
+        "attention.head_count": 16,
+        "attention.head_count_kv": 4,
+        "attention.key_length": 256,
+        "attention.value_length": 256,
+        "block_count": 32,
+        "embedding_length": 4096,
+        "full_attention_interval": 4
+      },
+      "growth_bytes": 31821824,
+      "peak_footprint_bytes": 32567296,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 683,
+      "seconds": 208.95711533500003,
+      "sha256": "a22e706797f1fb976cc2274c8406321b049ed7f56f5886bbbaac6cf8d9ece6a0"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "heretic-qwen3-14b-compact",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello, I'm Rift, your friendly local assistant.\",\n    \"The ocean covers more than two-thirds of Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 230879232,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "749b198c9f69fe913f5f4c691bb49e1f2522542ead9b22caaf0bcf075d153d77",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen3",
+      "baseline_bytes": 745472,
+      "bytes": 6375301728,
+      "dimensions": {
+        "attention.head_count": 40,
+        "attention.head_count_kv": 8,
+        "attention.key_length": 128,
+        "attention.value_length": 128,
+        "block_count": 40,
+        "embedding_length": 5120
+      },
+      "growth_bytes": 30343168,
+      "peak_footprint_bytes": 31088640,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 1001,
+      "seconds": 317.532843298,
+      "sha256": "749b198c9f69fe913f5f4c691bb49e1f2522542ead9b22caaf0bcf075d153d77"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  },
+  {
+    "id": "heretic-qwen3-14b-quality",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"answers\" : [\n    \"Hello, I'm Rift, your helpful local assistant!\",\n    \"The ocean covers more than 60% of Earth's surface.\"\n  ],\n  \"backend\" : \"macOS CPU\",\n  \"peak_last_footprint\" : 230948864,\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Preparing on-device runtime\nLoading model\nReading conversation\nWriting reply\nOn device\nPreparing on-device runtime\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "0f1f2806c1baa76938156c4d9117960de3b8f22d7c28a020a092228c21a5974f",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false,
+    "transfer": {
+      "architecture": "qwen3",
+      "baseline_bytes": 749568,
+      "bytes": 8110730848,
+      "dimensions": {
+        "attention.head_count": 40,
+        "attention.head_count_kv": 8,
+        "attention.key_length": 128,
+        "attention.value_length": 128,
+        "block_count": 40,
+        "embedding_length": 5120
+      },
+      "growth_bytes": 32563200,
+      "peak_footprint_bytes": 33312768,
+      "physical_iPhone_test": false,
+      "production_download_and_verification": true,
+      "progress_events": 1778,
+      "seconds": 595.205946627,
+      "sha256": "0f1f2806c1baa76938156c4d9117960de3b8f22d7c28a020a092228c21a5974f"
+    },
+    "source": "c4c0b699cc2c8ee10ad0632b6845a7b581fbd22c"
+  }
+]
