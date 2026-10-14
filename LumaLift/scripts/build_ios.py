@@ -99,13 +99,13 @@ def main():
                                   'coverage': 'Simulator-supported tests only. Real RIFE inference and combined 60 FPS export remain unverified.'}
         sim_app = BUILD / 'DerivedData/Build/Products/Debug-iphonesimulator/LumaLift.app'
         run(['xcrun', 'simctl', 'install', udid, sim_app])
-        run(['xcrun', 'simctl', 'launch', udid, 'com.billy.lumalift'], log='simulator-launch')
+        run(['xcrun', 'simctl', 'launch', udid, 'com.billy.lucid'], log='simulator-launch')
         time.sleep(3)
         run(['xcrun', 'simctl', 'io', udid, 'screenshot', BUILD / 'Simulator-Launch.png'])
         report['simulator_launch'] = 'Passed; screenshot attached.'
         app = BUILD / 'DerivedData/Build/Products/Release-iphoneos/LumaLift.app'
         info = plistlib.loads((app / 'Info.plist').read_bytes())
-        assert info['CFBundleIdentifier'] == 'com.billy.lumalift'
+        assert info['CFBundleIdentifier'] == 'com.billy.lucid'
         assert 'iPhoneOS' in info['CFBundleSupportedPlatforms']
         assert (app / 'LumaLift').read_bytes()[:4] == b'\xcf\xfa\xed\xfe'
         assert list(app.rglob('LumaGeneral.mlmodelc')), 'Missing bundled Core ML model.'

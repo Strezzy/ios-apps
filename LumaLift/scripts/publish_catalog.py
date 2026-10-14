@@ -24,7 +24,7 @@ def main():
         run(['git', 'worktree', 'add', '--detach', work, 'origin/main'])
         registry_path = work / 'app-registry.json'
         registry = json.loads(registry_path.read_text())
-        registry['com.billy.lumalift'] = json.loads((ROOT / 'catalog-entry.json').read_text())
+        registry['com.billy.lucid'] = json.loads((ROOT / 'catalog-entry.json').read_text())
         registry_path.write_text(json.dumps(registry, indent=2, ensure_ascii=False) + '\n')
         (work / 'assets').mkdir(exist_ok=True)
         shutil.copyfile(ROOT / 'Build/LumaLift-Icon.png', work / 'assets/LumaLift.png')
@@ -35,8 +35,8 @@ def main():
         run(['python3', 'scripts/update_catalog.py', '--tag', TAG, '--local', ROOT / 'Build/LumaLift.ipa',
              '--date', datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), '--notes', notes], cwd=work)
         after = json.loads((work / 'apps.json').read_text())
-        old_versions = {a['bundleIdentifier']: a.get('versions') for a in before['apps'] if a['bundleIdentifier'] != 'com.billy.lumalift'}
-        new_versions = {a['bundleIdentifier']: a.get('versions') for a in after['apps'] if a['bundleIdentifier'] != 'com.billy.lumalift'}
+        old_versions = {a['bundleIdentifier']: a.get('versions') for a in before['apps'] if a['bundleIdentifier'] != 'com.billy.lucid'}
+        new_versions = {a['bundleIdentifier']: a.get('versions') for a in after['apps'] if a['bundleIdentifier'] != 'com.billy.lucid'}
         assert old_versions == new_versions, 'An unrelated app release changed.'
         # Publish the actual build report alongside the app source for clear evidence.
         shutil.copyfile(ROOT / 'Build/BUILD-REPORT.json', work / 'assets/LumaLift-Build-Report.json')

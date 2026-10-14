@@ -101,6 +101,11 @@ def render(name: str, size: int = 1024) -> Image.Image:
 def synchronize(root: Path) -> None:
     registry_path, catalog_path = root/'app-registry.json', root/'apps.json'
     registry = json.loads(registry_path.read_text())
+    # Native renamed IDs supersede legacy catalog identities.
+    for old_id, identity in list(BRANDS.items()):
+        current_id = 'com.billy.' + identity[0].lower()
+        if current_id in registry and old_id not in registry:
+            BRANDS[current_id] = BRANDS.pop(old_id)
     catalog = json.loads(catalog_path.read_text())
     before_registry, before_catalog = copy.deepcopy(registry), copy.deepcopy(catalog)
     for bundle, (name, tint, _) in BRANDS.items():

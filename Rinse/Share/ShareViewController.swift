@@ -61,7 +61,7 @@ struct ShareView: View {
         NavigationStack {
             VStack(spacing: 22) {
                 Image(systemName: "drop.fill").font(.system(size: 56)).foregroundStyle(.teal)
-                Text("Clean with Rinse").font(.title.bold())
+                Text("Clean with Veil").font(.title.bold())
                 Text(model.status).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 if model.busy { ProgressView() }
                 if !model.results.isEmpty && !model.busy {

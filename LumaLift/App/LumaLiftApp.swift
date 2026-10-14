@@ -52,7 +52,7 @@ struct RootView: View {
             Tab("Library", systemImage: "square.stack.3d.up") { LibraryView() }
             Tab("Settings", systemImage: "slider.horizontal.3") { SettingsView() }
         }
-        .alert("LumaLift", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+        .alert("Lucid", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("OK", role: .cancel) { store.error = nil }
         } message: { Text(store.error ?? "") }
         .fullScreenCover(isPresented: Binding(get: { store.working }, set: { _ in })) {
@@ -130,7 +130,7 @@ struct EnhanceView: View {
                         .frame(maxWidth: 640).frame(maxWidth: .infinity)
                 }
             }
-            .navigationTitle("LumaLift")
+            .navigationTitle("Lucid")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showPrivacy = true } label: { Image(systemName: "lock.shield") }
@@ -249,7 +249,7 @@ struct EnhanceView: View {
             Button { store.start(preview: true) } label: {
                 Label("Try a 2-second preview", systemImage: "play.circle").frame(maxWidth: .infinity).padding(.vertical, 6)
             }.buttonStyle(.glass)
-            Text("Originals are never overwritten. Keep LumaLift open while processing.")
+            Text("Originals are never overwritten. Keep Lucid open while processing.")
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }.disabled(store.validationError != nil || store.importing)
     }

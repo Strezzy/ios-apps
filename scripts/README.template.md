@@ -32,6 +32,10 @@ You only need to add this source once.
 
 You can also download an IPA from the table above and import it through **Apps → + → Install IPA File** in LiveContainer.
 
+## Native suite rename
+
+**The first native Facet, Veil, Lucid and Echo releases use new bundle IDs.** Keep the old installation and export important files before removing it. Data does not automatically transfer to the new app identity. See [the one-time installation note](docs/NATIVE-SUITE-UPGRADE.md). Prism and Music are unchanged.
+
 ## Update an app and keep your data
 
 **Leave the old version installed.** Replacing that existing copy lets LiveContainer reuse its data container, where the app keeps your files and settings. Keep a separate copy of any files you can't replace before updating.

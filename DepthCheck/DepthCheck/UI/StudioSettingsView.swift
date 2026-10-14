@@ -22,7 +22,7 @@ struct StudioSettingsView: View {
                         .buttonStyle(.glass)
                         .disabled(store.isBusy)
                         .frame(maxWidth: .infinity)
-                    Text("Depth Check · \(appVersion)")
+                    Text("Facet · \(appVersion)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)

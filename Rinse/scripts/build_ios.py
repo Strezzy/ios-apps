@@ -57,7 +57,7 @@ def main():
             raise RuntimeError("App source network audit failed.")
         report["static_network_audit"] = "passed; no listed network APIs or web URLs in shipping Swift code"
         prepare()
-        report["artwork_sha256"] = hashlib.sha256((ROOT / "Artwork.jpg").read_bytes()).hexdigest()
+        report["artwork_sha256"] = hashlib.sha256((ROOT / "Artwork.png").read_bytes()).hexdigest()
         run(["xcodegen", "generate", "--spec", "project.yml"], log="project")
         report["xcodegen"] = run(["xcodegen", "--version"], capture=True).strip()
         number = os.environ.get("RINSE_BUILD_NUMBER", "1")
@@ -91,14 +91,14 @@ def main():
         report["native_tests"] = {"status": "passed", "count": len(passed), "tests": passed}
         simulator_app = BUILD / "DerivedData/Build/Products/Debug-iphonesimulator/Rinse.app"
         run(["xcrun", "simctl", "install", udid, simulator_app])
-        run(["xcrun", "simctl", "launch", udid, "com.billy.rinse"], log="simulator-launch")
+        run(["xcrun", "simctl", "launch", udid, "com.billy.veil"], log="simulator-launch")
         time.sleep(3)
         run(["xcrun", "simctl", "io", udid, "screenshot", BUILD / "Simulator-Launch.png"])
         report["simulator_launch"] = "passed; see Simulator-Launch.png"
         run(common + ["-configuration", "Release", "-destination", "generic/platform=iOS", "build"], log="iphone-build")
         app = BUILD / "DerivedData/Build/Products/Release-iphoneos/Rinse.app"
         info = plistlib.loads((app / "Info.plist").read_bytes())
-        if info["CFBundleIdentifier"] != "com.billy.rinse" or "iPhoneOS" not in info["CFBundleSupportedPlatforms"]:
+        if info["CFBundleIdentifier"] != "com.billy.veil" or "iPhoneOS" not in info["CFBundleSupportedPlatforms"]:
             raise RuntimeError("The packaged binary is not the intended physical iPhone app.")
         if (app / "Rinse").read_bytes()[:4] != b"\xcf\xfa\xed\xfe": raise RuntimeError("Missing device Mach-O executable.")
         if not (app / "PrivacyInfo.xcprivacy").exists(): raise RuntimeError("Privacy manifest missing.")

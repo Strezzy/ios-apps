@@ -7,7 +7,7 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     SWIFT_STRICT_CONCURRENCY: minimal
-    MARKETING_VERSION: "1.0.0"
+    MARKETING_VERSION: "1.1"
     CURRENT_PROJECT_VERSION: "1"
     TARGETED_DEVICE_FAMILY: "1,2"
     CODE_SIGNING_ALLOWED: NO
@@ -24,14 +24,15 @@ targets:
       - path: PrivacyInfo.xcprivacy
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rinse
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.veil
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     info:
       path: App/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleDisplayName: Rinse
+        CFBundleName: Veil
+        CFBundleDisplayName: Veil
         UILaunchScreen: {}
         UIRequiredDeviceCapabilities: [arm64]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
@@ -56,7 +57,7 @@ targets:
       - path: PrivacyInfo.xcprivacy
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rinse.share
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.veil.share
         APPLICATION_EXTENSION_API_ONLY: YES
         SKIP_INSTALL: YES
     info:
@@ -64,7 +65,8 @@ targets:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleDisplayName: Clean with Rinse
+        CFBundleName: VeilShare
+        CFBundleDisplayName: Clean with Veil
         NSPhotoLibraryAddUsageDescription: Save the clean photos you choose to your library.
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
@@ -78,7 +80,7 @@ targets:
     sources: [Tests]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.billy.rinse.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.veil.tests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: Rinse

@@ -23,7 +23,7 @@ struct LibraryItem: Codable, Identifiable {
 enum LocalFiles {
     static var library: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("LumaLift", isDirectory: true)
+            .appendingPathComponent("Lucid", isDirectory: true)
     }
     static var pending: URL { library.appendingPathComponent("Pending", isDirectory: true) }
     static var imports: URL {

@@ -89,7 +89,7 @@ struct SettingsView: View {
                             HStack(spacing: 16) {
                                 Image("BrandMark").resizable().frame(width: 68, height: 68).clipShape(.rect(cornerRadius: 18))
                                 VStack(alignment: .leading, spacing: 5) {
-                                    Text("LumaLift").font(.title2.bold())
+                                    Text("Lucid").font(.title2.bold())
                                     Text("Private video enhancement").font(.callout).foregroundStyle(.secondary)
                                     Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")")
                                         .font(.caption).foregroundStyle(.secondary)
@@ -139,7 +139,7 @@ struct PrivacyView: View {
                 VStack(spacing: 20) {
                     LiftCard {
                         Label("Your videos stay yours", systemImage: "lock.shield").font(.title2.bold())
-                        Text("LumaLift has no accounts, analytics, advertising SDKs, remote processing or app-initiated network requests. Enhancement and interpolation run on this device.")
+                        Text("Lucid has no accounts, analytics, advertising SDKs, remote processing or app-initiated network requests. Enhancement and interpolation run on this device.")
                         Text("Imported originals are copied to a private working folder. Finished exports stay in the local app library, excluded from device backups, until you explicitly save or share them. Originals are never edited or deleted.")
                     }
                     LiftCard {

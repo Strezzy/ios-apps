@@ -93,7 +93,7 @@ def verify(path):
         require(not any(name.startswith(prefix + "Resources/") for name in names),
                 "A reserved root Resources directory changes CFBundle's Info.plist lookup")
         info = plistlib.loads(archive.read(prefix + "Info.plist"))
-        require(info["CFBundleIdentifier"] == "com.billy.depthcheck", "Incorrect app bundle identifier")
+        require(info["CFBundleIdentifier"] == "com.billy.facet", "Incorrect app bundle identifier")
         require(info["CFBundleExecutable"] == "DepthCheck", "Incorrect app executable name")
         require(info["CFBundleSupportedPlatforms"] == ["iPhoneOS"], "Bundle describes a simulator app")
         require(info.get("NSPhotoLibraryAddUsageDescription"), "Photo saving permission description is missing")

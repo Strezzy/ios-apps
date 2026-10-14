@@ -21,7 +21,7 @@ from verify_ipa import verify
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "Build"
 DERIVED = BUILD / "DerivedData"
-BUNDLE = "com.billy.depthcheck"
+BUNDLE = "com.billy.facet"
 
 
 def run(arguments, name=None, capture=False, check=True):

@@ -291,7 +291,7 @@
 					"@executable_path/Frameworks",
 				);
 				"MARKETING_VERSION" = "1.0";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.depthcheck";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.facet";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
 				"SUPPORTS_MACCATALYST" = "NO";
@@ -315,7 +315,7 @@
 					"@executable_path/Frameworks",
 				);
 				"MARKETING_VERSION" = "1.0";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.depthcheck";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.facet";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
 				"SUPPORTS_MACCATALYST" = "NO";
@@ -503,7 +503,7 @@
 			"buildSettings" = {
 				"CODE_SIGN_STYLE" = "Automatic";
 				"GENERATE_INFOPLIST_FILE" = "YES";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.depthcheck.tests";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.facet.tests";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/DepthCheck.app/DepthCheck";
 				"BUNDLE_LOADER" = "$(TEST_HOST)";
@@ -521,7 +521,7 @@
 			"buildSettings" = {
 				"CODE_SIGN_STYLE" = "Automatic";
 				"GENERATE_INFOPLIST_FILE" = "YES";
-				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.depthcheck.tests";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.billy.facet.tests";
 				"PRODUCT_NAME" = "$(TARGET_NAME)";
 				"TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/DepthCheck.app/DepthCheck";
 				"BUNDLE_LOADER" = "$(TEST_HOST)";

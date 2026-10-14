@@ -12,7 +12,7 @@ def main():
     meta = {'info': {'version': 1, 'author': 'xcode'}}
     (assets / 'Contents.json').write_text(json.dumps(meta))
     icon = assets / 'AppIcon.appiconset/AppIcon.png'
-    subprocess.run(['swift', str(ROOT / 'scripts/Icon.swift'), str(icon)], check=True)
+    shutil.copyfile(ROOT / 'Artwork.png', icon)
     (assets / 'AppIcon.appiconset/Contents.json').write_text(json.dumps(dict(meta, images=[{'idiom':'universal', 'platform':'ios', 'size':'1024x1024', 'filename':'AppIcon.png'}])))
     shutil.copyfile(icon, assets / 'BrandMark.imageset/BrandMark.png')
     (assets / 'BrandMark.imageset/Contents.json').write_text(json.dumps(dict(meta, images=[{'idiom':'universal','filename':'BrandMark.png'}])))

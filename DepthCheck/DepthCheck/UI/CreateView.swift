@@ -39,7 +39,7 @@ struct CreateView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .navigationTitle("Depth Check")
+        .navigationTitle("Facet")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -305,7 +305,7 @@ struct CreateView: View {
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
-                InfoNote(text: "Keep Depth Check open until conversion finishes.", symbol: "iphone")
+                InfoNote(text: "Keep Facet open until conversion finishes.", symbol: "iphone")
                 Button(role: .cancel) { store.cancelConversion() } label: {
                     Text(store.isCancelling ? "Stopping…" : "Cancel conversion")
                         .frame(maxWidth: .infinity)

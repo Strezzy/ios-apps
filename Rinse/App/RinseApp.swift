@@ -11,7 +11,7 @@ import SwiftUI
                     if phase == .background {
                         ZStack {
                             Color(.systemBackground).ignoresSafeArea()
-                            Label("Rinse", systemImage: "lock.shield").font(.title)
+                            Label("Veil", systemImage: "lock.shield").font(.title)
                         }
                     }
                 }

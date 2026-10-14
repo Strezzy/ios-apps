@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = "DepthCheck"
-BUNDLE = "com.billy.depthcheck"
+BUNDLE = "com.billy.facet"
 CONFIGURATION_PATH = ROOT / "scripts/project_config.json"
 
 
@@ -185,7 +185,7 @@ def generate():
         "CODE_SIGN_STYLE": "Automatic", "CURRENT_PROJECT_VERSION": str(plistlib.loads((ROOT / APP / "Info.plist").read_bytes())["CFBundleVersion"]),
         "GENERATE_INFOPLIST_FILE": "NO", "INFOPLIST_FILE": APP + "/Info.plist",
         "LD_RUNPATH_SEARCH_PATHS": ["$(inherited)", "@executable_path/Frameworks"],
-        "MARKETING_VERSION": "1.0", "PRODUCT_BUNDLE_IDENTIFIER": BUNDLE,
+        "MARKETING_VERSION": "1.1", "PRODUCT_BUNDLE_IDENTIFIER": BUNDLE,
         "PRODUCT_NAME": "$(TARGET_NAME)", "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
         "SUPPORTS_MACCATALYST": "NO", "SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD": "NO",
         "SWIFT_EMIT_LOC_STRINGS": "YES", "TARGETED_DEVICE_FAMILY": "1",
