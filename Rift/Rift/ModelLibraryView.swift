@@ -5,11 +5,12 @@ struct ModelLibraryView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var profileID=DeviceProfile.current.id
-    @State private var expanded: Set<String>=["Qwen"]
+    @State private var expanded: Set<String>=["Heretic"]
+    @State private var allSizes: Set<String> = []
     @State private var showImporter=false
     @State private var pendingDownload: CatalogModel?
     @State private var deleting: InstalledModel?
-    var profile: DeviceProfile { DeviceProfile.profiles.first {$0.id == profileID} ?? model.device }
+    var profile: DeviceProfile { profileID == model.device.id ? model.device : (DeviceProfile.profiles.first {$0.id == profileID} ?? model.device) }
     var models: [CatalogModel] { profile.models(from:model.catalog) }
     var body: some View {
         NavigationStack {
@@ -39,17 +40,17 @@ struct ModelLibraryView: View {
                         }
                         VStack(alignment:.leading,spacing:12) {
                             sectionLabel("CURATED FOR \(profile.name.uppercased())")
-                            ForEach(["Qwen","Gemma","Liquid"],id:\.self) { family in
-                                let entries=models.filter {$0.family == family}
+                            ForEach(["Heretic","Qwen","Gemma"],id:\.self) { family in
+                                let entries=models.filter {$0.libraryGroup == family}
                                 if !entries.isEmpty { familyCard(family,entries:entries) }
                             }
                         }
                         Button { showImporter=true } label: { HStack(spacing:14) { Image(systemName:"folder.badge.plus").font(.title3); VStack(alignment:.leading,spacing:4) { Text("Import your own model").font(.subheadline.weight(.semibold)); Text("Choose a compatible GGUF in Files").font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName:"plus") }.padding(18) }.buttonStyle(.plain).background(.thinMaterial,in:RoundedRectangle(cornerRadius:22)).disabled(model.busy || model.generating).accessibilityIdentifier("importModel")
-                        Text("Curated downloads are publisher-labeled uncensored variants, not stock models. Refusal behavior can still vary. Device fits are estimates until tested on a physical iPhone; live memory checks always apply.").font(.caption).foregroundStyle(.secondary).lineSpacing(3)
+                        Text("Models use quantized GGUF weights for Rift's native llama.cpp/Metal runtime. They are not CUDA-only or full-precision desktop downloads. Phone model alone does not guarantee enough app memory. Heretic is the modification; Qwen and Liquid are the underlying model families. Uncensored behavior is publisher-labeled, not a zero-refusal guarantee.").font(.caption).foregroundStyle(.secondary).lineSpacing(3)
                         if model.offline { Label("Offline mode is on. Imports and installed models still work.",systemImage:"wifi.slash").font(.caption).foregroundStyle(.secondary) }
                     }.padding(20)
                 }
-            }.navigationTitle("Models").navigationBarTitleDisplayMode(.inline)
+            }.task { model.refreshMemory() }.navigationTitle("Models").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement:.topBarLeading) { Button("Done") { dismiss() } }; ToolbarItem(placement:.topBarTrailing) { Button { showImporter=true } label: { Image(systemName:"plus") }.disabled(model.busy || model.generating).accessibilityLabel("Import model from Files") } }
                 .fileImporter(isPresented:$showImporter,allowedContentTypes:[UTType(filenameExtension:"gguf") ?? .data],allowsMultipleSelection:false) { result in do { if let url=try result.get().first { model.importModel(url) } } catch { model.error=error.localizedDescription } }
                 .sheet(item:$pendingDownload) { item in DownloadConsentView(item:item) { model.download(item) } }
@@ -66,7 +67,8 @@ struct ModelLibraryView: View {
                 }
                 Spacer(minLength:0)
             }
-            if profileID != model.device.id { Text("Downloads still have to fit your actual iPhone.").font(.caption).foregroundStyle(.secondary) }
+            HStack { Text("Available to app"); Spacer(); Text(MemoryBudget.label(model.availableMemory)).monospacedDigit() }.font(.caption).foregroundStyle(.secondary)
+            if profileID != model.device.id { Text("Browsing does not change this installation's memory allowance.").font(.caption).foregroundStyle(.secondary) }
         }.padding(16).glassEffect(.regular.tint(RiftTheme.accent.opacity(0.06)),in:RoundedRectangle(cornerRadius:24))
     }
     private var transferCard: some View {
@@ -82,12 +84,12 @@ struct ModelLibraryView: View {
             } label: {
                 HStack(spacing:12) {
                     Text(String(family.prefix(1))).font(.system(.headline,design:.rounded,weight:.bold)).frame(width:36,height:36).background(RiftTheme.accent.opacity(0.10),in:RoundedRectangle(cornerRadius:12))
-                    VStack(alignment:.leading,spacing:3) { Text(family).font(.headline); Text(family == "Qwen" ? "Uncensored Aggressive" : family == "Gemma" ? "Uncensored Aggressive" : "Heretic · uncensored").font(.caption).foregroundStyle(.secondary) }
+                    VStack(alignment:.leading,spacing:3) { Text(family).font(.headline); Text(family == "Heretic" ? "Heretic-modified · multiple model sizes" : "Uncensored Aggressive").font(.caption).foregroundStyle(.secondary) }
                     Spacer(); Text("\(entries.count)").font(.caption).foregroundStyle(.secondary); Image(systemName:expanded.contains(family) ? "chevron.up" : "chevron.down").font(.caption.weight(.semibold))
                 }.padding(16).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("family-\(family)")
             if expanded.contains(family) {
-                ForEach(entries) { item in
+                ForEach(allSizes.contains(family) ? entries : DeviceProfile.featured(entries)) { item in
                     Divider().padding(.horizontal,16)
                     VStack(alignment:.leading,spacing:10) {
                         HStack(alignment:.top,spacing:8) { Text(item.name).font(.subheadline.weight(.semibold)); Spacer(minLength:4); BenefitBadge(text:item.badge) }
@@ -100,7 +102,15 @@ struct ModelLibraryView: View {
                             }
                         }
                         HStack(spacing:6) { Text(item.sizeLabel); Text("·"); Text("\(item.variant)"); if item.workingGB >= 6 { Text("· Higher memory") } }.font(.system(size:10)).foregroundStyle(.secondary)
+                        if item.experimental == true {
+                            Text("Experimental · needs a high app memory allowance").font(.caption2).foregroundStyle(.secondary)
+                        }
                     }.padding(16)
+                }
+                if entries.count > 2 {
+                    Button(allSizes.contains(family) ? "Show fewer sizes" : "Show all \(entries.count) options") {
+                        withAnimation(.snappy) { if allSizes.contains(family) { allSizes.remove(family) } else { allSizes.insert(family) } }
+                    }.font(.caption.weight(.semibold)).padding(16).accessibilityIdentifier("sizes-\(family)")
                 }
             }
         }.background(.thinMaterial,in:RoundedRectangle(cornerRadius:24)).overlay { RoundedRectangle(cornerRadius:24).strokeBorder(RiftTheme.accent.opacity(0.07),lineWidth:0.5) }
@@ -108,6 +118,7 @@ struct ModelLibraryView: View {
     private func sectionLabel(_ value: String) -> some View { Text(value).font(.system(size:10,weight:.semibold)).tracking(1.4).foregroundStyle(.secondary) }
 }
 struct DownloadConsentView: View {
+    @EnvironmentObject var model: AppModel
     let item: CatalogModel
     let accept: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -121,13 +132,18 @@ struct DownloadConsentView: View {
                     LabeledContent("Download",value:item.sizeLabel)
                     LabeledContent("Format",value:"GGUF · \(item.variant)")
                     LabeledContent("License",value:item.license)
+                    LabeledContent("App memory available", value:MemoryBudget.label(model.availableMemory))
+                    Text("This download only stores the model. Generation uses additional working memory and is checked separately when you send a message.").font(.caption).foregroundStyle(.secondary)
+                    if item.experimental == true || MemoryBudget.plan(bytes:item.bytes, requested:2048, available:model.availableMemory, architecture:item.architecture) == nil {
+                        Label("This model may not load under the current app memory limit. You can still download it, but larger weights may require the host's increased-memory-limit entitlement. 14B options are experimental, not certified iPhone benchmarks.", systemImage:"exclamationmark.triangle").font(.caption).foregroundStyle(.secondary)
+                    }
                     Text(item.licenseText).font(.callout).foregroundStyle(.secondary)
                     Text("The download connects to Hugging Face and its file-delivery hosts, which can see your IP address. Your messages are never part of that request. Once installed, chat works offline.").font(.callout).foregroundStyle(.secondary)
                     Text("This is an uncensored community modification. Its publisher's refusal and quality claims are not a guarantee. It can produce incorrect or unexpected content. Imported models are not certified as uncensored.").font(.caption).foregroundStyle(.secondary)
                     Link(destination:item.sourceURL) { Label("Model source and license",systemImage:"arrow.up.right.square") }
                     Button { dismiss(); accept() } label: { Text("Download \(item.sizeLabel)").font(.headline).frame(maxWidth:.infinity).padding(.vertical,12) }.buttonStyle(.glassProminent)
                 }.padding(24) }
-            }.navigationTitle("Download model").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarLeading) { Button("Cancel") { dismiss() } } }
+            }.task { model.refreshMemory() }.navigationTitle("Download model").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarLeading) { Button("Cancel") { dismiss() } } }
         }.presentationDetents([.large])
     }
 }

@@ -15,7 +15,7 @@ struct RiftBackground: View {
     var body: some View {
         LinearGradient(colors:scheme == .dark ? [Color(red:0.07,green:0.035,blue:0.05),Color(red:0.13,green:0.035,blue:0.065),Color(red:0.23,green:0.045,blue:0.09)] : [Color(red:1,green:0.975,blue:0.975),Color(red:0.985,green:0.92,blue:0.935),Color(red:0.97,green:0.82,blue:0.85)],startPoint:.topLeading,endPoint:.bottomTrailing)
             .overlay(alignment:.topTrailing) { Circle().fill(RiftTheme.rose.opacity(scheme == .dark ? 0.09 : 0.15)).frame(width:280,height:280).blur(radius:65).offset(x:120,y:-120) }
-            .ignoresSafeArea()
+            .ignoresSafeArea(.container)
     }
 }
 struct RiftWing: Shape {
@@ -54,13 +54,19 @@ struct BenefitBadge: View {
 }
 struct ErrorBanner: View {
     @EnvironmentObject var model: AppModel
+    @State private var details = false
     var body: some View {
-        if let error=model.error {
-            HStack(alignment:.top,spacing:12) {
-                Image(systemName:"exclamationmark.circle").foregroundStyle(RiftTheme.accent)
-                Text(error).font(.callout).frame(maxWidth:.infinity,alignment:.leading)
-                Button { model.dismissError() } label: { Image(systemName:"xmark").frame(width:44,height:44) }.accessibilityLabel("Dismiss error")
-            }.padding(14).background(.regularMaterial,in:RoundedRectangle(cornerRadius:20)).padding(.horizontal).padding(.top,8)
+        if let error = model.error {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "exclamationmark.circle").foregroundStyle(RiftTheme.accent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(error).font(.caption).lineLimit(2)
+                    Button("Details") { details = true }.font(.caption.weight(.semibold))
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                Button { model.dismissError() } label: { Image(systemName: "xmark").frame(width: 36, height: 36) }
+                    .accessibilityLabel("Dismiss error")
+            }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 12).padding(.top, 6)
+                .alert("Rift", isPresented: $details) { Button("OK", role: .cancel) {} } message: { Text(error) }
         }
     }
 }

@@ -48,11 +48,11 @@ struct SettingsView: View {
                         Text("New letters softly appear and settle into place. Reduce Motion removes the lift, scale and blur. Low Power Mode uses a lighter fade.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Conversation") {
-                        Picker("Context",selection:$model.context) { Text("2K · lighter").tag(2048); Text("4K · balanced").tag(4096); Text("8K · more memory").tag(8192) }.disabled(model.generating)
+                        Picker("Context",selection:$model.context) { Text("512 · minimum").tag(512); Text("1K · low memory").tag(1024); Text("2K · lighter").tag(2048); Text("4K · balanced").tag(4096); Text("8K · more memory").tag(8192) }.disabled(model.generating)
                         Picker("Reply length",selection:$model.maxTokens) { Text("Shorter").tag(512); Text("Standard").tag(1024); Text("Longer").tag(2048) }.disabled(model.generating)
                         Toggle("Allow model thinking",isOn:$model.thinking).disabled(model.generating)
                         VStack(alignment:.leading) { HStack { Text("Creativity"); Spacer(); Text(model.temperature,format:.number.precision(.fractionLength(1))).foregroundStyle(.secondary) }; Slider(value:$model.temperature,in:0.1...1.4,step:0.1) }.disabled(model.generating)
-                        Text("Thinking and longer context use more memory and time. Old turns are left out when the context fills; saved chats are not deleted.").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift automatically lowers context when needed, down to 512 tokens, without changing models. Thinking and longer context use more memory and time. Old turns are left out when the context fills; saved chats are not deleted.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Assistant instructions") {
                         TextEditor(text:$model.systemPrompt).frame(minHeight:90).disabled(model.generating)
@@ -60,7 +60,10 @@ struct SettingsView: View {
                     }
                     Section("This iPhone") {
                         LabeledContent("Device",value:model.device.name)
-                        LabeledContent("Memory",value:"\(model.device.ram) GB")
+                        LabeledContent("Physical memory",value:"\(model.device.ram) GB")
+                        LabeledContent("Available to this app",value:MemoryBudget.label(model.availableMemory))
+                        Button("Refresh memory reading") { model.refreshMemory() }
+                        Text("Rift requests Apple's increased-memory-limit and extended-virtual-addressing entitlements. Your signing profile must grant them. Within LiveContainer, the host controls them; this app cannot grant itself more RAM.").font(.caption).foregroundStyle(.secondary)
                         LabeledContent("Downloaded models",value:"\(model.installed.count)")
                         Text("Device labels are for browsing. Actual available memory, context size, and thermal state determine whether a model can run. Physical iPhone and LiveContainer performance still need device testing.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -74,10 +77,10 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.0 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.1 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
-            }.navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarTrailing) { Button("Done") { dismiss() } } }
+            }.task { model.refreshMemory() }.navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarTrailing) { Button("Done") { dismiss() } } }
                 .sheet(isPresented: $animationPreview) { ReplyAnimationPreview() }
                 .confirmationDialog("Delete every conversation on this iPhone? This cannot be undone.",isPresented:$clearConfirmation,titleVisibility:.visible) { Button("Delete all conversations",role:.destructive) { model.clearChats() } }
         }

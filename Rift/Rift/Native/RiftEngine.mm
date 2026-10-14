@@ -11,6 +11,13 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#import <mach/mach.h>
+static std::atomic<int> backendStarts{0};
+int RiftBackendInitializationCount(void) { return backendStarts.load(); }
+uint64_t RiftMemoryFootprint(void) {
+    task_vm_info_data_t info{}; mach_msg_type_number_t count=TASK_VM_INFO_COUNT;
+    return task_info(mach_task_self(),TASK_VM_INFO,(task_info_t)&info,&count)==KERN_SUCCESS ? info.phys_footprint : 0;
+}
 
 uint64_t RiftAvailableMemory(void) {
 #if TARGET_OS_IOS && !TARGET_OS_SIMULATOR
@@ -34,12 +41,13 @@ static NSError *failure(const std::string &s) {
 - (instancetype)init {
     if ((self = [super init])) {
         _model=nullptr; _context=nullptr; _contextSize=0; _cancelled.store(false);
-        static std::once_flag once;
-        std::call_once(once, [] { llama_log_set(quiet_log, nullptr); llama_backend_init(); });
+        // Runtime initialization is deliberately deferred to generateAtPath,
+        // which is called only by the inference queue, never app launch.
     }
     return self;
 }
 - (void)resetCancellation { _cancelled.store(false); }
+- (BOOL)cancelled { return _cancelled.load(); }
 - (void)cancel { _cancelled.store(true); }
 - (void)unload {
     if (_context) { llama_free(_context); _context=nullptr; }
@@ -50,18 +58,30 @@ static NSError *failure(const std::string &s) {
 - (BOOL)generateAtPath:(NSString *)path messages:(NSArray<NSDictionary<NSString *,NSString *> *> *)messages context:(int)context maxTokens:(int)maxTokens temperature:(float)temperature thinking:(BOOL)thinking cpu:(BOOL)cpu token:(void (^)(NSString *))token status:(void (^)(NSString *))status error:(NSError **)error {
     llama_sampler *sampler=nullptr;
     try {
+        if (_cancelled.load()) throw std::runtime_error("Stopped.");
+        if (![[NSFileManager defaultManager] fileExistsAtPath:path]) throw std::runtime_error("This model could not load because its file is missing. Download or import it again.");
+        status(@"Preparing on-device runtime");
+        static std::once_flag once;
+        std::call_once(once, [] { llama_log_set(quiet_log, nullptr); llama_backend_init(); backendStarts.fetch_add(1); });
+        if (_cancelled.load()) throw std::runtime_error("Stopped.");
         if (context < 512 || context > 8192 || maxTokens < 1 || maxTokens > 2048) throw std::runtime_error("Unsupported conversation length.");
         const std::string wanted=path.fileSystemRepresentation;
         if (!_model || _path!=wanted || _contextSize!=context) {
             [self unload]; status(@"Loading model");
             auto mp=llama_model_default_params();
-            mp.n_gpu_layers=cpu ? 0 : 99;
+            mp.n_gpu_layers=cpu ? 0 : -1;
+            mp.load_mode=LLAMA_LOAD_MODE_MMAP;
+            mp.use_extra_bufts=false; // Avoid a second repacked copy of weights.
+            mp.load_mtp=false; // Text chat does not load speculative draft tensors.
+            mp.lazy_mode=LLAMA_LAZY_MODE_AUTO;
             mp.progress_callback=[](float, void *p)->bool { return !static_cast<std::atomic<bool> *>(p)->load(); };
             mp.progress_callback_user_data=&_cancelled;
             _model=llama_model_load_from_file(wanted.c_str(),mp);
             if (!_model) throw std::runtime_error(_cancelled.load() ? "Stopped." : "This model could not load. It may be incompatible, damaged, or too large for the available memory.");
             auto cp=llama_context_default_params();
-            cp.n_ctx=(uint32_t)context; cp.n_batch=128; cp.n_ubatch=128; cp.n_seq_max=1;
+            cp.n_ctx=(uint32_t)context; cp.n_batch=64; cp.n_ubatch=32; cp.n_seq_max=1;
+            cp.flash_attn_type=LLAMA_FLASH_ATTN_TYPE_AUTO;
+            cp.no_perf=true;
             cp.n_threads=(int32_t)std::max<NSUInteger>(1,std::min<NSUInteger>(4,NSProcessInfo.processInfo.activeProcessorCount));
             cp.n_threads_batch=cp.n_threads; cp.offload_kqv=!cpu; cp.op_offload=!cpu;
             cp.abort_callback=[](void *p)->bool { return static_cast<std::atomic<bool> *>(p)->load(); };
@@ -106,9 +126,9 @@ static NSError *failure(const std::string &s) {
             trimmed=true;
         }
         status(trimmed ? @"Reading recent messages · earlier turns outside context" : @"Reading conversation");
-        for (size_t offset=0; offset<prompt.size(); offset+=128) {
+        for (size_t offset=0; offset<prompt.size(); offset+=64) {
             if(_cancelled.load()) throw std::runtime_error("Stopped.");
-            const int count=(int)std::min<size_t>(128,prompt.size()-offset);
+            const int count=(int)std::min<size_t>(64,prompt.size()-offset);
             auto batch=llama_batch_get_one(prompt.data()+offset,count);
             if(llama_decode(_context,batch)!=0) throw std::runtime_error(_cancelled.load() ? "Stopped." : "The model could not process this conversation. Try a shorter context.");
         }
@@ -138,8 +158,10 @@ static NSError *failure(const std::string &s) {
             }
             CFAbsoluteTime now=CFAbsoluteTimeGetCurrent();
             if(now-lastUpdate>0.06 || stop) {
-                NSString *text=[[NSString alloc] initWithBytes:output.data() length:output.size() encoding:NSUTF8StringEncoding];
-                if(text) { token(text); lastUpdate=now; }
+                @autoreleasepool {
+                    NSString *text=[[NSString alloc] initWithBytes:output.data() length:output.size() encoding:NSUTF8StringEncoding];
+                    if(text) { token(text); lastUpdate=now; }
+                }
             }
             if(stop) break;
             auto batch=llama_batch_get_one(&next,1);

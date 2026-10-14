@@ -4,36 +4,55 @@ import UIKit
 
 final class InferenceService: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.billy.rift.inference", qos: .userInitiated)
+    // This object is cheap; the backend itself is initialized only on this queue.
     private let engine = RiftEngine()
     private var loadedID: String?
     private var loadedContext = 0
-    // Called synchronously before scheduling a generation Task, never from the queued job.
     func prepare() { engine.resetCancellation() }
     func stop() { engine.cancel() }
     func unload() {
         engine.cancel()
         queue.async { self.engine.unload(); self.loadedID = nil; self.loadedContext = 0 }
     }
+    func release() async {
+        engine.cancel()
+        await withCheckedContinuation { continuation in
+            queue.async { self.engine.unload(); self.loadedID = nil; self.loadedContext = 0; continuation.resume() }
+        }
+    }
     func run(model: InstalledModel, url: URL, messages: [[String:String]], context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws -> String {
         return try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
-                    if self.loadedID != model.id || self.loadedContext != context { self.engine.unload(); self.loadedID = nil }
-                    let required = self.loadedID == model.id ? UInt64(256 * 1_048_576) : MemoryBudget.required(bytes: model.bytes, context: context, workingGB: workingGB)
-                    guard MemoryBudget.fits(required: required, available: RiftAvailableMemory()) else {
-                        throw RiftFailure("This installation does not currently provide enough app memory. Choose a smaller model or shorter context. Larger models may need an increased memory limit in your signing setup or LiveContainer host; a different browsing profile cannot change that allowance.")
+                    if self.engine.cancelled { throw RiftFailure("Stopped.") }
+                    guard FileManager.default.fileExists(atPath: url.path) else { throw RiftFailure("This model could not load because its file is missing. Download or import it again.") }
+                    var chosenContext = self.loadedContext
+                    if self.loadedID != model.id || self.loadedContext > context || RiftAvailableMemory() < MemoryBudget.headroom {
+                        self.engine.unload(); self.loadedID = nil; self.loadedContext = 0
+                        let info = try GGUFInspector.inspect(url)
+                        let available = RiftAvailableMemory()
+                        guard let plan = MemoryBudget.plan(bytes: model.bytes, requested: context, available: available, architecture: info.architecture, dimensions: info.dimensions) else {
+                            throw RiftFailure(MemoryBudget.blockedMessage(bytes: model.bytes, available: available, architecture: info.architecture, dimensions: info.dimensions))
+                        }
+                        chosenContext = plan.context
                     }
+                    if self.engine.cancelled { throw RiftFailure("Stopped.") }
                     #if targetEnvironment(simulator)
                     let cpu = true
                     #else
                     let cpu = false
                     #endif
                     var finalText = ""
-                    _ = try self.engine.generate(atPath: url.path, messages: messages, context: Int32(context), maxTokens: Int32(maxTokens), temperature: temperature, thinking: thinking, cpu: cpu, token: { value in finalText = value; text(value) }, status: status)
-                    self.loadedID = model.id; self.loadedContext = context
+                    _ = try self.engine.generate(atPath: url.path, messages: messages, context: Int32(chosenContext), maxTokens: Int32(min(maxTokens, max(128, chosenContext / 2))), temperature: temperature, thinking: thinking, cpu: cpu,
+                        token: { value in finalText = value; text(value) }, status: status)
+                    self.loadedID = model.id; self.loadedContext = chosenContext
+                    if finalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !self.engine.cancelled {
+                        throw RiftFailure("The model ended its reply without producing text. Retry the reply. Your message has been kept.")
+                    }
+                    if !self.engine.cancelled { status(chosenContext < context ? "On device · \(chosenContext)-token context" : "On device") }
                     continuation.resume(returning: finalText)
                 } catch {
-                    self.loadedID = nil; self.loadedContext = 0
+                    self.engine.unload(); self.loadedID = nil; self.loadedContext = 0
                     continuation.resume(throwing: error)
                 }
             }
@@ -42,6 +61,10 @@ final class InferenceService: @unchecked Sendable {
 }
 
 @MainActor final class AppModel: ObservableObject {
+    @Published private(set) var ready = false
+    @Published var availableMemory: UInt64 = 0
+    private var started = false
+    private var bootstrapRoot: URL?
     @Published var catalog: [CatalogModel] = []
     @Published var installed: [InstalledModel] = []
     @Published var conversations: [Conversation] = []
@@ -79,23 +102,36 @@ final class InferenceService: @unchecked Sendable {
     var activeChat: Conversation? { conversations.first { $0.id == activeChatID } }
     var busy: Bool { transferID != nil || importing || pausing }
 
-    init(storageOverride: URL? = nil) {
+    init(storageOverride: URL? = nil) { bootstrapRoot = storageOverride }
+    /// Called after SwiftUI has presented the first frame. No Metal/model load here.
+    func bootstrap() async {
+        guard !started else { return }; started = true
+        let root = bootstrapRoot
         do {
-            let store = try LocalStorage(root: storageOverride)
-            guard let url = Bundle.main.url(forResource: "catalog", withExtension: "json") else { throw RiftFailure("The bundled model catalog is missing.") }
-            catalog = try JSONDecoder().decode([CatalogModel].self, from: Data(contentsOf: url))
-            guard !catalog.isEmpty, catalog.allSatisfy({ $0.uncensored && $0.sha256.count == 64 && $0.revision.count == 40 && $0.bytes > 0 }) else { throw RiftFailure("The bundled catalog did not pass validation.") }
-            installed = try store.read("models.json", fallback: [InstalledModel]()).filter { FileManager.default.fileExists(atPath: store.url(for: $0).path) }
-            conversations = try store.read("chats.json", fallback: [Conversation]())
+            let snapshot = try await Task.detached(priority: .userInitiated) { () throws -> (LocalStorage, [CatalogModel], [InstalledModel], [Conversation]) in
+                let store = try LocalStorage(root: root)
+                guard let url = Bundle.main.url(forResource: "catalog", withExtension: "json") else { throw RiftFailure("The model catalog is missing.") }
+                let catalog = try JSONDecoder().decode([CatalogModel].self, from: Data(contentsOf: url))
+                guard !catalog.isEmpty, catalog.allSatisfy({ $0.uncensored && $0.sha256.count == 64 && $0.revision.count == 40 && $0.bytes > 0 }) else { throw RiftFailure("The model catalog did not pass validation.") }
+                let installed: [InstalledModel] = try store.read("models.json", fallback: [])
+                let existing = installed.filter { FileManager.default.fileExists(atPath: store.url(for: $0).path) }
+                let chats: [Conversation] = try store.read("chats.json", fallback: [])
+                return (store, catalog, existing, chats)
+            }.value
+            storage = snapshot.0; catalog = snapshot.1; installed = snapshot.2; conversations = snapshot.3
             selectedModelID = UserDefaults.standard.string(forKey: "rift.selectedModel")
             if selectedModel == nil { selectedModelID = installed.first?.id }
             activeChatID = conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id
-            storage = store
+            pausedID = catalog.first { item in
+                FileManager.default.fileExists(atPath: snapshot.0.transfers.appendingPathComponent(item.id + ".resume").path) ||
+                FileManager.default.fileExists(atPath: snapshot.0.transfers.appendingPathComponent(item.id + ".partial").path)
+            }?.id
+            ready = true; refreshMemory()
         } catch {
-            storage = nil
             startupError = "Rift could not open its local data. Existing files have been left untouched. \(error.localizedDescription)"
         }
     }
+    func refreshMemory() { availableMemory = RiftAvailableMemory() }
     func dismissError() { error = nil }
     private func save() {
         guard let storage, startupError == nil else { return }
@@ -133,28 +169,33 @@ final class InferenceService: @unchecked Sendable {
     }
     func clearChats() { stop(); conversations = []; activeChatID = nil; save() }
     func stop() { guard generating else { return }; stopping = true; inference.stop(); status = "Stopping" }
-    func background() { if generating { stop() }; inference.unload(); save(); UIApplication.shared.isIdleTimerDisabled = false }
-    func send(_ draft: String) {
+    func background() {
+        if generating { stop() }
+        if transferStatus == "Downloading" { pauseDownload() }
+        inference.unload(); save(); UIApplication.shared.isIdleTimerDisabled = false
+    }
+    @discardableResult func send(_ draft: String) -> Bool {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !generating, selectedModel != nil, startupError == nil else { return }
-        guard text.utf8.count <= 100_000 else { error = "This message is too long. Use a shorter message."; return }
+        guard !text.isEmpty, !generating, !busy, ready, selectedModel != nil, startupError == nil else { return false }
+        guard text.utf8.count <= 100_000 else { error = "This message is too long. Use a shorter message."; return false }
         if activeChatID == nil { let chat = Conversation(); conversations.append(chat); activeChatID = chat.id }
-        guard let index = conversations.firstIndex(where: { $0.id == activeChatID }) else { return }
+        guard let index = conversations.firstIndex(where: { $0.id == activeChatID }) else { return false }
         if conversations[index].messages.isEmpty { conversations[index].title = String(text.prefix(60)) }
         conversations[index].messages.append(.init(role: "user", content: text))
-        beginReply()
+        beginReply(); return true
     }
     func regenerate() {
-        guard !generating, let index = conversations.firstIndex(where: { $0.id == activeChatID }), let last = conversations[index].messages.last, last.role == "assistant" else { return }
+        guard !generating, !busy, let index = conversations.firstIndex(where: { $0.id == activeChatID }), let last = conversations[index].messages.last, last.role == "assistant" else { return }
         conversations[index].messages.removeLast(); beginReply()
     }
     private func beginReply() {
         guard let model = selectedModel, let storage, let index = conversations.firstIndex(where: { $0.id == activeChatID }) else { return }
         guard ProcessInfo.processInfo.thermalState != .critical && ProcessInfo.processInfo.thermalState != .serious else { error = "Your iPhone needs to cool down before generating another reply."; save(); return }
+        error = nil
         let chatID = conversations[index].id, replyID = UUID(), operation = UUID()
         var messages = [[String:String]]()
         if !systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { messages.append(["role": "system", "content": String(systemPrompt.prefix(8000))]) }
-        messages += conversations[index].messages.filter { !$0.content.isEmpty }.map { ["role": $0.role, "content": $0.content] }
+        messages += conversations[index].messages.filter { $0.canSendToModel }.map { ["role": $0.role, "content": $0.content] }
         conversations[index].messages.append(.init(id: replyID, role: "assistant", content: "", modelName: model.name))
         conversations[index].updatedAt = Date(); generating = true; stopping = false; generationID = operation; status = "Preparing model"
         UIApplication.shared.isIdleTimerDisabled = true; save()
@@ -162,6 +203,7 @@ final class InferenceService: @unchecked Sendable {
         let working = catalog.first { $0.id == model.catalogID }?.workingGB
         inference.prepare()
         Task {
+            var failure: String?
             do {
                 let finalText = try await inference.run(model: model, url: storage.url(for: model), messages: messages, context: context, maxTokens: maxTokens, temperature: Float(temperature), thinking: thinking, workingGB: working, text: { [weak self] text in
                     Task { @MainActor in
@@ -172,64 +214,78 @@ final class InferenceService: @unchecked Sendable {
                     Task { @MainActor in guard let self, self.generationID == operation else { return }; self.status = status }
                 })
                 if let c = conversations.firstIndex(where: { $0.id == chatID }), let m = conversations[c].messages.firstIndex(where: { $0.id == replyID }), !finalText.isEmpty { conversations[c].messages[m].content = finalText }
-            } catch { if !stopping { self.error = error.localizedDescription } }
+            } catch { if !stopping { failure = error.localizedDescription; self.error = failure } }
             if let c = conversations.firstIndex(where: { $0.id == chatID }), let m = conversations[c].messages.firstIndex(where: { $0.id == replyID }) {
                 conversations[c].messages[m].interrupted = stopping
-                if conversations[c].messages[m].content.isEmpty { conversations[c].messages[m].content = stopping ? "Reply stopped." : "No reply was generated. Try again or choose another model."; conversations[c].messages[m].interrupted = true }
+                if let failure { conversations[c].messages[m].failureDescription = failure }
+                if conversations[c].messages[m].content.isEmpty { conversations[c].messages[m].interrupted = true }
             }
             generationID = nil; generating = false; UIApplication.shared.isIdleTimerDisabled = false
-            if stopping { status = "Stopped" }; save()
+            if stopping { status = "Stopped" } else if failure != nil { status = "Reply not started" }; refreshMemory(); save()
         }
     }
     func thermalChanged() { if generating && [.serious, .critical].contains(ProcessInfo.processInfo.thermalState) { stop(); error = "Generation stopped to let your iPhone cool down." } }
     func lowMemory() { if generating { stop() }; inference.unload(); error = "iOS reported low memory. Rift released its model; a smaller model or context may help." }
 
-    func download(_ model: CatalogModel) {
-        guard model.uncensored, !busy, !generating, !offline, let storage else { return }
-        guard storage.freeSpace() > model.bytes + 700 * 1_048_576 else { error = "Free up \(model.sizeLabel) plus some working space before downloading this model."; return }
-        let destination = storage.transfers.appendingPathComponent(model.id + ".partial")
-        let resumeURL = storage.transfers.appendingPathComponent(model.id + ".resume")
-        let resume = try? Data(contentsOf: resumeURL)
-        let job = DownloadJob(destination: destination, expectedBytes: model.bytes)
-        downloader = job; transferID = model.id; pausedID = nil; transferProgress = 0; transferStatus = "Downloading"
+    func download(_ item: CatalogModel) {
+        guard item.uncensored, !busy, !generating, ready, !offline, let storage else { return }
+        let destination = storage.transfers.appendingPathComponent(item.id + ".partial")
+        let resumeURL = storage.transfers.appendingPathComponent(item.id + ".resume")
+        let complete = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) == item.bytes } ?? false
+        guard complete || storage.freeSpace() > item.bytes + 300 * 1_048_576 || FileManager.default.fileExists(atPath: resumeURL.path) else {
+            error = "Free up \(item.sizeLabel) plus 300 MB of working space before downloading."; return
+        }
+        transferID = item.id; transferProgress = 0; transferStatus = "Preparing download"; pausedID = nil; error = nil
         transferTask = Task {
+            await inference.release() // A previously loaded model must not coexist with a big transfer.
+            refreshMemory()
             do {
-                for try await event in job.start(url: model.downloadURL, cellular: cellular, resumeData: resume) {
-                    switch event {
-                    case .progress(let value): transferProgress = value
-                    case .file(let url):
-                        transferStatus = "Verifying model"; transferProgress = 1
-                        let verify = Task.detached(priority: .utility) { () throws -> InstalledModel in
-                            let hash = try GGUFInspector.hash(url)
-                            guard hash == model.sha256 else { throw RiftFailure("The SHA-256 checksum did not match. The model was not installed.") }
-                            let info = try GGUFInspector.inspect(url)
-                            guard info.architecture == model.architecture else { throw RiftFailure("The downloaded model architecture did not match the catalog.") }
-                            let filename = model.id + ".gguf", final = storage.models.appendingPathComponent(filename)
-                            if FileManager.default.fileExists(atPath: final.path) { throw RiftFailure("This model is already installed.") }
-                            try FileManager.default.moveItem(at: url, to: final)
-                            return .init(id: model.id, name: model.name, filename: filename, bytes: model.bytes, sha256: hash, architecture: info.architecture, catalogID: model.id, importedAt: Date())
+                try Task.checkCancellation()
+                if !complete {
+                    let resume = try? Data(contentsOf: resumeURL)
+                    let job = DownloadJob(destination: destination, expectedBytes: item.bytes)
+                    downloader = job; transferStatus = "Downloading"
+                    for try await event in job.start(url: item.downloadURL, cellular: cellular, resumeData: resume) {
+                        switch event {
+                        case .progress(let value): transferProgress = value
+                        case .file: break
                         }
-                        importTask = verify
-                        let item = try await verify.value; installed.append(item); select(item); save()
-                        try? FileManager.default.removeItem(at: resumeURL)
                     }
                 }
+                if pausedID == item.id { throw CancellationError() }
+                transferStatus = "Verifying model"; transferProgress = 0
+                let verification = Task.detached(priority: .utility) { [weak self] () throws -> InstalledModel in
+                    let hash = try GGUFInspector.hash(destination) { value in
+                        Task { @MainActor [weak self] in
+                            guard self?.transferID == item.id, self?.transferStatus == "Verifying model" else { return }
+                            self?.transferProgress = value
+                        }
+                    }
+                    guard hash == item.sha256 else { throw RiftFailure("The download checksum did not match. The file was not installed. Tap Download to try again.") }
+                    let info = try GGUFInspector.inspect(destination)
+                    guard info.architecture == item.architecture else { throw RiftFailure("The downloaded architecture did not match the catalog.") }
+                    try Task.checkCancellation()
+                    let filename = item.id + ".gguf", final = storage.models.appendingPathComponent(filename)
+                    if FileManager.default.fileExists(atPath: final.path) { throw RiftFailure("This model is already installed.") }
+                    try FileManager.default.moveItem(at: destination, to: final)
+                    return .init(id: item.id, name: item.name, filename: filename, bytes: item.bytes, sha256: hash, architecture: info.architecture, catalogID: item.id, importedAt: Date())
+                }
+                importTask = verification
+                let installedModel = try await verification.value
+                installed.append(installedModel); select(installedModel); save()
+                try? FileManager.default.removeItem(at: resumeURL)
             } catch {
                 let failure = error as NSError
                 let cancelled = error is CancellationError || (failure.domain == NSURLErrorDomain && failure.code == NSURLErrorCancelled)
-                if pausedID != model.id && !cancelled {
+                if !cancelled && pausedID != item.id {
                     self.error = error.localizedDescription
-                    if let freshResume = failure.userInfo["NSURLSessionDownloadTaskResumeData"] as? Data {
-                        try? freshResume.write(to: resumeURL, options: .atomic)
-                        pausedID = model.id
-                    } else if resume != nil {
-                        try? FileManager.default.removeItem(at: resumeURL)
-                        self.error = "The saved download could not finish. Tap Download to restart it. " + error.localizedDescription
-                    }
+                    if let data = failure.userInfo["NSURLSessionDownloadTaskResumeData"] as? Data, data.count < 2 * 1_048_576 {
+                        try? data.write(to: resumeURL, options: .atomic); pausedID = item.id
+                    } else { try? FileManager.default.removeItem(at: resumeURL) }
+                    if !cancelled { try? FileManager.default.removeItem(at: destination) }
                 }
-                try? FileManager.default.removeItem(at: destination)
             }
-            transferID = nil; downloader = nil; importTask = nil; transferTask = nil
+            transferID = nil; downloader = nil; importTask = nil; transferTask = nil; refreshMemory()
         }
     }
     func pauseDownload() {
@@ -244,11 +300,11 @@ final class InferenceService: @unchecked Sendable {
         }
     }
     func cancelTransfer() {
-        downloader?.cancel(); importTask?.cancel(); pausedID = nil; pauseOperation = nil; pausing = false
+        transferTask?.cancel(); downloader?.cancel(); importTask?.cancel(); pausedID = nil; pauseOperation = nil; pausing = false
         if let id = transferID, let storage { try? FileManager.default.removeItem(at: storage.transfers.appendingPathComponent(id + ".resume")) }
     }
     func importModel(_ source: URL) {
-        guard !busy, !generating, let storage else { return }
+        guard !busy, !generating, ready, let storage else { return }
         importing = true; transferStatus = "Reading model"; transferProgress = 0
         let task = Task.detached(priority: .utility) { () throws -> InstalledModel in
             let scoped = source.startAccessingSecurityScopedResource(); defer { if scoped { source.stopAccessingSecurityScopedResource() } }
@@ -272,6 +328,7 @@ final class InferenceService: @unchecked Sendable {
         }
         importTask = task
         Task {
+            await inference.release()
             do {
                 let item = try await task.value
                 if !installed.contains(where: { $0.sha256 == item.sha256 }) { installed.append(item) }

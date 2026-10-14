@@ -11,16 +11,18 @@ struct ChatView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                RiftBackground()
                 if let startup=model.startupError { ContentUnavailableView("Local data unavailable",systemImage:"externaldrive.badge.exclamationmark",description:Text(startup)).padding() }
                 else {
                     VStack(spacing:0) {
                         ErrorBanner()
-                        if model.activeChat?.messages.isEmpty != false { welcome }
+                        if model.activeChat?.messages.isEmpty != false { ScrollView { welcome }.scrollDismissesKeyboard(.interactively) }
                         else { messages }
-                    }.safeAreaInset(edge:.bottom,spacing:0) { composer }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { RiftBackground() }
+            .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement:.topBarLeading) { Button { sheet = .history } label: { Image(systemName:"line.3.horizontal").frame(width:28,height:28) }.accessibilityLabel("Chat history") }
@@ -44,7 +46,9 @@ struct ChatView: View {
             Spacer(minLength:28)
             RiftMark().frame(width:84,height:102)
             VStack(spacing:8) { Text("A little space to think.").font(.system(.title2,design:.rounded,weight:.semibold)); Text("Your conversations. Your iPhone.").font(.subheadline).foregroundStyle(.secondary) }
-            if model.selectedModel == nil {
+            if !model.ready {
+                ProgressView("Opening local library").font(.caption).padding(.top, 10)
+            } else if model.selectedModel == nil {
                 Button { sheet = .models } label: { Label("Choose your AI",systemImage:"sparkle").font(.headline).padding(.horizontal,20).padding(.vertical,10) }.buttonStyle(.glassProminent).padding(.top,10)
                 Text("Download once. Chat offline.").font(.caption).foregroundStyle(.secondary)
             } else {
@@ -77,22 +81,36 @@ struct ChatView: View {
         }
     }
     private var composer: some View {
-        VStack(spacing:8) {
-            HStack(alignment:.bottom,spacing:10) {
-                TextField("Message",text:$draft,axis:.vertical).lineLimit(1...5).focused($composing).padding(.vertical,11).padding(.leading,18).submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
-                if model.generating {
-                    Button { model.stop() } label: { Image(systemName:"stop.fill").font(.system(size:14,weight:.bold)).frame(width:42,height:42) }.buttonStyle(.glassProminent).accessibilityLabel("Stop reply")
-                } else {
-                    Button(action:send) { Image(systemName:"arrow.up").font(.system(size:18,weight:.semibold)).frame(width:42,height:42) }.buttonStyle(.glassProminent).disabled(draft.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty || model.selectedModel == nil).accessibilityLabel("Send message")
-                }
-            }.padding(7).glassEffect(.regular,in:RoundedRectangle(cornerRadius:29))
-            HStack(spacing:5) {
-                Image(systemName:model.generating ? "sparkle" : "lock.fill").font(.system(size:8))
-                Text(model.generating ? model.status : "On-device AI · Responses can be inaccurate").font(.system(size:10))
-            }.foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center)
-        }.padding(.horizontal,16).padding(.top,8).padding(.bottom,8)
+        VStack(spacing: 3) {
+            HStack(alignment: .bottom, spacing: 2) {
+                TextField("Message", text: $draft, axis: .vertical)
+                    .font(.body).lineLimit(1...4).focused($composing)
+                    .padding(.leading, 14).padding(.vertical, 10)
+                    .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
+                Button {
+                    if model.generating { model.stop() } else { send() }
+                } label: {
+                    Image(systemName: model.generating ? "stop.fill" : "arrow.up")
+                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(RiftTheme.accent, in: Circle())
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain)
+                    .disabled(!model.generating && (draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.selectedModel == nil || !model.ready || model.busy))
+                    .accessibilityLabel(model.generating ? "Stop reply" : "Send message")
+            }
+            .padding(.horizontal, 3).padding(.vertical, 2)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
+            .accessibilityElement(children: .contain).accessibilityIdentifier("composerBar")
+            if !composing || model.generating {
+                Text(model.generating ? model.status : "On-device AI · Responses can be inaccurate")
+                    .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }.padding(.horizontal, 12).padding(.top, 5).padding(.bottom, 3)
     }
-    private func send() { guard !model.generating, model.selectedModel != nil else { return }; let text=draft; draft=""; composing=false; model.send(text) }
+    private func send() {
+        if model.send(draft) { draft = "" }
+    }
 }
 struct MessageView: View {
     @EnvironmentObject var model: AppModel
@@ -110,9 +128,13 @@ struct MessageView: View {
                 if !parts.answer.isEmpty || isStreaming { MarkdownMessage(text:parts.answer, isStreaming:isStreaming, interrupted:message.interrupted) }
                 if isStreaming && message.content.isEmpty { HStack(spacing:9) { ProgressView().controlSize(.small); Text(model.status).font(.callout).foregroundStyle(.secondary) } }
                 if !user && !isStreaming {
+                    if message.isFailedReply || (message.interrupted && message.content.isEmpty) {
+                        Label(message.failureDescription == nil ? "Reply stopped" : "Reply not started", systemImage: "exclamationmark.circle")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                     HStack(spacing:18) {
                         Button { UIPasteboard.general.string=message.content } label: { Image(systemName:"document.on.document") }.accessibilityLabel("Copy reply")
-                        if message.id == model.activeChat?.messages.last?.id { Button { model.regenerate() } label: { Image(systemName:"arrow.clockwise") }.disabled(model.generating).accessibilityLabel("Regenerate reply") }
+                        if message.id == model.activeChat?.messages.last?.id { Button { model.regenerate() } label: { Label(message.isFailedReply ? "Retry reply" : "Regenerate", systemImage:"arrow.clockwise") }.disabled(model.generating).accessibilityLabel("Regenerate reply") }
                         if message.interrupted { Text("Interrupted").font(.caption2) }
                     }.font(.caption).foregroundStyle(.secondary).buttonStyle(.plain)
                 }

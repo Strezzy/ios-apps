@@ -10,8 +10,10 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Choose your AI"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["family-Qwen"].exists)
         attach("Rift-models")
+        for _ in 0..<5 { if app.buttons["family-Qwen"].isHittable { break }; app.swipeUp() }
         app.buttons["family-Qwen"].tap()
         XCTAssertTrue(app.buttons["family-Gemma"].exists)
+        for _ in 0..<5 { if app.buttons["family-Gemma"].isHittable { break }; app.swipeUp() }
         app.buttons["family-Gemma"].tap()
         attach("Rift-Gemma")
     }
@@ -42,6 +44,33 @@ final class RiftUITests: XCTestCase {
         attach("Rift-Bloom-replay")
         wait(for: [expectation(for: predicate, evaluatedWith: rendered)], timeout: 10)
         XCTAssertTrue(app.staticTexts["Sample text, not an AI response. The preview deliberately feeds uneven chunks to the same renderer used in chat."].exists)
+    }
+    func testComposerStaysAboveKeyboardInPortraitAndLandscape() {
+        let app = XCUIApplication(); app.launch()
+        let field = app.descendants(matching: .any)["messageInput"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap(); field.typeText("A keyboard layout test")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertLessThanOrEqual(field.frame.maxY, app.keyboards.firstMatch.frame.minY + 2)
+        attach("Rift-keyboard-portrait")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let visible = NSPredicate { _, _ in field.frame.maxY <= app.keyboards.firstMatch.frame.minY + 2 }
+        expectation(for: visible, evaluatedWith: field)
+        waitForExpectations(timeout: 8)
+        attach("Rift-keyboard-landscape")
+        XCUIDevice.shared.orientation = .portrait
+    }
+    func testHereticHasMoreSizesAnd14BChoices() {
+        let app = XCUIApplication(); app.launch()
+        XCTAssertTrue(app.buttons["modelPicker"].waitForExistence(timeout: 10))
+        app.buttons["modelPicker"].tap()
+        XCTAssertTrue(app.buttons["family-Heretic"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Qwen3 14B · Compact"].exists)
+        let more = app.buttons["sizes-Heretic"]
+        if !more.isHittable { app.swipeUp() }
+        more.tap()
+        XCTAssertTrue(app.staticTexts["Qwen3 14B · Precision"].exists)
+        attach("Rift-Heretic-sizes")
     }
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIApplication().screenshot())

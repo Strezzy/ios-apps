@@ -20,6 +20,9 @@ struct CatalogModel: Codable, Identifiable, Equatable, Sendable {
     let license: String
     let licenseText: String
     let uncensored: Bool
+    var group: String? = nil
+    var experimental: Bool? = nil
+    var libraryGroup: String { group ?? (family == "Liquid" ? "Heretic" : family) }
     var downloadURL: URL { URL(string: "https://huggingface.co/\(repo)/resolve/\(revision)/\(filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!)")! }
     var sourceURL: URL { URL(string: "https://huggingface.co/\(repo)/tree/\(revision)")! }
     var sizeLabel: String { ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) }
@@ -41,6 +44,9 @@ struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
     var content: String
     var modelName: String?
     var interrupted = false
+    var failureDescription: String? = nil
+    var isFailedReply: Bool { failureDescription != nil || (interrupted && (content.hasPrefix("No reply was generated.") || content == "Reply stopped.")) }
+    var canSendToModel: Bool { !content.isEmpty && !isFailedReply }
 }
 struct Conversation: Codable, Identifiable, Equatable, Sendable {
     var id = UUID()
@@ -83,9 +89,15 @@ struct DeviceProfile: Identifiable, Hashable, Sendable {
     }
     func models(from all: [CatalogModel]) -> [CatalogModel] {
         let eligible = all.filter { $0.uncensored && $0.minimumRAM <= ram }
-        return ["Qwen", "Gemma", "Liquid"].flatMap { family in
-            Array(eligible.filter { $0.family == family }.sorted { $0.rank > $1.rank }.prefix(2))
+        return ["Heretic", "Qwen", "Gemma"].flatMap { group in
+            eligible.filter { $0.libraryGroup == group }.sorted { $0.rank > $1.rank }
         }
+    }
+    static func featured(_ models: [CatalogModel]) -> [CatalogModel] {
+        let normal=models.filter { $0.experimental != true }.sorted { $0.rank > $1.rank }
+        let large=models.filter { $0.experimental == true }.sorted { $0.bytes < $1.bytes }
+        if let preview=large.first { return Array(normal.prefix(1)) + [preview] }
+        return Array(normal.prefix(2))
     }
 }
 struct ReplyParts: Equatable {
@@ -106,13 +118,4 @@ struct RiftFailure: LocalizedError {
     let message: String
     var errorDescription: String? { message }
     init(_ message: String) { self.message = message }
-}
-struct MemoryBudget {
-    static func required(bytes: Int64, context: Int, workingGB: Double?) -> UInt64 {
-        let estimate = Double(bytes)*1.12 + 650*1_048_576 + Double(context)*80_000
-        return UInt64(max(estimate, (workingGB ?? 0)*1_073_741_824))
-    }
-    static func fits(required: UInt64, available: UInt64) -> Bool {
-        available > 320*1_048_576 && required < available - 320*1_048_576
-    }
 }

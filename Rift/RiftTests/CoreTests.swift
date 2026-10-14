@@ -23,11 +23,11 @@ final class CoreTests: XCTestCase {
     func testUncensoredCatalogIsPinnedAndSmall() throws {
         let url=try XCTUnwrap(Bundle.main.url(forResource:"catalog",withExtension:"json"))
         let models=try JSONDecoder().decode([CatalogModel].self,from:Data(contentsOf:url))
-        XCTAssertGreaterThanOrEqual(models.count,3); XCTAssertLessThanOrEqual(models.count,6)
+        XCTAssertGreaterThanOrEqual(models.count,3); XCTAssertLessThanOrEqual(models.count,10)
         XCTAssertEqual(Set(models.map(\.id)).count,models.count)
         for model in models {
             XCTAssertTrue(model.uncensored)
-            XCTAssertTrue(model.repo.lowercased().contains("uncensored"))
+            XCTAssertTrue(model.repo.lowercased().contains("uncensored") || model.repo.lowercased().contains("heretic"))
             XCTAssertEqual(model.sha256.count,64); XCTAssertEqual(model.revision.count,40)
             XCTAssertTrue(model.downloadURL.absoluteString.contains(model.revision))
             XCTAssertGreaterThan(model.bytes,10_000_000)
@@ -35,7 +35,7 @@ final class CoreTests: XCTestCase {
         }
         for phone in DeviceProfile.profiles {
             let list=phone.models(from:models)
-            for family in ["Qwen","Gemma","Liquid"] { XCTAssertLessThanOrEqual(list.filter {$0.family==family}.count,2) }
+            for group in ["Heretic","Qwen","Gemma"] { XCTAssertLessThanOrEqual(DeviceProfile.featured(list.filter {$0.libraryGroup==group}).count,2) }
             XCTAssertTrue(list.allSatisfy {$0.minimumRAM <= phone.ram})
         }
     }

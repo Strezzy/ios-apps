@@ -3,6 +3,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// All inference methods are called on one private serial queue. Cancellation is thread-safe.
 @interface RiftEngine : NSObject
 - (void)cancel;
+@property(nonatomic, readonly) BOOL cancelled;
 - (void)resetCancellation;
 - (void)unload;
 - (BOOL)generateAtPath:(NSString *)path
@@ -17,4 +18,6 @@ NS_ASSUME_NONNULL_BEGIN
                 error:(NSError * _Nullable * _Nullable)error;
 @end
 FOUNDATION_EXPORT uint64_t RiftAvailableMemory(void);
+FOUNDATION_EXPORT uint64_t RiftMemoryFootprint(void);
+FOUNDATION_EXPORT int RiftBackendInitializationCount(void);
 NS_ASSUME_NONNULL_END
