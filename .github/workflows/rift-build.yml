@@ -6,8 +6,9 @@ on:
     paths: ['Rift/**', '.github/workflows/rift-build.yml']
 permissions:
   contents: write
+  actions: write
 concurrency:
-  group: rift-native-build
+  group: rift-native-build-${{ github.ref_name }}
   cancel-in-progress: false
 jobs:
   build:
@@ -17,6 +18,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - name: Remove only the superseded queued main build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          p='repos/Strezzy/ios-apps/actions/runs/38557734123'
+          r=json.loads(subprocess.check_output(['gh','api',p]))
+          if r['head_sha']=='2bdfdb98ad959e8603133e7a21d222164e1636a6' and r['status'] in ('queued','pending','in_progress'):
+              subprocess.run(['gh','api','--method','POST',p+'/cancel'],check=True)
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -42,6 +54,7 @@ jobs:
           key: rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-${{ github.run_id }}
           restore-keys: |
             rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-
+            rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
       - name: Prepare and verify repeat-safe source
         run: |
           python Rift/scripts/polish.py
