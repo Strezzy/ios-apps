@@ -1,0 +1,54 @@
+name: Publish verified Rift first release
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/rift-first-release.yml']
+  workflow_run:
+    workflows: ['Build and verify Rift for iPhone']
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: rift-first-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name == 'push' || github.event.workflow_run.id == 38558194415
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Strezzy/ios-apps
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify the specific build's provenance and conclusion
+        id: gate
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          run=json.loads(subprocess.check_output(['gh','api','repos/Strezzy/ios-apps/actions/runs/38558194415']))
+          assert run['head_sha']=='104599c09fedfe4a7dd4f42f5cfe646f627f1472'
+          assert run['head_branch']=='main' and run['head_repository']['full_name']=='Strezzy/ios-apps'
+          assert run['workflow_id']==384220112
+          ready=run['status']=='completed' and run['conclusion']=='success'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('ready='+str(ready).lower()+'\n')
+          print('Verified build state:',run['status'],run['conclusion'])
+          if not ready: print('No release or app-source entry will be created. A successful completion event is required.')
+          PY
+      - name: Download the actual verified artifact
+        if: steps.gate.outputs.ready == 'true'
+        run: gh run download 38558194415 --repo Strezzy/ios-apps --name Rift-iPhone --dir RiftRelease
+      - name: Check native executable, model results and hashes without publishing
+        if: steps.gate.outputs.ready == 'true'
+        run: python3 scripts/publish_rift.py RiftRelease --verify-only
+      - name: Publish the first IPA and update only Rift's listing
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          python3 scripts/publish_rift.py RiftRelease
