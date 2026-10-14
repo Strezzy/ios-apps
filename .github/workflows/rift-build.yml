@@ -20,7 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Prepare native tools
+      - name: Prepare tools and start simulator migration early
         id: tools
         run: |
           xcodebuild -version
@@ -29,20 +29,35 @@ jobs:
           if ! command -v xcodegen; then brew install xcodegen; fi
           if ! command -v cmake; then brew install cmake; fi
           if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
-      - uses: actions/cache@v4
+          python - <<'PY'
+          import json, subprocess
+          devices=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','--json']))['devices']
+          choices=[d for runtime,items in devices.items() if 'iOS' in runtime for d in items if 'iPhone' in d['name'] and d.get('isAvailable')]
+          choices.sort(key=lambda d:('Pro' in d['name'],'18' in d['name'],'17' in d['name']),reverse=True)
+          if choices and choices[0]['state']!='Booted': subprocess.run(['xcrun','simctl','boot',choices[0]['udid']],check=True)
+          PY
+      - uses: actions/cache/restore@v4
         with:
           path: Rift/Build/Native
-          key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-          save-always: true
-      - name: Prepare and preserve recoverable source
+          key: rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-${{ github.run_id }}
+          restore-keys: |
+            rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-
+      - name: Prepare and verify repeat-safe source
         run: |
           python Rift/scripts/polish.py
+          python - <<'PY'
+          import hashlib, pathlib, subprocess
+          paths=list(pathlib.Path('Rift/Rift').rglob('*.swift'))+[pathlib.Path('Rift/scripts/prepare.py')]
+          before={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+          subprocess.run(['python','Rift/scripts/polish.py'],check=True)
+          assert all(hashlib.sha256(p.read_bytes()).hexdigest()==before[str(p)] for p in paths), 'Preparation changed the source on its second pass'
+          PY
           python Rift/scripts/prepare.py
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Rift/Rift Rift/scripts/prepare.py Rift/scripts/build.py
           if ! git diff --cached --quiet; then
-            git commit -m 'Save Rift reveal integration, compile correction, pinned catalog and icon [skip ci]'
+            git commit -m 'Save repeat-safe Rift source and final reply delivery [skip ci]'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
@@ -59,6 +74,11 @@ jobs:
             git push origin HEAD:main
           fi
           git rev-parse HEAD > Rift/Build/SOURCE-REVISION.txt
+      - uses: actions/cache/save@v4
+        if: always() && hashFiles('Rift/Build/Native/**/libruntime.a') != ''
+        with:
+          path: Rift/Build/Native
+          key: rift-native-8345f333-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}-${{ github.run_id }}
       - name: Preserve build evidence and the real IPA
         if: always()
         uses: actions/upload-artifact@v7

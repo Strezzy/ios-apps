@@ -1,44 +1,47 @@
 #!/usr/bin/env python3
-"""Apply reviewed, idempotent first-build corrections and integrate native reply reveal."""
+"""Migrate the initial source exactly once; repeated runs leave identical bytes."""
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-def edit(relative, replacements):
+
+def replace_once(path, old, new):
+    text=path.read_text()
+    if new in text: return
+    if old not in text: raise RuntimeError('Unexpected source in '+str(path)+': '+old[:70])
+    path.write_text(text.replace(old,new,1))
+
+# Remove the obsolete mutating function itself, not just a substring of its call.
+path=ROOT/'scripts/prepare.py'; text=path.read_text()
+if 'def source_corrections():' in text:
+    begin=text.index('def source_corrections():')
+    end=text.index("if __name__=='__main__':",begin)
+    text=text[:begin]+text[end:]
+text=text.replace('source_corrections(); catalog(); source(); icon()', 'catalog(); source(); icon()')
+assert 'source_corrections' not in text
+path.write_text(text)
+
+# Recover duplicates left by the obsolete preparation pass.
+for relative,line in [('Rift/Models.swift','        let length=MemoryLayout.size(ofValue:system.machine)'),('Rift/AppModel.swift','        engine.resetCancellation()')]:
     path=ROOT/relative; text=path.read_text()
-    for old,new in replacements:
-        if new in text: continue
-        if old not in text: raise RuntimeError('Expected source not found: '+relative+' '+old[:60])
-        text=text.replace(old,new,1)
+    while line+'\n'+line in text: text=text.replace(line+'\n'+line,line)
     path.write_text(text)
-edit('scripts/prepare.py', [('source_corrections(); catalog(); source(); icon()', 'catalog(); source(); icon()')])
-edit('Rift/AppModel.swift', [
- ('    let storage: LocalStorage?', '    private(set) var storage: LocalStorage?'),
- ('let store=try LocalStorage(root:storageOverride); storage=store', 'let store=try LocalStorage(root:storageOverride)\n            storage=store'),
- ('if (error as NSError).code == NSURLErrorCannotResume {', 'if resume != nil && (error as NSError).domain == NSURLErrorDomain && (error as NSError).code != NSURLErrorCancelled {'),
- ('        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in', '        engine.resetCancellation()\n        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in'),
- ('@AppStorage("rift.thinking") var thinking=false', '@AppStorage("rift.thinking") var thinking=false\n    @AppStorage("rift.animateReplies") var animateReplies=true'),
-])
-edit('Rift/Native/RiftEngine.h', [('- (void)cancel;', '- (void)cancel;\n- (void)resetCancellation;')])
-edit('Rift/Native/RiftEngine.mm', [
- ('- (void)cancel {', '- (void)resetCancellation { _cancelled.store(false); }\n- (void)cancel {'),
- ('    _cancelled.store(false);\n    llama_sampler *sampler=nullptr;', '    // Cancellation is reset before enqueueing, never after a queued stop.\n    llama_sampler *sampler=nullptr;'),
-])
-edit('Rift/Models.swift', [
- ('var system = utsname(); uname(&system)', 'var system = utsname(); uname(&system)\n        let length=MemoryLayout.size(ofValue:system.machine)'),
- ('capacity: MemoryLayout.size(ofValue: system.machine)', 'capacity: length'),
-])
-edit('Rift/ChatView.swift', [
- ('import SwiftUI', 'import SwiftUI\nimport UIKit'),
- ('MarkdownMessage(text:parts.answer)', 'MarkdownMessage(text:parts.answer, live:isStreaming)'),
- ('struct MarkdownMessage: View {\n    let text: String', 'struct MarkdownMessage: View {\n    let text: String\n    var live = false'),
- ('Text(.init(chunk)).textSelection(.enabled)', 'BloomText(text:chunk, live:live)'),
- ('Text(chunk.components(separatedBy:"\\n").dropFirst().joined(separator:"\\n")).font', 'BloomText(text:chunk.components(separatedBy:"\\n").dropFirst().joined(separator:"\\n"), live:live, markdown:false).font'),
-])
-edit('Rift/SettingsView.swift', [
- ('                    Section("Conversation") {', '                    Section("Appearance") {\n                        Toggle("Animated replies",isOn:$model.animateReplies)\n                        ReplyAnimationPreview()\n                        Text("Respects Reduce Motion, VoiceOver, and Low Power Mode.").font(.caption).foregroundStyle(.secondary)\n                    }\n                    Section("Conversation") {'),
-])
-# Compile before waiting for the simulator to finish its first-boot migration.
-edit('scripts/build.py', [
- ("if device['state']!='Booted': run(['xcrun','simctl','boot',uid],'simulator-boot')\n    run(['xcrun','simctl','bootstatus',uid,'-b'],'simulator-ready')", "if device['state']!='Booted': run(['xcrun','simctl','boot',uid],'simulator-boot')\n    # Build while the simulator completes its initial migration."),
- ("run(common+['build-for-testing'],'simulator-build')", "run(common+['build-for-testing'],'simulator-build')\n    run(['xcrun','simctl','bootstatus',uid,'-b'],'simulator-ready')"),
-])
-print('Rift source corrections and native reveal integration applied.')
+    assert text.count(line)==1
+path=ROOT/'Rift/AppModel.swift'; text=path.read_text()
+text=text.replace('            activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id\n            storage=store','            activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id')
+path.write_text(text)
+
+# Deliver the final canonical reply before closing the UI stream, regardless of task ordering.
+replace_once(path,'status: @escaping @Sendable (String)->Void) async throws {','status: @escaping @Sendable (String)->Void) async throws -> String {')
+replace_once(path,'CheckedContinuation<Void,Error>','CheckedContinuation<String,Error>')
+replace_once(path,'                    _ = try self.engine.generate(atPath:url.path,messages:messages,context:Int32(context),maxTokens:Int32(maxTokens),temperature:temperature,thinking:thinking,cpu:cpu,token:text,status:status)','                    var finalText = ""\n                    _ = try self.engine.generate(atPath:url.path,messages:messages,context:Int32(context),maxTokens:Int32(maxTokens),temperature:temperature,thinking:thinking,cpu:cpu,token:{ value in finalText=value; text(value) },status:status)')
+replace_once(path,'                    continuation.resume()','                    continuation.resume(returning:finalText)')
+replace_once(path,'                try await inference.run(model:model,','                let finalText = try await inference.run(model:model,')
+replace_once(path,'            } catch { if !stopping { self.error=error.localizedDescription } }','                if let c=conversations.firstIndex(where:{$0.id==chatID}), let m=conversations[c].messages.firstIndex(where:{$0.id==replyID}) { conversations[c].messages[m].content=finalText }\n            } catch { if !stopping { self.error=error.localizedDescription } }\n            generationID=nil')
+
+path=ROOT/'Rift/BloomText.swift'; text=path.read_text()
+text=text.replace('accept(animated: live && canAnimate)','accept(animated: (live || active) && canAnimate)')
+path.write_text(text)
+
+# Check every mutated input has the intended single declaration.
+assert (ROOT/'Rift/Models.swift').read_text().count('let length=MemoryLayout.size(ofValue:system.machine)')==1
+assert 'NSURLErrorCannotResume' not in (ROOT/'Rift/AppModel.swift').read_text()
+print('Rift preparation is repeat-safe; final reply delivery is ordered.')
