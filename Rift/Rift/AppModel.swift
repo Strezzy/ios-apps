@@ -7,20 +7,21 @@ final class InferenceService: @unchecked Sendable {
     private let engine = RiftEngine()
     private var loadedID: String?
     private var loadedContext = 0
+    // Called synchronously before scheduling a generation Task, never from the queued job.
+    func prepare() { engine.resetCancellation() }
     func stop() { engine.cancel() }
     func unload() {
         engine.cancel()
         queue.async { self.engine.unload(); self.loadedID = nil; self.loadedContext = 0 }
     }
     func run(model: InstalledModel, url: URL, messages: [[String:String]], context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws -> String {
-        engine.resetCancellation()
         return try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
                     if self.loadedID != model.id || self.loadedContext != context { self.engine.unload(); self.loadedID = nil }
                     let required = self.loadedID == model.id ? UInt64(256 * 1_048_576) : MemoryBudget.required(bytes: model.bytes, context: context, workingGB: workingGB)
                     guard MemoryBudget.fits(required: required, available: RiftAvailableMemory()) else {
-                        throw RiftFailure("Not enough memory is available. Close other apps, shorten context, or select a smaller model. Browsing another iPhone does not increase this phone's memory.")
+                        throw RiftFailure("This installation does not currently provide enough app memory. Choose a smaller model or shorter context. Larger models may need an increased memory limit in your signing setup or LiveContainer host; a different browsing profile cannot change that allowance.")
                     }
                     #if targetEnvironment(simulator)
                     let cpu = true
@@ -159,6 +160,7 @@ final class InferenceService: @unchecked Sendable {
         UIApplication.shared.isIdleTimerDisabled = true; save()
         let context = max(512, min(8192, self.context)), maxTokens = max(1, min(2048, self.maxTokens))
         let working = catalog.first { $0.id == model.catalogID }?.workingGB
+        inference.prepare()
         Task {
             do {
                 let finalText = try await inference.run(model: model, url: storage.url(for: model), messages: messages, context: context, maxTokens: maxTokens, temperature: Float(temperature), thinking: thinking, workingGB: working, text: { [weak self] text in
@@ -179,7 +181,7 @@ final class InferenceService: @unchecked Sendable {
             if stopping { status = "Stopped" }; save()
         }
     }
-    func thermalChanged() { if generating && [.serious, .critical].contains(ProcessInfo.processInfo.thermalState) { stop(); error = "Generation paused to let your iPhone cool down." } }
+    func thermalChanged() { if generating && [.serious, .critical].contains(ProcessInfo.processInfo.thermalState) { stop(); error = "Generation stopped to let your iPhone cool down." } }
     func lowMemory() { if generating { stop() }; inference.unload(); error = "iOS reported low memory. Rift released its model; a smaller model or context may help." }
 
     func download(_ model: CatalogModel) {
