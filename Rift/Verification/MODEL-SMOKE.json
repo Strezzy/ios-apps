@@ -1,0 +1,20 @@
+[
+  {
+    "id": "qwen35-2b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am an artificial intelligence assistant designed to help with information, tasks, and creative ideas.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "be3ccca13a9d1bc8b67165ea80bd103cd6151a37ad131183cc7ca388f78d9517",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  },
+  {
+    "id": "qwen35-4b",
+    "exit_code": 0,
+    "stdout": "{\n  \"physical_iPhone_test\" : false,\n  \"output\" : \"I am Qwen3.5, a large language model developed by Alibaba Cloud.\",\n  \"backend\" : \"macOS CPU\",\n  \"loaded\" : true,\n  \"error\" : \"\"\n}\n",
+    "stderr": "Loading model\nReading conversation\nWriting reply\nOn device\n",
+    "file_sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741",
+    "backend": "macOS CPU",
+    "physical_iPhone_test": false
+  }
+]

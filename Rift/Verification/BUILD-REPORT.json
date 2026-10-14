@@ -1,14 +1,51 @@
 {
   "app": "Rift",
   "version": "1.0",
-  "build": "2",
-  "source": "f00248e2c221166de07122ae2327a241881eece3",
+  "build": "4",
+  "source": "689081eaaf68121432f44ee41aeba1cee05f739a",
   "iPhone_inference": "not_tested",
   "LiveContainer": "not_tested",
   "thermal_performance": "not_tested",
-  "simulator": "not_run",
+  "simulator": "passed",
   "model_inference": "not_run",
   "simulator_device": "iPhone 17 Pro",
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "4E3A6BB3-F417-4829-8DF5-0EA652541F40",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 27,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift \u00b7 Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1791978477.595,
+    "passedTests": 27,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1791978349.517,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 27
+  },
+  "iphone_compilation": "passed",
   "build_result": "failed",
-  "failure": "simulator-build failed with exit code 65"
+  "failure": "model-inference failed with exit code 1"
 }

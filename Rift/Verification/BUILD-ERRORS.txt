@@ -12,12 +12,8 @@ native-runtimes.log
 -- Performing Test HAVE_SVE - Failed
 -- Performing Test HAVE_MATMUL_INT8 - Failed
 -- Performing Test HAVE_SME - Failed
-simulator-build.log
-/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
-/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
-/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
-/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
-/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
-Failed frontend command:
-** TEST BUILD FAILED **
-The following build commands failed:
+model-inference.log
+Traceback (most recent call last):
+native-tests.log
+2026-10-14 11:46:35.655948+0000 RiftUITests-Runner[30957:82993] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-10-14 11:46:37.698497+0000 RiftUITests-Runner[30957:82988] [General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
