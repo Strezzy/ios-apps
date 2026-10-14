@@ -63,6 +63,7 @@ final class InferenceService: @unchecked Sendable {
 @MainActor final class AppModel: ObservableObject {
     @Published private(set) var ready = false
     @Published var availableMemory: UInt64 = 0
+    @Published var memorySnapshot = AppMemorySnapshot()
     private var started = false
     private var bootstrapRoot: URL?
     @Published var catalog: [CatalogModel] = []
@@ -84,7 +85,6 @@ final class InferenceService: @unchecked Sendable {
     @AppStorage("rift.maxTokens") var maxTokens = 1024
     @AppStorage("rift.temperature") var temperature = 0.7
     @AppStorage("rift.thinking") var thinking = false
-    @AppStorage("rift.offline") var offline = false
     @AppStorage("rift.cellular") var cellular = false
     @AppStorage("rift.systemPrompt") var systemPrompt = "You are Rift, a helpful local assistant. Answer clearly."
     private(set) var storage: LocalStorage?
@@ -102,10 +102,18 @@ final class InferenceService: @unchecked Sendable {
     var activeChat: Conversation? { conversations.first { $0.id == activeChatID } }
     var busy: Bool { transferID != nil || importing || pausing }
 
-    init(storageOverride: URL? = nil) { bootstrapRoot = storageOverride }
+    init(storageOverride: URL? = nil) {
+        bootstrapRoot = storageOverride
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--rift-ui-fixture") {
+            bootstrapRoot = FileManager.default.temporaryDirectory.appendingPathComponent("Rift-UI-" + UUID().uuidString)
+        }
+        #endif
+    }
     /// Called after SwiftUI has presented the first frame. No Metal/model load here.
     func bootstrap() async {
         guard !started else { return }; started = true
+        PrivacyPreferences.migrate()
         let root = bootstrapRoot
         do {
             let snapshot = try await Task.detached(priority: .userInitiated) { () throws -> (LocalStorage, [CatalogModel], [InstalledModel], [Conversation]) in
@@ -127,11 +135,23 @@ final class InferenceService: @unchecked Sendable {
                 FileManager.default.fileExists(atPath: snapshot.0.transfers.appendingPathComponent(item.id + ".partial").path)
             }?.id
             ready = true; refreshMemory()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--rift-ui-fixture") { DebugChatFixture.install(in: self) }
+            #endif
         } catch {
             startupError = "Rift could not open its local data. Existing files have been left untouched. \(error.localizedDescription)"
         }
     }
-    func refreshMemory() { availableMemory = RiftAvailableMemory() }
+    func refreshMemory() {
+        let snapshot = AppMemorySnapshot(remaining: RiftAvailableMemory(), footprint: RiftMemoryFootprint())
+        memorySnapshot = snapshot
+        availableMemory = snapshot.remaining
+    }
+    func releaseModelMemory() async {
+        guard !generating, !busy else { return }
+        await inference.release()
+        refreshMemory()
+    }
     func dismissError() { error = nil }
     private func save() {
         guard let storage, startupError == nil else { return }
@@ -228,7 +248,7 @@ final class InferenceService: @unchecked Sendable {
     func lowMemory() { if generating { stop() }; inference.unload(); error = "iOS reported low memory. Rift released its model; a smaller model or context may help." }
 
     func download(_ item: CatalogModel) {
-        guard item.uncensored, !busy, !generating, ready, !offline, let storage else { return }
+        guard item.uncensored, !busy, !generating, ready, let storage else { return }
         let destination = storage.transfers.appendingPathComponent(item.id + ".partial")
         let resumeURL = storage.transfers.appendingPathComponent(item.id + ".resume")
         let complete = (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) == item.bytes } ?? false

@@ -5,7 +5,7 @@ struct RevealSchedule: Equatable {
     private(set) var characters: [Character] = []
     private(set) var arrivals: [TimeInterval] = []
     static let maximumLead: TimeInterval = 0.18
-    static let settleDuration: TimeInterval = 0.28
+    static let settleDuration: TimeInterval = 0.34
     var text: String { String(characters) }
     var completion: TimeInterval { (arrivals.last ?? -.infinity) + Self.settleDuration }
 

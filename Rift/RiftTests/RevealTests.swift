@@ -20,7 +20,7 @@ final class RevealTests: XCTestCase {
         var schedule = RevealSchedule()
         schedule.ingest(String(repeating: "a", count: 10_000), now: 0, animate: true)
         XCTAssertEqual(schedule.arrivals.count, 10_000)
-        XCTAssertLessThanOrEqual(schedule.completion, 0.18 + 0.28)
+        XCTAssertLessThanOrEqual(schedule.completion, RevealSchedule.maximumLead + RevealSchedule.settleDuration)
     }
     func testEmojiAndCombiningMarksRemainWhole() {
         let text = "👨‍👩‍👧‍👦 cafe\u{301} 日本語 مرحباً"

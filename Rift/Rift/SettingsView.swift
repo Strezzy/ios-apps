@@ -28,7 +28,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var clearConfirmation=false
     @State private var animationPreview=false
-    @AppStorage("rift.replyAnimation") private var replyAnimation="bloom"
     var body: some View {
         NavigationStack {
             ZStack {
@@ -38,13 +37,16 @@ struct SettingsView: View {
                         HStack(spacing:16) { RiftMark().frame(width:44,height:56); VStack(alignment:.leading,spacing:4) { Text("Rift").font(.system(.title2,design:.rounded,weight:.bold)); Text("Private AI. On your terms.").font(.caption).foregroundStyle(.secondary) }; Spacer() }.padding(.vertical,8)
                     }.listRowBackground(Color.clear)
                     Section("Privacy") {
-                        Toggle("Offline mode",isOn:$model.offline).onChange(of:model.offline) { _, enabled in if enabled { model.cancelTransfer() } }
-                        Toggle("Allow cellular downloads",isOn:$model.cellular).disabled(model.offline)
+                        Label("Always on-device", systemImage: "lock.fill").accessibilityIdentifier("privacyAlwaysLocal")
+                        Text("Chat always runs on this iPhone. Internet is used for model downloads you request, never to generate replies.")
+                            .font(.callout).foregroundStyle(.secondary)
+                        Toggle("Allow cellular model downloads", isOn: $model.cellular)
                         Text("No account, analytics, cloud inference, or automatic chat uploads. Chats and models are excluded from app-managed iCloud backup. Exporting a chat or choosing a cloud file in Files is your action.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Reply animation") {
-                        Picker("Style", selection: $replyAnimation) { Text("Bloom").tag("bloom"); Text("Soft fade").tag("fade"); Text("Instant").tag("instant") }
-                        Button("Preview animation", systemImage: "sparkles") { animationPreview=true }
+                        ReplyStylePicker()
+                        ReplyAnimationSample()
+                        Button("Larger preview", systemImage: "arrow.up.left.and.arrow.down.right") { animationPreview = true }
                         Text("New letters softly appear and settle into place. Reduce Motion removes the lift, scale and blur. Low Power Mode uses a lighter fade.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Conversation") {
@@ -61,9 +63,22 @@ struct SettingsView: View {
                     Section("This iPhone") {
                         LabeledContent("Device",value:model.device.name)
                         LabeledContent("Physical memory",value:"\(model.device.ram) GB")
-                        LabeledContent("Available to this app",value:MemoryBudget.label(model.availableMemory))
-                        Button("Refresh memory reading") { model.refreshMemory() }
-                        Text("Rift requests Apple's increased-memory-limit and extended-virtual-addressing entitlements. Your signing profile must grant them. Within LiveContainer, the host controls them; this app cannot grant itself more RAM.").font(.caption).foregroundStyle(.secondary)
+                        LabeledContent("Remaining app memory", value: MemoryBudget.label(model.memorySnapshot.remaining))
+                            .accessibilityIdentifier("memoryRemaining")
+                        LabeledContent("In use by app / host", value: MemoryBudget.label(model.memorySnapshot.footprint))
+                        LabeledContent("Estimated process budget", value: model.memorySnapshot.estimatedBudget.map(MemoryBudget.label) ?? "Unavailable")
+                            .accessibilityIdentifier("memoryBudget")
+                        Button("Unload model from memory") { Task { await model.releaseModelMemory() } }
+                            .disabled(model.generating || model.busy)
+                        Text("Remaining memory is what this process can allocate now, not its total limit. The budget estimate adds memory already in use. Readings refresh while this screen is open; iOS can change the allowance.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        DisclosureGroup("Why is the memory limit low?") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Rift requests Increased Memory Limit. Inside LiveContainer, the signed host process controls the allowance; Rift's guest entitlements cannot raise it.")
+                                Text("To request more memory, enable Increased Memory Limit for the actual LiveContainer host's App ID in your signing setup, then reinstall or re-sign that same host without deleting its data. Standalone installations need the capability on Rift instead.")
+                                Text("Extended Virtual Addressing expands address space, not physical RAM. A larger allowance is device- and profile-dependent, not guaranteed. This screen does not claim that a signing capability was granted merely because the IPA requests it.")
+                            }.font(.callout).foregroundStyle(.secondary).padding(.vertical, 8)
+                        }
                         LabeledContent("Downloaded models",value:"\(model.installed.count)")
                         Text("Device labels are for browsing. Actual available memory, context size, and thermal state determine whether a model can run. Physical iPhone and LiveContainer performance still need device testing.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -77,10 +92,16 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.1 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.2 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
-            }.task { model.refreshMemory() }.navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarTrailing) { Button("Done") { dismiss() } } }
+            }.task {
+                model.refreshMemory()
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(3)) } catch { break }
+                    model.refreshMemory()
+                }
+            }.navigationTitle("Settings").navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.topBarTrailing) { Button("Done") { dismiss() } } }
                 .sheet(isPresented: $animationPreview) { ReplyAnimationPreview() }
                 .confirmationDialog("Delete every conversation on this iPhone? This cannot be undone.",isPresented:$clearConfirmation,titleVisibility:.visible) { Button("Delete all conversations",role:.destructive) { model.clearChats() } }
         }

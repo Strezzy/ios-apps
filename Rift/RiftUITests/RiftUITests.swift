@@ -22,28 +22,60 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
         app.buttons["More options"].tap(); app.buttons["Settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.switches["Offline mode"].exists)
+        XCTAssertFalse(app.switches["Offline mode"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["privacyAlwaysLocal"].firstMatch.exists)
         attach("Rift-settings")
     }
-    func testReplyAnimationHandlesUnevenBurstsAndReplay() {
+    func testReplyStylesSwitchAndReplayWithoutAModel() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
         app.buttons["More options"].tap(); app.buttons["Settings"].tap()
-        let preview = app.buttons["Preview animation"]
-        for _ in 0..<4 { if preview.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(preview.isHittable); preview.tap()
+        let larger = app.buttons["Larger preview"]
+        for _ in 0..<5 { if larger.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(larger.isHittable); larger.tap()
         XCTAssertTrue(app.navigationBars["Reply animation"].waitForExistence(timeout: 5))
-        attach("Rift-Bloom-arriving")
+        let picker = app.segmentedControls["replyStylePicker"]
         let rendered = app.descendants(matching: .any)["animationPreviewText"].firstMatch
-        let predicate = NSPredicate(format: "label CONTAINS %@", "Just a little room to think.")
-        wait(for: [expectation(for: predicate, evaluatedWith: rendered)], timeout: 10)
-        XCTAssertTrue(rendered.label.contains("🌸"))
-        attach("Rift-Bloom-complete")
-        let replay = app.buttons["replayAnimation"]
-        XCTAssertTrue(replay.isHittable); replay.tap()
-        attach("Rift-Bloom-replay")
-        wait(for: [expectation(for: predicate, evaluatedWith: rendered)], timeout: 10)
-        XCTAssertTrue(app.staticTexts["Sample text, not an AI response. The preview deliberately feeds uneven chunks to the same renderer used in chat."].exists)
+        for style in ["Bloom", "Soft fade", "Instant", "Bloom"] {
+            picker.buttons[style].tap()
+            XCTAssertTrue(picker.buttons[style].isSelected)
+            let complete = NSPredicate(format: "label CONTAINS %@", "Just a little room to think.")
+            let done = XCTNSPredicateExpectation(predicate: complete, object: rendered)
+            XCTAssertEqual(XCTWaiter.wait(for: [done], timeout: 10), .completed)
+            attach("Rift-style-" + style)
+        }
+        app.buttons["replayAnimation"].tap()
+        XCTAssertTrue(app.staticTexts["Sample text, not an AI response."].exists)
+    }
+    func testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-stream"]
+        app.launch()
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let field = app.descendants(matching: .any)["messageInput"].firstMatch
+        let last = app.descendants(matching: .any)["chatMessage-00000000-0000-0000-0000-000000000099"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(last.waitForExistence(timeout: 10))
+        field.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        field.typeText("A reply while reading")
+        assertTailIsVisible(last, above: field, in: app)
+        attach("Rift-latest-above-keyboard")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        assertTailIsVisible(last, above: field, in: app)
+        attach("Rift-latest-landscape")
+        XCUIDevice.shared.orientation = .portrait
+        assertTailIsVisible(last, above: field, in: app)
+    }
+    private func assertTailIsVisible(_ last: XCUIElement, above field: XCUIElement, in app: XCUIApplication) {
+        let visible = NSPredicate { _, _ in
+            last.exists && last.frame.maxY <= field.frame.minY + 2 &&
+            last.frame.maxY > app.navigationBars.firstMatch.frame.maxY &&
+            field.frame.maxY <= app.keyboards.firstMatch.frame.minY + 2
+        }
+        let check = XCTNSPredicateExpectation(predicate: visible, object: last)
+        XCTAssertEqual(XCTWaiter.wait(for: [check], timeout: 10), .completed,
+            "Latest reply tail must remain visible, not only the input field")
     }
     func testComposerStaysAboveKeyboardInPortraitAndLandscape() {
         let app = XCUIApplication(); app.launch()

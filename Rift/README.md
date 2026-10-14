@@ -49,3 +49,26 @@ Bundle identifier: `com.billy.rift`. Minimum OS: iOS 26. The IPA is unsigned for
 
 Native API reference: https://developer.apple.com/documentation/swiftui/textrenderer
 Device reference: https://www.apple.com/iphone-18-pro/specs/
+
+
+## 1.2 interaction fixes
+
+Reply styles now have a live inline preview which replays when changed. The streaming text renderer deliberately disables native selection during rendering, restoring selectable text once the reply settles. Regression tests compare rendered image pixels for Bloom, Soft fade and Instant.
+
+Chat scrolling distinguishes user gestures from keyboard/layout changes. Focusing the composer follows the latest reply, and viewport resizing reanchors after layout. The full long-chat case, incoming wrapped text and rotation are tested, not only the composer frame.
+
+There is no Offline mode switch: inference is always local. The removed preference is migrated so an old value cannot block explicitly requested downloads.
+
+### Memory readings and LiveContainer
+
+Remaining app memory is the current `os_proc_available_memory()` result, not total RAM or the full process limit. The estimated process budget adds `task_vm_info.phys_footprint`; it is a changing snapshot, not a guaranteed allocation. The app does not infer a granted entitlement from its packaged request.
+
+Rift retains the increased-memory-limit and extended-virtual-addressing requests. With LiveContainer, guest entitlements are not applied to the host. Enabling the capability on the actual host App ID and reinstalling/re-signing that host may raise the available budget on supported devices. Do not delete the host's data. Standalone Rift requires the capability on its own signed app. Extended virtual address space is not more physical RAM.
+
+Primary references:
+- https://developer.apple.com/documentation/os/os_proc_available_memory
+- https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.kernel.increased-memory-limit
+- https://github.com/LiveContainer/LiveContainer#limitations
+- https://github.com/hugeBlack/GetMoreRam#how-to-use
+
+The debugger-only keyboard sample is not compiled into the distributed application and is never used as a substitute for model inference.

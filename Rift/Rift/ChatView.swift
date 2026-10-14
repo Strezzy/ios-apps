@@ -7,7 +7,9 @@ struct ChatView: View {
     @State private var draft=""
     @State private var sheet: RiftSheet?
     @FocusState private var composing: Bool
-    @State private var followsBottom = true
+    @State private var following = ChatFollowingState()
+    @State private var viewport = ChatViewport()
+    @State private var bottomRequest = UUID()
     var body: some View {
         NavigationStack {
             ZStack {
@@ -67,18 +69,63 @@ struct ChatView: View {
     private var messages: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment:.leading,spacing:22) {
-                    ForEach(model.activeChat?.messages ?? []) { message in MessageView(message:message,isStreaming:model.generating && message.id == model.activeChat?.messages.last?.id).id(message.id) }
-                    Color.clear.frame(height:1).id("bottom")
-                }.padding(.horizontal,20).padding(.vertical,20)
-            }.scrollDismissesKeyboard(.interactively)
-                .onScrollGeometryChange(for: Bool.self) { geometry in
-                    geometry.contentSize.height - geometry.contentOffset.y - geometry.containerSize.height < 100
-                } action: { _, value in followsBottom = value }
-                .onChange(of:model.activeChat?.messages.last?.content) { _, _ in if followsBottom { withAnimation(.easeOut(duration: 0.14)) { proxy.scrollTo("bottom",anchor:.bottom) } } }
-                .onChange(of:model.activeChatID) { _, _ in proxy.scrollTo("bottom",anchor:.bottom) }
-                .onAppear { proxy.scrollTo("bottom",anchor:.bottom) }
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    ForEach(model.activeChat?.messages ?? []) { message in
+                        MessageView(message: message, isStreaming: model.generating && message.id == model.activeChat?.messages.last?.id)
+                            .id(message.id)
+                            .accessibilityElement(children: .contain)
+                            .accessibilityIdentifier("chatMessage-\(message.id.uuidString)")
+                    }
+                    Color.clear.frame(height: 1).id("bottom")
+                }.padding(.horizontal, 20).padding(.vertical, 16)
+            }
+            .accessibilityIdentifier("chatScrollView")
+            .scrollDismissesKeyboard(.interactively)
+            .defaultScrollAnchor(.bottom, for: .initialOffset)
+            .defaultScrollAnchor(.top, for: .alignment)
+            .onScrollGeometryChange(for: ChatViewport.self) { geometry in
+                ChatViewport(height: Double(geometry.containerSize.height),
+                    contentHeight: Double(geometry.contentSize.height),
+                    bottomDistance: Double(max(0, geometry.contentSize.height + geometry.contentInsets.bottom - geometry.contentOffset.y - geometry.containerSize.height)))
+            } action: { old, new in
+                viewport = new
+                if following.observe(old: old, new: new) { bottomRequest = UUID() }
+            }
+            .onScrollPhaseChange { _, phase in
+                following.interaction(phase == .tracking || phase == .interacting || phase == .decelerating, viewport: viewport)
+            }
+            .onChange(of: composing) { _, focused in
+                if focused { followLatest() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidChangeFrameNotification)) { _ in
+                // Re-anchor after keyboard layout, including frame changes which
+                // do not produce a focus-state transition.
+                if following.followsLatest && !following.userScrolling { bottomRequest = UUID() }
+            }
+            .onChange(of: model.activeChat?.messages.last?.content) { _, _ in
+                if following.followsLatest && !following.userScrolling { bottomRequest = UUID() }
+            }
+            .onChange(of: model.activeChat?.messages.last?.id) { _, _ in followLatest() }
+            .onChange(of: model.activeChatID) { _, _ in followLatest() }
+            .onAppear { followLatest() }
+            .task(id: bottomRequest) {
+                await Task.yield()
+                guard !Task.isCancelled, following.followsLatest, !following.userScrolling else { return }
+                // Keep the latest line above the composer; per-letter motion is
+                // handled by the renderer, not by a long scroll on every token.
+                withTransaction(Transaction(animation: nil)) { proxy.scrollTo("bottom", anchor: .bottom) }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if !following.followsLatest {
+                    Button { followLatest() } label: { Label("Latest reply", systemImage: "arrow.down").font(.caption).padding(6) }
+                        .buttonStyle(.glass).padding(12).accessibilityIdentifier("jumpToLatest")
+                }
+            }
         }
+    }
+    private func followLatest() {
+        following.followLatest()
+        bottomRequest = UUID()
     }
     private var composer: some View {
         VStack(spacing: 3) {
@@ -109,7 +156,7 @@ struct ChatView: View {
         }.padding(.horizontal, 12).padding(.top, 5).padding(.bottom, 3)
     }
     private func send() {
-        if model.send(draft) { draft = "" }
+        if model.send(draft) { draft = ""; followLatest() }
     }
 }
 struct MessageView: View {

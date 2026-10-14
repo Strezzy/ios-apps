@@ -9,7 +9,7 @@ def sha(path):
 def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(path).write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.1' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
+assert report['app']=='Rift' and report['version']=='1.2' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
 summary=report['test_summary'];assert summary['failedTests']==0 and summary['skippedTests']==0 and summary['passedTests']>=40
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
 assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes']
@@ -23,7 +23,7 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.1' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.2' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
@@ -36,22 +36,20 @@ with zipfile.ZipFile(ipa) as z:
 report.update(build_result='passed',model_inference='All 10 pinned quantizations passed production Swift downloads, verification and two-turn macOS CPU inference',metal_inference='Qwen3.5 4B passed two-turn macOS Metal inference; not a physical-iPhone test',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
 save(OUT/'BUILD-REPORT.json',report);save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.1-build'+report['build']
-notes=f'''Rift 1.1 ({report['build']}) · Stability update
+tag='rift-1.2-build'+report['build']
+notes=f'''Rift 1.2 ({report['build']}) · Chat and animation fixes
 
-- Slimmer composer with native keyboard-safe placement, tested in portrait and landscape.
-- The AI runtime initializes only for generation, not at app launch. Local restoration runs off the UI thread.
-- Bounded 512 KiB verification buffer, bounded metadata reader, throttled download progress, and model unload before transfers. Six-GiB hashing is covered by a memory-growth regression test. All model files were downloaded and verified using the production Swift code.
-- Model-aware memory estimates with automatic context reduction down to 512 tokens. Lower batch sizes, memory-mapped weights, and no extra weight-repacking or speculative-model allocations.
-- Short error banner with full details, preserved messages, and retry. Failed placeholders no longer become conversation input.
-- Expanded Heretic group: 2.6B, 8B, 9B, plus 14B Compact (IQ3_XS) and 14B Precision (IQ4_XS). Two featured choices, with all sizes one tap away. All curated entries are uncensored community variants in quantized GGUF format, never stock-model fallbacks.
-- Requested increased-memory-limit and extended-virtual-addressing entitlements included for signing tools. Within LiveContainer, the host's signed entitlements still control memory. The app cannot grant itself more memory or guarantee that 9B/14B fits every installation. 14B choices are explicitly experimental.
+- Bloom and Soft fade now use the native custom renderer while replies stream. Selectable text is kept out of that drawing path on affected iOS versions; native selection returns after the reply settles. The first live fragment animates too.
+- Every animation style has a live inline preview. Selecting a style restarts the sample immediately, with a Replay button and a larger preview. Reduce Motion, Low Power Mode and VoiceOver behavior is explained rather than looking like a broken switch.
+- Opening the keyboard follows the latest reply after the viewport shrinks. Incoming wrapping text, rotation and composer resizing keep its last line above the keyboard. Manual scrolling still lets you read earlier messages; Latest reply returns to the bottom.
+- Removed Offline mode and migrated its old preference. Inference remains local by design. Model downloads are explicit actions; the cellular model-download preference remains.
+- Memory readings now distinguish remaining headroom, the process footprint and the estimated total process budget. An Unload model from memory action releases the cached model without deleting downloads. Help explains the LiveContainer host/signing requirement. No memory limits are bypassed or promises of extra RAM made.
 
-Verification: {summary['passedTests']} native simulator tests passed, zero failed/skipped. All 10 catalog quantizations passed actual two-turn macOS CPU inference and production Swift download/verification checks; Qwen3.5 4B also passed macOS Metal inference. ARM64 iPhone app and entitlement signature verified.
+Verification: {summary['passedTests']} native simulator tests passed with zero failures/skips. Includes rendered-pixel animation checks (not only accessibility text), keyboard/latest-reply layout tests, privacy preference migration, and memory-display regressions. All 10 existing catalog quantizations were rechecked through production Swift downloads and two-turn macOS CPU inference; Qwen3.5 4B also passed macOS Metal inference. ARM64 iPhone executable and requested memory entitlements verified.
 
-Physical-iPhone performance, heat, and LiveContainer behavior still require device testing. A Mac Metal result is not an iPhone benchmark; this update does not claim crashes are impossible. Uncensored does not mean guaranteed zero refusals or accuracy.
+Physical-iPhone behavior and LiveContainer still need confirmation. The displayed remaining headroom is not total physical RAM or necessarily the full process limit. An Increased Memory Limit capability must be granted to the actual signed host for a LiveContainer guest. Extended Virtual Addressing does not create more physical RAM.
 
-Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+. Existing downloaded models and chats are preserved. The installer supplies the final device signature.
+Update the existing Rift entry and keep its data container. The bundle ID remains com.billy.rift, iOS 26.0+. Existing downloaded models and chats are preserved. The catalog and inference engine are unchanged; uncensored is not a zero-refusal or accuracy guarantee.
 
 Build source: {source}
 IPA SHA-256: {report['ipa_sha256']}
@@ -63,21 +61,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']='Chat locally on your iPhone with quantized uncensored community models or a GGUF imported from Files. Includes a compact iPhone-organized model picker, Heretic 8B/9B and experimental 14B choices, Bloom text animations, saved chats, and local search. Version 1.1 adds keyboard and startup fixes, bounded large-file verification, adaptive memory/context handling, and clearer retry errors. No accounts, analytics, or cloud inference. Model downloads use the internet. Larger models depend on the signing/LiveContainer host memory allowance; physical-iPhone performance remains unverified.'
+metadata['localizedDescription']='Chat locally on your iPhone with quantized uncensored community models or a GGUF imported from Files. Includes a compact iPhone-organized model picker, Heretic 8B/9B and experimental 14B choices, Bloom text animations, saved chats, and local search. Version 1.2 fixes live text animation and keyboard-follow scrolling, adds replaying style previews, removes the offline switch, and explains remaining memory versus the host process budget. No accounts, analytics, or cloud inference. Model downloads use the internet. Larger models depend on the signing/LiveContainer host memory allowance; physical-iPhone performance remains unverified.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.1-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.2-build'+report['build'])
 for filename in ['BUILD-REPORT.json','MODEL-SMOKE.json','METAL-SMOKE.json']:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.1 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.2 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.1 ({report['build']}) · Stability update",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.2 ({report['build']}) · Chat and animation fixes",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -92,5 +90,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.1 ({report['build']}) stability update [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.2 ({report['build']}) chat and animation fixes [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)
