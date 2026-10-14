@@ -97,7 +97,13 @@ final class PresentationTests: XCTestCase {
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue))
             context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
         }
-        let ink = stride(from: 0, to: pixels.count, by: 4).reduce(0) { $0 + 765 - Int(pixels[$1]) - Int(pixels[$1+1]) - Int(pixels[$1+2]) }
+        var ink = 0
+        for index in stride(from: 0, to: pixels.count, by: 4) {
+            let red = Int(pixels[index])
+            let green = Int(pixels[index + 1])
+            let blue = Int(pixels[index + 2])
+            ink += 765 - red - green - blue
+        }
         let attachment = XCTAttachment(image: image)
         attachment.name = "Rift-render-\(style.rawValue)-\(time)"; attachment.lifetime = .keepAlways; add(attachment)
         return (Data(pixels), ink)
