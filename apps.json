@@ -193,55 +193,33 @@
       "localizedDescription": "Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.",
       "category": "photo-video",
       "tintColor": "#32AFE1",
-      "bundleIdentifier": "com.billy.depthcheck",
+      "bundleIdentifier": "com.billy.facet",
       "developerName": "Strezzy",
       "versions": [
         {
-          "version": "1.0",
-          "buildVersion": "8",
-          "buildNumber": "8",
-          "date": "2026-10-12T00:17:45Z",
-          "localizedDescription": "Convert photos and videos to 3D on your iPhone. Fixes side-by-side exports stalling near the end, improves depth stability, and simplifies the interface. Keeps original pixel dimensions and video timing.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa",
-          "size": 228724052,
+          "version": "1.1",
+          "buildVersion": "301",
+          "buildNumber": "301",
+          "date": "2026-10-14T08:30:49Z",
+          "localizedDescription": "Facet 1.1 (301) installs with the Facet name, approved blue suite icon, and bundle identifier `com.billy.facet`. Its blue UI and processing features are retained.\n\nThis publishes the recovered, already-built iPhone artifact, not a new untested rebuild. The attached report records 24 passed simulator checks, 4 skipped simulator checks, and separate native macOS media checks. Physical iPhone testing has not been performed. Read the report for the exact test scope and limitations.\n\nBuild provenance: source revision `32e1d3aff34839770f5f6cbf650cb5475b5090c0`, recovered from artifact `11878258884`. This publication tag points to the current default branch, which includes the recovery workflow. The attached report identifies the original build revision and the exact IPA checksum.\n\n**Migration:** The bundle identifier changed from `com.billy.depthcheck`. Treat this as a new app identity. Keep the previous installation and its data container until your files have been exported/imported and verified. Changing the bundle identifier does not automatically transfer saved files or downloaded models. Music, Prism, and all other app releases are unchanged by this publication.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/facet-1.1-build301/Facet.ipa",
+          "size": 228792821,
           "minOSVersion": "26.0",
-          "sha256": "49a407569cff86ac0c6491d3322ffad5a11c649520b1d6ececd2eca9b356d83b"
-        },
-        {
-          "version": "1.0",
-          "buildVersion": "5",
-          "buildNumber": "5",
-          "date": "2026-10-11T23:02:50Z",
-          "localizedDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-5/DepthCheck.ipa",
-          "size": 228712902,
-          "minOSVersion": "26.0",
-          "sha256": "831f335c38637cec421779dbbccfdd6d7023d83db353c49f5d0653743dcf064e"
-        },
-        {
-          "version": "1.0",
-          "buildVersion": "4",
-          "buildNumber": "4",
-          "date": "2026-10-11T22:47:11Z",
-          "localizedDescription": "Depth Check 1.0: local photo and video depth conversion, full-resolution stereo exports, source video timing, native Liquid Glass. See the release notes for validation details.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-4/DepthCheck.ipa",
-          "size": 228701625,
-          "minOSVersion": "26.0",
-          "sha256": "02d6399498291e343ec0139192c318de49c87cac8acd9e3ba9ee0b73db529551"
+          "sha256": "96c885382002ab015d0d9a078f9e17d9e3ad682bc8a0bb5994100761f4a6dc01"
         }
       ],
       "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Facet.png",
       "appPermissions": {
         "entitlements": [],
         "privacy": {
-          "NSPhotoLibraryAddUsageDescription": "Save the spatial photos and videos you create in Depth Check to Photos."
+          "NSPhotoLibraryAddUsageDescription": "Save the spatial photos and videos you create in Facet to Photos."
         }
       },
-      "version": "1.0",
-      "versionDate": "2026-10-12T00:17:45Z",
-      "versionDescription": "Convert photos and videos to 3D on your iPhone. Fixes side-by-side exports stalling near the end, improves depth stability, and simplifies the interface. Keeps original pixel dimensions and video timing.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/depth-check-1.0-8/DepthCheck.ipa",
-      "size": 228724052
+      "version": "1.1",
+      "versionDate": "2026-10-14T08:30:49Z",
+      "versionDescription": "Facet 1.1 (301) installs with the Facet name, approved blue suite icon, and bundle identifier `com.billy.facet`. Its blue UI and processing features are retained.\n\nThis publishes the recovered, already-built iPhone artifact, not a new untested rebuild. The attached report records 24 passed simulator checks, 4 skipped simulator checks, and separate native macOS media checks. Physical iPhone testing has not been performed. Read the report for the exact test scope and limitations.\n\nBuild provenance: source revision `32e1d3aff34839770f5f6cbf650cb5475b5090c0`, recovered from artifact `11878258884`. This publication tag points to the current default branch, which includes the recovery workflow. The attached report identifies the original build revision and the exact IPA checksum.\n\n**Migration:** The bundle identifier changed from `com.billy.depthcheck`. Treat this as a new app identity. Keep the previous installation and its data container until your files have been exported/imported and verified. Changing the bundle identifier does not automatically transfer saved files or downloaded models. Music, Prism, and all other app releases are unchanged by this publication.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/facet-1.1-build301/Facet.ipa",
+      "size": 228792821
     },
     {
       "name": "Veil",

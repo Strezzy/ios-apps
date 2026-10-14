@@ -23,7 +23,7 @@
     "category": "photo-video",
     "tintColor": "#FF8C45"
   },
-  "com.billy.depthcheck": {
+  "com.billy.facet": {
     "name": "Facet",
     "subtitle": "Convert photos and videos to 3D",
     "localizedDescription": "Convert photos and videos into 3D on your iPhone. Export Apple Spatial, side-by-side, over-under and other stereo formats at the original pixel dimensions and video frame timing. Includes two offline depth models. HDR video is converted to SDR.",
