@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "name": "Echo",
+  "bundleIdentifier": "com.billy.echo",
+  "version": "1.1",
+  "build": "104",
+  "ipa_sha256": "6ab990682578b4e1574563051026b0222684ad0b8517c7344f49e937cb924b41",
+  "ipa_bytes": 3616644,
+  "native_branding": {
+    "status": "passed",
+    "compiled_icons": [
+      {
+        "file": "AppIcon60x60@2x.png",
+        "dimensions": [
+          120,
+          120
+        ],
+        "mean_pixel_difference": 0.82
+      }
+    ],
+    "archiveRoot": "Echo.app"
+  },
+  "native_unit_tests": "passed, including installed identity and purple light/dark accent tests",
+  "simulator_launch": {
+    "result": "passed",
+    "device": "iPhone 17 Pro",
+    "process_survived_seconds": 3
+  },
+  "physical_iphone_validation": "Not performed",
+  "model_inference_validation": "Requires downloaded weights and a supported physical iPhone; not validated by this build",
+  "migration": "New bundle identity. Export files and voice recordings before removing the old app; its data does not automatically move."
+}

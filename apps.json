@@ -102,19 +102,19 @@
       "localizedDescription": "Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.",
       "category": "utilities",
       "tintColor": "#A28AEF",
-      "bundleIdentifier": "com.billy.voiceglass",
+      "bundleIdentifier": "com.billy.echo",
       "developerName": "Strezzy",
       "versions": [
         {
-          "version": "1.0",
-          "buildVersion": "1",
-          "buildNumber": "1",
-          "date": "2026-10-11",
-          "localizedDescription": "First release with saved voices, text-to-speech, clip playback, and WAV export. Models download separately. Voice generation still needs testing on a real iPhone.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa",
-          "size": 3600579,
+          "version": "1.1",
+          "buildVersion": "104",
+          "buildNumber": "104",
+          "date": "2026-10-14T07:14:48Z",
+          "localizedDescription": "Echo 1.1 (104)\n\nNative iPhone rebuild with the approved purple waveform icon, installed name Echo and bundle identifier com.billy.echo. Purple and lavender now coordinate the buttons, voice avatars, waveforms, background and controls. The actual compiled home-screen icon was pixel-checked against the approved master. Native tests, including identity and light/dark accent checks, passed. Light and dark simulator captures are attached. Full voice generation with downloaded models still requires testing on a physical iPhone.\n\n## Important installation change\n\nThe bundle identifier changes from com.billy.voiceglass to com.billy.echo at the owner's request. This is a separate app identity. Keep the previous installation and export important clips or voice samples before removing it. Files, settings and model downloads do not automatically transfer. Previous release downloads remain available and were not overwritten. This is an unsigned arm64 iPhone IPA for your existing sideloading/signing setup.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/echo-1.1-build104/Echo.ipa",
+          "size": 3616644,
           "minOSVersion": "26.0",
-          "sha256": "033f981c50f0d469f490f00ad520bd30e038f9994f13ad454f2cbf90fb4bcdc0"
+          "sha256": "6ab990682578b4e1574563051026b0222684ad0b8517c7344f49e937cb924b41"
         }
       ],
       "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Echo.png",
@@ -122,14 +122,14 @@
         "entitlements": [],
         "privacy": {
           "NSMicrophoneUsageDescription": "Record a short voice sample on this iPhone.",
-          "NSSpeechRecognitionUsageDescription": "Transcribe your voice sample on this iPhone so Qwen can match your voice. VoiceGlass requires on-device recognition; audio is not sent to a server."
+          "NSSpeechRecognitionUsageDescription": "Transcribe your voice sample on this iPhone so Qwen can match your voice. Echo requires on-device recognition; audio is not sent to a server."
         }
       },
-      "version": "1.0",
-      "versionDate": "2026-10-11",
-      "versionDescription": "First release with saved voices, text-to-speech, clip playback, and WAV export. Models download separately. Voice generation still needs testing on a real iPhone.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/initial-apps/VoiceGlass.ipa",
-      "size": 3600579
+      "version": "1.1",
+      "versionDate": "2026-10-14T07:14:48Z",
+      "versionDescription": "Echo 1.1 (104)\n\nNative iPhone rebuild with the approved purple waveform icon, installed name Echo and bundle identifier com.billy.echo. Purple and lavender now coordinate the buttons, voice avatars, waveforms, background and controls. The actual compiled home-screen icon was pixel-checked against the approved master. Native tests, including identity and light/dark accent checks, passed. Light and dark simulator captures are attached. Full voice generation with downloaded models still requires testing on a physical iPhone.\n\n## Important installation change\n\nThe bundle identifier changes from com.billy.voiceglass to com.billy.echo at the owner's request. This is a separate app identity. Keep the previous installation and export important clips or voice samples before removing it. Files, settings and model downloads do not automatically transfer. Previous release downloads remain available and were not overwritten. This is an unsigned arm64 iPhone IPA for your existing sideloading/signing setup.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/echo-1.1-build104/Echo.ipa",
+      "size": 3616644
     },
     {
       "name": "Prism",

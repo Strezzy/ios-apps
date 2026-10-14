@@ -7,7 +7,7 @@
     "category": "entertainment",
     "tintColor": "#70A6FF"
   },
-  "com.billy.voiceglass": {
+  "com.billy.echo": {
     "name": "Echo",
     "subtitle": "Turn text into speech with your voice",
     "localizedDescription": "Turn typed text into speech using a short voice recording. Record or import a sample, save voices, and export clips as WAV files. Download a model before using it offline. Voice generation in this release still needs testing on a real iPhone.",
