@@ -94,7 +94,11 @@ let package = Package(name: "RifeMetal", platforms: [.iOS(.v16), .macOS(.v13)],
     pixels = np.random.default_rng(37).integers(0, 256, (256, 256, 3), dtype=np.uint8)
     reference_input = torch.from_numpy(pixels.astype(np.float32).transpose(2, 0, 1)).unsqueeze(0) / 255.0
     with torch.no_grad(): reference = wrapped(reference_input)[0].permute(1, 2, 0).numpy()
-    actual = np.asarray(converted.predict({'image': Image.fromarray(pixels)})['enhanced']).astype(np.float32)
+    predicted_image = converted.predict({'image': Image.fromarray(pixels)})['enhanced']
+    assert predicted_image.mode in ('RGB', 'RGBA'), predicted_image.mode
+    # Core ML exposes an RGBA backing image for RGB model outputs on this SDK.
+    # Compare only the three modeled channels, not the synthesized alpha channel.
+    actual = np.asarray(predicted_image.convert('RGB')).astype(np.float32)
     assert actual.shape == (1024, 1024, 3), actual.shape
     mae = float(np.mean(np.abs(actual - reference)))
     assert mae < 2.0, f'Converted model does not match pretrained network: MAE={mae}'
