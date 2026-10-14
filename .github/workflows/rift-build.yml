@@ -26,19 +26,28 @@ jobs:
         id: tools
         run: |
           xcodebuild -version
+          sysctl hw.memsize hw.ncpu
           echo "xcode=$(xcodebuild -version | tr '\n ' '-')" >> "$GITHUB_OUTPUT"
           python -m pip install Pillow==11.1.0
           if ! command -v xcodegen; then brew install xcodegen; fi
           if ! command -v cmake; then brew install cmake; fi
           if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: native-cache
         with:
           path: Rift/Build/Native
           key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
       - name: Prepare approved artwork, source and pinned uncensored catalog
         run: python Rift/scripts/build.py prepare
       - name: Build real simulator, iPhone Metal and macOS inference runtimes
+        id: native
         run: python Rift/scripts/build.py native
+      - name: Keep completed native runtimes even when a later test fails
+        uses: actions/cache/save@v4
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        with:
+          path: Rift/Build/Native
+          key: rift-native-8345f333-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
       - name: Compile SwiftUI app and run native core, animation and UI tests
         run: python Rift/scripts/build.py simulator
       - name: Compile arm64 iPhone application
@@ -51,12 +60,13 @@ jobs:
         if: always()
         run: |
           python3 - <<'PY'
-          import json, pathlib, base64
+          import pathlib, subprocess
           from PIL import Image
           root=pathlib.Path('Rift'); out=root/'Verification'; out.mkdir(exist_ok=True)
           for name in ['BUILD-REPORT.json','MODEL-SMOKE.json','catalog-resolution.json']:
             p=root/'Build'/name
             if p.exists(): (out/name).write_bytes(p.read_bytes())
+          (out/'HOST.txt').write_text(subprocess.check_output(['sysctl','hw.memsize','hw.ncpu'],text=True))
           errors=[]
           for p in (root/'Build/Logs').glob('*.log'):
             lines=p.read_text(errors='replace').splitlines()
@@ -65,7 +75,7 @@ jobs:
           (out/'BUILD-ERRORS.txt').write_text('\n'.join(errors)[-25000:])
           for p in (root/'Build/Screenshots').rglob('*.png'):
             image=Image.open(p).convert('RGB'); image.thumbnail((440,956))
-            dest=out/(p.stem+'.webp'); image.save(dest,quality=75)
+            image.save(out/(p.stem+'.webp'),quality=75)
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

@@ -5,8 +5,8 @@ private struct ArrivalAttribute: TextAttribute {
     let times: [TimeInterval]
 }
 
-/// Native glyph rendering keeps line wrapping and text shaping in SwiftUI.
-/// Settled runs are drawn in one operation; only the newest glyphs use effects.
+/// Native shaping and wrapping remain in SwiftUI. Only the newest glyphs
+/// animate; a settled word/line segment is drawn as a single operation.
 private struct BloomTextRenderer: TextRenderer {
     let now: TimeInterval
     let motion: Bool
@@ -15,13 +15,17 @@ private struct BloomTextRenderer: TextRenderer {
         var offsets: [Int: Int] = [:]
         for line in layout {
             for run in line {
-                guard enabled, let attribute = run[ArrivalAttribute.self],
-                      let latest = attribute.times.last,
-                      now < latest + RevealSchedule.settleDuration else {
+                guard enabled, let attribute = run[ArrivalAttribute.self], !attribute.times.isEmpty else {
                     context.draw(run)
                     continue
                 }
                 let start = offsets[attribute.id, default: 0]
+                offsets[attribute.id] = start + run.count
+                let last = min(start + max(0, run.count - 1), attribute.times.count - 1)
+                if now >= attribute.times[last] + RevealSchedule.settleDuration {
+                    context.draw(run)
+                    continue
+                }
                 for (index, slice) in run.enumerated() {
                     let timestamp = attribute.times[min(start + index, attribute.times.count - 1)]
                     let age = now - timestamp
@@ -35,7 +39,6 @@ private struct BloomTextRenderer: TextRenderer {
                     let fade = min(1, progress / 0.64)
                     copy.opacity = fade * fade * (3 - 2 * fade)
                     if motion {
-                        // A small damped overshoot, rather than bouncing the line.
                         let settle = 1 - exp(-7.5 * progress) * cos(9 * progress)
                         let bounds = slice.typographicBounds.rect
                         let scale = 0.94 + 0.06 * settle
@@ -48,7 +51,6 @@ private struct BloomTextRenderer: TextRenderer {
                     }
                     copy.draw(slice, options: .disablesSubpixelQuantization)
                 }
-                offsets[attribute.id] = start + run.count
             }
         }
     }
@@ -88,6 +90,7 @@ struct StreamingText: View {
         .onChange(of: isStreaming) { _, active in if active { hasStreamed = true } }
         .onChange(of: interrupted) { _, stopped in if stopped { finish() } }
         .onChange(of: animation) { _, _ in if animation == "instant" { finish() } }
+        .onChange(of: voiceOver) { _, enabled in if enabled { finish() } }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
@@ -109,16 +112,30 @@ struct StreamingText: View {
         settled = true
     }
     private func composedText() -> Text {
+        // Whitespace boundaries prevent newline and ligature glyph counts from
+        // shifting the reveal timing of every later word in a long paragraph.
+        // This is one composed Text, not a view tree containing every letter.
         var output = Text("")
         var offset = 0
         for run in richText.runs {
-            let fragment = AttributedString(richText[run.range])
-            let count = fragment.characters.count
-            let times = Array(schedule.arrivals.dropFirst(offset).prefix(count))
-            let part = Text(fragment)
-            if !times.isEmpty { output = output + part.customAttribute(ArrivalAttribute(id: offset, times: times)) }
-            else { output = output + part }
-            offset += count
+            var beginning = run.range.lowerBound
+            var cursor = beginning
+            var count = 0
+            while cursor < run.range.upperBound {
+                let character = richText.characters[cursor]
+                cursor = richText.characters.index(after: cursor)
+                count += 1
+                if character.isWhitespace || cursor == run.range.upperBound {
+                    let fragment = AttributedString(richText[beginning..<cursor])
+                    let times = Array(schedule.arrivals.dropFirst(offset).prefix(count))
+                    let part = Text(fragment)
+                    if !times.isEmpty { output = output + part.customAttribute(ArrivalAttribute(id: offset, times: times)) }
+                    else { output = output + part }
+                    offset += count
+                    beginning = cursor
+                    count = 0
+                }
+            }
         }
         return output
     }
@@ -144,6 +161,7 @@ struct ReplyAnimationPreview: View {
                         .font(.caption).foregroundStyle(.secondary)
                     Button { runID = UUID() } label: { Label("Replay", systemImage: "arrow.clockwise").frame(maxWidth: .infinity).padding(.vertical, 10) }
                         .buttonStyle(.glassProminent)
+                        .accessibilityIdentifier("replayAnimation")
                 }.padding(24)
             }.navigationTitle("Reply animation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
