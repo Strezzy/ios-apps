@@ -1,0 +1,160 @@
+name: Fix and publish Lucid Files import
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/lucid-files-import.yml'
+      - 'LumaLift/scripts/apply_files_fix.py'
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: lucid-files-import
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply and commit the targeted repair
+        run: |
+          python LumaLift/scripts/apply_files_fix.py
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add LumaLift/App/LumaLiftApp.swift LumaLift/App/AppStore.swift LumaLift/App/VideoFileImportPolicy.swift LumaLift/Tests/LumaLiftTests.swift LumaLift/scripts/build_ios.py
+          if ! git diff --cached --quiet; then
+            git commit -m 'Fix greyed-out Files videos with content validation and coordinated imports [skip ci]'
+            git push origin HEAD:main
+          fi
+          echo "LUCID_SOURCE_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          python - <<'PY'
+          import json, os
+          catalog=json.load(open('apps.json'))
+          builds=[int(v['buildVersion']) for a in catalog['apps'] if a['bundleIdentifier']=='com.billy.lucid' for v in a['versions'] if str(v.get('buildVersion','')).isdigit()]
+          build=max(201+int(os.environ['GITHUB_RUN_NUMBER']),max(builds or [201])+1)
+          with open(os.environ['GITHUB_ENV'],'a') as f:
+              f.write('LUMALIFT_BUILD_NUMBER='+str(build)+'\n')
+          PY
+      - name: Prepare Apple tools and the unchanged offline models
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          python -m pip install Pillow==11.1.0 numpy==1.26.4 torch==2.5.0 coremltools==8.3.0
+          command -v xcodegen || brew install xcodegen
+          if ! xcrun metal --version; then xcodebuild -downloadComponent MetalToolchain; fi
+          python LumaLift/scripts/prepare_models.py
+      - name: Build iPhone IPA and run required native regressions
+        run: |
+          export GITHUB_SHA="$LUCID_SOURCE_REVISION"
+          python LumaLift/scripts/build_ios.py
+          python scripts/native_suite_publish.py verify Lucid
+          python - <<'PY'
+          import json, runpy
+          from pathlib import Path
+          p=Path('LumaLift/Build/Lucid-BUILD-REPORT.json')
+          r=json.loads(p.read_text())
+          required=runpy.run_path('LumaLift/scripts/apply_files_fix.py')['TEST_NAMES']
+          assert r['status']=='passed' and r['native_branding']['status']=='passed'
+          assert set(required).issubset(r['native_tests']['tests'])
+          r['files_import_fix']={'status':'passed','required_regressions':required,'picker_filter':'public.item; actual media validated after selection','physical_files_provider_ui':'Not tested on a physical iPhone or inside LiveContainer','bundle_identity':'Unchanged: com.billy.lucid'}
+          p.write_text(json.dumps(r,indent=2)+'\n')
+          print(json.dumps(r['files_import_fix'],indent=2))
+          PY
+      - name: Publish new Lucid IPA and update only its source entry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import copy, hashlib, importlib.util, json, os, shutil, subprocess, tempfile
+          from pathlib import Path
+          root=Path.cwd()
+          build=root/'LumaLift/Build'
+          report=json.loads((build/'Lucid-BUILD-REPORT.json').read_text())
+          ipa=build/'Lucid.ipa'
+          assert report['status']=='passed' and report['files_import_fix']['status']=='passed'
+          assert hashlib.sha256(ipa.read_bytes()).hexdigest()==report['ipa_sha256']
+          def run(args,cwd=root,check=True):
+              return subprocess.run([str(a) for a in args],cwd=cwd,check=check,text=True,capture_output=True)
+          tag=f"lucid-{report['version']}-build{report['build']}"
+          notes=(f"Lucid {report['version']} ({report['build']})\n\n"
+              'Fixes videos appearing greyed out or unselectable when importing from Files. The picker no longer relies on a file provider labeling a movie with a video-specific type. It allows file selection, then checks the actual video track before accepting it. Non-video files and folders are rejected.\n\n'
+              'Files imports now coordinate read access while permission is held and copy into private storage off the main thread. Originals are not modified, failed imports are cleaned up, and an invalid selection does not replace the current clip.\n\n'
+              'The app name, icon and bundle identifier remain Lucid / com.billy.lucid. This is an ordinary update to Lucid, not a new app identity. The enhancement engine, RIFE frame-rate processing, model preparation, UI theme and export settings were not changed.\n\n'
+              f"Validation: {report['native_tests']['count']} simulator-supported tests passed, including six new Files/identity regressions. The two hardware-only motion tests remain explicitly skipped. The real Files-provider interface and LiveContainer behavior still require physical-device confirmation.\n\n"
+              f"Built from source revision `{report['source_revision']}`. The release tag uses the publication branch; the attached report and source archive identify the tested code.\n")
+          (build/'Lucid-RELEASE-NOTES.md').write_text(notes)
+          shutil.copyfile(build/'LumaLift-Source.zip',build/'Lucid-Source.zip')
+          assets=[ipa,build/'Lucid-BUILD-REPORT.json',build/'Lucid-Source.zip',build/'Lucid-light.png',build/'Lucid-dark.png']
+          (build/'Lucid-SHA256SUMS.txt').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in assets))
+          assets.append(build/'Lucid-SHA256SUMS.txt')
+          if run(['gh','release','view',tag,'--repo','Strezzy/ios-apps'],check=False).returncode==0:
+              with tempfile.TemporaryDirectory() as temp:
+                  run(['gh','release','download',tag,'--repo','Strezzy/ios-apps','--pattern','Lucid.ipa','--dir',temp])
+                  assert hashlib.sha256((Path(temp)/'Lucid.ipa').read_bytes()).hexdigest()==report['ipa_sha256'], 'Never replace existing published IPA bytes'
+          else:
+              result=run(['gh','release','create',tag,*assets,'--repo','Strezzy/ios-apps','--target','main','--title',f"Lucid {report['version']} ({report['build']})",'--notes-file',build/'Lucid-RELEASE-NOTES.md','--prerelease','--latest=false'],check=False)
+              print(result.stdout);print(result.stderr)
+              result.check_returncode()
+          release=json.loads(run(['gh','release','view',tag,'--repo','Strezzy/ios-apps','--json','publishedAt']).stdout)
+          for attempt in range(5):
+              run(['git','fetch','origin','main'])
+              with tempfile.TemporaryDirectory() as temp:
+                  work=Path(temp)/'catalog'
+                  run(['git','worktree','add','--detach',work,'origin/main'])
+                  try:
+                      spec=importlib.util.spec_from_file_location('catalog_release',work/'scripts/update_catalog.py')
+                      module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+                      catalog=json.loads((work/'apps.json').read_text())
+                      registry=json.loads((work/'app-registry.json').read_text())
+                      before={a['bundleIdentifier']:copy.deepcopy(a) for a in catalog['apps'] if a['bundleIdentifier']!='com.billy.lucid'}
+                      meta=registry['com.billy.lucid']
+                      meta['localizedDescription']=meta['localizedDescription'].replace('Eleven other simulator tests cover','Simulator tests cover')
+                      module.update(catalog,registry,[ipa],tag,release['publishedAt'],notes)
+                      after={a['bundleIdentifier']:a for a in catalog['apps'] if a['bundleIdentifier']!='com.billy.lucid'}
+                      assert before==after,'Unrelated app entry changed'
+                      def save(path,data):path.write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
+                      save(work/'apps.json',catalog)
+                      save(work/'app-registry.json',registry)
+                      save(work/'LumaLift/catalog-entry.json',meta)
+                      module.render_readme(catalog)
+                      evidence=work/'branding/native-releases/Lucid.json'
+                      evidence.parent.mkdir(exist_ok=True)
+                      save(evidence,report)
+                      run(['git','add','apps.json','app-registry.json','README.md','LumaLift/catalog-entry.json','branding/native-releases/Lucid.json'],cwd=work)
+                      if run(['git','diff','--cached','--quiet'],cwd=work,check=False).returncode==0:break
+                      run(['git','config','user.name','github-actions[bot]'],cwd=work)
+                      run(['git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com'],cwd=work)
+                      run(['git','commit','-m',f"Publish verified Lucid Files import fix {report['version']} ({report['build']}) [skip ci]"],cwd=work)
+                      pushed=run(['git','push','origin','HEAD:main'],cwd=work,check=False)
+                      print(pushed.stdout);print(pushed.stderr)
+                      if pushed.returncode==0:break
+                  finally:
+                      run(['git','worktree','remove','--force',work])
+          else:raise RuntimeError('Release published but concurrent catalog edits prevented source update')
+          print(f'Published {tag} and updated only Lucid in the live catalog.')
+          PY
+      - name: Retain IPA and native test evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Lucid-Files-fix-${{ github.run_number }}
+          path: |
+            LumaLift/Build/Lucid.ipa
+            LumaLift/Build/Lucid-BUILD-REPORT.json
+            LumaLift/Build/Lucid-Source.zip
+            LumaLift/Build/Lucid-SHA256SUMS.txt
+            LumaLift/Build/Lucid-RELEASE-NOTES.md
+            LumaLift/Build/Lucid-light.png
+            LumaLift/Build/Lucid-dark.png
+            LumaLift/Build/BUILD-REPORT.json
+            LumaLift/Build/Logs
+          if-no-files-found: ignore
+          retention-days: 14
