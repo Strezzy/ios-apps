@@ -40,7 +40,7 @@ struct RiftMark: View {
 struct BenefitBadge: View {
     let text: String
     var body: some View {
-        Text(text).font(.system(size:10,weight:.semibold,design:.rounded)).foregroundStyle(RiftTheme.accent)
+        Text(text).font(.system(.caption2, design:.rounded, weight:.semibold)).foregroundStyle(RiftTheme.accent)
             .padding(.horizontal,8).padding(.vertical,5)
             .background(RiftTheme.accent.opacity(0.09),in:Capsule())
             .overlay { Capsule().strokeBorder(RiftTheme.accent.opacity(0.13),lineWidth:0.5) }

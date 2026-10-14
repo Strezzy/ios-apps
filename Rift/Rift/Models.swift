@@ -68,7 +68,8 @@ struct DeviceProfile: Identifiable, Hashable, Sendable {
     static var machine: String {
         if let value = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] { return value }
         var system = utsname(); uname(&system)
-        return withUnsafePointer(to: &system.machine) { pointer in pointer.withMemoryRebound(to: CChar.self, capacity: MemoryLayout.size(ofValue: system.machine)) { String(cString:$0) } }
+        let capacity = MemoryLayout.size(ofValue: system.machine)
+        return withUnsafePointer(to: &system.machine) { pointer in pointer.withMemoryRebound(to: CChar.self, capacity: capacity) { String(cString:$0) } }
     }
     static var current: DeviceProfile {
         let identifier = machine

@@ -1,0 +1,14 @@
+{
+  "app": "Rift",
+  "version": "1.0",
+  "build": "2",
+  "source": "f00248e2c221166de07122ae2327a241881eece3",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "not_run",
+  "model_inference": "not_run",
+  "simulator_device": "iPhone 17 Pro",
+  "build_result": "failed",
+  "failure": "simulator-build failed with exit code 65"
+}

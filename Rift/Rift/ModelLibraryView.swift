@@ -44,13 +44,13 @@ struct ModelLibraryView: View {
                                 if !entries.isEmpty { familyCard(family,entries:entries) }
                             }
                         }
-                        Button { showImporter=true } label: { HStack(spacing:14) { Image(systemName:"folder.badge.plus").font(.title3); VStack(alignment:.leading,spacing:4) { Text("Import your own model").font(.subheadline.weight(.semibold)); Text("Choose a compatible GGUF in Files").font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName:"plus") }.padding(18) }.buttonStyle(.plain).background(.thinMaterial,in:RoundedRectangle(cornerRadius:22)).disabled(model.busy).accessibilityIdentifier("importModel")
+                        Button { showImporter=true } label: { HStack(spacing:14) { Image(systemName:"folder.badge.plus").font(.title3); VStack(alignment:.leading,spacing:4) { Text("Import your own model").font(.subheadline.weight(.semibold)); Text("Choose a compatible GGUF in Files").font(.caption).foregroundStyle(.secondary) }; Spacer(); Image(systemName:"plus") }.padding(18) }.buttonStyle(.plain).background(.thinMaterial,in:RoundedRectangle(cornerRadius:22)).disabled(model.busy || model.generating).accessibilityIdentifier("importModel")
                         Text("Curated downloads are publisher-labeled uncensored variants, not stock models. Refusal behavior can still vary. Device fits are estimates until tested on a physical iPhone; live memory checks always apply.").font(.caption).foregroundStyle(.secondary).lineSpacing(3)
                         if model.offline { Label("Offline mode is on. Imports and installed models still work.",systemImage:"wifi.slash").font(.caption).foregroundStyle(.secondary) }
                     }.padding(20)
                 }
             }.navigationTitle("Models").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement:.topBarLeading) { Button("Done") { dismiss() } }; ToolbarItem(placement:.topBarTrailing) { Button { showImporter=true } label: { Image(systemName:"plus") }.disabled(model.busy).accessibilityLabel("Import model from Files") } }
+                .toolbar { ToolbarItem(placement:.topBarLeading) { Button("Done") { dismiss() } }; ToolbarItem(placement:.topBarTrailing) { Button { showImporter=true } label: { Image(systemName:"plus") }.disabled(model.busy || model.generating).accessibilityLabel("Import model from Files") } }
                 .fileImporter(isPresented:$showImporter,allowedContentTypes:[UTType(filenameExtension:"gguf") ?? .data],allowsMultipleSelection:false) { result in do { if let url=try result.get().first { model.importModel(url) } } catch { model.error=error.localizedDescription } }
                 .sheet(item:$pendingDownload) { item in DownloadConsentView(item:item) { model.download(item) } }
                 .confirmationDialog("Delete downloaded model? Your chats will stay on this iPhone.",isPresented:Binding(get:{deleting != nil},set:{if !$0 {deleting=nil}}),titleVisibility:.visible) { if let deleting { Button("Delete \(deleting.name)",role:.destructive) { model.deleteModel(deleting); self.deleting=nil } } }
@@ -96,7 +96,7 @@ struct ModelLibraryView: View {
                             if let installed=model.installed.first(where:{$0.catalogID==item.id}) {
                                 Button { model.select(installed); dismiss() } label: { Image(systemName:installed.id == model.selectedModelID ? "checkmark" : "arrow.right").frame(width:36,height:36) }.buttonStyle(.glass).disabled(model.generating).accessibilityLabel("Use \(item.name)")
                             } else {
-                                Button { pendingDownload=item } label: { Image(systemName:model.pausedID == item.id ? "play.fill" : "arrow.down").frame(width:36,height:36) }.buttonStyle(.glass).disabled(model.busy || model.offline).accessibilityLabel("Download \(item.name)")
+                                Button { pendingDownload=item } label: { Image(systemName:model.pausedID == item.id ? "play.fill" : "arrow.down").frame(width:36,height:36) }.buttonStyle(.glass).disabled(model.busy || model.generating || model.offline).accessibilityLabel("Download \(item.name)")
                             }
                         }
                         HStack(spacing:6) { Text(item.sizeLabel); Text("·"); Text("\(item.variant)"); if item.workingGB >= 6 { Text("· Higher memory") } }.font(.system(size:10)).foregroundStyle(.secondary)

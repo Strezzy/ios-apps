@@ -1,0 +1,23 @@
+native-runtimes.log
+-- Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E - Failed
+-- Performing Test HAVE_SVE - Failed
+-- Performing Test HAVE_MATMUL_INT8 - Failed
+-- Performing Test HAVE_SME - Failed
+-- Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E - Failed
+-- Performing Test HAVE_DOTPROD - Failed
+-- Performing Test HAVE_SVE - Failed
+-- Performing Test HAVE_MATMUL_INT8 - Failed
+-- Performing Test HAVE_SME - Failed
+-- Performing Test GGML_COMPILER_SUPPORTS_FP16_FORMAT_I3E - Failed
+-- Performing Test HAVE_SVE - Failed
+-- Performing Test HAVE_MATMUL_INT8 - Failed
+-- Performing Test HAVE_SME - Failed
+simulator-build.log
+/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
+/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
+/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
+/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
+/Users/runner/work/ios-apps/ios-apps/Rift/Rift/AppModel.swift:214:47: error: cannot find 'NSURLErrorCannotResume' in scope
+Failed frontend command:
+** TEST BUILD FAILED **
+The following build commands failed:

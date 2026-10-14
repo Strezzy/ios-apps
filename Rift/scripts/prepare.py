@@ -46,7 +46,7 @@ def catalog():
                 match=next(f for f in tree if f.get('path')==selected['rfilename'])
                 lfs=match.get('lfs',{}); sha=lfs.get('oid') or lfs.get('sha256'); size=lfs.get('size') or match.get('size')
             assert re.fullmatch('[0-9a-f]{64}',sha or '') and 10_000_000 < int(size) < 10_000_000_000
-            license=info.get('cardData',{}).get('license','See model source')
+            license=(info.get('cardData') or {}).get('license') or 'See model source'
             if isinstance(license,list): license=', '.join(license)
             item=dict(spec,revision=revision,filename=selected['rfilename'],bytes=int(size),sha256=sha,variant=quant,license=license,licenseText='The model remains under its publisher\'s and base model\'s license. Review the source and license before downloading. Rift does not bundle model weights.',uncensored=True)
             models.append(item)
@@ -81,23 +81,7 @@ def icon():
     (assets/'Contents.json').write_text(json.dumps({'info':{'version':1,'author':'xcode'}}))
     (app/'Contents.json').write_text(json.dumps({'images':[{'idiom':'universal','platform':'ios','size':'1024x1024','filename':'Rift.png'}],'info':{'version':1,'author':'xcode'}},indent=2))
 def source_corrections():
-    # One-time source fixes are made before compiling and included in the source snapshot.
-    path=ROOT/'Rift/AppModel.swift'; text=path.read_text()
-    text=text.replace('let store=try LocalStorage(root:storageOverride); storage=store','let store=try LocalStorage(root:storageOverride)')
-    text=text.replace('activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id','activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id\n            storage=store')
-    path.write_text(text)
-    path=ROOT/'Rift/Models.swift'; text=path.read_text().replace('var system = utsname(); uname(&system)','var system = utsname(); uname(&system)\n        let length=MemoryLayout.size(ofValue:system.machine)').replace('capacity: MemoryLayout.size(ofValue: system.machine)','capacity:length'); path.write_text(text)
-    path=ROOT/'Rift/ChatView.swift'; text=path.read_text();
-    if 'import UIKit' not in text: text=text.replace('import SwiftUI','import SwiftUI\nimport UIKit',1)
-    text=text.replace('Text(.init(chunk))','Text(LocalizedStringKey(chunk))')
-    path.write_text(text)
-    path=ROOT/'Rift/Native/RiftEngine.h'; text=path.read_text();
-    if '- (void)resetCancellation;' not in text: text=text.replace('- (void)cancel;','- (void)cancel;\n- (void)resetCancellation;')
-    path.write_text(text)
-    path=ROOT/'Rift/Native/RiftEngine.mm'; text=path.read_text().replace('    _cancelled.store(false);\n    llama_sampler','    llama_sampler')
-    if '- (void)resetCancellation {' not in text: text=text.replace('- (void)cancel {','- (void)resetCancellation { _cancelled.store(false); }\n- (void)cancel {')
-    path.write_text(text)
-    path=ROOT/'Rift/AppModel.swift'; text=path.read_text().replace('        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in','        engine.resetCancellation()\n        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in'); path.write_text(text)
+    pass
 if __name__=='__main__':
     BUILD.mkdir(exist_ok=True); RES.mkdir(parents=True,exist_ok=True)
     source_corrections(); catalog(); source(); icon()
