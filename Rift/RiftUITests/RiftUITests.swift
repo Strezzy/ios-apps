@@ -34,11 +34,13 @@ final class RiftUITests: XCTestCase {
         for _ in 0..<5 { if larger.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(larger.isHittable); larger.tap()
         XCTAssertTrue(app.navigationBars["Reply animation"].waitForExistence(timeout: 5))
-        let picker = app.segmentedControls["replyStylePicker"]
+        let picker = app
         let rendered = app.descendants(matching: .any)["animationPreviewText"].firstMatch
-        for style in ["Bloom", "Soft fade", "Instant", "Bloom"] {
-            picker.buttons[style].tap()
-            XCTAssertTrue(picker.buttons[style].isSelected)
+        for style in ["bloom", "fade", "instant", "starlight", "wave", "bounce"] {
+            let button = picker.buttons["replyStyle-" + style].firstMatch
+            if !button.isHittable { app.swipeDown() }
+            button.tap()
+            XCTAssertTrue(button.isSelected)
             let complete = NSPredicate(format: "label CONTAINS %@", "Just a little room to think.")
             let done = XCTNSPredicateExpectation(predicate: complete, object: rendered)
             XCTAssertEqual(XCTWaiter.wait(for: [done], timeout: 10), .completed)
@@ -109,6 +111,18 @@ final class RiftUITests: XCTestCase {
         more.tap()
         XCTAssertTrue(app.staticTexts["Qwen3 14B · Precision"].exists)
         attach("Rift-Heretic-sizes")
+    }
+    func testVoiceModeOpensWithoutStartingMicrophone() {
+        let app = XCUIApplication(); app.launch()
+        let entry = app.buttons["openVoiceMode"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
+        XCTAssertTrue(app.navigationBars["Voice mode"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
+        XCTAssertTrue(app.switches["Hands-free turns"].exists)
+        XCTAssertEqual(app.alerts.count, 0, "Opening voice mode must not request microphone access")
+        attach("Rift-voice-mode")
+        app.navigationBars["Voice mode"].buttons["Done"].tap()
+        XCTAssertTrue(entry.waitForExistence(timeout: 5))
     }
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIApplication().screenshot())

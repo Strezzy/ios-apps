@@ -11,8 +11,8 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     TARGETED_DEVICE_FAMILY: '1'
-    MARKETING_VERSION: '1.2'
-    CURRENT_PROJECT_VERSION: '125'
+    MARKETING_VERSION: '1.3'
+    CURRENT_PROJECT_VERSION: '126'
 targets:
   Rift:
     type: application
@@ -24,8 +24,8 @@ targets:
       path: Rift/Info.plist
       properties:
         CFBundleDisplayName: Rift
-        CFBundleShortVersionString: '1.2'
-        CFBundleVersion: '125'
+        CFBundleShortVersionString: '1.3'
+        CFBundleVersion: '126'
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
@@ -33,6 +33,8 @@ targets:
         UIFileSharingEnabled: false
         LSSupportsOpeningDocumentsInPlace: true
         ITSAppUsesNonExemptEncryption: false
+        NSMicrophoneUsageDescription: "Record a short voice-chat turn for on-device transcription. Recordings are deleted after use and are not uploaded."
+        NSSpeechRecognitionUsageDescription: "Transcribe voice-chat turns using Apple's on-device speech model. No server recognition is used."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.billy.rift

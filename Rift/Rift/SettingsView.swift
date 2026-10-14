@@ -38,7 +38,7 @@ struct SettingsView: View {
                     }.listRowBackground(Color.clear)
                     Section("Privacy") {
                         Label("Always on-device", systemImage: "lock.fill").accessibilityIdentifier("privacyAlwaysLocal")
-                        Text("Chat always runs on this iPhone. Internet is used for model downloads you request, never to generate replies.")
+                        Text("Chat and voice transcription run on this iPhone. Internet is used for model or speech-language downloads you request, never to generate replies.")
                             .font(.callout).foregroundStyle(.secondary)
                         Toggle("Allow cellular model downloads", isOn: $model.cellular)
                         Text("No account, analytics, cloud inference, or automatic chat uploads. Chats and models are excluded from app-managed iCloud backup. Exporting a chat or choosing a cloud file in Files is your action.").font(.caption).foregroundStyle(.secondary)
@@ -47,7 +47,7 @@ struct SettingsView: View {
                         ReplyStylePicker()
                         ReplyAnimationSample()
                         Button("Larger preview", systemImage: "arrow.up.left.and.arrow.down.right") { animationPreview = true }
-                        Text("New letters softly appear and settle into place. Reduce Motion removes the lift, scale and blur. Low Power Mode uses a lighter fade.").font(.caption).foregroundStyle(.secondary)
+                        Text("Choose quiet effects or expressive Starlight, Wave and Bubble. Reduce Motion removes particles and movement. Low Power Mode uses a lighter fade.").font(.caption).foregroundStyle(.secondary)
                     }
                     Section("Conversation") {
                         Picker("Context",selection:$model.context) { Text("512 · minimum").tag(512); Text("1K · low memory").tag(1024); Text("2K · lighter").tag(2048); Text("4K · balanced").tag(4096); Text("8K · more memory").tag(8192) }.disabled(model.generating)
@@ -92,7 +92,7 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.2 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.3 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
             }.task {

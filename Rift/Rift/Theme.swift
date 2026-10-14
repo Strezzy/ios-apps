@@ -15,7 +15,7 @@ struct RiftBackground: View {
     var body: some View {
         LinearGradient(colors:scheme == .dark ? [Color(red:0.07,green:0.035,blue:0.05),Color(red:0.13,green:0.035,blue:0.065),Color(red:0.23,green:0.045,blue:0.09)] : [Color(red:1,green:0.975,blue:0.975),Color(red:0.985,green:0.92,blue:0.935),Color(red:0.97,green:0.82,blue:0.85)],startPoint:.topLeading,endPoint:.bottomTrailing)
             .overlay(alignment:.topTrailing) { Circle().fill(RiftTheme.rose.opacity(scheme == .dark ? 0.09 : 0.15)).frame(width:280,height:280).blur(radius:65).offset(x:120,y:-120) }
-            .ignoresSafeArea(.container)
+            .ignoresSafeArea(.all)
     }
 }
 struct RiftWing: Shape {

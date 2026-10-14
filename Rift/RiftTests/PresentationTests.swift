@@ -81,6 +81,23 @@ final class PresentationTests: XCTestCase {
         XCTAssertNotEqual(bloom.pixels, fade.pixels, "Bloom and Soft fade must visibly differ")
         XCTAssertEqual(complete.pixels, instant.pixels, "Settled text must match Instant")
     }
+    @MainActor func testExpressiveStylesActuallyChangeRenderedPixels() throws {
+        var schedule = RevealSchedule()
+        let rich = AttributedString("Stars ripple softly")
+        schedule.ingest(String(rich.characters), now: 100, animate: true)
+        let text = ReplyTextComposition.make(rich, arrivals: schedule.arrivals)
+        let instant = try render(text, time: 100.12, style: .instant)
+        var snapshots = Set<Data>()
+        for style in [ReplyAnimationStyle.starlight, .wave, .bounce] {
+            let intermediate = try render(text, time: 100.12, style: style)
+            let final = try render(text, time: 102, style: style)
+            XCTAssertGreaterThan(intermediate.ink, 0)
+            XCTAssertNotEqual(intermediate.pixels, instant.pixels)
+            XCTAssertEqual(final.pixels, instant.pixels)
+            snapshots.insert(intermediate.pixels)
+        }
+        XCTAssertEqual(snapshots.count, 3)
+    }
     @MainActor private func render(_ text: Text, time: Double, style: ReplyAnimationStyle) throws -> (pixels: Data, ink: Int) {
         let view = ReplyRenderSurface(text: text, now: time, style: style)
             .font(.system(size: 24)).foregroundStyle(.black).padding(12)

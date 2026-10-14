@@ -11,6 +11,7 @@ struct BloomTextRenderer: TextRenderer {
     var animatableData: Double { get { now } set { now = newValue } }
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         var offsets: [Int: Int] = [:]
+        var particlesRemaining = 24
         for line in layout {
             for run in line {
                 guard style != .instant, let attribute = run[ArrivalAttribute.self], !attribute.times.isEmpty else {
@@ -19,7 +20,7 @@ struct BloomTextRenderer: TextRenderer {
                 let start = offsets[attribute.id, default: 0]
                 offsets[attribute.id] = start + run.count
                 let last = min(start + max(0, run.count - 1), attribute.times.count - 1)
-                if now >= attribute.times[last] + RevealSchedule.settleDuration { context.draw(run); continue }
+                if now >= attribute.times[last] + style.duration { context.draw(run); continue }
                 for (index, slice) in run.enumerated() {
                     let timestamp = attribute.times[min(start + index, attribute.times.count - 1)]
                     let frame = ReplyGlyphFrame.at(age: now - timestamp, style: style)
@@ -28,11 +29,37 @@ struct BloomTextRenderer: TextRenderer {
                     copy.opacity *= frame.opacity
                     let bounds = slice.typographicBounds.rect
                     let lift = frame.liftFraction * min(7, bounds.height * 0.28)
-                    copy.translateBy(x: bounds.midX, y: bounds.midY + lift)
+                    copy.translateBy(x: bounds.midX + frame.horizontal, y: bounds.midY + lift)
+                    copy.rotate(by: .radians(frame.rotation))
                     copy.scaleBy(x: frame.scale, y: frame.scale)
                     copy.translateBy(x: -bounds.midX, y: -bounds.midY)
                     if frame.blur > 0.03 { copy.addFilter(.blur(radius: frame.blur)) }
                     copy.draw(slice, options: .disablesSubpixelQuantization)
+                    let seed = attribute.id + start + index
+                    if frame.sparkle > 0.015 && seed % 3 == 0 && particlesRemaining > 0 {
+                        let progress = min(1, max(0, (now - timestamp) / style.duration))
+                        for particle in 0..<2 where particlesRemaining > 0 {
+                            particlesRemaining -= 1
+                            let side: Double = particle == 0 ? -1 : 1
+                            let travel = 3 + 8 * progress
+                            let x = bounds.midX + side * travel
+                            let y = bounds.minY + bounds.height * 0.3 - 9 * progress + Double(seed % 4)
+                            let radius = (particle == 0 ? 2.1 : 1.35) * (1 - 0.4 * progress)
+                            var star = Path()
+                            star.move(to: CGPoint(x: x, y: y - radius))
+                            star.addLine(to: CGPoint(x: x + radius * 0.26, y: y - radius * 0.26))
+                            star.addLine(to: CGPoint(x: x + radius, y: y))
+                            star.addLine(to: CGPoint(x: x + radius * 0.26, y: y + radius * 0.26))
+                            star.addLine(to: CGPoint(x: x, y: y + radius))
+                            star.addLine(to: CGPoint(x: x - radius * 0.26, y: y + radius * 0.26))
+                            star.addLine(to: CGPoint(x: x - radius, y: y))
+                            star.addLine(to: CGPoint(x: x - radius * 0.26, y: y - radius * 0.26))
+                            star.closeSubpath()
+                            var glow = context
+                            glow.opacity *= frame.sparkle * 0.85
+                            glow.fill(star, with: .color(RiftTheme.accent))
+                        }
+                    }
                 }
             }
         }
@@ -95,6 +122,9 @@ struct StreamingText: View {
     private var style: ReplyAnimationStyle {
         ReplyAnimationStyle.resolved(animation).effective(reduceMotion: reduceMotion, lowPower: lowPower, voiceOver: voiceOver)
     }
+    private var animationCompletion: TimeInterval {
+        schedule.completion + max(0, style.duration - RevealSchedule.settleDuration)
+    }
     var body: some View {
         Group {
             if (isStreaming || !settled) && style != .instant {
@@ -115,9 +145,9 @@ struct StreamingText: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
-        .task(id: schedule.completion) {
-            guard !settled, schedule.completion.isFinite else { return }
-            let wait = max(0, schedule.completion - Date.timeIntervalSinceReferenceDate)
+        .task(id: animationCompletion) {
+            guard !settled, animationCompletion.isFinite else { return }
+            let wait = max(0, animationCompletion - Date.timeIntervalSinceReferenceDate)
             do { try await Task.sleep(for: .seconds(wait)); settled = true } catch { }
         }
     }
@@ -131,7 +161,7 @@ struct StreamingText: View {
         schedule.ingest(String(richText.characters), now: now, animate: animate)
         assembled = ReplyTextComposition.make(richText, arrivals: schedule.arrivals)
         hasStreamed = hasStreamed || isStreaming
-        settled = !animate || now >= schedule.completion
+        settled = !animate || now >= animationCompletion
     }
     private func finish() {
         schedule.finishImmediately(now: Date.timeIntervalSinceReferenceDate)
@@ -143,9 +173,21 @@ struct StreamingText: View {
 struct ReplyStylePicker: View {
     @AppStorage("rift.replyAnimation") private var style = "bloom"
     var body: some View {
-        Picker("Style", selection: $style) {
-            ForEach(ReplyAnimationStyle.allCases) { item in Text(item.title).tag(item.rawValue) }
-        }.pickerStyle(.segmented).accessibilityIdentifier("replyStylePicker")
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+            ForEach(ReplyAnimationStyle.allCases) { item in
+                Button { style = item.rawValue } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: item.icon).font(.title3)
+                        Text(item.title).font(.caption.weight(.semibold))
+                    }.frame(maxWidth: .infinity).padding(.vertical, 12)
+                        .foregroundStyle(style == item.rawValue ? RiftTheme.accent : .primary)
+                        .background(RiftTheme.accent.opacity(style == item.rawValue ? 0.15 : 0.035), in: RoundedRectangle(cornerRadius: 16))
+                        .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(RiftTheme.accent.opacity(style == item.rawValue ? 0.65 : 0.08), lineWidth: 1) }
+                }.buttonStyle(.plain).accessibilityIdentifier("replyStyle-" + item.rawValue)
+                    .accessibilityLabel(item.title).accessibilityHint(item.detail)
+                    .accessibilityAddTraits(style == item.rawValue ? .isSelected : [])
+            }
+        }.accessibilityIdentifier("replyStylePicker")
     }
 }
 
@@ -176,7 +218,7 @@ struct ReplyAnimationSample: View {
             }.frame(maxWidth: .infinity, alignment: .leading)
             if voiceOver { Text("VoiceOver is on. Text appears instantly.").font(.caption).foregroundStyle(.secondary) }
             else if reduceMotion || lowPower {
-                Text(reduceMotion ? "Reduce Motion is on. Bloom uses a gentle fade." : "Low Power Mode is on. Bloom uses a lighter fade.")
+                Text(reduceMotion ? "Reduce Motion is on. Expressive effects use a gentle fade." : "Low Power Mode is on. Expressive effects use a lighter fade.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Text("Sample text, not an AI response.").font(.caption2).foregroundStyle(.secondary)
@@ -207,11 +249,12 @@ struct ReplyAnimationPreview: View {
         NavigationStack {
             ZStack {
                 RiftBackground()
-                VStack(alignment: .leading, spacing: 24) {
-                    ReplyStylePicker()
-                    ReplyAnimationSample()
-                    Spacer()
-                }.padding(24)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        ReplyStylePicker()
+                        ReplyAnimationSample()
+                    }.padding(24)
+                }
             }.navigationTitle("Reply animation").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }

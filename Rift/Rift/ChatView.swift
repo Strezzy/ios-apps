@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-enum RiftSheet: String, Identifiable { case models, history, settings; var id: String { rawValue } }
+enum RiftSheet: String, Identifiable { case models, history, settings, voice; var id: String { rawValue } }
 struct ChatView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft=""
@@ -39,9 +39,9 @@ struct ChatView: View {
                 }
             }
             .sheet(item:$sheet) { choice in
-                switch choice { case .models: ModelLibraryView(); case .history: HistoryView(); case .settings: SettingsView() }
+                switch choice { case .models: ModelLibraryView(); case .history: HistoryView(); case .settings: SettingsView(); case .voice: VoiceConversationView(model: model) }
             }
-        }
+        }.background { RiftBackground().ignoresSafeArea(.all) }
     }
     private var welcome: some View {
         VStack(spacing:18) {
@@ -134,6 +134,11 @@ struct ChatView: View {
                     .font(.body).lineLimit(1...4).focused($composing)
                     .padding(.leading, 14).padding(.vertical, 10)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
+                Button { composing = false; sheet = .voice } label: {
+                    Image(systemName: "waveform").font(.system(size: 18, weight: .medium))
+                        .frame(width: 40, height: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel("Voice mode").accessibilityIdentifier("openVoiceMode")
+                    .disabled(model.generating || model.busy)
                 Button {
                     if model.generating { model.stop() } else { send() }
                 } label: {
