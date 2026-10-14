@@ -1,0 +1,29 @@
+name: Stop duplicate suite runs from Lucid Files repair
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/lucid-stop-duplicate-suite.yml']
+permissions:
+  actions: write
+  contents: read
+jobs:
+  stop-duplicates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Cancel only repo-wide runs caused by this Lucid-only repair
+        run: |
+          for sha in 8c8f34c5afd161a4b19968caf4b422789d083ddb 3b42953e86ad89110af4b9e649713886d56d9139; do
+            gh api "repos/Strezzy/ios-apps/actions/workflows/native-suite.yml/runs?head_sha=$sha&per_page=10" --jq '.workflow_runs[] | select(.status != "completed") | .id' > "$RUNNER_TEMP/duplicate-runs.txt"
+            while read -r run; do
+              test -n "$run" || continue
+              echo "Cancelling duplicate native-suite run $run from Lucid repair commit $sha"
+              gh api --method POST "repos/Strezzy/ios-apps/actions/runs/$run/cancel" || {
+                state=$(gh api "repos/Strezzy/ios-apps/actions/runs/$run" --jq .status)
+                test "$state" = completed
+              }
+            done < "$RUNNER_TEMP/duplicate-runs.txt"
+          done
