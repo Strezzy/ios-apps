@@ -31,6 +31,8 @@ targets:
       properties:
         CFBundleName: Lucid
         CFBundleDisplayName: Lucid
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
         NSPhotoLibraryAddUsageDescription: Save the enhanced videos you choose to your photo library.
         UILaunchScreen: {}
