@@ -9,10 +9,9 @@ final class InferenceService: @unchecked Sendable {
     private var loadedContext=0
     func stop() { engine.cancel() }
     func unload() { engine.cancel(); queue.async { self.engine.unload(); self.loadedID=nil; self.loadedContext=0 } }
-    func run(model: InstalledModel, url: URL, messages: [[String:String]], context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws {
+    func run(model: InstalledModel, url: URL, messages: [[String:String]], context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws -> String {
         engine.resetCancellation()
-        engine.resetCancellation()
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String,Error>) in
             queue.async {
                 do {
                     if self.loadedID != model.id || self.loadedContext != context { self.engine.unload(); self.loadedID=nil }
@@ -23,9 +22,10 @@ final class InferenceService: @unchecked Sendable {
                     #else
                     let cpu=false
                     #endif
-                    _ = try self.engine.generate(atPath:url.path,messages:messages,context:Int32(context),maxTokens:Int32(maxTokens),temperature:temperature,thinking:thinking,cpu:cpu,token:text,status:status)
+                    var finalText = ""
+                    _ = try self.engine.generate(atPath:url.path,messages:messages,context:Int32(context),maxTokens:Int32(maxTokens),temperature:temperature,thinking:thinking,cpu:cpu,token:{ value in finalText=value; text(value) },status:status)
                     self.loadedID=model.id; self.loadedContext=context
-                    continuation.resume()
+                    continuation.resume(returning:finalText)
                 } catch { self.loadedID=nil; self.loadedContext=0; continuation.resume(throwing:error) }
             }
         }
@@ -80,7 +80,6 @@ final class InferenceService: @unchecked Sendable {
             selectedModelID=UserDefaults.standard.string(forKey:"rift.selectedModel")
             if selectedModel == nil { selectedModelID=installed.first?.id }
             activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id
-            storage=store
         } catch {
             storage=nil; startupError="Rift could not open its local data. Existing files have been left untouched. \(error.localizedDescription)"
         }
@@ -148,7 +147,7 @@ final class InferenceService: @unchecked Sendable {
         let working=catalog.first {$0.id == model.catalogID}?.workingGB
         Task {
             do {
-                try await inference.run(model:model,url:storage.url(for:model),messages:messages,context:context,maxTokens:maxTokens,temperature:Float(temperature),thinking:thinking,workingGB:working,text:{ [weak self] text in
+                let finalText = try await inference.run(model:model,url:storage.url(for:model),messages:messages,context:context,maxTokens:maxTokens,temperature:Float(temperature),thinking:thinking,workingGB:working,text:{ [weak self] text in
                     Task { @MainActor in
                         guard let self, self.generationID == operation, let c=self.conversations.firstIndex(where:{$0.id==chatID}), let m=self.conversations[c].messages.firstIndex(where:{$0.id==replyID}) else { return }
                         self.conversations[c].messages[m].content=text; self.scheduleSave()
@@ -156,7 +155,9 @@ final class InferenceService: @unchecked Sendable {
                 },status:{ [weak self] status in
                     Task { @MainActor in guard let self, self.generationID == operation else { return }; self.status=status }
                 })
+                if let c=conversations.firstIndex(where:{$0.id==chatID}), let m=conversations[c].messages.firstIndex(where:{$0.id==replyID}) { conversations[c].messages[m].content=finalText }
             } catch { if !stopping { self.error=error.localizedDescription } }
+            generationID=nil
             if let c=conversations.firstIndex(where:{$0.id==chatID}), let m=conversations[c].messages.firstIndex(where:{$0.id==replyID}) {
                 conversations[c].messages[m].interrupted=stopping
                 if conversations[c].messages[m].content.isEmpty { conversations[c].messages[m].content=stopping ? "Reply stopped." : "No reply was generated. Try again or choose another model."; conversations[c].messages[m].interrupted=true }

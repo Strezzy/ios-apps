@@ -80,24 +80,6 @@ def icon():
     Image.open(image).convert('RGB').resize((1024,1024),Image.Resampling.LANCZOS).save(app/'Rift.png')
     (assets/'Contents.json').write_text(json.dumps({'info':{'version':1,'author':'xcode'}}))
     (app/'Contents.json').write_text(json.dumps({'images':[{'idiom':'universal','platform':'ios','size':'1024x1024','filename':'Rift.png'}],'info':{'version':1,'author':'xcode'}},indent=2))
-def source_corrections():
-    # One-time source fixes are made before compiling and included in the source snapshot.
-    path=ROOT/'Rift/AppModel.swift'; text=path.read_text()
-    text=text.replace('let store=try LocalStorage(root:storageOverride); storage=store','let store=try LocalStorage(root:storageOverride)')
-    text=text.replace('activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id','activeChatID=conversations.sorted { $0.updatedAt > $1.updatedAt }.first?.id\n            storage=store')
-    path.write_text(text)
-    path=ROOT/'Rift/Models.swift'; text=path.read_text().replace('var system = utsname(); uname(&system)','var system = utsname(); uname(&system)\n        let length=MemoryLayout.size(ofValue:system.machine)').replace('capacity: MemoryLayout.size(ofValue: system.machine)','capacity:length'); path.write_text(text)
-    path=ROOT/'Rift/ChatView.swift'; text=path.read_text();
-    if 'import UIKit' not in text: text=text.replace('import SwiftUI','import SwiftUI\nimport UIKit',1)
-    text=text.replace('Text(.init(chunk))','Text(LocalizedStringKey(chunk))')
-    path.write_text(text)
-    path=ROOT/'Rift/Native/RiftEngine.h'; text=path.read_text();
-    if '- (void)resetCancellation;' not in text: text=text.replace('- (void)cancel;','- (void)cancel;\n- (void)resetCancellation;')
-    path.write_text(text)
-    path=ROOT/'Rift/Native/RiftEngine.mm'; text=path.read_text().replace('    _cancelled.store(false);\n    llama_sampler','    llama_sampler')
-    if '- (void)resetCancellation {' not in text: text=text.replace('- (void)cancel {','- (void)resetCancellation { _cancelled.store(false); }\n- (void)cancel {')
-    path.write_text(text)
-    path=ROOT/'Rift/AppModel.swift'; text=path.read_text().replace('        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in','        engine.resetCancellation()\n        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void,Error>) in'); path.write_text(text)
 if __name__=='__main__':
     BUILD.mkdir(exist_ok=True); RES.mkdir(parents=True,exist_ok=True)
-    source_corrections(); catalog(); source(); icon()
+    catalog(); source(); icon()

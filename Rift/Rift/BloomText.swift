@@ -55,8 +55,8 @@ struct BloomText: View {
                 .textSelection(.enabled)
                 .accessibilityLabel(String(attributed.characters))
         }
-        .onAppear { mounted = true; accept(animated: live && canAnimate) }
-        .onChange(of: text) { _, _ in if mounted { accept(animated: live && canAnimate) } }
+        .onAppear { mounted = true; accept(animated: (live || active) && canAnimate) }
+        .onChange(of: text) { _, _ in if mounted { accept(animated: (live || active) && canAnimate) } }
         .onChange(of: live) { _, value in if !value && !canAnimate { revealAll() } }
         .onChange(of: canAnimate) { _, enabled in if !enabled { revealAll() } }
         .onDisappear { mounted = false; active = false }
