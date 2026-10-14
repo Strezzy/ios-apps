@@ -12,7 +12,7 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     TARGETED_DEVICE_FAMILY: '1'
     MARKETING_VERSION: '1.2'
-    CURRENT_PROJECT_VERSION: '123'
+    CURRENT_PROJECT_VERSION: '124'
 targets:
   Rift:
     type: application
@@ -25,7 +25,7 @@ targets:
       properties:
         CFBundleDisplayName: Rift
         CFBundleShortVersionString: '1.2'
-        CFBundleVersion: '123'
+        CFBundleVersion: '124'
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
