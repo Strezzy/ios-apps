@@ -244,71 +244,6 @@
       "size": 228724052
     },
     {
-      "name": "Enter the Third Dimension",
-      "subtitle": "Become the creatures of a magical rainforest",
-      "localizedDescription": "Play as a living raindrop in a mystical rainforest. Touch creatures to learn their forms, become a translucent girl, frog or fox, and shift between 2D and 3D to explore hidden paths. Includes an animated origin story, a playable first chapter, simple landscape touch controls, checkpoints, and offline play.",
-      "category": "games",
-      "tintColor": "#7FE6E3",
-      "bundleIdentifier": "com.billy.moonhop",
-      "developerName": "Strezzy",
-      "versions": [
-        {
-          "version": "2.3",
-          "buildVersion": "5",
-          "buildNumber": "5",
-          "date": "2026-10-13T22:54:29Z",
-          "localizedDescription": "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.3-build5/EnterTheThirdDimension.ipa",
-          "size": 3410491,
-          "minOSVersion": "16.0",
-          "sha256": "12972ba0db9efcb4397deb6a356a74fc30a8b1ea2ce5c97a7e2dc42883cdc704"
-        },
-        {
-          "version": "2.2",
-          "buildVersion": "4",
-          "buildNumber": "4",
-          "date": "2026-10-12T22:46:20Z",
-          "localizedDescription": "A visual polish update with expressive chibi inhabitants, sculpted reflective water forms, animated rainforest foliage, soft dynamic shadows, richer materials, luminous bloom, and smoother edges. Explore the Folded Forest, remember girl, frog, and fox forms, and unfold the world into 3D. Landscape touch controls, checkpoints, and offline play.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.2-build4/EnterTheThirdDimension.ipa",
-          "size": 3407046,
-          "minOSVersion": "16.0",
-          "sha256": "9792d829566e2b1fc62a27c9dc6070e06532a38a45fa18ae742702d6ee450c59"
-        },
-        {
-          "version": "2.1",
-          "buildVersion": "3",
-          "buildNumber": "3",
-          "date": "2026-10-12T08:32:37Z",
-          "localizedDescription": "Explore a smooth mystical rainforest as a reflective, translucent raindrop. Learn girl, frog, and fox forms by touching its inhabitants, and transform through a floating drop when entering 3D. Includes an opening story, elastic water animation, depth puzzles, landscape touch controls, checkpoints, and offline play.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.1-build3/EnterTheThirdDimension.ipa",
-          "size": 3391144,
-          "minOSVersion": "16.0",
-          "sha256": "2f2ece5f6827760ad067257d70185d93bfe0e58b449c22d2d138d225e60968b1"
-        },
-        {
-          "version": "2.0",
-          "buildVersion": "2",
-          "buildNumber": "2",
-          "date": "2026-10-12T07:15:58Z",
-          "localizedDescription": "Enter the Third Dimension: shift a pixel platforming world between 2D and real 3D, explore its depth, and find your way forward. Landscape touch controls and offline play.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.0-build2/EnterTheThirdDimension.ipa",
-          "size": 498609,
-          "minOSVersion": "16.0",
-          "sha256": "292eda2aa478051cb71e4bcc32e1d94b42f9b51cd877244c0c2d48b12e92d456"
-        }
-      ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/ThirdDimension-Rain.png",
-      "appPermissions": {
-        "entitlements": [],
-        "privacy": {}
-      },
-      "version": "2.3",
-      "versionDate": "2026-10-13T22:54:29Z",
-      "versionDescription": "Cozy Canopy: rounder chibi residents, warm daylight, soft tree crowns, pastel cottages, garden pools, butterflies, brighter liquid forms and tactile botanical controls. Original adventure, touch controls, saves and offline play preserved.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/enter-third-dimension-2.3-build5/EnterTheThirdDimension.ipa",
-      "size": 3410491
-    },
-    {
       "name": "Rinse",
       "subtitle": "Remove metadata from photos and videos",
       "localizedDescription": "Clean photos and videos on your iPhone without accounts, uploads or analytics. Import individual files, batches or folders; create separate copies; compare metadata reports and SHA-256 fingerprints; save or share the results. Supports JPEG, PNG and HEIC photos, and ordinary SDR MOV/MP4 videos up to 4K/60 fps. Photos export as SDR. Includes a small-batch photo Share extension where supported by your installation method. Originals are unchanged. Metadata removal does not hide visible content or prevent image matching. Physical iPhone testing is still required for this first release.",
@@ -352,64 +287,6 @@
       "versionDescription": "First Rinse release: offline photo and SDR video metadata cleaning, batch and folder import, native Liquid Glass, verified exports, fresh byte fingerprints, reports and a photo Share extension. See release notes for media limits and sideloading details.",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rinse-1.0.0-5/Rinse.ipa",
       "size": 2319258
-    },
-    {
-      "name": "Collectr",
-      "subtitle": "Turn moments into numbered collector cards",
-      "localizedDescription": "Create gently rounded photo cards with on-device Depth Anything 3, subtle motion and clear protective sleeves. Set a fixed edition size and rarity, collect numbered copies and transfer them between nearby phones. Includes native Liquid Glass and photo-matched ambient colors. Sealing requires confirmation to remove the original from Photos. Nearby edition records are local, without a global scarcity server. Physical iPhone motion and two-phone trading still need device testing.",
-      "category": "photo-video",
-      "tintColor": "#B5C9EA",
-      "bundleIdentifier": "com.billy.collectr",
-      "developerName": "Strezzy",
-      "versions": [
-        {
-          "version": "0.1.0",
-          "buildVersion": "9",
-          "buildNumber": "9",
-          "date": "2026-10-13T10:17:50Z",
-          "localizedDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-9/Collectr.ipa",
-          "size": 183034072,
-          "minOSVersion": "26.0",
-          "sha256": "8b1b176f5dfd22d2ef433603a848cd47492e74112afb078ae34a7c54b0fd1f01"
-        },
-        {
-          "version": "0.1.0",
-          "buildVersion": "8",
-          "buildNumber": "8",
-          "date": "2026-10-13T10:06:23Z",
-          "localizedDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-8/Collectr.ipa",
-          "size": 183034025,
-          "minOSVersion": "26.0",
-          "sha256": "2981ad57fadbaca27225e7cab78c6c7a9bf5917ad6c85b7374b4840e1066ac8d"
-        },
-        {
-          "version": "0.1.0",
-          "buildVersion": "5",
-          "buildNumber": "5",
-          "date": "2026-10-13T09:28:31Z",
-          "localizedDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
-          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-5/Collectr.ipa",
-          "size": 183028572,
-          "minOSVersion": "26.0",
-          "sha256": "1b3ed57565e02080aee7512044e05c620984b6bfd7f65f554f525028b08e4fe4"
-        }
-      ],
-      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Collectr.png",
-      "appPermissions": {
-        "entitlements": [],
-        "privacy": {
-          "NSLocalNetworkUsageDescription": "Find nearby collectors and transfer the numbered cards you choose directly between phones.",
-          "NSMotionUsageDescription": "Tilt your phone to look into your collector card. Motion stays on this device.",
-          "NSPhotoLibraryUsageDescription": "Choose a photo for a collector card. Before sealing, Collectr asks you to confirm deleting that original from Photos after safely saving your card."
-        }
-      },
-      "version": "0.1.0",
-      "versionDate": "2026-10-13T10:17:50Z",
-      "versionDescription": "First Collectr build: native Liquid Glass, offline DA3 photo depth, clear sleeves, fixed numbered editions, recoverable nearby card transfers and photo-matched ambient colors. See release notes for physical-device validation limits.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/collectr-0.1.0-9/Collectr.ipa",
-      "size": 183034072
     },
     {
       "name": "LumaLift",
