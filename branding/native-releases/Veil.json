@@ -1,7 +1,7 @@
 {
   "status": "passed",
   "physical_iphone_testing": "Not performed",
-  "source_revision": "395a73fb3031624c5121c5ab1ad543883775a41f",
+  "source_revision": "8c8f34c5afd161a4b19968caf4b422789d083ddb",
   "required_tests": [
     "testJPEGRemovesMetadataAndAppliesOrientation",
     "testPNGHasUniqueFingerprintsWithoutPixelChanges",
@@ -54,11 +54,11 @@
   },
   "simulator_launch": "passed; see Simulator-Launch.png",
   "version": "1.1",
-  "build": "201",
-  "ipa_sha256": "1c99b96327a043279a3d42f665015293d90b6b9977f4f4864eb4d5564f0340c1",
-  "ipa_bytes": 1254369,
+  "build": "202",
+  "ipa_sha256": "e636a74282d7a8af0ecdca2c941983444ace7499f8487d207606731c9230da9c",
+  "ipa_bytes": 1254373,
   "signing": "Unsigned device IPA; sign with your own sideloading/developer tool",
-  "original_build_ipa_sha256": "5f8fa15658e7094eaee13b78b8a3fcadd3d1d953870217cc3e56688b5087c462",
+  "original_build_ipa_sha256": "5cb02c3643d13b4f389e9d8fde2d1c7904d239adcb801f7857cba2aa2e62df6b",
   "native_branding": {
     "status": "passed",
     "name": "Veil",

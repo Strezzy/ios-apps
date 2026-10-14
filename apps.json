@@ -232,6 +232,17 @@
       "versions": [
         {
           "version": "1.1",
+          "buildVersion": "202",
+          "buildNumber": "202",
+          "date": "2026-10-14T09:07:41Z",
+          "localizedDescription": "Veil 1.1 (202)\n\nNative rebuild with the approved Veil icon, installed display name and bundle ID `com.billy.veil`. Veil now uses an emerald/mint interface, simpler import controls, adaptive large-text layout and reduced-transparency surfaces. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.rinse` to `com.billy.veil` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build202/Veil.ipa",
+          "size": 1254373,
+          "minOSVersion": "26.0",
+          "sha256": "e636a74282d7a8af0ecdca2c941983444ace7499f8487d207606731c9230da9c"
+        },
+        {
+          "version": "1.1",
           "buildVersion": "201",
           "buildNumber": "201",
           "date": "2026-10-14T07:28:23Z",
@@ -250,10 +261,10 @@
         }
       },
       "version": "1.1",
-      "versionDate": "2026-10-14T07:28:23Z",
-      "versionDescription": "Veil 1.1 (201)\n\nNative rebuild with the approved Veil icon, installed display name and bundle ID `com.billy.veil`. Veil now uses an emerald/mint interface, simpler import controls, adaptive large-text layout and reduced-transparency surfaces. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.rinse` to `com.billy.veil` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa",
-      "size": 1254369
+      "versionDate": "2026-10-14T09:07:41Z",
+      "versionDescription": "Veil 1.1 (202)\n\nNative rebuild with the approved Veil icon, installed display name and bundle ID `com.billy.veil`. Veil now uses an emerald/mint interface, simpler import controls, adaptive large-text layout and reduced-transparency surfaces. The actual packaged identity and compiled home-screen icon were checked. Native test evidence and light/dark simulator captures are attached. Physical iPhone behavior has not been tested. \n\n## Important installation change\n\nThe bundle ID changes from `com.billy.rinse` to `com.billy.veil` at the owner's request. This is a separate app identity, not a data-preserving in-place update. Keep the previous installation and export any files or recordings you need before removing it. Data and preferences do not automatically move into the new sandbox. Older published IPAs remain available and were not replaced. Use this arm64 iPhone IPA with your normal sideloading/signing setup.\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build202/Veil.ipa",
+      "size": 1254373
     },
     {
       "name": "Lucid",
