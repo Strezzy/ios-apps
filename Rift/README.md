@@ -1,10 +1,10 @@
-# Rift 1.3
+# Rift 1.4
 
 Native local AI chat, expressive replies, and on-device voice conversations.
 
-Tap the waveform beside the composer for voice mode. Prepare a speech language when prompted, choose an installed Apple voice, and tap Talk. Your selected uncensored model still generates the replies. Voice cloning from a clip is not included. See [Voice mode](VOICE.md) for behavior, privacy, and the physical-device checks that remain outstanding.
+Tap the waveform beside the composer for an inline liquid-glass voice orb. It starts listening as soon as the local model and speech language are ready, sends after a pause, speaks the reply, and listens again. Tap the orb to pause or interrupt, or its small X to close. Prepare a speech language when prompted; Automatic prefers the best installed Premium/Enhanced Apple voice in your language. Your selected uncensored model still generates the replies. Voice cloning from a clip is not included. See [Voice mode](VOICE.md) for behavior, privacy, and the physical-device checks that remain outstanding.
 
-Text effects now include Bloom, Soft fade, Instant, Starlight, Wave, and Bubble. Only new text animates. Background artwork extends behind the keyboard without disabling chat keyboard avoidance; the system controls the keyboard's own appearance.
+Text effects now include Ember, Bloom, Soft fade, Instant, Starlight, Wave, Bubble, Portal, and Cipher. Ember is the default for new installs; saved choices are preserved. Only new text animates. Background artwork extends behind the keyboard without disabling chat keyboard avoidance; the system controls the keyboard's own appearance.
 
 
 **Private AI. On your terms.**

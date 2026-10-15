@@ -12,10 +12,11 @@ import Combine
     @Published private(set) var heard = ""
     @Published private(set) var answer = ""
     @Published var error: String?
-    @Published var handsFree = false
+    @Published var handsFree = true
+    @Published private(set) var speechBeat = Date.distantPast
     @Published var language = UserDefaults.standard.string(forKey: "rift.voiceLanguage") ?? Locale.current.identifier { didSet { UserDefaults.standard.set(language, forKey: "rift.voiceLanguage") } }
     @Published var voiceID = UserDefaults.standard.string(forKey: "rift.voiceID") ?? "" { didSet { UserDefaults.standard.set(voiceID, forKey: "rift.voiceID") } }
-    @Published var rate = (UserDefaults.standard.object(forKey: "rift.voiceRate") as? Double) ?? 0.48 { didSet { UserDefaults.standard.set(rate, forKey: "rift.voiceRate") } }
+    @Published var rate = (UserDefaults.standard.object(forKey: "rift.voiceRate") as? Double) ?? 0.47 { didSet { UserDefaults.standard.set(rate, forKey: "rift.voiceRate") } }
     @Published var pitch = (UserDefaults.standard.object(forKey: "rift.voicePitch") as? Double) ?? 1.0 { didSet { UserDefaults.standard.set(pitch, forKey: "rift.voicePitch") } }
     let model: AppModel
     private let speech = LocalSpeechService()
@@ -33,6 +34,8 @@ import Combine
     private var queuedUtterances = Set<ObjectIdentifier>()
     private var previewing = false
     private var opened = true
+    private var wantsListening = false
+    private var speechCancellation: Task<Void, Never>?
     private var captureDirectory: URL {
         FileManager.default.temporaryDirectory.appendingPathComponent("RiftVoiceTurns", isDirectory: true)
     }
@@ -48,7 +51,7 @@ import Combine
         NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification).sink { [weak self] event in
             guard let type = event.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
                   type == AVAudioSession.InterruptionType.began.rawValue else { return }
-            Task { @MainActor in self?.pause(); self?.error = "Voice chat paused for an audio interruption. Tap Talk when you are ready." }
+            Task { @MainActor in self?.pause(); self?.error = "Voice chat paused for an audio interruption. Tap the orb when you are ready." }
         }.store(in: &subscriptions)
         NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification).sink { [weak self] event in
             guard let reason = event.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
@@ -59,15 +62,31 @@ import Combine
             Task { @MainActor in self?.refreshVoices() }
         }.store(in: &subscriptions)
     }
+    /// Opening the orb is the user's microphone action; constructing a controller is not.
+    func open() async {
+        guard opened else { return }
+        wantsListening = true
+        let id = token.renew()
+        await load()
+        guard opened, token.accepts(id), wantsListening, !Task.isCancelled else { return }
+        if assets == .ready { talk() }
+    }
     func load() async {
+        let id = token.id
         // Clean up only Rift's own short-lived audio, including after a prior crash.
         try? FileManager.default.removeItem(at: captureDirectory)
         refreshVoices()
-        languages = await speech.languages()
-        guard opened else { return }
-        assets = await speech.state(language: language)
-        if assets == .unsupported, let first = languages.first(where: { $0.hasPrefix("en_US") || $0.hasPrefix("en-US") }) ?? languages.first {
-            language = first; assets = await speech.state(language: first)
+        let supported = await speech.languages()
+        guard opened, token.accepts(id), !Task.isCancelled else { return }
+        languages = supported
+        let state = await speech.state(language: language)
+        guard opened, token.accepts(id), !Task.isCancelled else { return }
+        assets = state
+        if state == .unsupported, let first = languages.first(where: { $0.hasPrefix("en_US") || $0.hasPrefix("en-US") }) ?? languages.first {
+            language = first
+            let fallback = await speech.state(language: first)
+            guard opened, token.accepts(id), !Task.isCancelled else { return }
+            assets = fallback
         }
     }
     func languageChanged() async {
@@ -85,8 +104,12 @@ import Combine
     }
     var chosenVoice: AVSpeechSynthesisVoice? {
         if let stored = voices.first(where: { $0.identifier == voiceID }) { return stored }
-        let code = Locale(identifier: language).language.languageCode?.identifier ?? "en"
-        return voices.first { $0.language.hasPrefix(code) } ?? voices.first
+        let candidates = voices.map {
+            VoiceChoice(id: $0.identifier, language: $0.language, quality: Int($0.quality.rawValue),
+                novelty: $0.voiceTraits.contains(.isNoveltyVoice) || $0.identifier.contains(".eloquence."))
+        }
+        guard let id = VoiceChoice.preferred(in: candidates, language: language) else { return nil }
+        return voices.first { $0.identifier == id }
     }
     var active: Bool { phase != .idle }
     func prepareLanguage() {
@@ -97,9 +120,14 @@ import Combine
             do {
                 try await speech.install(language: language)
                 guard token.accepts(id), opened, !Task.isCancelled else { return }
-                assets = await speech.state(language: language)
+                let state = await speech.state(language: language)
+                guard token.accepts(id), opened, !Task.isCancelled else { return }
+                assets = state
             } catch { if token.accepts(id), !(error is CancellationError) { self.error = error.localizedDescription } }
-            if token.accepts(id) { phase = .idle }
+            if token.accepts(id) {
+                phase = .idle
+                if assets == .ready && wantsListening { talk() }
+            }
         }
     }
     func talk() {
@@ -110,6 +138,7 @@ import Combine
         guard assets == .ready else { error = "Prepare the on-device speech language first."; return }
         guard chosenVoice != nil else { error = "Install an Apple speech voice in Settings → Accessibility → Read & Speak → Voices, then reopen voice mode."; return }
         pause()
+        wantsListening = true
         error = nil; heard = ""; answer = ""; phase = .preparing
         let id = token.renew()
         operation = Task { [weak self] in
@@ -148,9 +177,11 @@ import Combine
                 self.level = min(1, max(0, Double(db + 55) / 50))
                 let elapsed = ProcessInfo.processInfo.systemUptime - began
                 gate.observe(decibels: db, elapsed: elapsed)
-                if gate.shouldFinish(elapsed: elapsed, handsFree: self.handsFree) { self.sendRecording(); return }
-                if elapsed > 15 && !gate.heardSpeech {
-                    self.pause(); self.error = "No speech was detected. Tap Talk to try again."; return
+                // Silence always submits a spoken turn. Hands-free controls only relistening.
+                if gate.shouldFinish(elapsed: elapsed, handsFree: true) {
+                    if gate.heardSpeech { self.sendRecording() }
+                    else { self.pause(); self.talk() } // Rotate the bounded file while waiting quietly.
+                    return
                 }
             }
         }
@@ -163,18 +194,20 @@ import Combine
         deadline = Task { [weak self] in
             do { try await Task.sleep(for: .seconds(40)) } catch { return }
             guard let self, self.token.accepts(id), self.phase == .transcribing else { return }
-            self.pause(); self.error = "On-device transcription took too long. Tap Talk to retry." 
+            self.pause(); self.error = "On-device transcription took too long. Tap the orb to retry."
         }
         operation = Task { [weak self] in
             guard let self else { return }
             defer { try? FileManager.default.removeItem(at: url) }
             do {
+                await speechCancellation?.value
+                try Task.checkCancellation()
                 let text = try await speech.transcribe(file: url, language: language)
                 guard token.accepts(id), opened, !Task.isCancelled else { return }
                 deadline?.cancel(); deadline = nil
-                guard !text.isEmpty else { throw RiftFailure("No words were recognized. Tap Talk and speak clearly, or use text chat.") }
+                guard !text.isEmpty else { throw RiftFailure("No words were recognized. Tap the orb and speak clearly, or use text chat.") }
                 heard = text; phase = .thinking
-                guard model.send(text), model.generating else { throw RiftFailure(model.error ?? "The local model could not begin a reply. Your transcription is shown above; you can copy it.") }
+                guard model.send(text), model.generating else { throw RiftFailure(model.error ?? "The local model could not begin a reply. Your transcription is shown in the chat; you can copy it.") }
                 awaitedReply = model.activeChat?.messages.last?.id; awaitedChat = model.activeChatID; ownsGeneration = true
             } catch {
                 if token.accepts(id), !(error is CancellationError) { pause(); self.error = error.localizedDescription }
@@ -187,7 +220,7 @@ import Combine
         guard model.activeChatID == awaitedChat,
               let reply = model.activeChat?.messages.last, reply.id == awaitedReply,
               !reply.isFailedReply, !reply.interrupted else {
-            phase = .idle; error = model.error ?? "The reply was stopped. Tap Talk to continue."; return
+            phase = .idle; error = model.error ?? "The reply was stopped. Tap the orb to continue."; return
         }
         answer = ReplyParts.parse(reply.content).answer
         say(VoiceText.spoken(reply.content), preview: false)
@@ -212,8 +245,20 @@ import Combine
             utterance.voice = voice
             utterance.rate = Float(max(0.35, min(0.65, rate)))
             utterance.pitchMultiplier = Float(max(0.75, min(1.25, pitch)))
+            utterance.postUtteranceDelay = VoiceText.pause(after: chunk)
             queuedUtterances.insert(ObjectIdentifier(utterance))
             synthesizer.speak(utterance)
+        }
+    }
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer,
+                                       willSpeakRangeOfSpeechString characterRange: NSRange,
+                                       utterance: AVSpeechUtterance) {
+        let id = ObjectIdentifier(utterance)
+        let energy = min(1, 0.35 + Double(characterRange.length) * 0.065)
+        Task { @MainActor [weak self] in
+            guard let self, self.opened, self.phase == .speaking,
+                  self.queuedUtterances.contains(id) else { return }
+            self.level = energy; self.speechBeat = Date()
         }
     }
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
@@ -221,14 +266,14 @@ import Combine
         Task { @MainActor [weak self] in
             guard let self, self.queuedUtterances.remove(id) != nil,
                   self.queuedUtterances.isEmpty, self.phase == .speaking else { return }
-            let again = self.handsFree && !self.previewing && self.opened
-            self.phase = .idle; self.previewing = false
+            let again = self.handsFree && self.wantsListening && !self.previewing && self.opened
+            self.phase = .idle; self.previewing = false; self.level = 0
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             if again {
                 let turn = self.token.id
                 self.operation = Task { [weak self] in
                     do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
-                    guard let self, self.opened, self.token.accepts(turn), self.handsFree else { return }
+                    guard let self, self.opened, self.token.accepts(turn), self.handsFree, self.wantsListening else { return }
                     self.talk()
                 }
             }
@@ -238,15 +283,16 @@ import Combine
         let id = ObjectIdentifier(utterance)
         Task { @MainActor [weak self] in
             guard let self, self.queuedUtterances.contains(id) else { return }
-            self.pause(); self.error = "Speech playback was interrupted. Tap Talk to continue."
+            self.pause(); self.error = "Speech playback was interrupted. Tap the orb to continue."
         }
     }
     func pause() {
+        wantsListening = false
         token.renew(); operation?.cancel(); operation = nil; deadline?.cancel(); deadline = nil
         clock?.cancel(); clock = nil; recorder?.stop(); recorder = nil
         if let captureURL { try? FileManager.default.removeItem(at: captureURL) }; captureURL = nil
         queuedUtterances.removeAll(); synthesizer.stopSpeaking(at: .immediate)
-        Task { await speech.cancel() }
+        speechCancellation = Task { await speech.cancel() }
         if ownsGeneration { model.stop() }; ownsGeneration = false; awaitedReply = nil; awaitedChat = nil
         level = 0; phase = .idle; previewing = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

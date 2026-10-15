@@ -41,7 +41,7 @@ final class RiftUITests: XCTestCase {
         for _ in 0..<5 { if larger.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(larger.isHittable); larger.tap()
         XCTAssertTrue(app.navigationBars["Reply animation"].waitForExistence(timeout: 5))
-        for style in ["bloom", "fade", "instant", "starlight", "wave", "bounce"] {
+        for style in ["bloom", "fade", "instant", "starlight", "wave", "bounce", "ember", "portal", "cipher"] {
             let button = app.buttons["replyStyle-expanded-" + style]
             XCTAssertTrue(button.waitForExistence(timeout: 5))
             if !button.isHittable { app.swipeDown() }
@@ -146,17 +146,25 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Qwen3 14B · Precision"].exists)
         attach("Rift-Heretic-sizes")
     }
-    func testVoiceModeOpensWithoutStartingMicrophone() {
+    func testVoiceOrbStaysInsideChatAndCanCloseAndReopen() {
         let app = XCUIApplication(); app.launch()
         let entry = app.buttons["openVoiceMode"]
         XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
-        XCTAssertTrue(app.navigationBars["Voice mode"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
-        XCTAssertTrue(app.switches["Hands-free turns"].exists)
-        XCTAssertEqual(app.alerts.count, 0, "Opening voice mode must not request microphone access")
-        attach("Rift-voice-mode")
-        app.navigationBars["Voice mode"].buttons["Done"].tap()
-        XCTAssertTrue(entry.waitForExistence(timeout: 5))
+        let close = app.buttons["closeVoiceMode"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Rift"].exists)
+        XCTAssertFalse(app.navigationBars["Voice mode"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["messageInput"].firstMatch.exists)
+        XCTAssertEqual(app.alerts.count, 0, "No microphone request before a chat model and speech assets are ready")
+        attach("Rift-inline-voice-orb")
+        app.buttons["voiceOptions"].tap()
+        XCTAssertTrue(app.switches["Hands-free turns"].waitForExistence(timeout: 5))
+        close.tap()
+        XCTAssertTrue(close.waitForNonExistence(timeout: 5))
+        entry.tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["messageInput"].firstMatch.isHittable)
     }
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIApplication().screenshot())

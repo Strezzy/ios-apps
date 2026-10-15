@@ -1,10 +1,14 @@
 import Foundation
 
 enum ReplyAnimationStyle: String, CaseIterable, Identifiable, Sendable {
-    case bloom, fade, instant, starlight, wave, bounce
+    case ember, bloom, fade, instant, starlight, wave, bounce, portal, cipher
+    static let defaultStyle: Self = .ember
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .ember: return "Ember"
+        case .portal: return "Portal"
+        case .cipher: return "Cipher"
         case .bloom: return "Bloom"
         case .fade: return "Soft fade"
         case .instant: return "Instant"
@@ -15,6 +19,9 @@ enum ReplyAnimationStyle: String, CaseIterable, Identifiable, Sendable {
     }
     var icon: String {
         switch self {
+        case .ember: return "flame"
+        case .portal: return "circle.hexagongrid"
+        case .cipher: return "character.cursor.ibeam"
         case .bloom: return "sparkle"
         case .fade: return "sun.haze"
         case .instant: return "bolt"
@@ -25,6 +32,9 @@ enum ReplyAnimationStyle: String, CaseIterable, Identifiable, Sendable {
     }
     var detail: String {
         switch self {
+        case .ember: return "Warm sparks drift into the air"
+        case .portal: return "Letters emerge through luminous rings"
+        case .cipher: return "Scattered glyphs resolve into words"
         case .bloom: return "Softly lifts into focus"
         case .fade: return "Quiet and understated"
         case .instant: return "No visual delay"
@@ -35,13 +45,16 @@ enum ReplyAnimationStyle: String, CaseIterable, Identifiable, Sendable {
     }
     var duration: TimeInterval {
         switch self {
+        case .ember: return 0.88
+        case .portal: return 0.76
+        case .cipher: return 0.68
         case .starlight: return 0.64
         case .wave, .bounce: return 0.58
         default: return RevealSchedule.settleDuration
         }
     }
-    var isExpressive: Bool { self == .starlight || self == .wave || self == .bounce }
-    static func resolved(_ value: String) -> Self { Self(rawValue: value) ?? .bloom }
+    var isExpressive: Bool { [.ember, .starlight, .wave, .bounce, .portal, .cipher].contains(self) }
+    static func resolved(_ value: String) -> Self { Self(rawValue: value) ?? .defaultStyle }
     func effective(reduceMotion: Bool, lowPower: Bool, voiceOver: Bool) -> Self {
         if voiceOver { return .instant }
         if (self == .bloom || isExpressive) && (reduceMotion || lowPower) { return .fade }
@@ -65,6 +78,21 @@ struct ReplyGlyphFrame: Equatable {
         let f = min(1, p / 0.74)
         let opacity = f * f * (3 - 2 * f)
         switch style {
+        case .ember:
+            let tail = pow(1 - p, 3)
+            return .init(opacity: min(1, opacity * 2), scale: 1 - 0.18 * tail,
+                liftFraction: 1.5 * tail, blur: 1.8 * tail,
+                rotation: 0.06 * tail * sin(p * 10), horizontal: sin(p * 9) * 1.6 * tail)
+        case .portal:
+            let tail = pow(1 - p, 3)
+            return .init(opacity: min(1, opacity * 1.8), scale: 1 - 0.58 * tail,
+                liftFraction: -1.4 * tail, blur: 2.4 * tail,
+                rotation: -0.65 * tail, horizontal: 5 * tail)
+        case .cipher:
+            let tail = pow(1 - p, 2)
+            return .init(opacity: min(1, opacity * 2.6), scale: 1 + 0.12 * tail,
+                liftFraction: -0.8 * tail, blur: 0.3 * tail,
+                rotation: sin(p * 37) * 0.09 * tail, horizontal: sin(p * 51) * 2.2 * tail)
         case .bloom:
             let settle = 1 - exp(-7.5 * p) * cos(9 * p)
             return .init(opacity: opacity, scale: 0.88 + 0.12 * settle, liftFraction: 1 - settle, blur: 1.4 * pow(1 - p, 2))

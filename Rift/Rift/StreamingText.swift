@@ -3,6 +3,7 @@ import SwiftUI
 struct ArrivalAttribute: TextAttribute {
     let id: Int
     let times: [TimeInterval]
+    var characters: [Character] = []
 }
 
 struct BloomTextRenderer: TextRenderer {
@@ -11,7 +12,7 @@ struct BloomTextRenderer: TextRenderer {
     var animatableData: Double { get { now } set { now = newValue } }
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         var offsets: [Int: Int] = [:]
-        var particlesRemaining = 24
+        var particlesRemaining = [.ember, .portal, .cipher].contains(style) ? 48 : 24
         for line in layout {
             for run in line {
                 guard style != .instant, let attribute = run[ArrivalAttribute.self], !attribute.times.isEmpty else {
@@ -34,8 +35,25 @@ struct BloomTextRenderer: TextRenderer {
                     copy.scaleBy(x: frame.scale, y: frame.scale)
                     copy.translateBy(x: -bounds.midX, y: -bounds.midY)
                     if frame.blur > 0.03 { copy.addFilter(.blur(radius: frame.blur)) }
-                    copy.draw(slice, options: .disablesSubpixelQuantization)
                     let seed = attribute.id + start + index
+                    let age = now - timestamp
+                    let progress = min(1, max(0, age / style.duration))
+                    if style == .portal {
+                        ArrivalEffects.portal(in: context, bounds: bounds, progress: progress,
+                            seed: seed, budget: &particlesRemaining)
+                    }
+                    let characterIndex = min(start + index, max(0, attribute.characters.count - 1))
+                    let character = attribute.characters.isEmpty ? nil : attribute.characters[characterIndex]
+                    let scrambles = style == .cipher && CipherGlyph.canScramble(character)
+                    if scrambles { copy.opacity *= min(1, max(0, (progress - 0.48) / 0.24)) }
+                    copy.draw(slice, options: .disablesSubpixelQuantization)
+                    if style == .ember {
+                        ArrivalEffects.embers(in: context, bounds: bounds, progress: progress,
+                            seed: seed, budget: &particlesRemaining)
+                    } else if scrambles {
+                        ArrivalEffects.cipher(in: context, bounds: bounds, progress: progress,
+                            seed: seed, budget: &particlesRemaining)
+                    }
                     if frame.sparkle > 0.015 && seed % 3 == 0 && particlesRemaining > 0 {
                         let progress = min(1, max(0, (now - timestamp) / style.duration))
                         for particle in 0..<2 where particlesRemaining > 0 {
@@ -94,7 +112,7 @@ enum ReplyTextComposition {
                     let fragment = AttributedString(richText[beginning..<cursor])
                     let times = Array(arrivals.dropFirst(offset).prefix(count))
                     let part = Text(fragment)
-                    output = output + (times.isEmpty ? part : part.customAttribute(ArrivalAttribute(id: offset, times: times)))
+                    output = output + (times.isEmpty ? part : part.customAttribute(ArrivalAttribute(id: offset, times: times, characters: Array(fragment.characters))))
                     offset += count; beginning = cursor; count = 0
                 }
             }
@@ -110,7 +128,7 @@ struct StreamingText: View {
     var monospaced = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-    @AppStorage("rift.replyAnimation") private var animation = "bloom"
+    @AppStorage("rift.replyAnimation") private var animation = ReplyAnimationStyle.defaultStyle.rawValue
     @State private var schedule = RevealSchedule()
     @State private var richText = AttributedString()
     @State private var assembled = Text("")
@@ -168,7 +186,7 @@ struct StreamingText: View {
 
 struct ReplyStylePicker: View {
     var contextID = "inline"
-    @AppStorage("rift.replyAnimation") private var style = "bloom"
+    @AppStorage("rift.replyAnimation") private var style = ReplyAnimationStyle.defaultStyle.rawValue
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
             ForEach(ReplyAnimationStyle.allCases) { item in
@@ -192,7 +210,7 @@ struct ReplyAnimationSample: View {
     var contextID = "inline"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-    @AppStorage("rift.replyAnimation") private var style = "bloom"
+    @AppStorage("rift.replyAnimation") private var style = ReplyAnimationStyle.defaultStyle.rawValue
     @State private var text = ""
     @State private var playing = false
     @State private var replay = UUID()

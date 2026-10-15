@@ -60,7 +60,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(ReplyGlyphFrame.at(age: -1, style: .fade).opacity, 0)
     }
     func testAccessibilityFallbacksAndUnknownPreference() {
-        XCTAssertEqual(ReplyAnimationStyle.resolved("unknown"), .bloom)
+        XCTAssertEqual(ReplyAnimationStyle.resolved("unknown"), .ember)
         XCTAssertEqual(ReplyAnimationStyle.bloom.effective(reduceMotion: true, lowPower: false, voiceOver: false), .fade)
         XCTAssertEqual(ReplyAnimationStyle.bloom.effective(reduceMotion: false, lowPower: true, voiceOver: false), .fade)
         XCTAssertEqual(ReplyAnimationStyle.fade.effective(reduceMotion: false, lowPower: false, voiceOver: true), .instant)
@@ -88,7 +88,7 @@ final class PresentationTests: XCTestCase {
         let text = ReplyTextComposition.make(rich, arrivals: schedule.arrivals)
         let instant = try render(text, time: 100.12, style: .instant)
         var snapshots = Set<Data>()
-        for style in [ReplyAnimationStyle.starlight, .wave, .bounce] {
+        for style in [ReplyAnimationStyle.starlight, .wave, .bounce, .ember, .portal, .cipher] {
             let intermediate = try render(text, time: 100.12, style: style)
             let final = try render(text, time: 102, style: style)
             XCTAssertGreaterThan(intermediate.ink, 0)
@@ -96,7 +96,7 @@ final class PresentationTests: XCTestCase {
             XCTAssertEqual(final.pixels, instant.pixels)
             snapshots.insert(intermediate.pixels)
         }
-        XCTAssertEqual(snapshots.count, 3)
+        XCTAssertEqual(snapshots.count, 6)
     }
     @MainActor private func render(_ text: Text, time: Double, style: ReplyAnimationStyle) throws -> (pixels: Data, ink: Int) {
         let view = ReplyRenderSurface(text: text, now: time, style: style)

@@ -1,11 +1,13 @@
 import SwiftUI
 import UIKit
 
-enum RiftSheet: String, Identifiable { case models, history, settings, voice; var id: String { rawValue } }
+enum RiftSheet: String, Identifiable { case models, history, settings; var id: String { rawValue } }
 struct ChatView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft=""
     @State private var sheet: RiftSheet?
+    @State private var voiceVisible = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var composing: Bool
     @State private var following = ChatFollowingState()
     @State private var viewport = ChatViewport()
@@ -24,6 +26,15 @@ struct ChatView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { RiftBackground() }
+            .overlay(alignment: .bottomTrailing) {
+                if voiceVisible {
+                    VoiceConversationView(model: model) { voiceVisible = false }
+                        .transition(reduceMotion ? .opacity : .scale(scale: 0.75, anchor: .bottomTrailing).combined(with: .opacity))
+                }
+            }
+            .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.8), value: voiceVisible)
+            .onChange(of: sheet) { _, value in if value != nil { voiceVisible = false } }
+            .onChange(of: composing) { _, value in if value { voiceVisible = false } }
             .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -34,12 +45,12 @@ struct ChatView: View {
                     }.buttonStyle(.plain).accessibilityIdentifier("modelPicker")
                 }
                 ToolbarItemGroup(placement:.topBarTrailing) {
-                    Button { model.newChat(); draft="" } label: { Image(systemName:"square.and.pencil") }.disabled(model.generating).accessibilityLabel("New chat")
+                    Button { voiceVisible = false; model.newChat(); draft="" } label: { Image(systemName:"square.and.pencil") }.disabled(model.generating).accessibilityLabel("New chat")
                     Menu { Button("Models",systemImage:"cpu") { sheet = .models }; Button("Settings",systemImage:"slider.horizontal.3") { sheet = .settings } } label: { Image(systemName:"ellipsis") }.accessibilityLabel("More options")
                 }
             }
             .sheet(item:$sheet) { choice in
-                switch choice { case .models: ModelLibraryView(); case .history: HistoryView(); case .settings: SettingsView(); case .voice: VoiceConversationView(model: model) }
+                switch choice { case .models: ModelLibraryView(); case .history: HistoryView(); case .settings: SettingsView() }
             }
         }.background { RiftBackground().ignoresSafeArea(.all) }
     }
@@ -134,7 +145,7 @@ struct ChatView: View {
                     .font(.body).lineLimit(1...4).focused($composing)
                     .padding(.leading, 14).padding(.vertical, 10)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
-                Button { composing = false; sheet = .voice } label: {
+                Button { composing = false; voiceVisible.toggle() } label: {
                     Image(systemName: "waveform").font(.system(size: 18, weight: .medium))
                         .frame(width: 40, height: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("Voice mode").accessibilityIdentifier("openVoiceMode")
