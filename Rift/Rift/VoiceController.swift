@@ -32,6 +32,7 @@ import Combine
     private var awaitedReply: UUID?
     private var awaitedChat: UUID?
     private var ownsGeneration = false
+    private var replyStream = VoiceReplyStream()
     private var queuedUtterances = Set<ObjectIdentifier>()
     private var previewing = false
     private var opened = true
@@ -50,6 +51,14 @@ import Combine
         model.$generating.removeDuplicates().sink { [weak self] value in
             guard !value else { return }
             Task { @MainActor in self?.generationFinished() }
+        }.store(in: &subscriptions)
+        model.$conversations.sink { [weak self] _ in
+            // Published emits before assignment; read the completed snapshot on the actor.
+            Task { @MainActor in self?.replyChanged() }
+        }.store(in: &subscriptions)
+        model.$status.removeDuplicates().sink { [weak self] status in
+            guard status == "Stopping", self?.ownsGeneration == true else { return }
+            self?.pause(stopGeneration: false)
         }.store(in: &subscriptions)
         NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification).sink { [weak self] event in
             guard let type = event.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
@@ -141,6 +150,21 @@ import Combine
     }
     func talk() {
         guard opened, phase == .idle || phase == .speaking else { return }
+        // Interrupting spoken output also cancels its still-generating text turn.
+        if phase == .speaking && ownsGeneration {
+            pause()
+            wantsListening = true
+            let turn = token.id
+            operation = Task { [weak self] in
+                while let self, self.model.generating {
+                    do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+                    guard self.opened, self.token.accepts(turn) else { return }
+                }
+                guard let self, self.opened, self.token.accepts(turn), self.wantsListening else { return }
+                self.talk()
+            }
+            return
+        }
         guard model.ready, model.selectedModel != nil, !model.busy, !model.generating else {
             error = "Choose and download a chat model first, and finish any active reply or transfer."; return
         }
@@ -218,21 +242,40 @@ import Combine
                 heard = text; phase = .thinking
                 guard model.send(text), model.generating else { throw RiftFailure(model.error ?? "The local model could not begin a reply. Your transcription is shown in the chat; you can copy it.") }
                 awaitedReply = model.activeChat?.messages.last?.id; awaitedChat = model.activeChatID; ownsGeneration = true
+                replyStream = VoiceReplyStream()
+                replyChanged()
             } catch {
                 if token.accepts(id), !(error is CancellationError) { pause(); self.error = error.localizedDescription }
             }
         }
     }
+    private func replyChanged() {
+        guard opened, ownsGeneration, model.activeChatID == awaitedChat,
+              let reply = model.activeChat?.messages.last, reply.id == awaitedReply else { return }
+        guard !reply.isFailedReply, !reply.interrupted else { return }
+        answer = ReplyParts.parse(reply.content).answer
+        let chunks = replyStream.take(reply.content, final: false)
+        if replyStream.diverged {
+            pause(); error = "The reply changed while it was being spoken. Its text remains in your chat."; return
+        }
+        if !chunks.isEmpty { enqueue(chunks, preview: false) }
+    }
     private func generationFinished() {
-        guard opened, phase == .thinking, ownsGeneration, !model.generating else { return }
-        ownsGeneration = false
+        guard opened, ownsGeneration, !model.generating else { return }
         guard model.activeChatID == awaitedChat,
               let reply = model.activeChat?.messages.last, reply.id == awaitedReply,
               !reply.isFailedReply, !reply.interrupted else {
-            phase = .idle; error = model.error ?? "The reply was stopped. Tap the orb to continue."; return
+            pause(); error = model.error ?? "The reply was stopped. Tap the orb to continue."; return
         }
         answer = ReplyParts.parse(reply.content).answer
-        say(VoiceText.spoken(reply.content), preview: false)
+        let tail = replyStream.take(reply.content, final: true)
+        ownsGeneration = false
+        if replyStream.diverged { pause(); error = "The reply changed while it was being spoken."; return }
+        if !tail.isEmpty { enqueue(tail, preview: false) }
+        if queuedUtterances.isEmpty {
+            if replyStream.hasSpoken { playbackDrained() }
+            else { phase = .idle; error = "There is no spoken answer yet. The model's output remains in your chat." }
+        }
     }
     func previewVoice() {
         guard phase == .idle || (phase == .speaking && previewing) else { return }
@@ -240,14 +283,17 @@ import Combine
         say("Hello. This is how I will sound in Rift. Everything you hear is spoken on your device.", preview: true)
     }
     private func say(_ text: String, preview: Bool) {
-        guard let voice = chosenVoice else { phase = .idle; error = "No installed Apple voice is available."; return }
         let chunks = VoiceText.chunks(text)
         guard !chunks.isEmpty else { phase = .idle; error = "There is no spoken answer yet. The model's output remains in your chat."; return }
+        enqueue(chunks, preview: preview)
+    }
+    private func enqueue(_ chunks: [String], preview: Bool) {
+        guard let voice = chosenVoice else { pause(); error = "No installed Apple voice is available."; return }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .spokenAudio)
             try session.setActive(true)
-        } catch { phase = .idle; self.error = error.localizedDescription; return }
+        } catch { pause(); self.error = error.localizedDescription; return }
         previewing = preview; phase = .speaking
         for chunk in chunks {
             let utterance = AVSpeechUtterance(string: chunk)
@@ -275,16 +321,23 @@ import Combine
         Task { @MainActor [weak self] in
             guard let self, self.queuedUtterances.remove(id) != nil,
                   self.queuedUtterances.isEmpty, self.phase == .speaking else { return }
-            let again = self.handsFree && self.wantsListening && !self.previewing && self.opened
-            self.phase = .idle; self.previewing = false; self.level = 0
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-            if again {
-                let turn = self.token.id
-                self.operation = Task { [weak self] in
-                    do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
-                    guard let self, self.opened, self.token.accepts(turn), self.handsFree, self.wantsListening else { return }
-                    self.talk()
-                }
+            self.playbackDrained()
+        }
+    }
+    private func playbackDrained() {
+        guard queuedUtterances.isEmpty else { return }
+        level = 0
+        if ownsGeneration { phase = .thinking; return }
+        let again = handsFree && wantsListening && !previewing && opened
+            && replyStream.canResumeListening(queued: queuedUtterances.count, generating: model.generating)
+        phase = .idle; previewing = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if again {
+            let turn = token.id
+            operation = Task { [weak self] in
+                do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
+                guard let self, self.opened, self.token.accepts(turn), self.handsFree, self.wantsListening else { return }
+                self.talk()
             }
         }
     }
@@ -295,7 +348,7 @@ import Combine
             self.pause(); self.error = "Speech playback was interrupted. Tap the orb to continue."
         }
     }
-    func pause() {
+    func pause(stopGeneration: Bool = true) {
         activationSound.stop()
         wantsListening = false
         token.renew(); operation?.cancel(); operation = nil; deadline?.cancel(); deadline = nil
@@ -303,7 +356,10 @@ import Combine
         if let captureURL { try? FileManager.default.removeItem(at: captureURL) }; captureURL = nil
         queuedUtterances.removeAll(); synthesizer.stopSpeaking(at: .immediate)
         speechCancellation = Task { await speech.cancel() }
-        if ownsGeneration { model.stop() }; ownsGeneration = false; awaitedReply = nil; awaitedChat = nil
+        let cancelGeneration = ownsGeneration
+        ownsGeneration = false; awaitedReply = nil; awaitedChat = nil
+        if cancelGeneration && stopGeneration { model.stop() }
+        replyStream = VoiceReplyStream()
         level = 0; phase = .idle; previewing = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }

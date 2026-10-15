@@ -1,11 +1,13 @@
-# Rift 1.5
+# Rift 1.6
 
 Native local AI chat, expressive replies, and on-device voice conversations.
 
-Tap the waveform beside the composer for an inline liquid-glass voice orb. It starts listening as soon as the local model and speech language are ready, sends after a pause, speaks the reply, and listens again. Tap the orb to pause or interrupt, or the composer’s X to close. The clear watery outline morphs around a see-through center, with a dark activation chime, a liquid pop and soft opening/closing haptics. Voice, language, sound and haptic controls are in Settings → Voice & sound. Prepare a speech language when prompted; Automatic prefers the best installed Premium/Enhanced Apple voice in your language. Your selected uncensored model still generates the replies. Voice cloning from a clip is not included. See [Voice mode](VOICE.md) for behavior, privacy, and the physical-device checks that remain outstanding.
+Tap the waveform beside the composer for an inline liquid-glass voice orb. It starts listening as soon as the local model and speech language are ready, sends after a pause, speaks completed phrases while the reply generates, and listens again once generation and speech finish. Tap the orb to pause or interrupt, or the composer’s X to close. The clear watery outline morphs around a see-through center, with longer dark opening/closing chimes, a liquid pop and soft fading haptics. Voice, language, sound and haptic controls are in Settings → Voice & sound. Prepare a speech language when prompted; Automatic prefers the best installed Premium/Enhanced Apple voice in your language. Your selected uncensored model still generates the replies. Voice cloning from a clip is not included. See [Voice mode](VOICE.md) for behavior, privacy, and the physical-device checks that remain outstanding.
 
-Text effects now include Ember, Bloom, Soft fade, Instant, Starlight, Wave, Bubble, Portal, and Cipher. Ember is the default for new installs; saved choices are preserved. Only new text animates. Background artwork extends behind the keyboard without disabling chat keyboard avoidance; the system controls the keyboard's own appearance.
+Text effects now include Ember, Bloom, Soft fade, Instant, Starlight, Wave, Bubble, Portal, and Cipher. Cipher is the default for new installs; saved choices are preserved. Only new text animates. Background artwork extends behind the keyboard without disabling chat keyboard avoidance; the system controls the keyboard's own appearance.
 
+
+Version 1.6 adds a subtly drifting crimson/garnet background, an icon-only empty chat, compact sent bubbles, a three-dot reply cue, and the “Unrestricted On-device AI” footer. Short conversations stay top-aligned while text streams; overflow follows the latest reply. Reduce Motion and Low Power Mode keep the background still.
 
 **Private AI. On your terms.**
 
@@ -40,7 +42,7 @@ Newer Ornith 1.5 9B variants and Qwen3.8 releases were also checked. An uncensor
 
 ## Build and verification
 
-Run the **Build, verify and publish Rift** GitHub Actions workflow. It builds pinned llama.cpp revision `8345f333951c661d166b00e6f9362e553768f292`, native simulator tests, the iPhone Metal runtime, and an arm64 iPhone app. Every catalog entry must pass actual macOS CPU inference before publication. Model weights are downloaded separately, not bundled.
+Run the **Build, verify and publish Rift** GitHub Actions workflow. It builds pinned llama.cpp revision `8345f333951c661d166b00e6f9362e553768f292`, native simulator tests, the iPhone Metal runtime, and an arm64 iPhone app. This presentation/voice update runs only its focused tests; model validation is retained because inference, downloads, catalog and storage are unchanged. Model weights are downloaded separately, not bundled.
 
 On a Mac with Xcode 26+, XcodeGen, CMake, Python 3.12 and Pillow 11.1.0:
 

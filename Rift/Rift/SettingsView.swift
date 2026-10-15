@@ -96,7 +96,7 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.5 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.6 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
             }.task {

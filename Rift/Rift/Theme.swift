@@ -10,12 +10,35 @@ enum RiftTheme {
     static let rose=Color(red:1,green:0.43,blue:0.48)
     static let wine=Color(red:0.30,green:0.035,blue:0.095)
 }
-struct RiftBackground: View {
-    @Environment(\.colorScheme) private var scheme
+struct RiftBackdrop: View {
+    let time: Double
+    let dark: Bool
     var body: some View {
-        LinearGradient(colors:scheme == .dark ? [Color(red:0.07,green:0.035,blue:0.05),Color(red:0.13,green:0.035,blue:0.065),Color(red:0.23,green:0.045,blue:0.09)] : [Color(red:1,green:0.975,blue:0.975),Color(red:0.985,green:0.92,blue:0.935),Color(red:0.97,green:0.82,blue:0.85)],startPoint:.topLeading,endPoint:.bottomTrailing)
-            .overlay(alignment:.topTrailing) { Circle().fill(RiftTheme.rose.opacity(scheme == .dark ? 0.09 : 0.15)).frame(width:280,height:280).blur(radius:65).offset(x:120,y:-120) }
-            .ignoresSafeArea(.all)
+        LinearGradient(colors: dark ? [Color(red:0.07,green:0.035,blue:0.05),Color(red:0.13,green:0.035,blue:0.065),Color(red:0.23,green:0.045,blue:0.09)] : [Color(red:1,green:0.975,blue:0.975),Color(red:0.985,green:0.92,blue:0.935),Color(red:0.97,green:0.82,blue:0.85)],
+            startPoint: UnitPoint(x: sin(time / 16) * 0.12, y: sin(time / 21) * 0.08),
+            endPoint: UnitPoint(x: 1 + sin(time / 19) * 0.12, y: 1 + sin(time / 24) * 0.08))
+            .overlay {
+                RadialGradient(colors: [RiftTheme.rose.opacity(dark ? 0.12 : 0.14), .clear],
+                    center: UnitPoint(x: 0.9 + sin(time / 14) * 0.2, y: 0.08 + sin(time / 18) * 0.18),
+                    startRadius: 0, endRadius: 380)
+                    .opacity(0.75 + 0.25 * cos(time / 12))
+            }
+    }
+}
+struct RiftBackground: View {
+    @Environment(.colorScheme) private var scheme
+    @Environment(.accessibilityReduceMotion) private var reduceMotion
+    @Environment(.scenePhase) private var scenePhase
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    var body: some View {
+        let still = reduceMotion || lowPower || scenePhase != .active
+        TimelineView(.animation(minimumInterval: 1.0 / 20, paused: still)) { tick in
+            RiftBackdrop(time: still ? 0 : tick.date.timeIntervalSinceReferenceDate, dark: scheme == .dark)
+        }
+        .ignoresSafeArea(.all).allowsHitTesting(false).accessibilityHidden(true)
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+            lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
     }
 }
 struct RiftWing: Shape {

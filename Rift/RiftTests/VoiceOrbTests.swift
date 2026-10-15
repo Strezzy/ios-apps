@@ -25,19 +25,24 @@ final class VoiceOrbTests: XCTestCase {
         XCTAssertEqual(LiquidOrbEntrance(age: 0, reduced: true).scale, 1)
         XCTAssertEqual(LiquidOrbEntrance(age: 0.1, reduced: true).squash, 0)
     }
-    func testActivationCueIsPlayableShortAndHasHeadroom() throws {
-        let data = VoiceActivationTone.waveData()
-        let player = try AVAudioPlayer(data: data)
-        XCTAssertEqual(player.duration, 0.36, accuracy: 0.001)
-        XCTAssertEqual(player.numberOfChannels, 1)
-        let bytes = Array(data.dropFirst(44))
-        let samples = stride(from: 0, to: bytes.count, by: 2).map {
-            Int(Int16(bitPattern: UInt16(bytes[$0]) | UInt16(bytes[$0 + 1]) << 8))
+    func testOpeningAndClosingCuesRingOutWithHeadroomAndFadeToSilence() throws {
+        for appearing in [true, false] {
+            let data = VoiceActivationTone.waveData(appearing: appearing)
+            let player = try AVAudioPlayer(data: data)
+            XCTAssertEqual(player.duration, appearing ? 0.95 : 0.8, accuracy: 0.001)
+            XCTAssertEqual(player.numberOfChannels, 1)
+            let bytes = Array(data.dropFirst(44))
+            let samples = stride(from: 0, to: bytes.count, by: 2).map {
+                Int(Int16(bitPattern: UInt16(bytes[$0]) | UInt16(bytes[$0 + 1]) << 8))
+            }
+            XCTAssertGreaterThan(samples.map { abs($0) }.max() ?? 0, 1000)
+            XCTAssertLessThan(samples.map { abs($0) }.max() ?? 32767, 18000)
+            let tail = samples.dropFirst(VoiceActivationTone.sampleRate / 2)
+            XCTAssertGreaterThan(tail.map { abs($0) }.max() ?? 0, 500, "The cue must remain audible past half a second")
+            XCTAssertEqual(samples.first, 0)
+            XCTAssertLessThan(abs(samples.last ?? 100), 3)
         }
-        XCTAssertGreaterThan(samples.map { abs($0) }.max() ?? 0, 1000)
-        XCTAssertLessThan(samples.map { abs($0) }.max() ?? 32767, 16000)
-        XCTAssertEqual(samples.first, 0)
-        XCTAssertLessThan(abs(samples.last ?? 100), 2)
+        XCTAssertNotEqual(VoiceActivationTone.waveData(), VoiceActivationTone.waveData(appearing: false))
     }
     @MainActor func testClosingDuringCuePreventsSpeechSetupAndMicrophoneStart() async {
         let key = "rift.voiceActivationSound", old = UserDefaults.standard.object(forKey: key)

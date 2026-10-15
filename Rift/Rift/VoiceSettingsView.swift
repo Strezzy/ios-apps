@@ -11,9 +11,9 @@ struct VoiceSettingsView: View {
     var body: some View {
         Form {
             Section("Orb") {
-                Toggle("Activation sound", isOn: $activationSound).accessibilityIdentifier("voiceActivationSound")
+                Toggle("Voice mode sounds", isOn: $activationSound).accessibilityIdentifier("voiceActivationSound")
                 Toggle("Soft haptics", isOn: $haptics).accessibilityIdentifier("voiceHaptics")
-                Text("A dark glass chime when the orb appears, with soft feedback as it opens and closes. Sound respects Silent Mode.")
+                Text("Resonant glass tones and a soft fading vibration when the orb opens and closes. Sound respects Silent Mode.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Conversation & speech") {

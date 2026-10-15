@@ -11,8 +11,8 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     TARGETED_DEVICE_FAMILY: '1'
-    MARKETING_VERSION: '1.5'
-    CURRENT_PROJECT_VERSION: '129'
+    MARKETING_VERSION: '1.6'
+    CURRENT_PROJECT_VERSION: '130'
 targets:
   Rift:
     type: application
@@ -24,8 +24,8 @@ targets:
       path: Rift/Info.plist
       properties:
         CFBundleDisplayName: Rift
-        CFBundleShortVersionString: '1.5'
-        CFBundleVersion: '129'
+        CFBundleShortVersionString: '1.6'
+        CFBundleVersion: '130'
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true

@@ -4,8 +4,28 @@ import Foundation
 /// UI-test content only; not compiled into the distributed app. Uses a separate
 /// temporary data directory and is never substituted for model inference.
 @MainActor enum DebugChatFixture {
+    static let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     static let lastID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
     static func install(in model: AppModel) {
+        if ProcessInfo.processInfo.arguments.contains("--rift-ui-short-stream") {
+            let chat = Conversation(title: "Short layout test", messages: [
+                .init(id: firstID, role: "user", content: "Hey"),
+                .init(id: lastID, role: "assistant", content: "", modelName: "Layout sample")
+            ])
+            model.conversations = [chat]; model.activeChatID = chat.id; model.generating = true
+            model.status = "Reading conversation"
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                model.status = "Writing reply"
+                for word in "Hey! I am here. This short reply grows a few words at a time while the conversation stays anchored in place. There is room to breathe, even as the last words arrive.".split(separator: " ") {
+                    guard model.generating else { return }
+                    model.conversations[0].messages[1].content += (model.conversations[0].messages[1].content.isEmpty ? "" : " ") + word
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
+                model.generating = false
+            }
+            return
+        }
         var messages: [ChatMessage] = []
         for index in 0..<14 {
             messages.append(.init(role: index.isMultiple(of: 2) ? "user" : "assistant",

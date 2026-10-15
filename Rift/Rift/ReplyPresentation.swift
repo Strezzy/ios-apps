@@ -2,7 +2,7 @@ import Foundation
 
 enum ReplyAnimationStyle: String, CaseIterable, Identifiable, Sendable {
     case ember, bloom, fade, instant, starlight, wave, bounce, portal, cipher
-    static let defaultStyle: Self = .ember
+    static let defaultStyle: Self = .cipher
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -120,6 +120,7 @@ struct ChatViewport: Equatable {
     var contentHeight: Double = 0
     var bottomDistance: Double = 0
     var atBottom: Bool { bottomDistance < 60 }
+    var overflows: Bool { height > 0 && contentHeight > height + 1 }
 }
 
 /// Only a user's scroll can stop following. Keyboard or text layout changes
@@ -132,9 +133,12 @@ struct ChatFollowingState: Equatable {
         if userScrolling && !active { followsLatest = viewport.atBottom }
         userScrolling = active
     }
+    func shouldScroll(in viewport: ChatViewport) -> Bool {
+        followsLatest && !userScrolling && viewport.overflows
+    }
     mutating func observe(old: ChatViewport, new: ChatViewport) -> Bool {
         if userScrolling { followsLatest = new.atBottom; return false }
-        return followsLatest && (abs(new.height - old.height) > 0.5 || abs(new.contentHeight - old.contentHeight) > 0.5)
+        return shouldScroll(in: new) && (abs(new.height - old.height) > 0.5 || abs(new.contentHeight - old.contentHeight) > 0.5)
     }
 }
 

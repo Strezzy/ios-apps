@@ -33,6 +33,34 @@ final class PresentationTests: XCTestCase {
         var state = ChatFollowingState()
         XCTAssertFalse(state.observe(old: .init(height: 300, contentHeight: 800, bottomDistance: 80), new: .init(height: 300, contentHeight: 800, bottomDistance: 0)))
     }
+    func testShortStreamingConversationNeverRequestsBottomAlignment() {
+        var state = ChatFollowingState()
+        var old = ChatViewport(height: 650, contentHeight: 100, bottomDistance: 0)
+        for height in stride(from: 110.0, through: 640.0, by: 10) {
+            let new = ChatViewport(height: 650, contentHeight: height, bottomDistance: 0)
+            XCTAssertFalse(state.observe(old: old, new: new))
+            XCTAssertFalse(state.shouldScroll(in: new))
+            old = new
+        }
+        XCTAssertTrue(state.observe(old: old, new: .init(height: 650, contentHeight: 680, bottomDistance: 30)))
+        XCTAssertTrue(state.followsLatest)
+    }
+    @MainActor func testLivingBackgroundChangesPixelsWithinTheSamePalette() throws {
+        for dark in [true, false] {
+            func snapshot(_ time: Double) throws -> Data {
+                let renderer = ImageRenderer(content: RiftBackdrop(time: time, dark: dark).frame(width: 240, height: 480))
+                renderer.scale = 1
+                let image = try XCTUnwrap(renderer.uiImage)
+                let attachment = XCTAttachment(image: image)
+                attachment.name = "Rift-background-\(dark ? "dark" : "light")-\(time)"
+                attachment.lifetime = .keepAlways; add(attachment)
+                return try XCTUnwrap(image.pngData())
+            }
+            let first = try snapshot(0)
+            XCTAssertNotEqual(first, try snapshot(20))
+            XCTAssertEqual(first, try snapshot(0), "A paused time must render a stable background")
+        }
+    }
     func testMemoryRemainingIsNotTotalProcessBudget() {
         let snapshot = AppMemorySnapshot(remaining: 3_000_000_000, footprint: 2_500_000_000)
         XCTAssertEqual(snapshot.estimatedBudget, 5_500_000_000)
@@ -60,7 +88,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(ReplyGlyphFrame.at(age: -1, style: .fade).opacity, 0)
     }
     func testAccessibilityFallbacksAndUnknownPreference() {
-        XCTAssertEqual(ReplyAnimationStyle.resolved("unknown"), .ember)
+        XCTAssertEqual(ReplyAnimationStyle.resolved("unknown"), .cipher)
         XCTAssertEqual(ReplyAnimationStyle.bloom.effective(reduceMotion: true, lowPower: false, voiceOver: false), .fade)
         XCTAssertEqual(ReplyAnimationStyle.bloom.effective(reduceMotion: false, lowPower: true, voiceOver: false), .fade)
         XCTAssertEqual(ReplyAnimationStyle.fade.effective(reduceMotion: false, lowPower: false, voiceOver: true), .instant)

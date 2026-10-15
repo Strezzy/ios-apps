@@ -11,7 +11,7 @@ final class RiftUITests: XCTestCase {
     func testWelcomeAndModelPicker() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["modelPicker"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.staticTexts["A little space to think."].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["emptyChatMark"].firstMatch.exists)
         attach("Rift-chat")
         app.buttons["modelPicker"].tap()
         XCTAssertTrue(app.staticTexts["Choose your AI"].waitForExistence(timeout: 5))
@@ -23,6 +23,49 @@ final class RiftUITests: XCTestCase {
         for _ in 0..<5 { if app.buttons["family-Gemma"].isHittable { break }; app.swipeUp() }
         app.buttons["family-Gemma"].tap()
         attach("Rift-Gemma")
+    }
+    func testEmptyChatShowsOnlyCenteredMarkAndNewFooter() {
+        let app = XCUIApplication(); app.launch()
+        let mark = app.descendants(matching: .any)["emptyChatMark"].firstMatch
+        XCTAssertTrue(mark.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.staticTexts["A little space to think."].exists)
+        XCTAssertFalse(app.staticTexts["Your conversation. Your phone."].exists)
+        XCTAssertEqual(app.staticTexts["chatFooter"].label, "Unrestricted On-device AI")
+        let composer = app.descendants(matching: .any)["composerBar"].firstMatch
+        let top = app.navigationBars.firstMatch.frame.maxY
+        XCTAssertEqual(mark.frame.midX, app.frame.midX, accuracy: 3)
+        XCTAssertEqual(mark.frame.midY, (top + composer.frame.minY) / 2, accuracy: 16)
+        attach("Rift-quiet-empty-chat")
+        app.buttons["New chat"].tap()
+        XCTAssertTrue(mark.exists)
+        XCTAssertEqual(app.staticTexts["chatFooter"].label, "Unrestricted On-device AI")
+    }
+    func testShortBubbleTypingDotsAndStreamingStayAnchored() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-short-stream"]
+        app.launch()
+        let scroll = app.scrollViews["chatScrollView"]
+        let sent = app.descendants(matching: .any)["sentMessageBubble-00000000-0000-0000-0000-000000000001"].firstMatch
+        let last = app.descendants(matching: .any)["chatMessage-00000000-0000-0000-0000-000000000099"].firstMatch
+        XCTAssertTrue(sent.waitForExistence(timeout: 10))
+        XCTAssertLessThan(sent.frame.width, 110, "Hey should fit a small bubble")
+        XCTAssertEqual(sent.frame.maxX, scroll.frame.maxX - 20, accuracy: 3)
+        XCTAssertTrue(app.descendants(matching: .any)["replyTypingIndicator"].firstMatch.exists)
+        XCTAssertFalse(app.staticTexts["Reading conversation"].exists)
+        attach("Rift-short-message-and-dots")
+        let initialY = sent.frame.minY
+        var minimumY = initialY, maximumY = initialY
+        let initialHeight = last.frame.height
+        for _ in 0..<24 {
+            Thread.sleep(forTimeInterval: 0.15)
+            let y = sent.frame.minY
+            minimumY = min(minimumY, y); maximumY = max(maximumY, y)
+        }
+        XCTAssertLessThanOrEqual(maximumY - minimumY, 2, "Short conversations must not bounce between top and bottom")
+        XCTAssertGreaterThan(last.frame.height, initialHeight, "The fixture must actually grow while measured")
+        XCTAssertFalse(app.staticTexts["Writing reply"].exists)
+        XCTAssertEqual(app.staticTexts["chatFooter"].label, "Unrestricted On-device AI")
+        attach("Rift-short-stream-stable")
     }
     func testSettingsDoesNotNeedAnAccount() {
         let app = XCUIApplication(); app.launch()
@@ -160,6 +203,7 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(composer.buttons["closeVoiceMode"].isHittable)
         XCTAssertTrue(app.buttons["voiceOrb"].exists)
         XCTAssertTrue(app.navigationBars["Rift"].exists)
+        XCTAssertFalse(app.staticTexts["Preparing voice"].exists)
         XCTAssertFalse(app.buttons["voiceOptions"].exists)
         XCTAssertFalse(app.staticTexts["voiceStatus"].exists)
         XCTAssertFalse(app.switches["Hands-free turns"].exists)

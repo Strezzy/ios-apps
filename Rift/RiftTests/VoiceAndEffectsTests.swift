@@ -79,9 +79,9 @@ final class VoiceAndEffectsTests: XCTestCase {
         XCTAssertNotNil(Bundle.main.object(forInfoDictionaryKey: "NSMicrophoneUsageDescription"))
         XCTAssertNotNil(Bundle.main.object(forInfoDictionaryKey: "NSSpeechRecognitionUsageDescription"))
     }
-    func testEmberDefaultPreservesAllSavedChoices() {
-        XCTAssertEqual(ReplyAnimationStyle.defaultStyle, .ember)
-        XCTAssertEqual(ReplyAnimationStyle.resolved(""), .ember)
+    func testCipherDefaultPreservesAllSavedChoices() {
+        XCTAssertEqual(ReplyAnimationStyle.defaultStyle, .cipher)
+        XCTAssertEqual(ReplyAnimationStyle.resolved(""), .cipher)
         for style in ReplyAnimationStyle.allCases {
             XCTAssertEqual(ReplyAnimationStyle.resolved(style.rawValue), style)
         }

@@ -44,9 +44,7 @@ struct VoiceConversationView: View {
     }
     @ViewBuilder private var assetNotice: some View {
         switch voice.assets {
-        case .checking:
-            ProgressView("Preparing voice").font(.caption).padding(12)
-                .background(.regularMaterial, in: Capsule())
+        case .checking: EmptyView()
         case .unsupported:
             Text("On-device speech is unavailable for this language or device. Choose a language in voice settings.")
                 .font(.caption).padding(12).frame(maxWidth: 280)

@@ -20,7 +20,7 @@ struct ChatView: View {
                 else {
                     VStack(spacing:0) {
                         ErrorBanner()
-                        if model.activeChat?.messages.isEmpty != false { ScrollView { welcome }.scrollDismissesKeyboard(.interactively) }
+                        if model.activeChat?.messages.isEmpty != false { welcome }
                         else { messages }
                     }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
@@ -35,8 +35,8 @@ struct ChatView: View {
                 }
             }
             .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.8), value: voiceVisible)
-            .onChange(of: sheet) { _, value in if value != nil { closeVoice() } }
-            .onChange(of: composing) { _, value in if value { closeVoice() } }
+            .onChange(of: sheet) { _, value in if value != nil { closeVoice(feedback: false) } }
+            .onChange(of: composing) { _, value in if value { closeVoice(feedback: false) } }
             .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -57,27 +57,10 @@ struct ChatView: View {
         }.background { RiftBackground().ignoresSafeArea(.all) }
     }
     private var welcome: some View {
-        VStack(spacing:18) {
-            Spacer(minLength:28)
-            RiftMark().frame(width:84,height:102)
-            VStack(spacing:8) { Text("A little space to think.").font(.system(.title2,design:.rounded,weight:.semibold)); Text("Your conversations. Your iPhone.").font(.subheadline).foregroundStyle(.secondary) }
-            if !model.ready {
-                ProgressView("Opening local library").font(.caption).padding(.top, 10)
-            } else if model.selectedModel == nil {
-                Button { sheet = .models } label: { Label("Choose your AI",systemImage:"sparkle").font(.headline).padding(.horizontal,20).padding(.vertical,10) }.buttonStyle(.glassProminent).padding(.top,10)
-                Text("Download once. Chat offline.").font(.caption).foregroundStyle(.secondary)
-            } else {
-                VStack(spacing:9) {
-                    suggestion("Help me think something through",icon:"sparkles")
-                    suggestion("Explain something simply",icon:"lightbulb")
-                    suggestion("Write something with me",icon:"pencil.line")
-                }.padding(.top,16).frame(maxWidth:320)
-            }
-            Spacer(minLength:40)
-        }.padding(.horizontal,28).frame(maxWidth:.infinity)
-    }
-    private func suggestion(_ text: String, icon: String) -> some View {
-        Button { draft=text; composing=true } label: { HStack { Image(systemName:icon).frame(width:22).foregroundStyle(RiftTheme.accent); Text(text).font(.callout); Spacer(); Image(systemName:"arrow.up.left").font(.caption).foregroundStyle(.tertiary) }.padding(14) }.buttonStyle(.plain).background(.thinMaterial,in:RoundedRectangle(cornerRadius:18))
+        ZStack { RiftMark() }.frame(width: 84, height: 102)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Rift").accessibilityIdentifier("emptyChatMark")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     private var messages: some View {
         ScrollViewReader { proxy in
@@ -115,15 +98,12 @@ struct ChatView: View {
                 // do not produce a focus-state transition.
                 if following.followsLatest && !following.userScrolling { bottomRequest = UUID() }
             }
-            .onChange(of: model.activeChat?.messages.last?.content) { _, _ in
-                if following.followsLatest && !following.userScrolling { bottomRequest = UUID() }
-            }
             .onChange(of: model.activeChat?.messages.last?.id) { _, _ in followLatest() }
             .onChange(of: model.activeChatID) { _, _ in followLatest() }
             .onAppear { followLatest() }
             .task(id: bottomRequest) {
                 await Task.yield()
-                guard !Task.isCancelled, following.followsLatest, !following.userScrolling else { return }
+                guard !Task.isCancelled, following.shouldScroll(in: viewport) else { return }
                 // Keep the latest line above the composer; per-letter motion is
                 // handled by the renderer, not by a long scroll on every token.
                 withTransaction(Transaction(animation: nil)) { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -175,17 +155,16 @@ struct ChatView: View {
             .padding(.horizontal, 3).padding(.vertical, 2)
             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
             .accessibilityElement(children: .contain).accessibilityIdentifier("composerBar")
-            if !composing || model.generating {
-                Text(model.generating ? model.status : "On-device AI · Responses can be inaccurate")
-                    .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
-            }
+            Text("Unrestricted On-device AI")
+                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                .accessibilityIdentifier("chatFooter")
         }.padding(.horizontal, 12).padding(.top, 5).padding(.bottom, 3)
     }
-    private func closeVoice() {
+    private func closeVoice(feedback: Bool = true) {
         guard let voiceSession else { return }
         // Stop audio immediately, even while the disappearing glass is animating.
         voiceSession.close()
-        VoiceOrbFeedback.play(appearing: false)
+        if feedback { VoiceOrbFeedback.play(appearing: false) }
         self.voiceSession = nil
     }
     private func send() {
@@ -205,8 +184,8 @@ struct MessageView: View {
                 if !parts.thought.isEmpty {
                     DisclosureGroup(isStreaming && parts.answer.isEmpty ? "Thinking" : "Thought process") { Text(parts.thought).font(.callout).foregroundStyle(.secondary).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading) }.font(.caption).tint(RiftTheme.accent)
                 }
-                if !parts.answer.isEmpty || isStreaming { MarkdownMessage(text:parts.answer, isStreaming:isStreaming, interrupted:message.interrupted) }
-                if isStreaming && message.content.isEmpty { HStack(spacing:9) { ProgressView().controlSize(.small); Text(model.status).font(.callout).foregroundStyle(.secondary) } }
+                if !parts.answer.isEmpty { MarkdownMessage(text:parts.answer, isStreaming:isStreaming, interrupted:message.interrupted, fillsWidth: !user) }
+                if !user && isStreaming && parts.answer.isEmpty { ReplyTypingIndicator() }
                 if !user && !isStreaming {
                     if message.isFailedReply || (message.interrupted && message.content.isEmpty) {
                         Label(message.failureDescription == nil ? "Reply stopped" : "Reply not started", systemImage: "exclamationmark.circle")
@@ -219,6 +198,7 @@ struct MessageView: View {
                     }.font(.caption).foregroundStyle(.secondary).buttonStyle(.plain)
                 }
             }.padding(user ? 14 : 0).background { if user { RoundedRectangle(cornerRadius:22).fill(RiftTheme.accent.opacity(0.11)) } }
+                .accessibilityIdentifier(user ? "sentMessageBubble-\(message.id.uuidString)" : "replyBody-\(message.id.uuidString)")
             if !user { Spacer(minLength:0) }
         }.contextMenu { Button("Copy",systemImage:"document.on.document") { UIPasteboard.general.string=message.content } }
     }
@@ -227,13 +207,14 @@ struct MarkdownMessage: View {
     let text: String
     var isStreaming = false
     var interrupted = false
+    var fillsWidth = true
     var body: some View {
         let chunks = text.components(separatedBy: "```")
         VStack(alignment: .leading, spacing: 12) {
             ForEach(Array(chunks.enumerated()), id: \.offset) { index, chunk in
                 if index % 2 == 0 {
                     StreamingText(text: chunk, isStreaming: isStreaming, interrupted: interrupted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
                 } else {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
@@ -247,6 +228,31 @@ struct MarkdownMessage: View {
                     }.padding(14).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
             }
+        }
+    }
+}
+
+/// A quiet reply cue with stable layout; its dots never affect scroll geometry.
+struct ReplyTypingIndicator: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    var body: some View {
+        let still = reduceMotion || lowPower || scenePhase != .active
+        TimelineView(.animation(minimumInterval: 1.0 / 20, paused: still)) { tick in
+            HStack(spacing: 5) {
+                ForEach(0..<3) { index in
+                    let wave = still ? 0.5 : (sin(tick.date.timeIntervalSinceReferenceDate * 5 - Double(index) * 0.8) + 1) / 2
+                    Circle().fill(RiftTheme.accent.opacity(0.35 + wave * 0.5))
+                        .frame(width: 7, height: 7).offset(y: still ? 0 : -wave * 3)
+                }
+            }.padding(.horizontal, 14).frame(height: 34)
+                .background(RiftTheme.accent.opacity(0.09), in: Capsule())
+        }
+        .accessibilityElement(children: .ignore).accessibilityLabel("Replying")
+        .accessibilityIdentifier("replyTypingIndicator")
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+            lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
     }
 }
