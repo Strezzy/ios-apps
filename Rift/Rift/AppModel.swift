@@ -20,18 +20,22 @@ final class InferenceService: @unchecked Sendable {
             queue.async { self.engine.unload(); self.loadedID = nil; self.loadedContext = 0; continuation.resume() }
         }
     }
-    func run(model: InstalledModel, url: URL, messages: [[String:String]], context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws -> String {
+    func run(model: InstalledModel, url: URL, messages: [[String:String]], projector: URL? = nil, context: Int, maxTokens: Int, temperature: Float, thinking: Bool, workingGB: Double?, text: @escaping @Sendable (String)->Void, status: @escaping @Sendable (String)->Void) async throws -> String {
         return try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
                     if self.engine.cancelled { throw RiftFailure("Stopped.") }
                     guard FileManager.default.fileExists(atPath: url.path) else { throw RiftFailure("This model could not load because its file is missing. Download or import it again.") }
                     var chosenContext = self.loadedContext
-                    if self.loadedID != model.id || self.loadedContext > context || RiftAvailableMemory() < MemoryBudget.headroom {
+                    if projector != nil || self.loadedID != model.id || self.loadedContext > context || RiftAvailableMemory() < MemoryBudget.headroom {
                         self.engine.unload(); self.loadedID = nil; self.loadedContext = 0
                         let info = try GGUFInspector.inspect(url)
-                        let available = RiftAvailableMemory()
+                        let physicalAvailable = RiftAvailableMemory()
+                        let visionReserve: UInt64 = projector == nil ? 0 : 1_100 * 1_048_576
+                        guard physicalAvailable > visionReserve else { throw RiftFailure("This installation does not have enough available memory for image understanding.") }
+                        let available = physicalAvailable - visionReserve
                         guard let plan = MemoryBudget.plan(bytes: model.bytes, requested: context, available: available, architecture: info.architecture, dimensions: info.dimensions) else {
+                            if projector != nil { throw RiftFailure("Qwen3.5 4B image understanding needs more working memory than this installation currently has available (\(MemoryBudget.label(physicalAvailable))). Free memory or use a text-only chat.") }
                             throw RiftFailure(MemoryBudget.blockedMessage(bytes: model.bytes, available: available, architecture: info.architecture, dimensions: info.dimensions))
                         }
                         chosenContext = plan.context
@@ -43,7 +47,8 @@ final class InferenceService: @unchecked Sendable {
                     let cpu = false
                     #endif
                     var finalText = ""
-                    _ = try self.engine.generate(atPath: url.path, messages: messages, context: Int32(chosenContext), maxTokens: Int32(min(maxTokens, max(128, chosenContext / 2))), temperature: temperature, thinking: thinking, cpu: cpu,
+                    if projector != nil && chosenContext < 1024 { throw RiftFailure("Image understanding needs at least a 1K conversation window and more available memory. Use a shorter text-only chat or free memory first.") }
+                    _ = try self.engine.generate(atPath: url.path, projector: projector?.path, messages: messages, context: Int32(chosenContext), maxTokens: Int32(min(maxTokens, max(128, chosenContext / 2))), temperature: temperature, thinking: thinking, cpu: cpu,
                         token: { value in finalText = value; text(value) }, status: status)
                     self.loadedID = model.id; self.loadedContext = chosenContext
                     if finalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !self.engine.cancelled {
@@ -183,25 +188,39 @@ final class InferenceService: @unchecked Sendable {
     }
     func deleteChat(_ chat: Conversation) {
         if generating && activeChatID == chat.id { stop() }
+        if let storage, let files = try? AttachmentStore(storage: storage) { chat.messages.flatMap { $0.attachments ?? [] }.forEach(files.remove) }
         conversations.removeAll { $0.id == chat.id }
         if activeChatID == chat.id { activeChatID = nil }
         save()
     }
-    func clearChats() { stop(); conversations = []; activeChatID = nil; save() }
+    func clearChats() {
+        stop()
+        if let storage, let files = try? AttachmentStore(storage: storage) {
+            conversations.flatMap { $0.messages }.flatMap { $0.attachments ?? [] }.forEach(files.remove)
+        }
+        conversations = []; activeChatID = nil; save()
+    }
     func stop() { guard generating else { return }; stopping = true; inference.stop(); status = "Stopping" }
     func background() {
         if generating { stop() }
         if transferStatus == "Downloading" { pauseDownload() }
         inference.unload(); save(); UIApplication.shared.isIdleTimerDisabled = false
     }
-    @discardableResult func send(_ draft: String) -> Bool {
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    @discardableResult func send(_ draft: String, attachments: [ChatAttachment] = []) -> Bool {
+        var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard attachments.count <= 1 else { error = "Attach one image or file per message."; return false }
+        if attachments.contains(where: { $0.isImage }) {
+            guard VisionDownload.supports(selectedModel), let storage, VisionDownload.installedURL(storage: storage) != nil else {
+                error = "Select Qwen3.5 4B and download its image support before sending an image."; return false
+            }
+        }
+        if text.isEmpty && !attachments.isEmpty { text = attachments[0].isImage ? "Describe this image." : "Read this file and summarize it." }
         guard !text.isEmpty, !generating, !busy, ready, selectedModel != nil, startupError == nil else { return false }
         guard text.utf8.count <= 100_000 else { error = "This message is too long. Use a shorter message."; return false }
         if activeChatID == nil { let chat = Conversation(); conversations.append(chat); activeChatID = chat.id }
         guard let index = conversations.firstIndex(where: { $0.id == activeChatID }) else { return false }
         if conversations[index].messages.isEmpty { conversations[index].title = String(text.prefix(60)) }
-        conversations[index].messages.append(.init(role: "user", content: text))
+        conversations[index].messages.append(.init(role: "user", content: text, attachments: attachments.isEmpty ? nil : attachments))
         beginReply(); return true
     }
     func regenerate() {
@@ -215,7 +234,26 @@ final class InferenceService: @unchecked Sendable {
         let chatID = conversations[index].id, replyID = UUID(), operation = UUID()
         var messages = [[String:String]]()
         if !systemPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { messages.append(["role": "system", "content": String(systemPrompt.prefix(8000))]) }
-        messages += conversations[index].messages.filter { $0.canSendToModel }.map { ["role": $0.role, "content": $0.content] }
+        let turns = conversations[index].messages.filter { $0.canSendToModel }
+        let hasImages = turns.contains { ($0.attachments ?? []).contains { $0.isImage } }
+        let projector = hasImages ? VisionDownload.installedURL(storage: storage) : nil
+        if hasImages && (!VisionDownload.supports(model) || projector == nil) {
+            error = "This conversation includes images. Select Qwen3.5 4B with image support, or start a new text-only chat."; save(); return
+        }
+        do {
+            let files = try AttachmentStore(storage: storage)
+            for turn in turns {
+                var message = ["role": turn.role, "content": turn.content]
+                for attachment in turn.attachments ?? [] {
+                    if let text = attachment.text { message["content", default: ""] += "\n\nAttached file: \(attachment.name)\n\(text)" }
+                    if attachment.isImage {
+                        guard let url = files.imageURL(attachment), FileManager.default.fileExists(atPath: url.path) else { throw RiftFailure("A saved image is missing. Please attach it again in a new chat.") }
+                        message["imageFile"] = url.path
+                    }
+                }
+                messages.append(message)
+            }
+        } catch { self.error = error.localizedDescription; save(); return }
         conversations[index].messages.append(.init(id: replyID, role: "assistant", content: "", modelName: model.name))
         conversations[index].updatedAt = Date(); generating = true; stopping = false; generationID = operation; status = "Preparing model"
         UIApplication.shared.isIdleTimerDisabled = true; save()
@@ -225,7 +263,7 @@ final class InferenceService: @unchecked Sendable {
         Task {
             var failure: String?
             do {
-                let finalText = try await inference.run(model: model, url: storage.url(for: model), messages: messages, context: context, maxTokens: maxTokens, temperature: Float(temperature), thinking: thinking, workingGB: working, text: { [weak self] text in
+                let finalText = try await inference.run(model: model, url: storage.url(for: model), messages: messages, projector: projector, context: context, maxTokens: maxTokens, temperature: Float(temperature), thinking: thinking, workingGB: working, text: { [weak self] text in
                     Task { @MainActor in
                         guard let self, self.generationID == operation, let c = self.conversations.firstIndex(where: { $0.id == chatID }), let m = self.conversations[c].messages.firstIndex(where: { $0.id == replyID }) else { return }
                         self.conversations[c].messages[m].content = text; self.scheduleSave()

@@ -32,7 +32,8 @@ jobs:
     env:
       RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
       RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
-      RIFT_TEST_SCOPE: navigation
+      RIFT_TEST_SCOPE: attachments
+      RIFT_MAC_METAL: '1'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,18 +56,20 @@ jobs:
         id: cache
         with:
           path: Rift/Build/Native
-          key: rift-8345f333-stability-metal-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+          key: rift-8345f333-vision-metal-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
       - name: Prepare pinned dependency sources
         run: python Rift/scripts/build.py prepare
       - name: Compile the native inference runtimes
-        run: python Rift/scripts/native.py iphonesimulator iphoneos
+        run: python Rift/scripts/native.py iphonesimulator iphoneos macosx
       - uses: actions/cache/save@v4
         if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: Rift/Build/Native
-          key: rift-8345f333-stability-metal-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Test only drawer, picker, composer, background and connected behavior
+          key: rift-8345f333-vision-metal-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
+      - name: Test only attachments and connected composer behavior
         run: python Rift/scripts/build.py simulator
+      - name: Verify only Qwen 3.5 4B images and connected text fallback
+        run: python Rift/scripts/vision_smoke.py
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone
       - name: Package iPhone candidate with requested memory entitlements
@@ -79,6 +82,7 @@ jobs:
             Rift/Build/Rift.ipa
             Rift/Build/Rift-Source.zip
             Rift/Build/BUILD-REPORT.json
+            Rift/Build/VISION-SMOKE.json
             Rift/Build/Screenshots
             Rift/Build/Logs
           retention-days: 14
@@ -110,5 +114,6 @@ jobs:
             RiftRelease/Rift.ipa
             RiftRelease/Rift-Source.zip
             RiftRelease/BUILD-REPORT.json
+            RiftRelease/VISION-SMOKE.json
             RiftRelease/SHA256SUMS.txt
           retention-days: 14

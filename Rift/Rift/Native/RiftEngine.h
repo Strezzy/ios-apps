@@ -16,6 +16,17 @@ NS_ASSUME_NONNULL_BEGIN
                 token:(void (^)(NSString *text))token
                status:(void (^)(NSString *status))status
                 error:(NSError * _Nullable * _Nullable)error;
+- (BOOL)generateAtPath:(NSString *)path
+            projector:(nullable NSString *)projector
+             messages:(NSArray<NSDictionary<NSString *, NSString *> *> *)messages
+              context:(int)context
+            maxTokens:(int)maxTokens
+          temperature:(float)temperature
+             thinking:(BOOL)thinking
+                  cpu:(BOOL)cpu
+                token:(void (^)(NSString *text))token
+               status:(void (^)(NSString *status))status
+                error:(NSError * _Nullable * _Nullable)error;
 @end
 FOUNDATION_EXPORT uint64_t RiftAvailableMemory(void);
 FOUNDATION_EXPORT uint64_t RiftMemoryFootprint(void);

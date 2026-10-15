@@ -1,13 +1,13 @@
-"""Navigation/composer update only; no inference or model download tests."""
+"""Only attachments and directly connected composer behavior; no model sweep."""
 VOICE_TESTS = [
-    'RiftTests/NavigationTests',
-    'RiftTests/PresentationTests/testLivingBackgroundChangesPixelsWithinTheSamePalette',
-    'RiftUITests/RiftUITests/testDrawerRevealSelectionAndSettings',
+    'RiftTests/AttachmentTests',
+    'RiftUITests/RiftUITests/testAttachmentPreviewRemovalAndFilePicker',
     'RiftUITests/RiftUITests/testDownloadedPickerAndMorphingComposer',
-    'RiftUITests/RiftUITests/testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating',
+    'RiftUITests/RiftUITests/testDrawerRevealSelectionAndSettings',
     'RiftUITests/RiftUITests/testVoiceOrbStaysInsideChatAndCanCloseAndReopen',
+    'RiftUITests/RiftUITests/testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating',
 ]
-EXPECTED_TESTS = 7
+EXPECTED_TESTS = 10
 
 def selection_for_source(source, root):
     return VOICE_TESTS, None

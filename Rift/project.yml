@@ -11,8 +11,8 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     TARGETED_DEVICE_FAMILY: '1'
-    MARKETING_VERSION: '1.7'
-    CURRENT_PROJECT_VERSION: '131'
+    MARKETING_VERSION: '1.8'
+    CURRENT_PROJECT_VERSION: '132'
 targets:
   Rift:
     type: application
@@ -24,8 +24,8 @@ targets:
       path: Rift/Info.plist
       properties:
         CFBundleDisplayName: Rift
-        CFBundleShortVersionString: '1.7'
-        CFBundleVersion: '131'
+        CFBundleShortVersionString: '1.8'
+        CFBundleVersion: '132'
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
@@ -45,6 +45,7 @@ targets:
           - $(inherited)
           - $(SRCROOT)/ThirdParty/llama/include
           - $(SRCROOT)/ThirdParty/llama/ggml/include
+          - $(SRCROOT)/ThirdParty/llama/tools/mtmd
           - $(SRCROOT)/ThirdParty/llama/common
           - $(SRCROOT)/ThirdParty/llama/vendor
           - $(SRCROOT)/ThirdParty/llama/vendor/nlohmann

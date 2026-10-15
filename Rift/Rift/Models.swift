@@ -45,6 +45,7 @@ struct ChatMessage: Codable, Identifiable, Equatable, Sendable {
     var modelName: String?
     var interrupted = false
     var failureDescription: String? = nil
+    var attachments: [ChatAttachment]? = nil
     var isFailedReply: Bool { failureDescription != nil || (interrupted && (content.hasPrefix("No reply was generated.") || content == "Reply stopped.")) }
     var canSendToModel: Bool { !content.isEmpty && !isFailedReply }
 }

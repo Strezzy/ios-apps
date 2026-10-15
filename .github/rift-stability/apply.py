@@ -10,7 +10,7 @@ root = Path.cwd()
 project = (root / 'Rift/project.yml').read_text()
 build = re.search(r"CURRENT_PROJECT_VERSION: '([0-9]+)'", project).group(1)
 assert re.search(r"CFBundleVersion: '" + build + r"'", project), 'Build numbers differ'
-assert re.search(r"MARKETING_VERSION: '1.7'", project), 'Unexpected release version'
+assert re.search(r"MARKETING_VERSION: '1.8'", project), 'Unexpected release version'
 for path in (root / 'Rift/scripts').glob('*.py'):
     ast.parse(path.read_text(), filename=str(path))
 source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()

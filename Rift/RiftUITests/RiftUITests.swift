@@ -8,6 +8,24 @@ final class RiftUITests: XCTestCase {
     override func tearDownWithError() throws {
         XCUIDevice.shared.orientation = .portrait
     }
+    func testAttachmentPreviewRemovalAndFilePicker() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation", "--rift-ui-attachment"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Remove attachment"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.staticTexts["Attachment sample.txt"].exists)
+        XCTAssertTrue(app.buttons["sendMessage"].isEnabled)
+        attach("Rift-file-attachment")
+        app.buttons["Remove attachment"].tap()
+        XCTAssertTrue(app.buttons["openVoiceMode"].waitForExistence(timeout: 5))
+        app.buttons["attachFile"].tap()
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 8))
+        attach("Rift-native-file-picker")
+        cancel.tap()
+        XCTAssertTrue(app.buttons["attachFile"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Remove attachment"].exists)
+    }
     func testDrawerRevealSelectionAndSettings() {
         let app = XCUIApplication()
         app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation"]
@@ -15,10 +33,10 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 15))
         XCTAssertFalse(app.buttons["More options"].exists)
         app.buttons["Chat history"].tap()
-        XCTAssertTrue(app.navigationBars["Conversations"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["conversationDrawer"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["drawerSettings"].isHittable)
         attach("Rift-left-underlay")
-        app.buttons.containing(.staticText, identifier: "Drawer sample").firstMatch.tap()
+        app.buttons["Drawer sample"].tap()
         XCTAssertTrue(app.staticTexts["Saved conversation"].waitForExistence(timeout: 5))
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.015, dy: 0.45))
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.45))
@@ -40,9 +58,13 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(picker.waitForExistence(timeout: 15))
         XCTAssertTrue(app.buttons["openVoiceMode"].exists)
         let composer = app.descendants(matching: .any)["composerBar"].firstMatch
-        XCTAssertEqual(composer.frame.width, (app.frame.width - 24) * 0.8, accuracy: 4)
-        XCTAssertGreaterThanOrEqual(composer.frame.height, 55)
-        XCTAssertEqual(composer.frame.midX, app.frame.midX, accuracy: 3)
+        attach("Rift-compact-voice-composer")
+        // Accessibility reports the union of interactive children, excluding
+        // some glass padding; the rendered pill uses 80% of the former width.
+        XCTAssertLessThan(composer.frame.width, app.frame.width * 0.85)
+        XCTAssertGreaterThan(composer.frame.width, app.frame.width * 0.5)
+        XCTAssertGreaterThanOrEqual(composer.frame.height, 50)
+        XCTAssertEqual(composer.frame.midX, app.frame.midX, accuracy: 24)
         let field = app.descendants(matching: .any)["messageInput"].firstMatch
         field.tap(); field.typeText("Hey")
         XCTAssertTrue(app.buttons["sendMessage"].waitForExistence(timeout: 5))

@@ -14,7 +14,7 @@ Not shipped in 1.6. Apple's Personal Voice creation is a separate Settings workf
 
 ## Device validation still required
 
-The 1.7 CI scope covers compilation and seven focused checks of drawer navigation, downloaded-model selection, composer behavior, background rendering, keyboard layout and connected orb lifecycle. The passing 1.6 incremental speech and cue checks remain applicable to unchanged voice code. Model inference and unrelated animation tests are not rerun. Audible playback and tactile feel require a physical device. It does not establish actual microphone operation, installed SpeechTranscriber assets, transcription quality, Bluetooth routing, acoustic echo or silence detection on a physical iPhone or LiveContainer host. Voice mode reports unavailable speech support rather than falling back to the cloud.
+The 1.8 CI scope covers compilation and ten focused checks of attachments, drawer navigation, downloaded-model selection, composer behavior, keyboard layout and connected orb lifecycle. The background rendering check passed in the preceding navigation check; its code is unchanged. The passing 1.6 incremental speech and cue checks remain applicable to unchanged voice code. Only Qwen3.5 4B image understanding and its connected text fallback are checked with native inference; no other model or unrelated animation tests are rerun. Audible playback and tactile feel require a physical device. It does not establish actual microphone operation, installed SpeechTranscriber assets, transcription quality, Bluetooth routing, acoustic echo or silence detection on a physical iPhone or LiveContainer host. Voice mode reports unavailable speech support rather than falling back to the cloud.
 
 ## Sources reviewed
 

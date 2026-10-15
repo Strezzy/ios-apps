@@ -16,6 +16,9 @@ import UIKit
             model.selectedModelID = model.installed[0].id
             model.conversations = [Conversation(title: "Drawer sample", messages: [.init(role: "user", content: "Saved conversation")])]
             model.activeChatID = nil
+            if ProcessInfo.processInfo.arguments.contains("--rift-ui-attachment"), let storage = model.storage {
+                try? "A local attachment for the composer check.".write(to: storage.root.appendingPathComponent("Attachment sample.txt"), atomically: true, encoding: .utf8)
+            }
             return
         }
         if ProcessInfo.processInfo.arguments.contains("--rift-ui-short-stream") {

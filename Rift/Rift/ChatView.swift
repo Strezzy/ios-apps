@@ -1,10 +1,17 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 enum RiftSheet: String, Identifiable { case models, settings; var id: String { rawValue } }
 struct ChatView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft=""
+    @State private var attachment: ChatAttachment?
+    @State private var attachmentPicker = false
+    @State private var readingAttachment = false
+    @State private var attachmentImport: Task<Void, Never>?
+    @StateObject private var visionDownload = VisionDownload()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var sheet: RiftSheet?
     @State private var voiceSession: VoiceController?
     private var voiceVisible: Bool { voiceSession != nil }
@@ -15,50 +22,61 @@ struct ChatView: View {
     @State private var bottomRequest = UUID()
     @State private var drawerOpen = false
     @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.42, dampingFraction: 0.86))) private var drawerDrag: CGFloat = 0
+    @State private var surfaceWidth: CGFloat = 0
     var body: some View {
-        GeometryReader { geometry in
-            let width = min(340.0, geometry.size.width * 0.82)
-            let progress = DrawerMotion.progress(open: drawerOpen, translation: drawerDrag, width: width)
-            ZStack(alignment: .leading) {
+        let width = min(340.0, surfaceWidth * 0.82)
+        let progress = DrawerMotion.progress(open: drawerOpen, translation: drawerDrag, width: width)
+        ZStack(alignment: .leading) {
+            if progress > 0 {
                 ConversationDrawer(onSelect: { setDrawer(false) }, onSettings: {
                     setDrawer(false); sheet = .settings
                 })
                 .frame(width: width)
-                .opacity(progress > 0 ? 1 : 0)
                 .accessibilityHidden(!drawerOpen)
-                chatSurface(width: geometry.size.width)
-                    .frame(width: geometry.size.width, height: geometry.size.height)
-                    .clipShape(RoundedRectangle(cornerRadius: progress * 32, style: .continuous))
-                    .overlay {
-                        if progress > 0 {
-                            RoundedRectangle(cornerRadius: progress * 32, style: .continuous)
-                                .fill(.black.opacity(progress * 0.12))
-                                .contentShape(Rectangle())
-                                .onTapGesture { setDrawer(false) }
-                                .gesture(drawerGesture(width: width))
-                                .accessibilityLabel("Close conversations")
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityIdentifier("closeConversations")
-                        }
-                    }
-                    .shadow(color: .black.opacity(progress * 0.55), radius: 24, x: -8)
-                    .scaleEffect(reduceMotion ? 1 : 1 - progress * 0.035, anchor: .trailing)
-                    .offset(x: width * progress)
-                    .accessibilityHidden(drawerOpen)
-                if !drawerOpen {
-                    Color.clear.frame(width: 22).contentShape(Rectangle())
-                        .gesture(drawerGesture(width: width))
-                        .accessibilityHidden(true)
-                }
             }
-            .background(Color(red: 0.035, green: 0.045, blue: 0.065).ignoresSafeArea())
-            .clipped()
+            chatSurface(width: surfaceWidth)
+                .mask { RoundedRectangle(cornerRadius: progress * 32, style: .continuous).ignoresSafeArea() }
+                .overlay {
+                    if progress > 0 {
+                        RoundedRectangle(cornerRadius: progress * 32, style: .continuous)
+                            .fill(.black.opacity(progress * 0.12)).ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture { setDrawer(false) }
+                            .gesture(drawerGesture(width: width))
+                    }
+                }
+                .shadow(color: .black.opacity(progress * 0.55), radius: 24, x: -8)
+                .scaleEffect(reduceMotion ? 1 : 1 - progress * 0.035, anchor: .trailing)
+                .offset(x: width * progress)
+                .accessibilityHidden(drawerOpen)
+            if !drawerOpen {
+                Color.clear.frame(width: 22).contentShape(Rectangle())
+                    .gesture(drawerGesture(width: width))
+                    .accessibilityHidden(true)
+            }
         }
-        .ignoresSafeArea(.container)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { surfaceWidth = $0 }
+        .background(Color(red: 0.035, green: 0.045, blue: 0.065).ignoresSafeArea())
         .transaction { if reduceMotion { $0.animation = nil } }
         .sheet(item: $sheet) { choice in
             switch choice { case .models: ModelLibraryView(); case .settings: SettingsView() }
         }
+        .fileImporter(isPresented: $attachmentPicker, allowedContentTypes: [.image, .pdf, .text, .json], allowsMultipleSelection: false) { result in
+            switch result {
+            case .success(let urls): if let url = urls.first { importAttachment(url) }
+            case .failure(let error): model.error = error.localizedDescription
+            }
+        }
+        #if DEBUG
+        .onChange(of: model.ready) { _, ready in
+            if ready, ProcessInfo.processInfo.arguments.contains("--rift-ui-attachment"), let storage = model.storage {
+                importAttachment(storage.root.appendingPathComponent("Attachment sample.txt"))
+            }
+        }
+        #endif
+        .onChange(of: model.activeChatID) { _, _ in discardAttachment() }
+        .onChange(of: visionDownload.error) { _, error in if let error { model.error = error } }
+        .onChange(of: scenePhase) { _, phase in if phase == .background { visionDownload.cancel() } }
         .onChange(of: sheet) { _, value in if value != nil { closeVoice(feedback: false) } }
     }
     private func setDrawer(_ open: Bool) {
@@ -209,15 +227,45 @@ struct ChatView: View {
         bottomRequest = UUID()
     }
     private var composerAction: ComposerAction {
-        ComposerAction.resolve(draft: draft, voice: voiceVisible, generating: model.generating)
+        ComposerAction.resolve(draft: attachment == nil ? draft : "attachment", voice: voiceVisible, generating: model.generating)
     }
     private func composer(width: CGFloat) -> some View {
         let action = composerAction
         return VStack(spacing: 3) {
+            if let attachment {
+                VStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        AttachmentPreview(attachment: attachment)
+                        Text(attachment.name).font(.caption).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+                        Button { discardAttachment() } label: { Image(systemName: "xmark").frame(width: 36, height: 36) }
+                            .accessibilityLabel("Remove attachment")
+                    }
+                    if attachment.isImage && !imageSupportReady {
+                        if visionDownload.downloading {
+                            HStack {
+                                ProgressView(value: visionDownload.progress)
+                                Button("Cancel") { visionDownload.cancel() }
+                            }
+                        } else {
+                            Button("Download image support · 676 MB") {
+                                if let storage = model.storage { visionDownload.start(storage: storage, cellular: model.cellular) }
+                            }.font(.caption).disabled(model.busy)
+                            Text("One-time download. Your image stays on this iPhone.").font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }.padding(10).glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20))
+                    .accessibilityElement(children: .contain).accessibilityIdentifier("pendingAttachment")
+                    .padding(.bottom, 4)
+            }
             HStack(alignment: .bottom, spacing: 4) {
+                Button { composing = false; closeVoice(feedback: false); attachmentPicker = true } label: {
+                    if readingAttachment { ProgressView().frame(width: 40, height: 52) }
+                    else { Image(systemName: "plus").font(.system(size: 19, weight: .medium)).frame(width: 40, height: 52) }
+                }.buttonStyle(.plain).accessibilityLabel("Attach image or file").accessibilityIdentifier("attachFile")
+                    .disabled(model.generating || model.busy || readingAttachment || model.selectedModel == nil)
                 TextField("Message", text: $draft, axis: .vertical)
                     .font(.body).lineLimit(1...4).focused($composing)
-                    .padding(.leading, 16).padding(.vertical, 14)
+                    .padding(.leading, 2).padding(.vertical, 14)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
                 Button {
                     switch action {
@@ -242,7 +290,7 @@ struct ChatView: View {
                         .padding(3)
                 }.buttonStyle(.plain)
                     .accessibilityLabel(action.label).accessibilityIdentifier(action.identifier)
-                    .disabled(action == .send ? (model.selectedModel == nil || !model.ready || model.busy) : (action == .voice && model.busy))
+                    .disabled(action == .send ? (model.selectedModel == nil || !model.ready || model.busy || readingAttachment || (attachment?.isImage == true && !imageSupportReady)) : (action == .voice && (model.busy || readingAttachment)))
             }
             .padding(.horizontal, 3).padding(.vertical, 2)
             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 29))
@@ -255,6 +303,32 @@ struct ChatView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 5).padding(.bottom, 3)
     }
+    private var imageSupportReady: Bool {
+        guard let storage = model.storage else { return false }
+        return VisionDownload.supports(model.selectedModel) && VisionDownload.installedURL(storage: storage) != nil
+    }
+    private func discardAttachment() {
+        attachmentImport?.cancel(); attachmentImport = nil; readingAttachment = false
+        if let attachment, let storage = model.storage { (try? AttachmentStore(storage: storage))?.remove(attachment) }
+        attachment = nil
+    }
+    private func importAttachment(_ url: URL) {
+        guard let storage = model.storage else { return }
+        discardAttachment(); readingAttachment = true
+        attachmentImport = Task {
+            do {
+                let files = try AttachmentStore(storage: storage)
+                let imported = try await Task.detached(priority: .userInitiated) { try files.importFile(url) }.value
+                guard !Task.isCancelled else { files.remove(imported); return }
+                if imported.isImage && !VisionDownload.supports(model.selectedModel) {
+                    files.remove(imported)
+                    throw RiftFailure("Select the downloaded Qwen3.5 4B model to understand images. Text and PDF files work with your current model.")
+                }
+                attachment = imported
+            } catch { if !Task.isCancelled { model.error = error.localizedDescription } }
+            if !Task.isCancelled { readingAttachment = false; attachmentImport = nil }
+        }
+    }
     private func closeVoice(feedback: Bool = true) {
         guard let voiceSession else { return }
         // Stop audio immediately, even while the disappearing glass is animating.
@@ -263,7 +337,8 @@ struct ChatView: View {
         self.voiceSession = nil
     }
     private func send() {
-        if model.send(draft) { draft = ""; followLatest() }
+        guard !readingAttachment else { return }
+        if model.send(draft, attachments: attachment.map { [$0] } ?? []) { draft = ""; attachment = nil; followLatest() }
     }
 }
 struct MessageView: View {
@@ -275,6 +350,12 @@ struct MessageView: View {
         HStack(alignment:.top) {
             if user { Spacer(minLength:35) }
             VStack(alignment:.leading,spacing:10) {
+                ForEach(message.attachments ?? []) { attachment in
+                    HStack(spacing: 8) {
+                        AttachmentPreview(attachment: attachment)
+                        Text(attachment.name).font(.caption).lineLimit(2)
+                    }.accessibilityElement(children: .combine).accessibilityLabel("Attachment: \(attachment.name)")
+                }
                 if !user { HStack(spacing:7) { Image(systemName:"sparkle").foregroundStyle(RiftTheme.accent); Text(message.modelName ?? "Rift").foregroundStyle(.secondary) }.font(.caption.weight(.medium)) }
                 if !parts.thought.isEmpty {
                     DisclosureGroup(isStreaming && parts.answer.isEmpty ? "Thinking" : "Thought process") { Text(parts.thought).font(.callout).foregroundStyle(.secondary).textSelection(.enabled).frame(maxWidth:.infinity,alignment:.leading) }.font(.caption).tint(RiftTheme.accent)

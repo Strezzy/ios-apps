@@ -1,4 +1,4 @@
-# Rift 1.7
+# Rift 1.8
 
 Native local AI chat, expressive replies, and on-device voice conversations.
 
@@ -10,6 +10,10 @@ Text effects now include Ember, Bloom, Soft fade, Instant, Starlight, Wave, Bubb
 Version 1.7 reveals a cool charcoal conversation drawer underneath the rounded chat surface. Open it with the hamburger or a left-edge swipe; its lower-right glass gear opens Settings. Tap the Rift title to switch downloaded models or choose Manage Models. The centered composer is about 20% narrower and 15% taller, with one glass button that morphs between voice, send, stop and close as needed. The crimson/garnet background now moves visibly; Reduce Motion and Low Power Mode keep it still. Existing memory entitlements, model inference, downloads and saved-chat formats are unchanged.
 
 The increased-memory-limit and extended-virtual-addressing entitlements already ship in the signed IPA. They request capabilities; the final signing profile, device and LiveContainer host determine the granted allowance. Rift continues to check actual available memory before loading a model.
+
+Version 1.8 adds a small **+** on the left of the composer. Choose one image or file from Files, review its preview, and send. Qwen3.5 4B Uncensored Aggressive Q4_K_M image understanding uses the publisher’s matching vision encoder (optional 676 MB verified download). Text-based PDF (up to 40 pages), TXT, Markdown, CSV and JSON contents are extracted locally; scanned PDFs should be provided as page images. Files are limited to 20 MB, extracted text to 24,000 characters, and images are normalized to a maximum 768-pixel edge. The selected context window may require a shorter document excerpt. Office documents, video and audio-file attachments are not supported in this build. No content filtering or cloud moderation is added; model responses still depend on the model itself.
+
+Only the new Qwen 4B vision path and its text fallback are checked with real inference. The existing model catalog is not retested. Actual iPhone and LiveContainer vision performance remains unmeasured.
 
 **Private AI. On your terms.**
 
