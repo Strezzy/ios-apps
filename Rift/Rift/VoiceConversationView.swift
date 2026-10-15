@@ -16,12 +16,16 @@ struct VoiceConversationView: View {
     }
     private var compact: Bool { verticalSizeClass == .compact }
     var body: some View {
-        VStack(alignment: .trailing, spacing: 8) {
+        let layout = compact
+            ? AnyLayout(HStackLayout(alignment: .bottom, spacing: 8))
+            : AnyLayout(VStackLayout(alignment: .trailing, spacing: 8))
+        layout {
             if options {
                 ScrollView { voiceOptions.padding(16) }
-                    .frame(width: 300, height: compact ? 120 : 280)
+                    .frame(width: 300, height: compact ? 200 : 280)
                     .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
             }
+            VStack(alignment: .trailing, spacing: 8) {
             if let error = voice.error {
                 Text(error).font(.caption).foregroundStyle(.primary)
                     .padding(12).frame(maxWidth: 280)
@@ -62,6 +66,7 @@ struct VoiceConversationView: View {
                     }.buttonStyle(.plain).accessibilityLabel("Voice and language settings").accessibilityIdentifier("voiceOptions")
                 }.padding(.leading, 12).padding(.trailing, 2)
                     .glassEffect(.regular, in: Capsule())
+            }
             }
         }
         .padding(.trailing, 12).padding(.bottom, 10)

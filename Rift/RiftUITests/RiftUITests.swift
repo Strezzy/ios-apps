@@ -159,6 +159,13 @@ final class RiftUITests: XCTestCase {
         attach("Rift-inline-voice-orb")
         app.buttons["voiceOptions"].tap()
         XCTAssertTrue(app.switches["Hands-free turns"].waitForExistence(timeout: 5))
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let reachable = NSPredicate { _, _ in
+            close.isHittable && app.switches["Hands-free turns"].isHittable
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: reachable, object: app)], timeout: 8), .completed)
+        attach("Rift-voice-settings-landscape")
+        XCUIDevice.shared.orientation = .portrait
         close.tap()
         XCTAssertTrue(close.waitForNonExistence(timeout: 5))
         entry.tap()
