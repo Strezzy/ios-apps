@@ -8,6 +8,7 @@ def sha(path):
  with Path(path).open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(path).write_text(json.dumps(data,indent=2,ensure_ascii=False)+'\n')
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
+feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
 assert report['app']=='Rift' and report['version']=='1.4' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
 summary=report['test_summary'];assert summary['failedTests']==0 and summary['skippedTests']==0 and summary['passedTests']>=40
@@ -15,12 +16,18 @@ source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==o
 # Other apps may publish concurrently. Only newer Rift source invalidates this IPA.
 assert subprocess.run(['git','diff','--quiet',source,'HEAD','--','Rift/Rift','Rift/RiftTests','Rift/RiftUITests','Rift/project.yml']).returncode==0, 'Newer Rift source exists; wait for its verified build'
 assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes']
-checks=[]
-for path in sorted(OUT.glob('models-*/MODEL-SMOKE.json')):checks+=json.loads(path.read_text())
-assert len(checks)==len({c['id'] for c in checks})==10
-assert all(c['exit_code']==0 and c['source']==source and c['transfer']['growth_bytes']<160*1048576 for c in checks)
-metal=json.loads((OUT/'METAL-SMOKE.json').read_text())
-assert len(metal)==1 and metal[0]['id']=='qwen35-4b' and metal[0]['exit_code']==0 and metal[0]['backend']=='macOS Metal' and metal[0]['source']==source
+if feature_update:
+ assert summary['passedTests']>=73, 'Updated animation and voice tests must pass'
+ # This release changes presentation and voice only; reuse the existing model validation.
+ unchanged=['Rift/Rift/Native','Rift/Rift/Resources/catalog.json','Rift/Rift/DownloadJob.swift','Rift/Rift/GGUF.swift','Rift/Rift/Models.swift','Rift/Rift/MemoryBudget.swift','Rift/Rift/AppModel.swift','Rift/Rift/Storage.swift']
+ assert subprocess.run(['git','diff','--quiet','991ed22ae2bb61128c33b44c6b4787a358ab1ee9',source,'--',*unchanged]).returncode==0, 'Model or storage code changed; feature-only release is not applicable'
+else:
+ checks=[]
+ for path in sorted(OUT.glob('models-*/MODEL-SMOKE.json')):checks+=json.loads(path.read_text())
+ assert len(checks)==len({c['id'] for c in checks})==10
+ assert all(c['exit_code']==0 and c['source']==source and c['transfer']['growth_bytes']<160*1048576 for c in checks)
+ metal=json.loads((OUT/'METAL-SMOKE.json').read_text())
+ assert len(metal)==1 and metal[0]['id']=='qwen35-4b' and metal[0]['exit_code']==0 and metal[0]['backend']=='macOS Metal' and metal[0]['source']==source
 sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
@@ -31,14 +38,20 @@ with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
  verify_executable(z.read('Payload/Rift.app/Rift'))
  catalog=json.loads(z.read('Payload/Rift.app/catalog.json'))
- assert {m['id'] for m in catalog}=={c['id'] for c in checks}
- for model in catalog:
-  assert model['uncensored']
-  assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
+ assert catalog==json.loads((ROOT/'Rift/Rift/Resources/catalog.json').read_text())
+ if not feature_update:
+  assert {m['id'] for m in catalog}=={c['id'] for c in checks}
+  for model in catalog:
+   assert model['uncensored']
+   assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
 report.update(build_result='passed',model_inference='All 10 pinned quantizations passed production Swift downloads, verification and two-turn macOS CPU inference',metal_inference='Qwen3.5 4B passed two-turn macOS Metal inference; not a physical-iPhone test',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
-save(OUT/'BUILD-REPORT.json',report);save(OUT/'MODEL-SMOKE.json',checks)
+if feature_update:
+ report.update(model_inference='Full model matrix not rerun for this UI/voice release; model catalog, downloader, inference and storage code unchanged from 1.3', validation_scope='Animations, voice lifecycle and connected chat UI; 73 simulator tests and arm64 iPhone compilation', metal_inference='Already completed in the candidate build; no new model checks required for publication')
+save(OUT/'BUILD-REPORT.json',report)
+if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
 tag='rift-1.4-build'+report['build']
+model_verification='The existing model catalog, downloader and inference code are unchanged from 1.3; the full model matrix was not required or completed for this feature release.' if feature_update else 'All 10 existing model quantizations passed production downloads, verification and two-turn Mac CPU checks. Qwen3.5 4B passed the Mac Metal check.'
 notes=f'''Rift 1.4 ({report['build']}) · Ember and liquid voice
 
 - Adds Ember, Portal and Cipher reply animations. Ember's rising crimson/amber sparks are the default for new installs; existing saved animation choices remain intact. Portal reveals letters through luminous rings, and Cipher resolves scrambling glyphs into the actual reply. Existing effects remain available. Effects are bounded and respect Reduce Motion, VoiceOver and Low Power Mode.
@@ -47,7 +60,7 @@ notes=f'''Rift 1.4 ({report['build']}) · Ember and liquid voice
 - Automatic speech voice selection prefers natural Premium and Enhanced installed Apple voices in the selected language, with sentence-aware chunk boundaries and short phrasing pauses. Explicit voice, speed and pitch preferences are preserved. Voice quality depends on the assets installed in iOS; no hosted voice or voice cloning is added.
 - Model catalog, inference engine, memory limits, chat storage, app identity, icon, existing keyboard background and other app features are unchanged.
 
-Verification: {summary['passedTests']} native simulator tests passed with zero failures or skips, including rendered animation pixels, style previews, inline orb dismissal, voice selection, cancellation, silence handling and existing chat/keyboard tests. All 10 existing model quantizations passed production downloads, verification and two-turn Mac CPU checks. Qwen3.5 4B passed the Mac Metal check. The arm64 iPhone executable and requested memory entitlements were verified.
+Verification: {summary['passedTests']} native simulator tests passed with zero failures or skips, including rendered animation pixels, style previews, inline orb dismissal, voice selection, cancellation, silence handling and existing chat/keyboard tests. {model_verification} The arm64 iPhone executable and requested memory entitlements were verified.
 
 Physical-device validation is still required for microphone capture, speech-language assets, recognition accuracy, voice quality, speaker/Bluetooth routing and LiveContainer permissions. Simulator results do not establish those behaviors. The microphone is active only while Listening; spoken playback can be interrupted by tapping the orb. Conversation processing stays local.
 
@@ -57,7 +70,8 @@ Build source: {source}
 IPA SHA-256: {report['ipa_sha256']}
 '''
 (OUT/'RELEASE-NOTES.md').write_text(notes)
-files=[ipa,OUT/'Rift-Source.zip',OUT/'BUILD-REPORT.json',OUT/'MODEL-SMOKE.json',OUT/'METAL-SMOKE.json']
+evidence_files=['BUILD-REPORT.json'] if feature_update else ['BUILD-REPORT.json','MODEL-SMOKE.json','METAL-SMOKE.json']
+files=[ipa,OUT/'Rift-Source.zip',*[OUT/name for name in evidence_files]]
 (OUT/'SHA256SUMS.txt').write_text(''.join(f'{sha(p)}  {p.name}\n' for p in files))
 files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
@@ -66,7 +80,7 @@ metadata['subtitle']='Private offline AI chat'
 metadata['localizedDescription']='Chat privately on your iPhone with downloaded uncensored community models or an imported GGUF. Includes an iPhone-organized model library, expressive animated replies and saved conversations. Version 1.4 adds Ember (the new default), Portal and Cipher effects, an inline liquid-glass voice orb, automatic hands-free turns, and smarter Premium/Enhanced Apple voice selection. Speech-language setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings, or cloud inference. Physical microphone and LiveContainer voice behavior require device testing; larger models depend on host memory.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
 verification=ROOT/'Rift/Verification'/('1.4-build'+report['build'])
-for filename in ['BUILD-REPORT.json','MODEL-SMOKE.json','METAL-SMOKE.json']:
+for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')

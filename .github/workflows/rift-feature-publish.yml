@@ -1,0 +1,39 @@
+name: Publish verified Rift feature update
+on:
+  workflow_dispatch:
+    inputs:
+      verified_run:
+        description: Run containing the tested Rift-Native-Candidate
+        required: true
+        default: '38802817439'
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: rift-stability-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Strezzy/ios-apps
+      RIFT_FEATURE_UPDATE: '1'
+      VERIFIED_RUN: ${{ inputs.verified_run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v6
+        with:
+          name: Rift-Native-Candidate
+          run-id: ${{ inputs.verified_run }}
+          github-token: ${{ github.token }}
+          path: RiftRelease
+      - name: Publish the already tested feature build
+        run: |
+          SOURCE=$(gh api "repos/$GH_REPO/actions/runs/$VERIFIED_RUN" --jq .head_sha)
+          export RIFT_SOURCE="$SOURCE"
+          python3 Rift/scripts/publish_update.py RiftRelease
