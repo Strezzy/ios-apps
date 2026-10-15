@@ -26,9 +26,9 @@ struct RiftBackdrop: View {
     }
 }
 struct RiftBackground: View {
-    @Environment(.colorScheme) private var scheme
-    @Environment(.accessibilityReduceMotion) private var reduceMotion
-    @Environment(.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
     var body: some View {
         let still = reduceMotion || lowPower || scenePhase != .active
