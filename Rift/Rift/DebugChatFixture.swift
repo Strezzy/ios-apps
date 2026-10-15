@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import UIKit
 
 /// UI-test content only; not compiled into the distributed app. Uses a separate
 /// temporary data directory and is never substituted for model inference.
@@ -15,7 +16,10 @@ import Foundation
             model.conversations = [chat]; model.activeChatID = chat.id; model.generating = true
             model.status = "Reading conversation"
             Task { @MainActor in
-                try? await Task.sleep(for: .seconds(3))
+                // The UI check inspects the pending bubble before tapping the
+                // composer. Waiting for that real event avoids launch-time races.
+                for await _ in NotificationCenter.default.notifications(named: UIResponder.keyboardDidShowNotification) { break }
+                guard model.generating else { return }
                 model.status = "Writing reply"
                 for word in "Hey! I am here. This short reply grows a few words at a time while the conversation stays anchored in place. There is room to breathe, even as the last words arrive.".split(separator: " ") {
                     guard model.generating else { return }

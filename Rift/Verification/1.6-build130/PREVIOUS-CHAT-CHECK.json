@@ -1,0 +1,89 @@
+{
+  "app": "Rift",
+  "version": "1.6",
+  "build": "130",
+  "source": "0f391d6770cdd30d3f9eb8c1646c80a09655aaac",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "not_run",
+  "model_inference": "not_run",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "37dcb30ad21f6bbcb64a913dd67a564af425f5da255452a15876a5c9bc9b4179",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftTests/VoiceReplyStreamTests",
+    "RiftTests/VoiceOrbTests/testOpeningAndClosingCuesRingOutWithHeadroomAndFadeToSilence",
+    "RiftTests/VoiceOrbTests/testClosingDuringCuePreventsSpeechSetupAndMicrophoneStart",
+    "RiftTests/VoiceAndEffectsTests/testCipherDefaultPreservesAllSavedChoices",
+    "RiftTests/PresentationTests/testKeyboardResizeDoesNotTurnOffFollowing",
+    "RiftTests/PresentationTests/testOnlyUserScrollingCanLeaveLatestReply",
+    "RiftTests/PresentationTests/testWrappingIncomingTextRequestsBottomAlignment",
+    "RiftTests/PresentationTests/testProgrammaticScrollDoesNotCreateAnEndlessRequestLoop",
+    "RiftTests/PresentationTests/testShortStreamingConversationNeverRequestsBottomAlignment",
+    "RiftTests/PresentationTests/testLivingBackgroundChangesPixelsWithinTheSamePalette",
+    "RiftUITests/RiftUITests/testEmptyChatShowsOnlyCenteredMarkAndNewFooter",
+    "RiftUITests/RiftUITests/testShortBubbleTypingDotsAndStreamingStayAnchored",
+    "RiftUITests/RiftUITests/testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating",
+    "RiftUITests/RiftUITests/testVoiceOrbStaysInsideChatAndCanCloseAndReopen"
+  ],
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "4E3A6BB3-F417-4829-8DF5-0EA652541F40",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 1,
+        "passedTests": 19,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift \u00b7 Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 1,
+    "finishTime": 1792103979.465,
+    "passedTests": 19,
+    "result": "Failed",
+    "skippedTests": 0,
+    "startTime": 1792103593.194,
+    "statistics": [],
+    "testFailures": [
+      {
+        "failureText": "XCTAssertTrue failed",
+        "targetName": "RiftUITests",
+        "testIdentifier": 19,
+        "testIdentifierString": "RiftUITests/testShortBubbleTypingDotsAndStreamingStayAnchored()",
+        "testIdentifierURL": "test://com.apple.xcode/Rift/RiftUITests/RiftUITests/testShortBubbleTypingDotsAndStreamingStayAnchored",
+        "testName": "testShortBubbleTypingDotsAndStreamingStayAnchored()"
+      }
+    ],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 20
+  },
+  "build_result": "failed",
+  "failure": "native-tests failed with exit code 65"
+}

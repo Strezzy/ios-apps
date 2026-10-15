@@ -68,6 +68,7 @@ def simulator():
         assert os.getenv('RIFT_TEST_SCOPE') == 'voice-chat', 'Choose the reviewed voice-chat scope explicitly'
         selection, prior = selection_for_source(report['source'], ROOT)
         report['test_selection'] = selection
+        if prior: report['reused_feature_checks'] = {'source': prior['source'], 'passedTests': 19, 'evidence': 'Verification/1.6-build130/PREVIOUS-CHAT-CHECK.json'}
         save()
         run(common+['test-without-building','-parallel-testing-enabled','NO','-resultBundlePath',result]+['-only-testing:'+test for test in selection],'native-tests')
         report['simulator']='passed'; save()

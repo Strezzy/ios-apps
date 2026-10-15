@@ -53,6 +53,9 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["replyTypingIndicator"].firstMatch.exists)
         XCTAssertFalse(app.staticTexts["Reading conversation"].exists)
         attach("Rift-short-message-and-dots")
+        let input = app.descendants(matching: .any)["messageInput"].firstMatch
+        input.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         let initialY = sent.frame.minY
         var minimumY = initialY, maximumY = initialY
         let initialHeight = last.frame.height
