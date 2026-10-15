@@ -1,0 +1,77 @@
+{
+  "app": "Rift",
+  "version": "1.4",
+  "build": "128",
+  "source": "c6f1e7fe1dcda02d6f86cb8a7b4c1b4d4c4fb666",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "passed",
+  "model_inference": "Full model matrix not rerun for this UI/voice release; model catalog, downloader, inference and storage code unchanged from 1.3",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "11deb396ac4f82c6488baef89cdf2b94dcb52790cf34328a41a701c5b4bdfccd",
+  "simulator_device": "iPhone 17 Pro",
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "4E3A6BB3-F417-4829-8DF5-0EA652541F40",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 73,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift · Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1792097246.606,
+    "passedTests": 73,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1792096820.763,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [
+      {
+        "category": "Longest Test Runs",
+        "impact": "73% of duration",
+        "text": "2 longest test runs with outlier durations exceeding 3.00s (three standard deviations)"
+      }
+    ],
+    "totalTestCount": 73
+  },
+  "iphone_compilation": "passed",
+  "executable_architecture": "Non-fat file: /Users/runner/work/ios-apps/ios-apps/Rift/Build/DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app/Rift is architecture: arm64",
+  "ipa_sha256": "ae5ce929b2ea9073f31218690576e95df5563033da7770b4dd9d99a81c4c5688",
+  "voice_validation": "Voice state, cancellation, text cleanup and UI tested; physical microphone and Apple speech assets not tested on this runner",
+  "ipa_bytes": 5893770,
+  "build_result": "passed",
+  "metal_inference": "Already completed in the candidate build; no new model checks required for publication",
+  "signing": "Ad-hoc signature carries requested memory entitlements; installer and host must grant them",
+  "validation_scope": "Animations, voice lifecycle and connected chat UI; 73 simulator tests and arm64 iPhone compilation"
+}
