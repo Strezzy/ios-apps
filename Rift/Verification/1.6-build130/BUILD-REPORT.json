@@ -1,0 +1,81 @@
+{
+  "app": "Rift",
+  "version": "1.6",
+  "build": "130",
+  "source": "15f0f721ed956af28418097b90abf88f06e347b2",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "passed",
+  "model_inference": "Not rerun; model catalog, downloader, inference and storage code unchanged from 1.5",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "37dcb30ad21f6bbcb64a913dd67a564af425f5da255452a15876a5c9bc9b4179",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftUITests/RiftUITests/testShortBubbleTypingDotsAndStreamingStayAnchored"
+  ],
+  "reused_feature_checks": {
+    "source": "0f391d6770cdd30d3f9eb8c1646c80a09655aaac",
+    "passedTests": 19,
+    "evidence": "Verification/1.6-build130/PREVIOUS-CHAT-CHECK.json"
+  },
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "0183276C-C5F7-4A53-B0AF-C3D9117595F6",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 1,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift · Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1792105223.926,
+    "passedTests": 1,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1792105133.641,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 1
+  },
+  "iphone_compilation": "passed",
+  "executable_architecture": "Non-fat file: /Users/runner/work/ios-apps/ios-apps/Rift/Build/DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app/Rift is architecture: arm64",
+  "ipa_sha256": "f7e16baac724a7b4098dade7ccac9780036a44d67dd53a5f46f71e9da0738194",
+  "voice_validation": "Incremental speech, longer cues, empty chat, compact bubbles, typing dots, scrolling, Cipher default and background tested; physical microphone, haptics and speaker playback not tested on this runner",
+  "ipa_bytes": 5891725,
+  "build_result": "passed",
+  "validation_reuse": "19 passing checks retained for identical production code, unit tests and other UI tests; reran only the short-chat UI check after making its DEBUG fixture wait for keyboard focus and locating the dots by their accessible label",
+  "validated_feature_test_count": 20,
+  "signing": "Ad-hoc signature carries requested memory entitlements; installer and host must grant them",
+  "validation_scope": "20 scoped tests: incremental speech, audio cues, chat layout, scrolling, Cipher default, living background and orb lifecycle; arm64 iPhone compilation",
+  "metal_inference": "Not rerun; inference engine unchanged"
+}

@@ -50,7 +50,7 @@
   "com.billy.rift": {
     "name": "Rift",
     "subtitle": "Private offline AI chat",
-    "localizedDescription": "Chat privately on your iPhone with downloaded uncensored community models or an imported GGUF. Includes expressive replies with Ember as the default, saved conversations and hands-free voice. Version 1.5 adds a clear, flowing Liquid Glass orb, a dark activation chime and soft haptics. Close voice mode from the composer; voice and orb controls are in Settings. Speech setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings or cloud inference. Larger models depend on host memory.",
+    "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.6 adds a subtly living crimson background, a centered Rift mark in empty chats, compact outgoing bubbles, a three-dot reply indicator and Cipher as the default text animation. Voice replies begin as text generates. The glass orb has longer opening/closing tones and soft haptic fades; voice preferences remain in Settings. Speech setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings or cloud inference. Larger models depend on host memory.",
     "icon": "Rift.png",
     "category": "utilities",
     "tintColor": "#D62947"
