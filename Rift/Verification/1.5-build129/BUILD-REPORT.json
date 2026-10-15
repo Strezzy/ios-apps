@@ -1,0 +1,81 @@
+{
+  "app": "Rift",
+  "version": "1.5",
+  "build": "129",
+  "source": "c91dfeff089dd93a296fc42261023cf13bc539e9",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "passed",
+  "model_inference": "Not rerun; model catalog, downloader, inference and storage code unchanged from 1.4",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "17b81d3fa457a4f1b9349db5ecc0ad11b5824ec43d32b4a9918e90112110dfa3",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftUITests/RiftUITests/testVoicePreferencesLiveInSettingsAndPersist"
+  ],
+  "reused_voice_checks": {
+    "source": "45d1dd9d7d0a5c5773c4e00c0bb9ce5d94e94da4",
+    "passedTests": 12,
+    "evidence": "Verification/1.5-build129/PREVIOUS-VOICE-CHECK.json"
+  },
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "0183276C-C5F7-4A53-B0AF-C3D9117595F6",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 1,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift · Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1792100290.352,
+    "passedTests": 1,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1792100207.022,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 1
+  },
+  "iphone_compilation": "passed",
+  "executable_architecture": "Non-fat file: /Users/runner/work/ios-apps/ios-apps/Rift/Build/DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app/Rift is architecture: arm64",
+  "ipa_sha256": "ff62c5242186c1d77841394829e31e460fe38c7c719e2c5a3356989b5485bb6f",
+  "voice_validation": "Glass outline, entrance, activation cue, settings persistence and connected voice lifecycle tested; physical microphone, haptics and speaker playback not tested on this runner",
+  "ipa_bytes": 5891563,
+  "build_result": "passed",
+  "validated_voice_test_count": 13,
+  "validation_reuse": "12 passing checks retained for identical app/unit code and unchanged orb UI test; only the corrected Settings switch-tap test rerun",
+  "signing": "Ad-hoc signature carries requested memory entitlements; installer and host must grant them",
+  "validation_scope": "13 scoped tests: glass outline, liquid entrance, activation cue, Settings, dismissal and connected voice lifecycle; arm64 iPhone compilation",
+  "metal_inference": "Not rerun; inference engine unchanged"
+}
