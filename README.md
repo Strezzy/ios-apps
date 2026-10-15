@@ -12,7 +12,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Facet.png" width="44" alt=""/> **Facet** — Convert photos and videos to 3D | 1.1 (301) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/facet-1.1-build301/Facet.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png" width="44" alt=""/> **Veil** — Remove metadata from photos and videos | 1.1 (201) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png" width="44" alt=""/> **Lucid** — Offline video enhancement · Beta | 1.1 (204) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.3 (127) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.3-build127/Rift.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.4 (128) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.4-build128/Rift.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -50,7 +50,7 @@ FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x wit
 
 ### Rift
 
-Chat privately on your iPhone with downloaded uncensored community models or an imported GGUF. Includes an iPhone-organized model library, expressive animated replies, saved conversations, and on-device voice mode with installed Apple voices. Version 1.3 adds Starlight, Wave and Bubble effects, a full-height gradient behind the keyboard, spoken conversations, optional hands-free turns, and voice/speed/pitch choices. Apple speech-language setup may require an explicit download. No accounts, analytics, uploaded recordings, or cloud inference. Short-clip voice cloning is not included. Physical microphone and LiveContainer voice behavior require device testing; larger models depend on host memory.
+Chat privately on your iPhone with downloaded uncensored community models or an imported GGUF. Includes an iPhone-organized model library, expressive animated replies and saved conversations. Version 1.4 adds Ember (the new default), Portal and Cipher effects, an inline liquid-glass voice orb, automatic hands-free turns, and smarter Premium/Enhanced Apple voice selection. Speech-language setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings, or cloud inference. Physical microphone and LiveContainer voice behavior require device testing; larger models depend on host memory.
 
 ## Add my apps to LiveContainer
 
