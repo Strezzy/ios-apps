@@ -50,9 +50,15 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(sent.waitForExistence(timeout: 10))
         XCTAssertLessThan(sent.frame.width, 110, "Hey should fit a small bubble")
         XCTAssertEqual(sent.frame.maxX, scroll.frame.maxX - 20, accuracy: 3)
-        XCTAssertTrue(app.descendants(matching: .any)["replyTypingIndicator"].firstMatch.exists)
-        XCTAssertFalse(app.staticTexts["Reading conversation"].exists)
+        // SwiftUI propagates the message container's identifier to this child.
+        let dots = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Replying")).firstMatch
         attach("Rift-short-message-and-dots")
+        if !dots.exists {
+            let diagnostic = XCTAttachment(string: app.debugDescription)
+            diagnostic.name = "Rift-pending-reply-accessibility"; diagnostic.lifetime = .keepAlways; add(diagnostic)
+        }
+        XCTAssertTrue(dots.exists)
+        XCTAssertFalse(app.staticTexts["Reading conversation"].exists)
         let input = app.descendants(matching: .any)["messageInput"].firstMatch
         input.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))

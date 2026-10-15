@@ -21,7 +21,7 @@ validated_count = summary['passedTests'] + (19 if prior else 0)
 assert validated_count == EXPECTED_TESTS
 if prior:
  assert report['reused_feature_checks']['source'] == prior['source']
- report['validation_reuse'] = '19 passing checks retained for identical production code, unit tests and other UI tests; reran only the short-chat UI check after making its DEBUG fixture wait for keyboard focus'
+ report['validation_reuse'] = '19 passing checks retained for identical production code, unit tests and other UI tests; reran only the short-chat UI check after making its DEBUG fixture wait for keyboard focus and locating the dots by their accessible label'
 report['validated_feature_test_count'] = validated_count
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
 # Other apps may publish concurrently. Only newer Rift source invalidates this IPA.
