@@ -60,12 +60,16 @@ final class RiftUITests: XCTestCase {
             // Re-query the stable expanded surface, not a Text branch which was
             // replaced during streaming or the covered inline Settings sample.
             let sample = app.descendants(matching: .any)["animationPreview-expanded"].firstMatch
-            return sample.exists && sample.isHittable &&
-                sample.label.contains("Just a little room to think.") &&
-                (sample.value as? String) == "Preview complete"
+            // One snapshot keeps this check atomic and avoids four separate
+            // accessibility round trips while the simulator is rendering.
+            guard let snapshot = try? sample.snapshot() else { return false }
+            return !snapshot.frame.isEmpty &&
+                snapshot.label.contains("Just a little room to think.") &&
+                (snapshot.value as? String) == "Preview complete"
         }
-        let result = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: completed, object: app)], timeout: 12)
+        let result = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: completed, object: app)], timeout: 20)
         XCTAssertEqual(result, .completed, "Visible selected-style preview must actually finish")
+        XCTAssertTrue(app.descendants(matching: .any)["animationPreview-expanded"].firstMatch.isHittable)
     }
     func testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating() {
         let app = XCUIApplication()

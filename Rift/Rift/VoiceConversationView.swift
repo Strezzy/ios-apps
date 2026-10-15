@@ -54,18 +54,20 @@ struct VoiceConversationView: View {
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("Close voice mode").accessibilityIdentifier("closeVoiceMode")
                 }
-                HStack(spacing: 3) {
-                    Text(voice.phase.title).font(.caption.weight(.medium)).lineLimit(1)
-                        .accessibilityIdentifier("voiceStatus")
-                    Button {
-                        if !options { voice.pause() }
-                        withAnimation(.smooth(duration: 0.25)) { options.toggle() }
-                    } label: {
+                Button {
+                    if !options { voice.pause() }
+                    withAnimation(.smooth(duration: 0.25)) { options.toggle() }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(voice.phase.title).font(.caption.weight(.medium)).lineLimit(1)
+                            .accessibilityIdentifier("voiceStatus")
                         Image(systemName: options ? "chevron.down" : "slider.horizontal.3")
                             .font(.system(size: 11, weight: .semibold)).frame(width: 36, height: 32)
-                    }.buttonStyle(.plain).accessibilityLabel("Voice and language settings").accessibilityIdentifier("voiceOptions")
-                }.padding(.leading, 12).padding(.trailing, 2)
-                    .glassEffect(.regular, in: Capsule())
+                    }.padding(.leading, 12).padding(.trailing, 2)
+                        .frame(minHeight: 36).contentShape(Capsule())
+                        .glassEffect(.regular.interactive(), in: Capsule())
+                }.buttonStyle(.plain).accessibilityLabel("Voice and language settings")
+                    .accessibilityIdentifier("voiceOptions")
             }
             }
         }
