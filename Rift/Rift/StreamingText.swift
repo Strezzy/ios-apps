@@ -10,6 +10,16 @@ struct BloomTextRenderer: TextRenderer {
     var now: TimeInterval
     let style: ReplyAnimationStyle
     var animatableData: Double { get { now } set { now = newValue } }
+    // Expand rasterization only, preserving line wrapping and the chat layout.
+    // Rising embers and portal halos must survive SwiftUI's offscreen clipping.
+    var displayPadding: EdgeInsets {
+        switch style {
+        case .ember: return EdgeInsets(top: 44, leading: 16, bottom: 10, trailing: 16)
+        case .portal: return EdgeInsets(top: 18, leading: 18, bottom: 18, trailing: 18)
+        case .cipher: return EdgeInsets(top: 8, leading: 6, bottom: 6, trailing: 6)
+        default: return EdgeInsets()
+        }
+    }
     func draw(layout: Text.Layout, in context: inout GraphicsContext) {
         var offsets: [Int: Int] = [:]
         var particlesRemaining = [.ember, .portal, .cipher].contains(style) ? 48 : 24
