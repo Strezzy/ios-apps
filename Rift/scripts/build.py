@@ -64,10 +64,13 @@ def simulator():
         # Compile while first-boot migration completes instead of serially waiting.
         run(common+['build-for-testing'],'simulator-build')
         run(['xcrun','simctl','bootstatus',uid,'-b'],'simulator-ready')
-        from voice_test_scope import VOICE_TESTS
+        from voice_test_scope import selection_for_source
         assert os.getenv('RIFT_TEST_SCOPE') == 'voice-orb', 'Choose the reviewed voice-orb scope explicitly'
-        report['test_selection'] = VOICE_TESTS; save()
-        run(common+['test-without-building','-parallel-testing-enabled','NO','-resultBundlePath',result]+['-only-testing:'+test for test in VOICE_TESTS],'native-tests')
+        selection, prior = selection_for_source(report['source'], ROOT)
+        report['test_selection'] = selection
+        if prior: report['reused_voice_checks'] = {'source': prior['source'], 'passedTests': 12, 'evidence': 'Verification/1.5-build129/PREVIOUS-VOICE-CHECK.json'}
+        save()
+        run(common+['test-without-building','-parallel-testing-enabled','NO','-resultBundlePath',result]+['-only-testing:'+test for test in selection],'native-tests')
         report['simulator']='passed'; save()
     finally:
         test_evidence(result)

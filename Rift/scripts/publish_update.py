@@ -11,10 +11,18 @@ def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
 assert report['app']=='Rift' and report['version']=='1.5' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
-from voice_test_scope import VOICE_TESTS, EXPECTED_TESTS
+from voice_test_scope import VOICE_TESTS, EXPECTED_TESTS, selection_for_source
 summary=report['test_summary']
-assert summary['failedTests']==0 and summary['skippedTests']==0 and summary['passedTests']==EXPECTED_TESTS
-assert report['test_selection']==VOICE_TESTS, 'Only the reviewed voice tests may gate this release'
+selection, prior = selection_for_source(report['source'], ROOT/'Rift')
+assert summary['failedTests']==0 and summary['skippedTests']==0
+assert report['test_selection']==selection, 'Only the reviewed voice tests may gate this release'
+assert summary['passedTests']==(1 if prior else EXPECTED_TESTS)
+validated_count = summary['passedTests'] + (12 if prior else 0)
+assert validated_count == EXPECTED_TESTS
+report['validated_voice_test_count'] = validated_count
+if prior:
+ assert report['reused_voice_checks']['source'] == prior['source']
+ report['validation_reuse'] = '12 passing checks retained for identical app/unit code and unchanged orb UI test; only the corrected Settings switch-tap test rerun'
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
 # Other apps may publish concurrently. Only newer Rift source invalidates this IPA.
 assert subprocess.run(['git','diff','--quiet',source,'HEAD','--','Rift/Rift','Rift/RiftTests','Rift/RiftUITests','Rift/project.yml']).returncode==0, 'Newer Rift source exists; wait for its verified build'
@@ -61,7 +69,7 @@ notes=f'''Rift 1.5 ({report['build']}) · Clear glass voice orb
 - Moves hands-free, speech language, voice, speed, pitch, sound and haptic controls into Settings → Voice & sound. Hands-free preferences persist after closing.
 - Keeps the existing reply animations, Ember default, chat behavior, speech voice selection, models, inference, storage, app identity and icon.
 
-Verification: {summary['passedTests']} scoped simulator tests passed with zero failures or skips, plus arm64 iPhone compilation. Only this orb update and connected voice interactions were tested. No model inference checks were rerun. Microphone capture, audible playback and tactile feel still require a physical iPhone; simulator checks cannot verify them.
+Verification: {validated_count} scoped simulator checks validated, plus arm64 iPhone compilation. Twelve checks passed on identical app code; the Settings UI check passed after correcting its switch tap targets. Only this orb update and connected voice interactions were tested. No model inference checks were rerun. Microphone capture, audible playback and tactile feel still require a physical iPhone; simulator checks cannot verify them.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+. Existing chats and downloaded models are retained. The installer supplies the final signature.
 

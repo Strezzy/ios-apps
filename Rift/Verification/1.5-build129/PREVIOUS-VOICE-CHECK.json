@@ -1,0 +1,88 @@
+{
+  "app": "Rift",
+  "version": "1.5",
+  "build": "129",
+  "source": "45d1dd9d7d0a5c5773c4e00c0bb9ce5d94e94da4",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "not_run",
+  "model_inference": "not_run",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "17b81d3fa457a4f1b9349db5ecc0ad11b5824ec43d32b4a9918e90112110dfa3",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftTests/VoiceOrbTests",
+    "RiftTests/VoiceAndEffectsTests/testClosingBeforeAutomaticStartupCannotRecord",
+    "RiftTests/VoiceAndEffectsTests/testPausingDuringSetupStillFinishesAssetCheckWithoutStartingMicrophone",
+    "RiftTests/VoiceAndEffectsTests/testDismissalDuringSetupCannotRestartSession",
+    "RiftTests/VoiceAndEffectsTests/testOpeningAutomaticallyAttemptsTurnOnceAssetsAreReady",
+    "RiftUITests/RiftUITests/testVoiceOrbStaysInsideChatAndCanCloseAndReopen",
+    "RiftUITests/RiftUITests/testVoicePreferencesLiveInSettingsAndPersist"
+  ],
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "4E3A6BB3-F417-4829-8DF5-0EA652541F40",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 1,
+        "passedTests": 12,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift \u00b7 Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 1,
+    "finishTime": 1792099699.925,
+    "passedTests": 12,
+    "result": "Failed",
+    "skippedTests": 0,
+    "startTime": 1792099344.291,
+    "statistics": [],
+    "testFailures": [
+      {
+        "failureText": "XCTAssertNotEqual failed: (\"[Optional(\"1\"), Optional(\"1\"), Optional(\"1\")]\") is equal to (\"[Optional(\"1\"), Optional(\"1\"), Optional(\"1\")]\")",
+        "targetName": "RiftUITests",
+        "testIdentifier": 13,
+        "testIdentifierString": "RiftUITests/testVoicePreferencesLiveInSettingsAndPersist()",
+        "testIdentifierURL": "test://com.apple.xcode/Rift/RiftUITests/RiftUITests/testVoicePreferencesLiveInSettingsAndPersist",
+        "testName": "testVoicePreferencesLiveInSettingsAndPersist()"
+      }
+    ],
+    "title": "Test - Rift",
+    "topInsights": [
+      {
+        "category": "Longest Test Runs",
+        "impact": "82% of duration",
+        "text": "1 longest test run with outlier durations exceeding 136.45s (three standard deviations)"
+      }
+    ],
+    "totalTestCount": 13
+  },
+  "build_result": "failed",
+  "failure": "native-tests failed with exit code 65"
+}

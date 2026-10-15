@@ -191,9 +191,11 @@ final class RiftUITests: XCTestCase {
         let handsFree = app.switches["voiceHandsFree"]
         XCTAssertTrue(sound.isHittable && haptics.isHittable && handsFree.isHittable)
         let original = [sound.value as? String, haptics.value as? String, handsFree.value as? String]
-        sound.tap(); haptics.tap(); handsFree.tap()
+        for control in [sound, haptics, handsFree] {
+            control.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        }
         let changed = [sound.value as? String, haptics.value as? String, handsFree.value as? String]
-        XCTAssertNotEqual(original, changed)
+        for (before, after) in zip(original, changed) { XCTAssertNotEqual(before, after) }
         XCTAssertEqual(app.alerts.count, 0)
         attach("Rift-voice-settings")
         app.navigationBars["Voice & sound"].buttons.firstMatch.tap()
@@ -201,7 +203,9 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(sound.waitForExistence(timeout: 5))
         XCTAssertEqual([sound.value as? String, haptics.value as? String, handsFree.value as? String], changed)
         // Restore user-facing defaults after exercising persistence.
-        sound.tap(); haptics.tap(); handsFree.tap()
+        for control in [sound, haptics, handsFree] {
+            control.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        }
     }
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIApplication().screenshot())
