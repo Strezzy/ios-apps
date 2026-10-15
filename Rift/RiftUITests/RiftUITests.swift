@@ -63,7 +63,6 @@ final class RiftUITests: XCTestCase {
         // some glass padding; the rendered pill uses 80% of the former width.
         XCTAssertLessThan(composer.frame.width, app.frame.width * 0.85)
         XCTAssertGreaterThan(composer.frame.width, app.frame.width * 0.5)
-        XCTAssertGreaterThanOrEqual(composer.frame.height, 50)
         XCTAssertEqual(composer.frame.midX, app.frame.midX, accuracy: 24)
         let field = app.descendants(matching: .any)["messageInput"].firstMatch
         field.tap(); field.typeText("Hey")

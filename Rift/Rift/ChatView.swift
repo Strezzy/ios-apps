@@ -155,7 +155,7 @@ struct ChatView: View {
                     }.menuIndicator(.hidden).accessibilityIdentifier("modelPicker")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { closeVoice(); model.newChat(); draft = "" } label: {
+                    Button { closeVoice(); discardAttachment(); model.newChat(); draft = "" } label: {
                         Image(systemName: "square.and.pencil").frame(width: 28, height: 28)
                     }.disabled(model.generating).accessibilityLabel("New chat")
                 }
@@ -241,7 +241,9 @@ struct ChatView: View {
                             .accessibilityLabel("Remove attachment")
                     }
                     if attachment.isImage && !imageSupportReady {
-                        if visionDownload.downloading {
+                        if !VisionDownload.supports(model.selectedModel) {
+                            Text("Select Qwen3.5 4B to send this image.").font(.caption).foregroundStyle(.secondary)
+                        } else if visionDownload.downloading {
                             HStack {
                                 ProgressView(value: visionDownload.progress)
                                 Button("Cancel") { visionDownload.cancel() }
@@ -284,9 +286,8 @@ struct ChatView: View {
                         .foregroundStyle(action == .send ? .white : RiftTheme.accent)
                         .frame(width: 46, height: 46)
                         .glassEffect(.regular.tint(action == .send ? RiftTheme.accent : .clear).interactive(), in: Circle())
-                        .phaseAnimator([1.0, 0.88, 1.07, 1.0], trigger: action) { content, scale in
-                            content.scaleEffect(reduceMotion ? 1 : scale)
-                        } animation: { _ in .spring(response: 0.22, dampingFraction: 0.65) }
+                        .symbolEffect(.bounce, value: reduceMotion ? nil : action)
+                        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.65), value: action)
                         .padding(3)
                 }.buttonStyle(.plain)
                     .accessibilityLabel(action.label).accessibilityIdentifier(action.identifier)
