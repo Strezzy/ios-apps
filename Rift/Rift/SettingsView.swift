@@ -1,28 +1,5 @@
 import SwiftUI
 
-struct HistoryView: View {
-    @EnvironmentObject var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var search=""
-    var chats: [Conversation] { model.conversations.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || $0.messages.contains(where:{$0.content.localizedCaseInsensitiveContains(search)}) }.sorted {$0.updatedAt > $1.updatedAt} }
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                RiftBackground()
-                if chats.isEmpty { ContentUnavailableView(search.isEmpty ? "Your conversations live here" : "No matches",systemImage:"bubble.left.and.bubble.right",description:Text(search.isEmpty ? "Start a chat. It stays on this iPhone." : "Try another search.")) }
-                else {
-                    List { ForEach(chats) { chat in
-                        Button { model.activeChatID=chat.id; dismiss() } label: { VStack(alignment:.leading,spacing:6) { Text(chat.title).font(.headline).foregroundStyle(.primary).lineLimit(2); Text(chat.updatedAt,style:.date).font(.caption).foregroundStyle(.secondary) }.padding(.vertical,6) }
-                            .listRowBackground(Color.clear)
-                            .swipeActions { Button(role:.destructive) { model.deleteChat(chat) } label: { Label("Delete",systemImage:"trash") } }
-                            .contextMenu { ShareLink(item:chat.transcript) { Label("Export conversation",systemImage:"square.and.arrow.up") }; Button("Delete conversation",systemImage:"trash",role:.destructive) { model.deleteChat(chat) } }
-                    } }.scrollContentBackground(.hidden)
-                }
-            }.navigationTitle("Conversations").searchable(text:$search,prompt:"Search on this iPhone")
-                .toolbar { ToolbarItem(placement:.topBarLeading) { Button("Done") { dismiss() } }; ToolbarItem(placement:.topBarTrailing) { Button { model.newChat(); dismiss() } label: { Image(systemName:"square.and.pencil") }.disabled(model.generating).accessibilityLabel("New chat") } }
-        }
-    }
-}
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -96,7 +73,7 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.6 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.7 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
             }.task {

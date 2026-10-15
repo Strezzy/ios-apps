@@ -8,12 +8,62 @@ final class RiftUITests: XCTestCase {
     override func tearDownWithError() throws {
         XCUIDevice.shared.orientation = .portrait
     }
+    func testDrawerRevealSelectionAndSettings() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["More options"].exists)
+        app.buttons["Chat history"].tap()
+        XCTAssertTrue(app.navigationBars["Conversations"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["drawerSettings"].isHittable)
+        attach("Rift-left-underlay")
+        app.buttons.containing(.staticText, identifier: "Drawer sample").firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Saved conversation"].waitForExistence(timeout: 5))
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.015, dy: 0.45))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.45))
+        start.press(forDuration: 0.05, thenDragTo: end)
+        XCTAssertTrue(app.buttons["drawerSettings"].waitForExistence(timeout: 5))
+        app.buttons["Close conversations"].tap()
+        XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 5))
+        app.buttons["Chat history"].tap()
+        app.buttons["drawerSettings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Manage Models"].exists)
+        attach("Rift-drawer-settings")
+    }
+    func testDownloadedPickerAndMorphingComposer() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation"]
+        app.launch()
+        let picker = app.buttons["modelPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["openVoiceMode"].exists)
+        let composer = app.descendants(matching: .any)["composerBar"].firstMatch
+        XCTAssertEqual(composer.frame.width, (app.frame.width - 24) * 0.8, accuracy: 4)
+        XCTAssertGreaterThanOrEqual(composer.frame.height, 55)
+        XCTAssertEqual(composer.frame.midX, app.frame.midX, accuracy: 3)
+        let field = app.descendants(matching: .any)["messageInput"].firstMatch
+        field.tap(); field.typeText("Hey")
+        XCTAssertTrue(app.buttons["sendMessage"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["openVoiceMode"].exists)
+        attach("Rift-compact-send-composer")
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 3))
+        XCTAssertTrue(app.buttons["openVoiceMode"].waitForExistence(timeout: 5))
+        picker.tap()
+        XCTAssertTrue(app.buttons["Navigation sample B"].waitForExistence(timeout: 5))
+        attach("Rift-downloaded-model-menu")
+        app.buttons["Navigation sample B"].tap()
+        XCTAssertTrue(picker.label.contains("Navigation sample B"))
+        picker.tap(); app.buttons["Manage Models"].tap()
+        XCTAssertTrue(app.staticTexts["Choose your AI"].waitForExistence(timeout: 5))
+    }
     func testWelcomeAndModelPicker() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["modelPicker"].waitForExistence(timeout: 15))
         XCTAssertTrue(app.descendants(matching: .any)["emptyChatMark"].firstMatch.exists)
         attach("Rift-chat")
-        app.buttons["modelPicker"].tap()
+        app.buttons["modelPicker"].tap(); app.buttons["Manage Models"].tap()
         XCTAssertTrue(app.staticTexts["Choose your AI"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["family-Qwen"].exists)
         attach("Rift-models")
@@ -78,8 +128,8 @@ final class RiftUITests: XCTestCase {
     }
     func testSettingsDoesNotNeedAnAccount() {
         let app = XCUIApplication(); app.launch()
-        XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
-        app.buttons["More options"].tap(); app.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 10))
+        app.buttons["Chat history"].tap(); app.buttons["Settings"].tap()
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.switches["Offline mode"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["privacyAlwaysLocal"].firstMatch.exists)
@@ -87,8 +137,8 @@ final class RiftUITests: XCTestCase {
     }
     func testReplyStylesSwitchAndReplayWithoutAModel() throws {
         let app = XCUIApplication(); app.launch()
-        XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
-        app.buttons["More options"].tap(); app.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 10))
+        app.buttons["Chat history"].tap(); app.buttons["Settings"].tap()
         let larger = app.buttons["Larger preview"]
         for _ in 0..<5 { if larger.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(larger.isHittable); larger.tap()
@@ -193,7 +243,7 @@ final class RiftUITests: XCTestCase {
     func testHereticHasMoreSizesAnd14BChoices() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["modelPicker"].waitForExistence(timeout: 10))
-        app.buttons["modelPicker"].tap()
+        app.buttons["modelPicker"].tap(); app.buttons["Manage Models"].tap()
         XCTAssertTrue(app.buttons["family-Heretic"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Qwen3 14B · Compact"].exists)
         let more = app.buttons["sizes-Heretic"]
@@ -233,8 +283,8 @@ final class RiftUITests: XCTestCase {
     }
     func testVoicePreferencesLiveInSettingsAndPersist() {
         let app = XCUIApplication(); app.launch()
-        XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
-        app.buttons["More options"].tap(); app.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 10))
+        app.buttons["Chat history"].tap(); app.buttons["Settings"].tap()
         let link = app.buttons["voiceSettingsLink"]
         for _ in 0..<3 { if link.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(link.isHittable); link.tap()

@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-enum RiftSheet: String, Identifiable { case models, history, settings; var id: String { rawValue } }
+enum RiftSheet: String, Identifiable { case models, settings; var id: String { rawValue } }
 struct ChatView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft=""
@@ -13,7 +13,77 @@ struct ChatView: View {
     @State private var following = ChatFollowingState()
     @State private var viewport = ChatViewport()
     @State private var bottomRequest = UUID()
+    @State private var drawerOpen = false
+    @GestureState(resetTransaction: Transaction(animation: .spring(response: 0.42, dampingFraction: 0.86))) private var drawerDrag: CGFloat = 0
     var body: some View {
+        GeometryReader { geometry in
+            let width = min(340.0, geometry.size.width * 0.82)
+            let progress = DrawerMotion.progress(open: drawerOpen, translation: drawerDrag, width: width)
+            ZStack(alignment: .leading) {
+                ConversationDrawer(onSelect: { setDrawer(false) }, onSettings: {
+                    setDrawer(false); sheet = .settings
+                })
+                .frame(width: width)
+                .opacity(progress > 0 ? 1 : 0)
+                .accessibilityHidden(!drawerOpen)
+                chatSurface(width: geometry.size.width)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: progress * 32, style: .continuous))
+                    .overlay {
+                        if progress > 0 {
+                            RoundedRectangle(cornerRadius: progress * 32, style: .continuous)
+                                .fill(.black.opacity(progress * 0.12))
+                                .contentShape(Rectangle())
+                                .onTapGesture { setDrawer(false) }
+                                .gesture(drawerGesture(width: width))
+                                .accessibilityLabel("Close conversations")
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityIdentifier("closeConversations")
+                        }
+                    }
+                    .shadow(color: .black.opacity(progress * 0.55), radius: 24, x: -8)
+                    .scaleEffect(reduceMotion ? 1 : 1 - progress * 0.035, anchor: .trailing)
+                    .offset(x: width * progress)
+                    .accessibilityHidden(drawerOpen)
+                if !drawerOpen {
+                    Color.clear.frame(width: 22).contentShape(Rectangle())
+                        .gesture(drawerGesture(width: width))
+                        .accessibilityHidden(true)
+                }
+            }
+            .background(Color(red: 0.035, green: 0.045, blue: 0.065).ignoresSafeArea())
+            .clipped()
+        }
+        .ignoresSafeArea(.container)
+        .transaction { if reduceMotion { $0.animation = nil } }
+        .sheet(item: $sheet) { choice in
+            switch choice { case .models: ModelLibraryView(); case .settings: SettingsView() }
+        }
+        .onChange(of: sheet) { _, value in if value != nil { closeVoice(feedback: false) } }
+    }
+    private func setDrawer(_ open: Bool) {
+        if open { composing = false; closeVoice(feedback: false) }
+        withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.86)) {
+            drawerOpen = open
+        }
+    }
+    private func drawerGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12)
+            .updating($drawerDrag) { value, state, _ in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                state = value.translation.width
+            }
+            .onChanged { value in
+                if abs(value.translation.width) > abs(value.translation.height) {
+                    composing = false; closeVoice(feedback: false)
+                }
+            }
+            .onEnded { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                setDrawer(DrawerMotion.shouldOpen(open: drawerOpen, projected: value.predictedEndTranslation.width, width: width))
+            }
+    }
+    private func chatSurface(width: CGFloat) -> some View {
         NavigationStack {
             ZStack {
                 if let startup=model.startupError { ContentUnavailableView("Local data unavailable",systemImage:"externaldrive.badge.exclamationmark",description:Text(startup)).padding() }
@@ -35,26 +105,44 @@ struct ChatView: View {
                 }
             }
             .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.8), value: voiceVisible)
-            .onChange(of: sheet) { _, value in if value != nil { closeVoice(feedback: false) } }
             .onChange(of: composing) { _, value in if value { closeVoice(feedback: false) } }
-            .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer } }
+            .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer(width: width) } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement:.topBarLeading) { Button { sheet = .history } label: { Image(systemName:"line.3.horizontal").frame(width:28,height:28) }.accessibilityLabel("Chat history") }
-                ToolbarItem(placement:.principal) {
-                    Button { composing=false; sheet = .models } label: {
-                        VStack(spacing:2) { Text("Rift").font(.headline).foregroundStyle(.primary); HStack(spacing:4) { Text(model.selectedModel?.name ?? "Choose a model").lineLimit(1); Image(systemName:"chevron.down").font(.system(size:8,weight:.bold)) }.font(.caption).foregroundStyle(.secondary) }
-                    }.buttonStyle(.plain).accessibilityIdentifier("modelPicker")
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { setDrawer(true) } label: { Image(systemName: "line.3.horizontal").frame(width: 28, height: 28) }
+                        .accessibilityLabel("Chat history")
                 }
-                ToolbarItemGroup(placement:.topBarTrailing) {
-                    Button { closeVoice(); model.newChat(); draft="" } label: { Image(systemName:"square.and.pencil") }.disabled(model.generating).accessibilityLabel("New chat")
-                    Menu { Button("Models",systemImage:"cpu") { sheet = .models }; Button("Settings",systemImage:"slider.horizontal.3") { sheet = .settings } } label: { Image(systemName:"ellipsis") }.accessibilityLabel("More options")
+                ToolbarItem(placement: .principal) {
+                    Menu {
+                        if model.installed.isEmpty { Text("No downloaded models") }
+                        ForEach(model.installed) { installed in
+                            Button {
+                                composing = false; closeVoice(feedback: false); model.select(installed)
+                            } label: {
+                                if installed.id == model.selectedModelID { Label(installed.name, systemImage: "checkmark") }
+                                else { Text(installed.name) }
+                            }.disabled(model.generating)
+                        }
+                        Divider()
+                        Button("Manage Models", systemImage: "cpu") { composing = false; sheet = .models }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text("Rift").font(.headline).foregroundStyle(.primary)
+                            HStack(spacing: 4) {
+                                Text(model.selectedModel?.name ?? "Choose a model").lineLimit(1)
+                                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+                            }.font(.caption).foregroundStyle(.secondary)
+                        }
+                    }.menuIndicator(.hidden).accessibilityIdentifier("modelPicker")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { closeVoice(); model.newChat(); draft = "" } label: {
+                        Image(systemName: "square.and.pencil").frame(width: 28, height: 28)
+                    }.disabled(model.generating).accessibilityLabel("New chat")
                 }
             }
-            .sheet(item:$sheet) { choice in
-                switch choice { case .models: ModelLibraryView(); case .history: HistoryView(); case .settings: SettingsView() }
-            }
-        }.background { RiftBackground().ignoresSafeArea(.all) }
+        }.background { RiftBackground() }
     }
     private var welcome: some View {
         ZStack { RiftMark() }.frame(width: 84, height: 102)
@@ -120,45 +208,52 @@ struct ChatView: View {
         following.followLatest()
         bottomRequest = UUID()
     }
-    private var composer: some View {
-        VStack(spacing: 3) {
-            HStack(alignment: .bottom, spacing: 2) {
+    private var composerAction: ComposerAction {
+        ComposerAction.resolve(draft: draft, voice: voiceVisible, generating: model.generating)
+    }
+    private func composer(width: CGFloat) -> some View {
+        let action = composerAction
+        return VStack(spacing: 3) {
+            HStack(alignment: .bottom, spacing: 4) {
                 TextField("Message", text: $draft, axis: .vertical)
                     .font(.body).lineLimit(1...4).focused($composing)
-                    .padding(.leading, 14).padding(.vertical, 10)
+                    .padding(.leading, 16).padding(.vertical, 14)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
                 Button {
-                    composing = false
-                    if voiceVisible { closeVoice() }
-                    else {
+                    switch action {
+                    case .close: closeVoice()
+                    case .stop: model.stop()
+                    case .send: send()
+                    case .voice:
+                        composing = false
                         VoiceOrbFeedback.play(appearing: true)
                         voiceSession = VoiceController(model: model)
                     }
                 } label: {
-                    Image(systemName: voiceVisible ? "xmark" : "waveform").font(.system(size: 18, weight: .medium))
-                        .frame(width: 40, height: 44).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel(voiceVisible ? "Close voice mode" : "Voice mode")
-                    .accessibilityIdentifier(voiceVisible ? "closeVoiceMode" : "openVoiceMode")
-                    .disabled(!voiceVisible && (model.generating || model.busy))
-                Button {
-                    if model.generating { model.stop() } else { send() }
-                } label: {
-                    Image(systemName: model.generating ? "stop.fill" : "arrow.up")
-                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
-                        .background(RiftTheme.accent, in: Circle())
-                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                    Image(systemName: action.symbol)
+                        .font(.system(size: 18, weight: .semibold))
+                        .contentTransition(.symbolEffect(.replace))
+                        .foregroundStyle(action == .send ? .white : RiftTheme.accent)
+                        .frame(width: 46, height: 46)
+                        .glassEffect(.regular.tint(action == .send ? RiftTheme.accent : .clear).interactive(), in: Circle())
+                        .phaseAnimator([1.0, 0.88, 1.07, 1.0], trigger: action) { content, scale in
+                            content.scaleEffect(reduceMotion ? 1 : scale)
+                        } animation: { _ in .spring(response: 0.22, dampingFraction: 0.65) }
+                        .padding(3)
                 }.buttonStyle(.plain)
-                    .disabled(!model.generating && (draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.selectedModel == nil || !model.ready || model.busy))
-                    .accessibilityLabel(model.generating ? "Stop reply" : "Send message")
+                    .accessibilityLabel(action.label).accessibilityIdentifier(action.identifier)
+                    .disabled(action == .send ? (model.selectedModel == nil || !model.ready || model.busy) : (action == .voice && model.busy))
             }
             .padding(.horizontal, 3).padding(.vertical, 2)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 29))
             .accessibilityElement(children: .contain).accessibilityIdentifier("composerBar")
             Text("Unrestricted On-device AI")
                 .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                 .accessibilityIdentifier("chatFooter")
-        }.padding(.horizontal, 12).padding(.top, 5).padding(.bottom, 3)
+        }
+        .frame(width: max(0, (width - 24) * 0.8))
+        .frame(maxWidth: .infinity)
+        .padding(.top, 5).padding(.bottom, 3)
     }
     private func closeVoice(feedback: Bool = true) {
         guard let voiceSession else { return }

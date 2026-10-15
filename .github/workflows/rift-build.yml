@@ -32,7 +32,7 @@ jobs:
     env:
       RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
       RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
-      RIFT_TEST_SCOPE: voice-chat
+      RIFT_TEST_SCOPE: navigation
     steps:
       - uses: actions/checkout@v7
         with:
@@ -65,7 +65,7 @@ jobs:
         with:
           path: Rift/Build/Native
           key: rift-8345f333-stability-metal-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Test only updated chat presentation, voice streaming and connected behavior
+      - name: Test only drawer, picker, composer, background and connected behavior
         run: python Rift/scripts/build.py simulator
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone

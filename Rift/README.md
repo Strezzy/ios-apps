@@ -1,13 +1,15 @@
-# Rift 1.6
+# Rift 1.7
 
 Native local AI chat, expressive replies, and on-device voice conversations.
 
-Tap the waveform beside the composer for an inline liquid-glass voice orb. It starts listening as soon as the local model and speech language are ready, sends after a pause, speaks completed phrases while the reply generates, and listens again once generation and speech finish. Tap the orb to pause or interrupt, or the composer’s X to close. The clear watery outline morphs around a see-through center, with longer dark opening/closing chimes, a liquid pop and soft fading haptics. Voice, language, sound and haptic controls are in Settings → Voice & sound. Prepare a speech language when prompted; Automatic prefers the best installed Premium/Enhanced Apple voice in your language. Your selected uncensored model still generates the replies. Voice cloning from a clip is not included. See [Voice mode](VOICE.md) for behavior, privacy, and the physical-device checks that remain outstanding.
+Tap the waveform in the empty composer for an inline liquid-glass voice orb. It starts listening as soon as the local model and speech language are ready, sends after a pause, speaks completed phrases while the reply generates, and listens again once generation and speech finish. Tap the orb to pause or interrupt, or the composer’s X to close. The clear watery outline morphs around a see-through center, with longer dark opening/closing chimes, a liquid pop and soft fading haptics. Voice, language, sound and haptic controls are in the conversation drawer’s Settings → Voice & sound. Prepare a speech language when prompted; Automatic prefers the best installed Premium/Enhanced Apple voice in your language. Your selected uncensored model still generates the replies. Voice cloning from a clip is not included. See [Voice mode](VOICE.md) for behavior, privacy, and the physical-device checks that remain outstanding.
 
 Text effects now include Ember, Bloom, Soft fade, Instant, Starlight, Wave, Bubble, Portal, and Cipher. Cipher is the default for new installs; saved choices are preserved. Only new text animates. Background artwork extends behind the keyboard without disabling chat keyboard avoidance; the system controls the keyboard's own appearance.
 
 
-Version 1.6 adds a subtly drifting crimson/garnet background, an icon-only empty chat, compact sent bubbles, a three-dot reply cue, and the “Unrestricted On-device AI” footer. Short conversations stay top-aligned while text streams; overflow follows the latest reply. Reduce Motion and Low Power Mode keep the background still.
+Version 1.7 reveals a cool charcoal conversation drawer underneath the rounded chat surface. Open it with the hamburger or a left-edge swipe; its lower-right glass gear opens Settings. Tap the Rift title to switch downloaded models or choose Manage Models. The centered composer is about 20% narrower and 15% taller, with one glass button that morphs between voice, send, stop and close as needed. The crimson/garnet background now moves visibly; Reduce Motion and Low Power Mode keep it still. Existing memory entitlements, model inference, downloads and saved-chat formats are unchanged.
+
+The increased-memory-limit and extended-virtual-addressing entitlements already ship in the signed IPA. They request capabilities; the final signing profile, device and LiveContainer host determine the granted allowance. Rift continues to check actual available memory before loading a model.
 
 **Private AI. On your terms.**
 

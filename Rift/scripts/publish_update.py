@@ -10,18 +10,14 @@ def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(pat
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.6' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
+assert report['app']=='Rift' and report['version']=='1.7' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
 from voice_test_scope import VOICE_TESTS, EXPECTED_TESTS, selection_for_source
 summary=report['test_summary']
 selection, prior = selection_for_source(report['source'], ROOT/'Rift')
 assert summary['failedTests']==0 and summary['skippedTests']==0
-assert report['test_selection']==selection, 'Only the reviewed voice tests may gate this release'
-assert summary['passedTests'] == (1 if prior else EXPECTED_TESTS)
-validated_count = summary['passedTests'] + (19 if prior else 0)
-assert validated_count == EXPECTED_TESTS
-if prior:
- assert report['reused_feature_checks']['source'] == prior['source']
- report['validation_reuse'] = '19 passing checks retained for identical production code, unit tests and other UI tests; reran only the short-chat UI check after making its DEBUG fixture wait for keyboard focus and locating the dots by their accessible label'
+assert report['test_selection']==selection, 'Only the reviewed navigation tests may gate this release'
+assert prior is None and summary['passedTests'] == EXPECTED_TESTS
+validated_count = summary['passedTests']
 report['validated_feature_test_count'] = validated_count
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
 # Other apps may publish concurrently. Only newer Rift source invalidates this IPA.
@@ -30,7 +26,7 @@ assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes'
 if feature_update:
  # This release changes presentation and voice only; reuse the existing model validation.
  unchanged=['Rift/Rift/Native','Rift/Rift/Resources/catalog.json','Rift/Rift/DownloadJob.swift','Rift/Rift/GGUF.swift','Rift/Rift/Models.swift','Rift/Rift/MemoryBudget.swift','Rift/Rift/AppModel.swift','Rift/Rift/Storage.swift']
- assert subprocess.run(['git','diff','--quiet','2f9cf01a96fef8db3b03f25d515c0e05ed741d8b',source,'--',*unchanged]).returncode==0, 'Model or storage code changed; feature-only release is not applicable'
+ assert subprocess.run(['git','diff','--quiet','4b0bfe6fa38272e2e3b7d7d8aabc57e5b519c6fe',source,'--',*unchanged]).returncode==0, 'Model or storage code changed; feature-only release is not applicable'
 else:
  checks=[]
  for path in sorted(OUT.glob('models-*/MODEL-SMOKE.json')):checks+=json.loads(path.read_text())
@@ -42,7 +38,7 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.6' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.7' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
@@ -56,21 +52,21 @@ with zipfile.ZipFile(ipa) as z:
    assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
 report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
 if feature_update:
- report.update(model_inference='Not rerun; model catalog, downloader, inference and storage code unchanged from 1.5', validation_scope='20 scoped tests: incremental speech, audio cues, chat layout, scrolling, Cipher default, living background and orb lifecycle; arm64 iPhone compilation', metal_inference='Not rerun; inference engine unchanged')
+ report.update(model_inference='Not rerun; model catalog, downloader, inference and storage code unchanged from 1.6', validation_scope='7 scoped tests: drawer gestures/navigation, downloaded-model selection, composer morph/layout, background rendering, keyboard/rotation and voice lifecycle; arm64 iPhone compilation', metal_inference='Not rerun; inference engine unchanged')
 save(OUT/'BUILD-REPORT.json',report)
 if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.6-build'+report['build']
-notes=f'''Rift 1.6 ({report['build']}) · Living chat and faster voice
+tag='rift-1.7-build'+report['build']
+notes=f'''Rift 1.7 ({report['build']}) · Fluid navigation
 
-- Starts speaking stable phrases while the selected local model continues generating. Reasoning, code and link destinations stay out of spoken output. Listening resumes only after text generation and queued speech both finish; closing or stopping cancels the owned voice turn.
-- Hides the voice preparation indicator. Opening and closing now have distinct darker glass tones with longer fading tails and continuous soft haptic fades. Sound respects Silent Mode and the existing Settings preferences.
-- Centers the Rift mark in empty chats, removes welcome copy and prompt shortcuts, and changes the footer to “Unrestricted On-device AI”.
-- Adds subtle drifting/fading crimson and garnet background light. Reduce Motion and Low Power Mode keep it still.
-- Makes Cipher the initial text animation while preserving explicitly saved choices. Replaces reading/writing status text with a three-dot reply bubble and fits short outgoing bubbles to their text.
-- Keeps short streaming conversations anchored at the top; follows the latest reply only once content exceeds the viewport. Models, inference, downloads, chat storage and voice selection are unchanged.
+- Reveals a cool charcoal conversation drawer from the left, underneath the rounded main chat surface. Open it with the hamburger or an edge swipe; search, select, export and delete saved conversations there.
+- Moves the liquid glass Settings gear to the drawer’s lower-right corner and leaves a single circular New Chat button at the top of chat.
+- Adds a compact downloaded-model menu under the Rift title, with quick switching and a separate Manage Models entry. Model management stays out of the normal Settings page.
+- Centers a composer about 20% narrower and 15% taller, with one glass button that morphs between voice and send. Stop reply and close voice remain available when needed.
+- Makes the existing crimson/garnet background light visibly drift across the screen. Reduce Motion and Low Power Mode keep it still.
+- Retains Apple’s increased-memory-limit and extended-virtual-addressing entitlements, already present in Rift. The final signing profile, device and host determine the actual memory allowance; existing memory safeguards remain unchanged.
 
-Verification: {validated_count} focused simulator checks passed, plus arm64 iPhone compilation. {report.get('validation_reuse', '')}. Only these changes and directly connected behavior were tested. No model inference checks were rerun. Microphone capture, audible playback and tactile feel require a physical iPhone; simulator checks cannot verify them.
+Verification: {validated_count} focused simulator checks passed, plus arm64 iPhone compilation and signed-package entitlement verification. No model inference or download tests were rerun. Physical microphone, audible playback and tactile feel were not retested for this navigation update.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+. Existing chats and downloaded models are retained. The installer supplies the final signature.
 
@@ -85,21 +81,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']='Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.6 adds a subtly living crimson background, a centered Rift mark in empty chats, compact outgoing bubbles, a three-dot reply indicator and Cipher as the default text animation. Voice replies begin as text generates. The glass orb has longer opening/closing tones and soft haptic fades; voice preferences remain in Settings. Speech setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings or cloud inference. Larger models depend on host memory.'
+metadata['localizedDescription']='Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.7 adds a left-side conversation drawer, quick switching between downloaded models, a compact morphing voice/send composer and visibly drifting crimson background light. Voice replies begin as text generates. Voice and sound preferences are in the drawer Settings; Manage Models is under the Rift title. Existing memory entitlements and safeguards are retained. No accounts, analytics, uploaded recordings or cloud inference. Larger models depend on device and host memory.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.6-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.7-build'+report['build'])
 for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.6 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.7 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.6 ({report['build']}) · Living chat and faster voice",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.7 ({report['build']}) · Fluid navigation",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -114,5 +110,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.6 ({report['build']}) Living chat and faster voice [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.7 ({report['build']}) Fluid navigation [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)

@@ -8,6 +8,16 @@ import UIKit
     static let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     static let lastID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
     static func install(in model: AppModel) {
+        if ProcessInfo.processInfo.arguments.contains("--rift-ui-navigation") {
+            model.installed = ["A", "B"].map { name in
+                InstalledModel(id: "fixture-" + name, name: "Navigation sample " + name,
+                    filename: "fixture-" + name + ".gguf", bytes: 1, sha256: "", architecture: "test", importedAt: Date())
+            }
+            model.selectedModelID = model.installed[0].id
+            model.conversations = [Conversation(title: "Drawer sample", messages: [.init(role: "user", content: "Saved conversation")])]
+            model.activeChatID = nil
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("--rift-ui-short-stream") {
             let chat = Conversation(title: "Short layout test", messages: [
                 .init(id: firstID, role: "user", content: "Hey"),

@@ -57,7 +57,7 @@ final class PresentationTests: XCTestCase {
                 return try XCTUnwrap(image.pngData())
             }
             let first = try snapshot(0)
-            XCTAssertNotEqual(first, try snapshot(20))
+            XCTAssertNotEqual(first, try snapshot(6))
             XCTAssertEqual(first, try snapshot(0), "A paused time must render a stable background")
         }
     }

@@ -15,13 +15,18 @@ struct RiftBackdrop: View {
     let dark: Bool
     var body: some View {
         LinearGradient(colors: dark ? [Color(red:0.07,green:0.035,blue:0.05),Color(red:0.13,green:0.035,blue:0.065),Color(red:0.23,green:0.045,blue:0.09)] : [Color(red:1,green:0.975,blue:0.975),Color(red:0.985,green:0.92,blue:0.935),Color(red:0.97,green:0.82,blue:0.85)],
-            startPoint: UnitPoint(x: sin(time / 16) * 0.12, y: sin(time / 21) * 0.08),
-            endPoint: UnitPoint(x: 1 + sin(time / 19) * 0.12, y: 1 + sin(time / 24) * 0.08))
+            startPoint: UnitPoint(x: sin(time / 5) * 0.3, y: sin(time / 7) * 0.2),
+            endPoint: UnitPoint(x: 1 + sin(time / 6) * 0.3, y: 1 + sin(time / 8) * 0.2))
             .overlay {
-                RadialGradient(colors: [RiftTheme.rose.opacity(dark ? 0.12 : 0.14), .clear],
-                    center: UnitPoint(x: 0.9 + sin(time / 14) * 0.2, y: 0.08 + sin(time / 18) * 0.18),
-                    startRadius: 0, endRadius: 380)
-                    .opacity(0.75 + 0.25 * cos(time / 12))
+                GeometryReader { geometry in
+                    let radius = max(geometry.size.width, geometry.size.height) * 0.7
+                    RadialGradient(colors: [RiftTheme.rose.opacity(dark ? 0.28 : 0.27), .clear],
+                        center: UnitPoint(x: 0.5 + sin(time / 4) * 0.55, y: 0.4 + cos(time / 5) * 0.45),
+                        startRadius: 0, endRadius: radius)
+                    RadialGradient(colors: [RiftTheme.wine.opacity(dark ? 0.42 : 0.13), .clear],
+                        center: UnitPoint(x: 0.5 - cos(time / 6) * 0.55, y: 0.55 + sin(time / 4.5) * 0.45),
+                        startRadius: 0, endRadius: radius * 0.85)
+                }
             }
     }
 }
