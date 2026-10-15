@@ -19,7 +19,7 @@ import Combine
     @Published var rate = (UserDefaults.standard.object(forKey: "rift.voiceRate") as? Double) ?? 0.47 { didSet { UserDefaults.standard.set(rate, forKey: "rift.voiceRate") } }
     @Published var pitch = (UserDefaults.standard.object(forKey: "rift.voicePitch") as? Double) ?? 1.0 { didSet { UserDefaults.standard.set(pitch, forKey: "rift.voicePitch") } }
     let model: AppModel
-    private let speech = LocalSpeechService()
+    private let speech: any VoiceSpeechService
     private let synthesizer = AVSpeechSynthesizer()
     private var recorder: AVAudioRecorder?
     private var captureURL: URL?
@@ -40,8 +40,9 @@ import Combine
         FileManager.default.temporaryDirectory.appendingPathComponent("RiftVoiceTurns", isDirectory: true)
     }
 
-    init(model: AppModel) {
+    init(model: AppModel, speech: any VoiceSpeechService = LocalSpeechService()) {
         self.model = model
+        self.speech = speech
         super.init()
         synthesizer.delegate = self
         model.$generating.removeDuplicates().sink { [weak self] value in
@@ -72,20 +73,22 @@ import Combine
         if assets == .ready { talk() }
     }
     func load() async {
-        let id = token.id
+        let requestedLanguage = language
         // Clean up only Rift's own short-lived audio, including after a prior crash.
         try? FileManager.default.removeItem(at: captureDirectory)
         refreshVoices()
         let supported = await speech.languages()
-        guard opened, token.accepts(id), !Task.isCancelled else { return }
+        guard opened, !Task.isCancelled else { return }
         languages = supported
-        let state = await speech.state(language: language)
-        guard opened, token.accepts(id), !Task.isCancelled else { return }
+        let state = await speech.state(language: requestedLanguage)
+        // Pausing automatic startup must not strand the language check in .checking.
+        // open() separately checks its turn token before starting the microphone.
+        guard opened, language == requestedLanguage, !Task.isCancelled else { return }
         assets = state
         if state == .unsupported, let first = languages.first(where: { $0.hasPrefix("en_US") || $0.hasPrefix("en-US") }) ?? languages.first {
             language = first
             let fallback = await speech.state(language: first)
-            guard opened, token.accepts(id), !Task.isCancelled else { return }
+            guard opened, language == first, !Task.isCancelled else { return }
             assets = fallback
         }
     }

@@ -2,9 +2,17 @@ import Foundation
 import Speech
 import AVFoundation
 
+protocol VoiceSpeechService: Sendable {
+    func languages() async -> [String]
+    func state(language: String) async -> SpeechAssetState
+    func install(language: String) async throws
+    func cancel() async
+    func transcribe(file: URL, language: String) async throws -> String
+}
+
 /// SpeechTranscriber is an Apple on-device module. No SFSpeechRecognizer or
 /// network-recognition fallback is installed. Language downloads are explicit.
-actor LocalSpeechService {
+actor LocalSpeechService: VoiceSpeechService {
     private var analyzer: SpeechAnalyzer?
     private var recognitionID = UUID()
 

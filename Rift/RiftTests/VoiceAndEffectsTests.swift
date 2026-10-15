@@ -132,4 +132,63 @@ final class VoiceAndEffectsTests: XCTestCase {
         XCTAssertEqual(controller.level, 0)
         XCTAssertFalse(controller.handsFree)
     }
+    @MainActor func testPausingDuringSetupStillFinishesAssetCheckWithoutStartingMicrophone() async {
+        let speech = SuspendedSpeechService()
+        let controller = VoiceController(model: AppModel(), speech: speech)
+        let opening = Task { await controller.open() }
+        await speech.waitForCheck()
+        controller.pause()
+        await speech.finishCheck()
+        await opening.value
+        XCTAssertEqual(controller.assets, .ready)
+        XCTAssertEqual(controller.phase, .idle)
+        XCTAssertNil(controller.error, "Paused startup must not attempt a voice turn")
+        controller.close()
+    }
+    @MainActor func testDismissalDuringSetupCannotRestartSession() async {
+        let speech = SuspendedSpeechService()
+        let controller = VoiceController(model: AppModel(), speech: speech)
+        let opening = Task { await controller.open() }
+        await speech.waitForCheck()
+        controller.close()
+        await speech.finishCheck()
+        await opening.value
+        XCTAssertEqual(controller.phase, .idle)
+        XCTAssertNil(controller.error)
+        XCTAssertFalse(controller.handsFree)
+    }
+    @MainActor func testOpeningAutomaticallyAttemptsTurnOnceAssetsAreReady() async {
+        let speech = SuspendedSpeechService()
+        let controller = VoiceController(model: AppModel(), speech: speech)
+        let opening = Task { await controller.open() }
+        await speech.waitForCheck()
+        await speech.finishCheck()
+        await opening.value
+        // This fresh model is not bootstrapped. The turn guard proves open() tried
+        // to listen automatically without requesting permission before readiness.
+        XCTAssertEqual(controller.assets, .ready)
+        XCTAssertTrue(controller.error?.contains("Choose and download a chat model") == true)
+        XCTAssertEqual(controller.phase, .idle)
+        controller.close()
+    }
+}
+
+private actor SuspendedSpeechService: VoiceSpeechService {
+    private var check: CheckedContinuation<SpeechAssetState, Never>?
+    private var waiter: CheckedContinuation<Void, Never>?
+    func languages() -> [String] { ["en_US"] }
+    func state(language: String) async -> SpeechAssetState {
+        await withCheckedContinuation { continuation in
+            check = continuation
+            waiter?.resume(); waiter = nil
+        }
+    }
+    func waitForCheck() async {
+        if check != nil { return }
+        await withCheckedContinuation { waiter = $0 }
+    }
+    func finishCheck() { check?.resume(returning: .ready); check = nil }
+    func install(language: String) async throws {}
+    func cancel() async {}
+    func transcribe(file: URL, language: String) async throws -> String { "" }
 }
