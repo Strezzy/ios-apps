@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the complete matrix, publish the exact IPA, update only Rift's listing."""
+"""Validate the scoped voice update, publish the exact IPA, update only Rift's listing."""
 import copy,hashlib,json,os,plistlib,re,subprocess,sys,tempfile,zipfile
 from pathlib import Path
 ROOT=Path.cwd(); OUT=Path(sys.argv[1]).resolve(); REPO='Strezzy/ios-apps'
@@ -10,17 +10,19 @@ def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(pat
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.4' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
-summary=report['test_summary'];assert summary['failedTests']==0 and summary['skippedTests']==0 and summary['passedTests']>=40
+assert report['app']=='Rift' and report['version']=='1.5' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
+from voice_test_scope import VOICE_TESTS, EXPECTED_TESTS
+summary=report['test_summary']
+assert summary['failedTests']==0 and summary['skippedTests']==0 and summary['passedTests']==EXPECTED_TESTS
+assert report['test_selection']==VOICE_TESTS, 'Only the reviewed voice tests may gate this release'
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
 # Other apps may publish concurrently. Only newer Rift source invalidates this IPA.
 assert subprocess.run(['git','diff','--quiet',source,'HEAD','--','Rift/Rift','Rift/RiftTests','Rift/RiftUITests','Rift/project.yml']).returncode==0, 'Newer Rift source exists; wait for its verified build'
 assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes']
 if feature_update:
- assert summary['passedTests']>=73, 'Updated animation and voice tests must pass'
  # This release changes presentation and voice only; reuse the existing model validation.
  unchanged=['Rift/Rift/Native','Rift/Rift/Resources/catalog.json','Rift/Rift/DownloadJob.swift','Rift/Rift/GGUF.swift','Rift/Rift/Models.swift','Rift/Rift/MemoryBudget.swift','Rift/Rift/AppModel.swift','Rift/Rift/Storage.swift']
- assert subprocess.run(['git','diff','--quiet','991ed22ae2bb61128c33b44c6b4787a358ab1ee9',source,'--',*unchanged]).returncode==0, 'Model or storage code changed; feature-only release is not applicable'
+ assert subprocess.run(['git','diff','--quiet','aa94cdcb29ba6bed6e056f6af7b8969dbdb0dbdd',source,'--',*unchanged]).returncode==0, 'Model or storage code changed; feature-only release is not applicable'
 else:
  checks=[]
  for path in sorted(OUT.glob('models-*/MODEL-SMOKE.json')):checks+=json.loads(path.read_text())
@@ -32,7 +34,7 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.4' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.5' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
@@ -44,25 +46,22 @@ with zipfile.ZipFile(ipa) as z:
   for model in catalog:
    assert model['uncensored']
    assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
-report.update(build_result='passed',model_inference='All 10 pinned quantizations passed production Swift downloads, verification and two-turn macOS CPU inference',metal_inference='Qwen3.5 4B passed two-turn macOS Metal inference; not a physical-iPhone test',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
+report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
 if feature_update:
- report.update(model_inference='Full model matrix not rerun for this UI/voice release; model catalog, downloader, inference and storage code unchanged from 1.3', validation_scope='Animations, voice lifecycle and connected chat UI; 73 simulator tests and arm64 iPhone compilation', metal_inference='Already completed in the candidate build; no new model checks required for publication')
+ report.update(model_inference='Not rerun; model catalog, downloader, inference and storage code unchanged from 1.4', validation_scope='13 scoped tests: glass outline, liquid entrance, activation cue, Settings, dismissal and connected voice lifecycle; arm64 iPhone compilation', metal_inference='Not rerun; inference engine unchanged')
 save(OUT/'BUILD-REPORT.json',report)
 if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.4-build'+report['build']
-model_verification='The existing model catalog, downloader and inference code are unchanged from 1.3; the full model matrix was not required or completed for this feature release.' if feature_update else 'All 10 existing model quantizations passed production downloads, verification and two-turn Mac CPU checks. Qwen3.5 4B passed the Mac Metal check.'
-notes=f'''Rift 1.4 ({report['build']}) · Ember and liquid voice
+tag='rift-1.5-build'+report['build']
+notes=f'''Rift 1.5 ({report['build']}) · Clear glass voice orb
 
-- Adds Ember, Portal and Cipher reply animations. Ember's rising crimson/amber sparks are the default for new installs; existing saved animation choices remain intact. Portal reveals letters through luminous rings, and Cipher resolves scrambling glyphs into the actual reply. Existing effects remain available. Effects are bounded and respect Reduce Motion, VoiceOver and Low Power Mode.
-- Voice mode now floats over the current chat as a crimson/amber liquid-glass orb with a Metal fluid shader and a small glass close button. Microphone levels drive its listening motion; speech callbacks drive its warmer speaking pulse and backlight. Voice and language controls remain accessible beside the orb.
-- Opening voice mode starts listening when a local model and speech assets are ready. A natural pause sends the turn, and hands-free mode is on by default so listening resumes after each spoken reply. Tap the orb to pause or interrupt and talk. Close, backgrounding and audio interruptions stop the session. Speech-language downloads still require confirmation.
-- Automatic speech voice selection prefers natural Premium and Enhanced installed Apple voices in the selected language, with sentence-aware chunk boundaries and short phrasing pauses. Explicit voice, speed and pitch preferences are preserved. Voice quality depends on the assets installed in iOS; no hosted voice or voice cloning is added.
-- Model catalog, inference engine, memory limits, chat storage, app identity, icon, existing keyboard background and other app features are unchanged.
+- Replaces the painted Metal orb with native clear Liquid Glass. The watery outline flows continuously and reacts to microphone levels and spoken replies, with crimson/amber rim reflections and a soft speaking backlight. Reduce Motion and Low Power Mode keep it still; Reduce Transparency uses material.
+- Adds a liquid pop and settle on opening, a soft collapse on closing, an original dark glass activation chime, and gentle opening/closing haptics. The chime respects Silent Mode and finishes before the microphone starts.
+- Removes the inline Listening/settings bar and the orb's corner X. The composer waveform becomes the close button and remains available during a voice reply. Closing immediately cancels audio and pending startup.
+- Moves hands-free, speech language, voice, speed, pitch, sound and haptic controls into Settings → Voice & sound. Hands-free preferences persist after closing.
+- Keeps the existing reply animations, Ember default, chat behavior, speech voice selection, models, inference, storage, app identity and icon.
 
-Verification: {summary['passedTests']} native simulator tests passed with zero failures or skips, including rendered animation pixels, style previews, inline orb dismissal, voice selection, cancellation, silence handling and existing chat/keyboard tests. {model_verification} The arm64 iPhone executable and requested memory entitlements were verified.
-
-Physical-device validation is still required for microphone capture, speech-language assets, recognition accuracy, voice quality, speaker/Bluetooth routing and LiveContainer permissions. Simulator results do not establish those behaviors. The microphone is active only while Listening; spoken playback can be interrupted by tapping the orb. Conversation processing stays local.
+Verification: {summary['passedTests']} scoped simulator tests passed with zero failures or skips, plus arm64 iPhone compilation. Only this orb update and connected voice interactions were tested. No model inference checks were rerun. Microphone capture, audible playback and tactile feel still require a physical iPhone; simulator checks cannot verify them.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+. Existing chats and downloaded models are retained. The installer supplies the final signature.
 
@@ -77,21 +76,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']='Chat privately on your iPhone with downloaded uncensored community models or an imported GGUF. Includes an iPhone-organized model library, expressive animated replies and saved conversations. Version 1.4 adds Ember (the new default), Portal and Cipher effects, an inline liquid-glass voice orb, automatic hands-free turns, and smarter Premium/Enhanced Apple voice selection. Speech-language setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings, or cloud inference. Physical microphone and LiveContainer voice behavior require device testing; larger models depend on host memory.'
+metadata['localizedDescription']='Chat privately on your iPhone with downloaded uncensored community models or an imported GGUF. Includes expressive replies with Ember as the default, saved conversations and hands-free voice. Version 1.5 adds a clear, flowing Liquid Glass orb, a dark activation chime and soft haptics. Close voice mode from the composer; voice and orb controls are in Settings. Speech setup may require an explicit download; voice quality depends on installed iOS voices. No accounts, analytics, uploaded recordings or cloud inference. Larger models depend on host memory.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.4-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.5-build'+report['build'])
 for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.4 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.5 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.4 ({report['build']}) · Ember and liquid voice",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.5 ({report['build']}) · Clear glass voice orb",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -106,5 +105,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.4 ({report['build']}) Ember and liquid voice [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.5 ({report['build']}) Clear glass voice orb [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)

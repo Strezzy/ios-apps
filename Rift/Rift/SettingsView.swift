@@ -43,6 +43,10 @@ struct SettingsView: View {
                         Toggle("Allow cellular model downloads", isOn: $model.cellular)
                         Text("No account, analytics, cloud inference, or automatic chat uploads. Chats and models are excluded from app-managed iCloud backup. Exporting a chat or choosing a cloud file in Files is your action.").font(.caption).foregroundStyle(.secondary)
                     }
+                    Section("Voice") {
+                        NavigationLink("Voice & sound") { VoiceSettingsView(model: model) }
+                            .accessibilityIdentifier("voiceSettingsLink")
+                    }
                     Section("Reply animation") {
                         ReplyStylePicker()
                         ReplyAnimationSample()
@@ -92,7 +96,7 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.4 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.5 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
             }.task {

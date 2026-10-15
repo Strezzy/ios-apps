@@ -156,26 +156,52 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(entry.waitForExistence(timeout: 10)); entry.tap()
         let close = app.buttons["closeVoiceMode"]
         XCTAssertTrue(close.waitForExistence(timeout: 5))
+        let composer = app.descendants(matching: .any)["composerBar"].firstMatch
+        XCTAssertTrue(composer.buttons["closeVoiceMode"].isHittable)
+        XCTAssertTrue(app.buttons["voiceOrb"].exists)
         XCTAssertTrue(app.navigationBars["Rift"].exists)
-        XCTAssertFalse(app.navigationBars["Voice mode"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["messageInput"].firstMatch.exists)
-        XCTAssertEqual(app.alerts.count, 0, "No microphone request before a chat model and speech assets are ready")
-        attach("Rift-inline-voice-orb")
-        app.buttons["voiceOptions"].tap()
-        XCTAssertTrue(app.switches["Hands-free turns"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["voiceOptions"].exists)
+        XCTAssertFalse(app.staticTexts["voiceStatus"].exists)
+        XCTAssertFalse(app.switches["Hands-free turns"].exists)
+        XCTAssertEqual(app.alerts.count, 0)
+        attach("Rift-clear-glass-orb")
         XCUIDevice.shared.orientation = .landscapeLeft
         let reachable = NSPredicate { _, _ in
-            close.isHittable && app.switches["Hands-free turns"].isHittable
+            app.frame.width > app.frame.height && close.isHittable && app.buttons["voiceOrb"].exists
         }
-        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: reachable, object: app)], timeout: 8), .completed)
-        attach("Rift-voice-settings-landscape")
-        XCUIDevice.shared.orientation = .portrait
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: reachable, object: app)], timeout: 10), .completed)
+        attach("Rift-glass-orb-landscape")
         close.tap()
-        XCTAssertTrue(close.waitForNonExistence(timeout: 5))
-        entry.tap()
-        XCTAssertTrue(close.waitForExistence(timeout: 5))
-        close.tap()
+        XCTAssertTrue(app.buttons["voiceOrb"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(entry.isHittable); entry.tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5)); close.tap()
+        XCTAssertTrue(app.buttons["voiceOrb"].waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["messageInput"].firstMatch.isHittable)
+    }
+    func testVoicePreferencesLiveInSettingsAndPersist() {
+        let app = XCUIApplication(); app.launch()
+        XCTAssertTrue(app.buttons["More options"].waitForExistence(timeout: 10))
+        app.buttons["More options"].tap(); app.buttons["Settings"].tap()
+        let link = app.buttons["voiceSettingsLink"]
+        for _ in 0..<3 { if link.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(link.isHittable); link.tap()
+        XCTAssertTrue(app.navigationBars["Voice & sound"].waitForExistence(timeout: 5))
+        let sound = app.switches["voiceActivationSound"]
+        let haptics = app.switches["voiceHaptics"]
+        let handsFree = app.switches["voiceHandsFree"]
+        XCTAssertTrue(sound.isHittable && haptics.isHittable && handsFree.isHittable)
+        let original = [sound.value as? String, haptics.value as? String, handsFree.value as? String]
+        sound.tap(); haptics.tap(); handsFree.tap()
+        let changed = [sound.value as? String, haptics.value as? String, handsFree.value as? String]
+        XCTAssertNotEqual(original, changed)
+        XCTAssertEqual(app.alerts.count, 0)
+        attach("Rift-voice-settings")
+        app.navigationBars["Voice & sound"].buttons.firstMatch.tap()
+        XCTAssertTrue(link.waitForExistence(timeout: 5)); link.tap()
+        XCTAssertTrue(sound.waitForExistence(timeout: 5))
+        XCTAssertEqual([sound.value as? String, haptics.value as? String, handsFree.value as? String], changed)
+        // Restore user-facing defaults after exercising persistence.
+        sound.tap(); haptics.tap(); handsFree.tap()
     }
     private func attach(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIApplication().screenshot())

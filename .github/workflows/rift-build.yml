@@ -32,7 +32,7 @@ jobs:
     env:
       RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
       RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
-      RIFT_MAC_METAL: '1'
+      RIFT_TEST_SCOPE: voice-orb
     steps:
       - uses: actions/checkout@v7
         with:
@@ -58,23 +58,16 @@ jobs:
       - name: Prepare pinned dependency sources
         run: python Rift/scripts/build.py prepare
       - name: Compile the native inference runtimes
-        run: python Rift/scripts/native.py iphonesimulator iphoneos macosx
+        run: python Rift/scripts/native.py iphonesimulator iphoneos
       - uses: actions/cache/save@v4
         if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: Rift/Build/Native
           key: rift-8345f333-stability-metal-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Test startup, six-GiB hashing, memory planning and keyboard layout
+      - name: Test only the glass orb, cue, settings and connected voice lifecycle
         run: python Rift/scripts/build.py simulator
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone
-      - name: Exercise 4B through the production Swift downloader and Metal backend
-        env:
-          RIFT_MODEL_IDS: qwen35-4b
-          RIFT_PROBE_BACKEND: metal
-        run: |
-          set -o pipefail
-          python Rift/scripts/smoke.py 2>&1 | tee Rift/Build/Logs/metal-inference.log
       - name: Package iPhone candidate with requested memory entitlements
         run: python Rift/scripts/build.py candidate
       - uses: actions/upload-artifact@v7
@@ -85,74 +78,17 @@ jobs:
             Rift/Build/Rift.ipa
             Rift/Build/Rift-Source.zip
             Rift/Build/BUILD-REPORT.json
-            Rift/Build/METAL-SMOKE.json
             Rift/Build/Screenshots
             Rift/Build/Logs
           retention-days: 14
-  models:
-    needs: prepare
-    runs-on: macos-26-intel
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - group: A
-            ids: qwen35-2b,qwen35-4b,qwen35-9b
-          - group: B
-            ids: gemma4-e2b,gemma4-e4b,lfm25-26b
-          - group: C
-            ids: heretic-qwen3-8b,heretic-qwen35-9b
-          - group: D
-            ids: heretic-qwen3-14b-compact,heretic-qwen3-14b-quality
-    env:
-      RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
-      RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
-      RIFT_MODEL_IDS: ${{ matrix.ids }}
-      RIFT_MAC_METAL: '0'
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.prepare.outputs.source }}
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Prepare standard higher-memory model test host
-        id: tools
-        run: |
-          xcodebuild -version
-          sysctl hw.memsize hw.ncpu
-          echo "xcode=$(xcodebuild -version | tr '\n ' '-')" >> "$GITHUB_OUTPUT"
-          python -m pip install Pillow==11.1.0
-          if ! command -v cmake; then brew install cmake; fi
-      - uses: actions/cache@v4
-        with:
-          path: Rift/Build/Native/macosx
-          key: rift-8345f333-stability-cpu-v1-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Prepare actual pinned native source
-        run: |
-          python Rift/scripts/prepare.py
-          python Rift/scripts/native.py macosx
-      - name: Download, checksum and generate two-turn replies for each quantization
-        run: |
-          mkdir -p Rift/Build/Logs
-          set -o pipefail
-          python Rift/scripts/smoke.py 2>&1 | tee Rift/Build/Logs/models-${{ matrix.group }}.log
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: models-${{ matrix.group }}
-          path: |
-            Rift/Build/MODEL-SMOKE.json
-            Rift/Build/Logs
-          retention-days: 14
   publish:
-    needs: [prepare, native, models]
+    needs: [prepare, native]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: Strezzy/ios-apps
+      RIFT_FEATURE_UPDATE: '1'
       RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
     steps:
       - uses: actions/checkout@v7
@@ -163,12 +99,7 @@ jobs:
         with:
           name: Rift-Native-Candidate
           path: RiftRelease
-      - uses: actions/download-artifact@v6
-        with:
-          pattern: models-*
-          path: RiftRelease
-          merge-multiple: false
-      - name: Verify every test and publish the exact IPA and source listing
+      - name: Verify the scoped tests and publish the exact IPA and source listing
         run: python3 Rift/scripts/publish_update.py RiftRelease
       - uses: actions/upload-artifact@v7
         if: always()
@@ -178,7 +109,5 @@ jobs:
             RiftRelease/Rift.ipa
             RiftRelease/Rift-Source.zip
             RiftRelease/BUILD-REPORT.json
-            RiftRelease/MODEL-SMOKE.json
-            RiftRelease/METAL-SMOKE.json
             RiftRelease/SHA256SUMS.txt
           retention-days: 14

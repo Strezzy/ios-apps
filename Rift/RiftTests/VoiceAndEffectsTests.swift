@@ -130,7 +130,7 @@ final class VoiceAndEffectsTests: XCTestCase {
         await controller.open()
         XCTAssertEqual(controller.phase, .idle)
         XCTAssertEqual(controller.level, 0)
-        XCTAssertFalse(controller.handsFree)
+        XCTAssertEqual(controller.handsFree, (UserDefaults.standard.object(forKey: "rift.voiceHandsFree") as? Bool) ?? true)
     }
     @MainActor func testPausingDuringSetupStillFinishesAssetCheckWithoutStartingMicrophone() async {
         let speech = SuspendedSpeechService()
@@ -155,7 +155,7 @@ final class VoiceAndEffectsTests: XCTestCase {
         await opening.value
         XCTAssertEqual(controller.phase, .idle)
         XCTAssertNil(controller.error)
-        XCTAssertFalse(controller.handsFree)
+        XCTAssertEqual(controller.handsFree, (UserDefaults.standard.object(forKey: "rift.voiceHandsFree") as? Bool) ?? true)
     }
     @MainActor func testOpeningAutomaticallyAttemptsTurnOnceAssetsAreReady() async {
         let speech = SuspendedSpeechService()

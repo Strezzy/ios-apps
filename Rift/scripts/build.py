@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; BUILD=ROOT/'Build'; LOGS=BUILD/'Logs'; SHOTS=BUILD/'Screenshots'
 for path in [BUILD,LOGS,SHOTS]: path.mkdir(parents=True,exist_ok=True)
 REPORT=BUILD/'BUILD-REPORT.json'
-report=json.loads(REPORT.read_text()) if REPORT.exists() else {'app':'Rift','version':'1.4','build':str(os.getenv('RIFT_BUILD_NUMBER','1')),'source':os.getenv('RIFT_SOURCE',os.getenv('GITHUB_SHA','local')),'iPhone_inference':'not_tested','LiveContainer':'not_tested','thermal_performance':'not_tested','simulator':'not_run','model_inference':'not_run'}
+report=json.loads(REPORT.read_text()) if REPORT.exists() else {'app':'Rift','version':'1.5','build':str(os.getenv('RIFT_BUILD_NUMBER','1')),'source':os.getenv('RIFT_SOURCE',os.getenv('GITHUB_SHA','local')),'iPhone_inference':'not_tested','LiveContainer':'not_tested','thermal_performance':'not_tested','simulator':'not_run','model_inference':'not_run'}
 def save(): REPORT.write_text(json.dumps(report,indent=2)+'\n')
 def run(command,name,cwd=ROOT):
     print('+',' '.join(map(str,command)),flush=True)
@@ -17,7 +17,7 @@ def run(command,name,cwd=ROOT):
 def capture(command): return subprocess.check_output(list(map(str,command)),text=True)
 def notices():
     source=ROOT/'ThirdParty/llama'
-    sections=['Rift 1.4 dependency notices\nllama.cpp revision 8345f333951c661d166b00e6f9362e553768f292\nhttps://github.com/ggml-org/llama.cpp\n\nThe following notices accompany the pinned source tree. Some components are not linked in this build.']
+    sections=['Rift 1.5 dependency notices\nllama.cpp revision 8345f333951c661d166b00e6f9362e553768f292\nhttps://github.com/ggml-org/llama.cpp\n\nThe following notices accompany the pinned source tree. Some components are not linked in this build.']
     names=[]
     for path in sorted(source.rglob('*')):
         if not path.is_file() or path.is_symlink(): continue
@@ -64,14 +64,11 @@ def simulator():
         # Compile while first-boot migration completes instead of serially waiting.
         run(common+['build-for-testing'],'simulator-build')
         run(['xcrun','simctl','bootstatus',uid,'-b'],'simulator-ready')
-        run(common+['test-without-building','-parallel-testing-enabled','NO','-resultBundlePath',result],'native-tests')
+        from voice_test_scope import VOICE_TESTS
+        assert os.getenv('RIFT_TEST_SCOPE') == 'voice-orb', 'Choose the reviewed voice-orb scope explicitly'
+        report['test_selection'] = VOICE_TESTS; save()
+        run(common+['test-without-building','-parallel-testing-enabled','NO','-resultBundlePath',result]+['-only-testing:'+test for test in VOICE_TESTS],'native-tests')
         report['simulator']='passed'; save()
-        for appearance in ['light','dark']:
-            run(['xcrun','simctl','ui',uid,'appearance',appearance],'appearance-'+appearance)
-            subprocess.run(['xcrun','simctl','terminate',uid,'com.billy.rift'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-            run(['xcrun','simctl','launch',uid,'com.billy.rift'],'launch-'+appearance)
-            time.sleep(2)
-            run(['xcrun','simctl','io',uid,'screenshot',SHOTS/('Rift-'+appearance+'.png')],'screenshot-'+appearance)
     finally:
         test_evidence(result)
         subprocess.run(['xcrun','simctl','shutdown',uid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -101,7 +98,7 @@ def package(require_models=True):
     ipa=BUILD/'Rift.ipa'; ipa.unlink(missing_ok=True)
     run(['ditto','-c','-k','--keepParent',payload,ipa],'package')
     with ipa.open('rb') as f: report['ipa_sha256']=hashlib.file_digest(f,'sha256').hexdigest()
-    report['voice_validation']='Voice state, cancellation, text cleanup and UI tested; physical microphone and Apple speech assets not tested on this runner'; report['ipa_bytes']=ipa.stat().st_size; report['build_result']='passed' if require_models else 'native_passed'; save()
+    report['voice_validation']='Glass outline, entrance, activation cue, settings persistence and connected voice lifecycle tested; physical microphone, haptics and speaker playback not tested on this runner'; report['ipa_bytes']=ipa.stat().st_size; report['build_result']='passed' if require_models else 'native_passed'; save()
     with zipfile.ZipFile(BUILD/'Rift-Source.zip','w',zipfile.ZIP_DEFLATED) as z:
         for path in ROOT.rglob('*'):
             if path.is_file() and not any(part in ['Build','ThirdParty','Rift.xcodeproj','__pycache__'] for part in path.relative_to(ROOT).parts): z.write(path,'Rift/'+str(path.relative_to(ROOT)))

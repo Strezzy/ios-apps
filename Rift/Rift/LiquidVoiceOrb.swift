@@ -1,46 +1,86 @@
 import SwiftUI
 
+/// The glass boundary itself flows; the center remains clear enough to see the chat.
+struct LiquidOrbShape: Shape {
+    var time: Double
+    var energy: Double
+    var animatableData: AnimatablePair<Double, Double> {
+        get { .init(time, energy) }
+        set { time = newValue.first; energy = newValue.second }
+    }
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let radius = min(rect.width, rect.height) * 0.43
+        let strength = 0.035 + min(1, max(0, energy)) * 0.035
+        for step in 0...120 {
+            let angle = Double(step) / 120 * .pi * 2
+            let wave = sin(angle * 3 + time * 1.3) * strength
+                + sin(angle * 2 - time * 0.85) * 0.045
+                + cos(angle * 5 + time * 0.65) * 0.016
+            let r = radius * (1 + wave)
+            let point = CGPoint(x: rect.midX + cos(angle) * r, y: rect.midY + sin(angle) * r)
+            if step == 0 { path.move(to: point) } else { path.addLine(to: point) }
+        }
+        path.closeSubpath()
+        return path
+    }
+}
+
+struct LiquidOrbEntrance {
+    let scale: Double
+    let squash: Double
+    init(age: Double, reduced: Bool) {
+        let t = max(0, age)
+        scale = reduced ? 1 : min(1.16, max(0.04, 1 - exp(-8 * t) * cos(13 * t)))
+        squash = reduced ? 0 : sin(t * 19) * exp(-7 * t) * 0.22
+    }
+}
+
 struct LiquidVoiceOrb: View {
     let phase: VoicePhase
     let level: Double
     let speechBeat: Date
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.scenePhase) private var scenePhase
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
     @State private var epoch = Date()
 
     var body: some View {
         let quiet = reduceMotion || lowPower || scenePhase != .active
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: quiet || phase == .idle)) { tick in
-            let t = quiet ? 0 : tick.date.timeIntervalSince(epoch)
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: quiet)) { tick in
+            let age = max(0, tick.date.timeIntervalSince(epoch))
+            let t = quiet ? 0 : age
             let speaking = phase == .speaking
-            let energy = speaking ? level * exp(-max(0, tick.date.timeIntervalSince(speechBeat)) * 4) : level
-            let pulse = quiet ? 1 : 1 + energy * 0.065 + (speaking ? sin(t * 2.6) * 0.018 : 0)
+            let energy = quiet ? 0 : min(1, max(0, speaking ? level * exp(-max(0, tick.date.timeIntervalSince(speechBeat)) * 4) : level))
+            let shape = LiquidOrbShape(time: t * (speaking ? 1.2 : 1), energy: energy)
+            let entrance = LiquidOrbEntrance(age: age, reduced: quiet)
             ZStack {
-                Circle().fill(RadialGradient(colors: [ArrivalEffects.amber.opacity(speaking ? 0.65 : 0.15), RiftTheme.rose.opacity(0.2), .clear],
-                    center: .center, startRadius: 8, endRadius: 80))
-                    .blur(radius: speaking ? 18 : 10).scaleEffect(speaking ? 1.42 + energy * 0.18 : 1.08)
-                Circle().fill(.clear)
-                    .glassEffect(.regular.tint(RiftTheme.wine.opacity(0.15)), in: Circle())
-                if quiet {
-                    Circle().fill(LinearGradient(colors: [ArrivalEffects.amber.opacity(0.7), RiftTheme.rose.opacity(0.75), RiftTheme.wine],
-                        startPoint: .topLeading, endPoint: .bottomTrailing)).opacity(0.85)
+                // A ring of light behind the glass, never an opaque painted sphere.
+                shape.stroke(ArrivalEffects.amber.opacity(speaking ? 0.42 + energy * 0.18 : 0.08), lineWidth: speaking ? 12 : 5)
+                    .blur(radius: speaking ? 15 : 9).scaleEffect(speaking ? 1.12 : 1.04)
+                if reduceTransparency {
+                    shape.fill(.regularMaterial)
                 } else {
-                    GeometryReader { geometry in
-                        Circle().fill(.white)
-                            .colorEffect(ShaderLibrary.riftLiquidOrb(
-                                .float2(Float(geometry.size.width), Float(geometry.size.height)),
-                                .float(Float(t)), .float(Float(energy)),
-                                .float(speaking ? 1 : phase == .thinking || phase == .transcribing || phase == .preparing ? 2 : 0)))
-                    }.clipShape(Circle()).opacity(0.92)
+                    shape.fill(.clear)
+                        .glassEffect(.clear.tint(RiftTheme.wine.opacity(0.06)), in: shape)
                 }
-                Circle().strokeBorder(LinearGradient(colors: [.white.opacity(0.8), .white.opacity(0.05), ArrivalEffects.amber.opacity(0.6)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.8)
-                Ellipse().fill(.white.opacity(0.32)).frame(width: 40, height: 12)
-                    .blur(radius: 5).rotationEffect(.degrees(-28)).offset(x: -21, y: -39)
+                shape.stroke(AngularGradient(colors: [
+                    .white.opacity(0.85), ArrivalEffects.amber.opacity(0.18),
+                    RiftTheme.rose.opacity(0.65), .white.opacity(0.08),
+                    ArrivalEffects.amber.opacity(0.8), .white.opacity(0.85)
+                ], center: .center, angle: .degrees(quiet ? 0 : sin(t * 0.6) * 32)), lineWidth: 1.1)
+                shape.trim(from: 0.53, to: 0.79)
+                    .stroke(.white.opacity(0.65), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .blur(radius: 1.5).scaleEffect(0.96)
+                shape.trim(from: 0.04, to: 0.28)
+                    .stroke(ArrivalEffects.amber.opacity(0.48), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .blur(radius: 2.5).scaleEffect(0.97)
             }
-            .scaleEffect(pulse)
-            .shadow(color: RiftTheme.wine.opacity(0.25), radius: 12, y: 9)
+            .scaleEffect(x: entrance.scale * (1 + entrance.squash + energy * 0.035),
+                         y: entrance.scale * (1 - entrance.squash + energy * 0.035))
+            .rotationEffect(.degrees(quiet ? 0 : sin(t * 0.7) * 4))
+            .shadow(color: RiftTheme.wine.opacity(0.12), radius: 10, y: 7)
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled

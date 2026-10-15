@@ -12,7 +12,7 @@ import Combine
     @Published private(set) var heard = ""
     @Published private(set) var answer = ""
     @Published var error: String?
-    @Published var handsFree = true
+    @Published var handsFree = (UserDefaults.standard.object(forKey: "rift.voiceHandsFree") as? Bool) ?? true { didSet { UserDefaults.standard.set(handsFree, forKey: "rift.voiceHandsFree") } }
     @Published private(set) var speechBeat = Date.distantPast
     @Published var language = UserDefaults.standard.string(forKey: "rift.voiceLanguage") ?? Locale.current.identifier { didSet { UserDefaults.standard.set(language, forKey: "rift.voiceLanguage") } }
     @Published var voiceID = UserDefaults.standard.string(forKey: "rift.voiceID") ?? "" { didSet { UserDefaults.standard.set(voiceID, forKey: "rift.voiceID") } }
@@ -20,6 +20,7 @@ import Combine
     @Published var pitch = (UserDefaults.standard.object(forKey: "rift.voicePitch") as? Double) ?? 1.0 { didSet { UserDefaults.standard.set(pitch, forKey: "rift.voicePitch") } }
     let model: AppModel
     private let speech: any VoiceSpeechService
+    private let activationSound: any VoiceActivationPlaying
     private let synthesizer = AVSpeechSynthesizer()
     private var recorder: AVAudioRecorder?
     private var captureURL: URL?
@@ -40,9 +41,10 @@ import Combine
         FileManager.default.temporaryDirectory.appendingPathComponent("RiftVoiceTurns", isDirectory: true)
     }
 
-    init(model: AppModel, speech: any VoiceSpeechService = LocalSpeechService()) {
+    init(model: AppModel, speech: any VoiceSpeechService = LocalSpeechService(), activationSound: (any VoiceActivationPlaying)? = nil) {
         self.model = model
         self.speech = speech
+        self.activationSound = activationSound ?? VoiceActivationSound()
         super.init()
         synthesizer.delegate = self
         model.$generating.removeDuplicates().sink { [weak self] value in
@@ -64,10 +66,14 @@ import Combine
         }.store(in: &subscriptions)
     }
     /// Opening the orb is the user's microphone action; constructing a controller is not.
-    func open() async {
+    func open(playActivationSound: Bool = false) async {
         guard opened else { return }
         wantsListening = true
         let id = token.renew()
+        if playActivationSound && (UserDefaults.standard.object(forKey: "rift.voiceActivationSound") as? Bool ?? true) {
+            await activationSound.play()
+        }
+        guard opened, token.accepts(id), wantsListening, !Task.isCancelled else { return }
         await load()
         guard opened, token.accepts(id), wantsListening, !Task.isCancelled else { return }
         if assets == .ready { talk() }
@@ -290,6 +296,7 @@ import Combine
         }
     }
     func pause() {
+        activationSound.stop()
         wantsListening = false
         token.renew(); operation?.cancel(); operation = nil; deadline?.cancel(); deadline = nil
         clock?.cancel(); clock = nil; recorder?.stop(); recorder = nil
@@ -300,5 +307,8 @@ import Combine
         level = 0; phase = .idle; previewing = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
-    func close() { opened = false; handsFree = false; pause() }
+    func close() {
+        guard opened else { return }
+        opened = false; pause()
+    }
 }

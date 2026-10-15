@@ -1,0 +1,3 @@
+"""Only the glass-orb update and its connected voice lifecycle."""
+VOICE_TESTS = ['RiftTests/VoiceOrbTests', 'RiftTests/VoiceAndEffectsTests/testClosingBeforeAutomaticStartupCannotRecord', 'RiftTests/VoiceAndEffectsTests/testPausingDuringSetupStillFinishesAssetCheckWithoutStartingMicrophone', 'RiftTests/VoiceAndEffectsTests/testDismissalDuringSetupCannotRestartSession', 'RiftTests/VoiceAndEffectsTests/testOpeningAutomaticallyAttemptsTurnOnceAssetsAreReady', 'RiftUITests/RiftUITests/testVoiceOrbStaysInsideChatAndCanCloseAndReopen', 'RiftUITests/RiftUITests/testVoicePreferencesLiveInSettingsAndPersist']
+EXPECTED_TESTS = 13

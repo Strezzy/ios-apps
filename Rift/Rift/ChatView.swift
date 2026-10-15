@@ -6,7 +6,8 @@ struct ChatView: View {
     @EnvironmentObject var model: AppModel
     @State private var draft=""
     @State private var sheet: RiftSheet?
-    @State private var voiceVisible = false
+    @State private var voiceSession: VoiceController?
+    private var voiceVisible: Bool { voiceSession != nil }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var composing: Bool
     @State private var following = ChatFollowingState()
@@ -27,14 +28,15 @@ struct ChatView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { RiftBackground() }
             .overlay(alignment: .bottomTrailing) {
-                if voiceVisible {
-                    VoiceConversationView(model: model) { voiceVisible = false }
-                        .transition(reduceMotion ? .opacity : .scale(scale: 0.75, anchor: .bottomTrailing).combined(with: .opacity))
+                if let voiceSession {
+                    VoiceConversationView(voice: voiceSession)
+                        .id(ObjectIdentifier(voiceSession))
+                        .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity, removal: .scale(scale: 0.12, anchor: .bottomTrailing).combined(with: .opacity)))
                 }
             }
             .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.8), value: voiceVisible)
-            .onChange(of: sheet) { _, value in if value != nil { voiceVisible = false } }
-            .onChange(of: composing) { _, value in if value { voiceVisible = false } }
+            .onChange(of: sheet) { _, value in if value != nil { closeVoice() } }
+            .onChange(of: composing) { _, value in if value { closeVoice() } }
             .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -45,7 +47,7 @@ struct ChatView: View {
                     }.buttonStyle(.plain).accessibilityIdentifier("modelPicker")
                 }
                 ToolbarItemGroup(placement:.topBarTrailing) {
-                    Button { voiceVisible = false; model.newChat(); draft="" } label: { Image(systemName:"square.and.pencil") }.disabled(model.generating).accessibilityLabel("New chat")
+                    Button { closeVoice(); model.newChat(); draft="" } label: { Image(systemName:"square.and.pencil") }.disabled(model.generating).accessibilityLabel("New chat")
                     Menu { Button("Models",systemImage:"cpu") { sheet = .models }; Button("Settings",systemImage:"slider.horizontal.3") { sheet = .settings } } label: { Image(systemName:"ellipsis") }.accessibilityLabel("More options")
                 }
             }
@@ -145,11 +147,19 @@ struct ChatView: View {
                     .font(.body).lineLimit(1...4).focused($composing)
                     .padding(.leading, 14).padding(.vertical, 10)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
-                Button { composing = false; voiceVisible.toggle() } label: {
-                    Image(systemName: "waveform").font(.system(size: 18, weight: .medium))
+                Button {
+                    composing = false
+                    if voiceVisible { closeVoice() }
+                    else {
+                        VoiceOrbFeedback.play(appearing: true)
+                        voiceSession = VoiceController(model: model)
+                    }
+                } label: {
+                    Image(systemName: voiceVisible ? "xmark" : "waveform").font(.system(size: 18, weight: .medium))
                         .frame(width: 40, height: 44).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel("Voice mode").accessibilityIdentifier("openVoiceMode")
-                    .disabled(model.generating || model.busy)
+                }.buttonStyle(.plain).accessibilityLabel(voiceVisible ? "Close voice mode" : "Voice mode")
+                    .accessibilityIdentifier(voiceVisible ? "closeVoiceMode" : "openVoiceMode")
+                    .disabled(!voiceVisible && (model.generating || model.busy))
                 Button {
                     if model.generating { model.stop() } else { send() }
                 } label: {
@@ -170,6 +180,13 @@ struct ChatView: View {
                     .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
             }
         }.padding(.horizontal, 12).padding(.top, 5).padding(.bottom, 3)
+    }
+    private func closeVoice() {
+        guard let voiceSession else { return }
+        // Stop audio immediately, even while the disappearing glass is animating.
+        voiceSession.close()
+        VoiceOrbFeedback.play(appearing: false)
+        self.voiceSession = nil
     }
     private func send() {
         if model.send(draft) { draft = ""; followLatest() }
