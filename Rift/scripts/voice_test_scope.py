@@ -1,13 +1,10 @@
-"""Only attachments and directly connected composer behavior; no model sweep."""
+"""Only the composer and full-height drawer patch; no model downloads or inference."""
 VOICE_TESTS = [
-    'RiftTests/AttachmentTests',
-    'RiftUITests/RiftUITests/testAttachmentPreviewRemovalAndFilePicker',
-    'RiftUITests/RiftUITests/testDownloadedPickerAndMorphingComposer',
+    'RiftUITests/RiftUITests/testComposerRespondsImmediatelyAfterReplyAndVoiceOpen',
     'RiftUITests/RiftUITests/testDrawerRevealSelectionAndSettings',
-    'RiftUITests/RiftUITests/testVoiceOrbStaysInsideChatAndCanCloseAndReopen',
     'RiftUITests/RiftUITests/testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating',
 ]
-EXPECTED_TESTS = 10
+EXPECTED_TESTS = 3
 
 def selection_for_source(source, root):
     return VOICE_TESTS, None

@@ -46,7 +46,6 @@ struct ChatView: View {
                     }
                 }
                 .shadow(color: .black.opacity(progress * 0.55), radius: 24, x: -8)
-                .scaleEffect(reduceMotion ? 1 : 1 - progress * 0.035, anchor: .trailing)
                 .offset(x: width * progress)
                 .accessibilityHidden(drawerOpen)
             if !drawerOpen {
@@ -55,6 +54,7 @@ struct ChatView: View {
                     .accessibilityHidden(true)
             }
         }
+        .ignoresSafeArea(.container)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { surfaceWidth = $0 }
         .background(Color(red: 0.035, green: 0.045, blue: 0.065).ignoresSafeArea())
         .transaction { if reduceMotion { $0.animation = nil } }
@@ -270,7 +270,7 @@ struct ChatView: View {
                     .padding(.leading, 2).padding(.vertical, 14)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
                 Button {
-                    switch action {
+                    switch composerAction {
                     case .close: closeVoice()
                     case .stop: model.stop()
                     case .send: send()
@@ -285,11 +285,15 @@ struct ChatView: View {
                         .contentTransition(.symbolEffect(.replace))
                         .foregroundStyle(action == .send ? .white : RiftTheme.accent)
                         .frame(width: 46, height: 46)
-                        .glassEffect(.regular.tint(action == .send ? RiftTheme.accent : .clear).interactive(), in: Circle())
-                        .symbolEffect(.bounce, value: reduceMotion ? nil : action)
-                        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.65), value: action)
+                        .background {
+                            Circle().fill(.clear)
+                                .glassEffect(.regular.tint(action == .send ? RiftTheme.accent : .clear), in: Circle())
+                                .allowsHitTesting(false)
+                        }
+                        .contentShape(Circle())
                         .padding(3)
                 }.buttonStyle(.plain)
+                    .id(action.identifier) // A new role must never retain the previous role’s touch action.
                     .accessibilityLabel(action.label).accessibilityIdentifier(action.identifier)
                     .disabled(action == .send ? (model.selectedModel == nil || !model.ready || model.busy || readingAttachment || (attachment?.isImage == true && !imageSupportReady)) : (action == .voice && (model.busy || readingAttachment)))
             }

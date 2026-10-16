@@ -8,6 +8,32 @@ final class RiftUITests: XCTestCase {
     override func tearDownWithError() throws {
         XCUIDevice.shared.orientation = .portrait
     }
+    func testComposerRespondsImmediatelyAfterReplyAndVoiceOpen() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation", "--rift-ui-controls"]
+        app.launch()
+        let field = app.descendants(matching: .any)["messageInput"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 15))
+        field.tap(); field.typeText("First message")
+        app.buttons["sendMessage"].tap()
+        XCTAssertTrue(app.staticTexts["Finished test reply."].firstMatch.waitForExistence(timeout: 3))
+        field.tap(); field.typeText("Second message")
+        let sent = Date()
+        app.buttons["sendMessage"].tap()
+        XCTAssertTrue(app.staticTexts["Second message"].waitForExistence(timeout: 3))
+        XCTAssertLessThan(Date().timeIntervalSince(sent), 8)
+        XCTAssertTrue(app.buttons["openVoiceMode"].waitForExistence(timeout: 3))
+        for _ in 0..<2 {
+            app.buttons["openVoiceMode"].tap()
+            let close = app.buttons["closeVoiceMode"]
+            XCTAssertTrue(close.waitForExistence(timeout: 3))
+            let closed = Date()
+            close.tap()
+            XCTAssertTrue(app.buttons["openVoiceMode"].waitForExistence(timeout: 3))
+            XCTAssertLessThan(Date().timeIntervalSince(closed), 8)
+        }
+        attach("Rift-responsive-composer")
+    }
     func testAttachmentPreviewRemovalAndFilePicker() {
         let app = XCUIApplication()
         app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation", "--rift-ui-attachment"]

@@ -221,6 +221,12 @@ final class InferenceService: @unchecked Sendable {
         guard let index = conversations.firstIndex(where: { $0.id == activeChatID }) else { return false }
         if conversations[index].messages.isEmpty { conversations[index].title = String(text.prefix(60)) }
         conversations[index].messages.append(.init(role: "user", content: text, attachments: attachments.isEmpty ? nil : attachments))
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--rift-ui-controls") {
+            DebugChatFixture.reply(in: self, index: index)
+            return true
+        }
+        #endif
         beginReply(); return true
     }
     func regenerate() {

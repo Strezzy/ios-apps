@@ -7,6 +7,14 @@ import UIKit
 @MainActor enum DebugChatFixture {
     static let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     static let lastID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
+    static func reply(in model: AppModel, index: Int) {
+        model.generating = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            model.conversations[index].messages.append(.init(role: "assistant", content: "Finished test reply."))
+            model.generating = false
+        }
+    }
     static func install(in model: AppModel) {
         if ProcessInfo.processInfo.arguments.contains("--rift-ui-navigation") {
             model.installed = ["A", "B"].map { name in
