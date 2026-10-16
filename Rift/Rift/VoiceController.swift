@@ -34,6 +34,7 @@ import Combine
     private var ownsGeneration = false
     private var replyStream = VoiceReplyStream()
     private var queuedUtterances = Set<ObjectIdentifier>()
+    private var voiceRefresh: Task<Void, Never>?
     private var previewing = false
     private var opened = true
     private var wantsListening = false
@@ -115,10 +116,18 @@ import Combine
         assets = result
     }
     func refreshVoices() {
-        // Do not select third-party voice providers, which could have their own network behavior.
-        voices = AVSpeechSynthesisVoice.speechVoices().filter {
-            $0.identifier.hasPrefix("com.apple.") && !$0.voiceTraits.contains(.isPersonalVoice)
-        }.sorted { ($0.language, $0.name, $0.identifier) < ($1.language, $1.name, $1.identifier) }
+        voiceRefresh?.cancel()
+        voiceRefresh = Task { [weak self] in
+            // Apple's first voice inventory lookup can block for many seconds.
+            // Keep the composer and close control responsive while it completes.
+            let available = await Task.detached(priority: .utility) {
+                AVSpeechSynthesisVoice.speechVoices().filter {
+                    $0.identifier.hasPrefix("com.apple.") && !$0.voiceTraits.contains(.isPersonalVoice)
+                }.sorted { ($0.language, $0.name, $0.identifier) < ($1.language, $1.name, $1.identifier) }
+            }.value
+            guard let self, self.opened, !Task.isCancelled else { return }
+            self.voices = available
+        }
     }
     var chosenVoice: AVSpeechSynthesisVoice? {
         if let stored = voices.first(where: { $0.identifier == voiceID }) { return stored }
@@ -365,6 +374,6 @@ import Combine
     }
     func close() {
         guard opened else { return }
-        opened = false; pause()
+        opened = false; voiceRefresh?.cancel(); voiceRefresh = nil; pause()
     }
 }

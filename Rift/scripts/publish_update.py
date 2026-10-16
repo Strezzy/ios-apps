@@ -26,7 +26,7 @@ assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes'
 assert feature_update, 'This patch only supports the scoped release path'
 # Reuse 1.8 inference evidence only when the shipping inference/download code is unchanged.
 baseline='65ea4249858e49aae5e0be9d3fb0a9b561e623ad'
-allowed={'Rift/Rift/ChatView.swift','Rift/Rift/DebugChatFixture.swift','Rift/Rift/SettingsView.swift','Rift/Rift/AppModel.swift'}
+allowed={'Rift/Rift/ChatView.swift','Rift/Rift/DebugChatFixture.swift','Rift/Rift/SettingsView.swift','Rift/Rift/AppModel.swift','Rift/Rift/VoiceController.swift'}
 changed=set(cmd('git','diff','--name-only',baseline,source,'--','Rift/Rift').splitlines())
 assert changed <= allowed, changed
 old=cmd('git','show',baseline+':Rift/Rift/AppModel.swift')
@@ -61,6 +61,7 @@ tag='rift-1.8.1-build'+report['build']
 notes=f'''Rift 1.8.1 ({report['build']}) · Responsive controls and full-height drawer
 
 - Makes the composer read its current send/stop/voice/close state on every tap and gives each role a fresh touch target. Decorative glass no longer owns interactive animation on that target.
+- Moves Apple voice enumeration off the UI thread so it cannot block close/send controls.
 - Removes drawer scaling and extends the sliding chat surface to the screen edges, preserving its full height and rounded corners.
 - Preserves models, attachments, voice processing, saved chats, the existing uncensored weights, and memory entitlements.
 
