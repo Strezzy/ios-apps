@@ -26,7 +26,7 @@ int main(int argc, const char *argv[]) {
             [answers addObject:@{@"input": @(index), @"answer": answer, @"passed": @(content)}];
         }
         [engine unload];
-        NSDictionary *report = @{@"passed": @(ok), @"answers": answers, @"error": error.localizedDescription ?: @"", @"backend": @"macOS Metal", @"physical_iPhone_test": @NO};
+        NSDictionary *report = @{@"passed": @(ok), @"answers": answers, @"error": error.localizedDescription ?: @"", @"backend": @"macOS Metal", @"vision_backend": @"CPU", @"physical_iPhone_test": @NO};
         NSData *data = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:nil];
         fwrite(data.bytes, 1, data.length, stdout);
         return ok ? 0 : 1;

@@ -107,7 +107,9 @@ static NSError *failure(const std::string &s) {
             if (![[NSFileManager defaultManager] fileExistsAtPath:projector]) throw std::runtime_error("Download Qwen3.5 4B image support first.");
             if (RiftAvailableMemory() < 1100ULL * 1048576ULL) throw std::runtime_error("Not enough remaining app memory for image understanding. Free memory or use text only.");
             auto vp=mtmd_context_params_default();
-            vp.use_gpu=!cpu; vp.n_threads=4; vp.warmup=false;
+            // The publisher encoder uses BF16 tensors, unsupported by some Apple Metal devices.
+            // Encode images on CPU; the language model keeps its existing Metal path.
+            vp.use_gpu=false; vp.n_threads=4; vp.warmup=false;
             vp.image_min_tokens=64; vp.image_max_tokens=256;
             vp.progress_callback=[](float, void *p)->bool { return !static_cast<std::atomic<bool> *>(p)->load(); };
             vp.progress_callback_user_data=&_cancelled;

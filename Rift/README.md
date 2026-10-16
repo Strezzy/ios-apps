@@ -13,7 +13,7 @@ The increased-memory-limit and extended-virtual-addressing entitlements already 
 
 Version 1.8 adds a small **+** on the left of the composer. Choose one image or file from Files, review its preview, and send. Qwen3.5 4B Uncensored Aggressive Q4_K_M image understanding uses the publisher’s matching vision encoder (optional 676 MB verified download). Text-based PDF (up to 40 pages), TXT, Markdown, CSV and JSON contents are extracted locally; scanned PDFs should be provided as page images. Files are limited to 20 MB, extracted text to 24,000 characters, and images are normalized to a maximum 768-pixel edge. The selected context window may require a shorter document excerpt. Office documents, video and audio-file attachments are not supported in this build. No content filtering or cloud moderation is added; model responses still depend on the model itself.
 
-Only the new Qwen 4B vision path and its text fallback are checked with real inference. The existing model catalog is not retested. Actual iPhone and LiveContainer vision performance remains unmeasured.
+The publisher’s BF16 vision encoder runs on CPU for compatibility; response generation retains the existing Metal acceleration. Only the new Qwen 4B vision path and its text fallback are checked with real inference. The existing model catalog is not retested. Actual iPhone and LiveContainer vision performance remains unmeasured.
 
 **Private AI. On your terms.**
 
@@ -48,7 +48,7 @@ Newer Ornith 1.5 9B variants and Qwen3.8 releases were also checked. An uncensor
 
 ## Build and verification
 
-Run the **Build, verify and publish Rift** GitHub Actions workflow. It builds pinned llama.cpp revision `8345f333951c661d166b00e6f9362e553768f292`, native simulator tests, the iPhone Metal runtime, and an arm64 iPhone app. This presentation/voice update runs only its focused tests; model validation is retained because inference, downloads, catalog and storage are unchanged. Model weights are downloaded separately, not bundled.
+Run the **Build, verify and publish Rift** GitHub Actions workflow. It builds pinned llama.cpp revision `8345f333951c661d166b00e6f9362e553768f292`, native simulator tests, the iPhone Metal runtime, and an arm64 iPhone app. This update runs only its focused attachment/navigation checks and Qwen3.5 4B vision/text check; unrelated models are not rerun. Model weights are downloaded separately, not bundled.
 
 On a Mac with Xcode 26+, XcodeGen, CMake, Python 3.12 and Pillow 11.1.0:
 

@@ -29,7 +29,7 @@ if feature_update:
  assert subprocess.run(['git','diff','--quiet','1421445242ea5ef292b6497769edfa0d1e07597b',source,'--',*unchanged]).returncode==0
  vision=json.loads((OUT/'VISION-SMOKE.json').read_text())
  assert vision['source']==source and vision['model_id']=='qwen35-4b' and vision['passed'] and vision['exit_code']==0
- assert vision['backend']=='macOS Metal' and len(vision['answers'])==3 and all(a['passed'] for a in vision['answers'])
+ assert vision['backend']=='macOS Metal' and vision['vision_backend']=='CPU' and len(vision['answers'])==3 and all(a['passed'] for a in vision['answers'])
  assert vision['model_sha256']=='79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741'
  assert vision['projector_sha256']=='a1e32e86ea99aa7a56f3dcfe7e63c1d0be9439d31fd07087099f15bc0fda0f22'
 
@@ -58,7 +58,7 @@ with zipfile.ZipFile(ipa) as z:
    assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
 report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
 if feature_update:
- report.update(model_inference='Only Qwen3.5 4B: two distinct images and text-document fallback passed with production native engine on macOS Metal', validation_scope='10 scoped simulator checks: file/PDF extraction, image normalization, bounds, chat compatibility, drawer/model picker, composer/preview, keyboard/rotation and voice open/close; arm64 iPhone compilation', metal_inference='Selected Qwen3.5 4B vision and text checks passed; no unrelated models rerun')
+ report.update(model_inference='Only Qwen3.5 4B: two distinct images and text-document fallback passed with production native engine with CPU image encoding and macOS Metal generation', validation_scope='10 scoped simulator checks: file/PDF extraction, image normalization, bounds, chat compatibility, drawer/model picker, composer/preview, keyboard/rotation and voice open/close; arm64 iPhone compilation', metal_inference='Selected Qwen3.5 4B vision and text checks passed; no unrelated models rerun')
 save(OUT/'BUILD-REPORT.json',report)
 if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
@@ -71,7 +71,7 @@ notes=f'''Rift 1.8 ({report['build']}) · Local image and file attachments
 - Stores attached images privately on this iPhone, bounds image resolution and image-token usage, and checks additional memory before loading vision. Images are never uploaded. Choosing an iCloud file may require Files to download it first.
 - Preserves the new left drawer, model menu, morphing composer, visible crimson background and existing memory entitlements alongside attachments. Saved chats without attachments remain compatible.
 
-Verification: {validated_count} focused simulator checks passed, arm64 iPhone compilation and signed-package entitlement checks passed, and the production native engine correctly identified two different images plus a text-document code using only Qwen3.5 4B on macOS Metal. No other models were retested. Physical iPhone/LiveContainer vision performance remains device-dependent and was not measured by this runner.
+Verification: {validated_count} focused simulator checks passed, arm64 iPhone compilation and signed-package entitlement checks passed, and the production native engine correctly identified two different images plus a text-document code using only Qwen3.5 4B with CPU image encoding and macOS Metal generation. No other models were retested. Physical iPhone/LiveContainer vision performance remains device-dependent and was not measured by this runner.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+. Existing chats and downloaded models are retained. The installer supplies the final signature.
 
