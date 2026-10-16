@@ -35,6 +35,7 @@ struct ChatView: View {
                 .accessibilityHidden(!drawerOpen)
             }
             chatSurface(width: surfaceWidth)
+                .ignoresSafeArea(.container)
                 .mask { RoundedRectangle(cornerRadius: progress * 32, style: .continuous).ignoresSafeArea() }
                 .overlay {
                     if progress > 0 {
@@ -54,7 +55,6 @@ struct ChatView: View {
                     .accessibilityHidden(true)
             }
         }
-        .ignoresSafeArea(.container)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { surfaceWidth = $0 }
         .background(Color(red: 0.035, green: 0.045, blue: 0.065).ignoresSafeArea())
         .transaction { if reduceMotion { $0.animation = nil } }

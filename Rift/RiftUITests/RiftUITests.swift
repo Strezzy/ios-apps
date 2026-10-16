@@ -68,6 +68,7 @@ final class RiftUITests: XCTestCase {
         let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.45))
         start.press(forDuration: 0.05, thenDragTo: end)
         XCTAssertTrue(app.buttons["drawerSettings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Close conversations"].isHittable)
         app.buttons["Close conversations"].tap()
         XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 5))
         app.buttons["Chat history"].tap()
