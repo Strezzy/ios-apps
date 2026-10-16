@@ -32,7 +32,7 @@ final class InferenceService: @unchecked Sendable {
                         let info = try GGUFInspector.inspect(url)
                         let physicalAvailable = RiftAvailableMemory()
                         let visionReserve: UInt64 = projector == nil ? 0 : 1_100 * 1_048_576
-                        guard physicalAvailable > visionReserve else { throw RiftFailure("This installation does not have enough available memory for image understanding.") }
+                        guard projector == nil || physicalAvailable > visionReserve else { throw RiftFailure("This installation does not have enough available memory for image understanding.") }
                         let available = physicalAvailable - visionReserve
                         guard let plan = MemoryBudget.plan(bytes: model.bytes, requested: context, available: available, architecture: info.architecture, dimensions: info.dimensions) else {
                             if projector != nil { throw RiftFailure("Qwen3.5 4B image understanding needs more working memory than this installation currently has available (\(MemoryBudget.label(physicalAvailable))). Free memory or use a text-only chat.") }
