@@ -66,10 +66,10 @@ jobs:
         with:
           path: Rift/Build/Native
           key: rift-8345f333-vision-metal-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Test only attachments and connected composer behavior
-        run: python Rift/scripts/build.py simulator
       - name: Verify only Qwen 3.5 4B images and connected text fallback
         run: python Rift/scripts/vision_smoke.py
+      - name: Test only attachments and connected composer behavior
+        run: python Rift/scripts/build.py simulator
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone
       - name: Package iPhone candidate with requested memory entitlements

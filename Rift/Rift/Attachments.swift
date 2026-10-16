@@ -70,7 +70,9 @@ struct AttachmentStore: Sendable {
         }
         let text: String
         if type?.conforms(to: .pdf) == true {
-            guard let pdf = PDFDocument(url: url), !pdf.isLocked else { throw RiftFailure("Unlock this PDF before attaching it.") }
+            // Read a coordinated snapshot so a provider replacing a file at the same URL
+            // cannot leave PDFKit serving the previous document's cached pages.
+            guard let pdf = PDFDocument(data: try Data(contentsOf: url)), !pdf.isLocked else { throw RiftFailure("Unlock this PDF before attaching it.") }
             guard pdf.pageCount <= 40 else { throw RiftFailure("Choose a PDF with 40 pages or fewer.") }
             var pages: [String] = []
             var count = 0

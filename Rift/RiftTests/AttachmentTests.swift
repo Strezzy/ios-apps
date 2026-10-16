@@ -32,7 +32,14 @@ final class AttachmentTests: XCTestCase {
         let url = storage.root.appendingPathComponent("sample.pdf")
         try pdf.writePDF(to: url) { context in context.beginPage(); ("Rift local PDF 42" as NSString).draw(at: CGPoint(x: 20, y: 30), withAttributes: [.font: UIFont.systemFont(ofSize: 18)]) }
         XCTAssertTrue(try XCTUnwrap(files.importFile(url).text).contains("Rift local PDF 42"))
-        try pdf.writePDF(to: url) { context in context.beginPage() }
+        let blank = storage.root.appendingPathComponent("blank.pdf")
+        let emptyPDF = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 300, height: 200))
+        let emptyData = emptyPDF.pdfData { context in context.beginPage() }
+        XCTAssertTrue((PDFDocument(data: emptyData)?.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        try emptyData.write(to: blank)
+        XCTAssertThrowsError(try files.importFile(blank))
+        // Also cover a document provider replacing a previously imported URL.
+        try emptyData.write(to: url, options: .atomic)
         XCTAssertThrowsError(try files.importFile(url))
     }
     @MainActor func testImageIsNormalizedBoundedSavedAndRemoved() throws {
