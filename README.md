@@ -12,7 +12,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Facet.png" width="44" alt=""/> **Facet** — Convert photos and videos to 3D | 1.1 (301) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/facet-1.1-build301/Facet.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png" width="44" alt=""/> **Veil** — Remove metadata from photos and videos | 1.1 (201) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png" width="44" alt=""/> **Lucid** — Offline video enhancement · Beta | 1.1 (204) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.8 (132) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.8-build132/Rift.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.8.1 (133) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.8.1-build133/Rift.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -50,7 +50,7 @@ FIRST BETA. Restore video detail at its original resolution or upscale 2x/4x wit
 
 ### Rift
 
-Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory.
+Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height.
 
 ## Add my apps to LiveContainer
 
