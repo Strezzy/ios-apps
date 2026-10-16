@@ -1,0 +1,80 @@
+{
+  "app": "Rift",
+  "version": "1.8",
+  "build": "132",
+  "source": "65ea4249858e49aae5e0be9d3fb0a9b561e623ad",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "passed",
+  "model_inference": "Only Qwen3.5 4B: two distinct images and text-document fallback passed with production native engine with CPU image encoding and macOS Metal generation",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "5ce86ade53bdc401f0dbb7de42c06178043223d45738a37b2358fe3aa48106e5",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftTests/AttachmentTests",
+    "RiftUITests/RiftUITests/testAttachmentPreviewRemovalAndFilePicker",
+    "RiftUITests/RiftUITests/testDownloadedPickerAndMorphingComposer",
+    "RiftUITests/RiftUITests/testDrawerRevealSelectionAndSettings",
+    "RiftUITests/RiftUITests/testVoiceOrbStaysInsideChatAndCanCloseAndReopen",
+    "RiftUITests/RiftUITests/testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating"
+  ],
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "0183276C-C5F7-4A53-B0AF-C3D9117595F6",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 10,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift · Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1792111170.515,
+    "passedTests": 10,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1792110886.769,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 10
+  },
+  "iphone_compilation": "passed",
+  "executable_architecture": "Non-fat file: /Users/runner/work/ios-apps/ios-apps/Rift/Build/DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app/Rift is architecture: arm64",
+  "ipa_sha256": "51a42ac776b017781d2cbbbeab997ca62e1210e8eebef7ae27a1f7a1d6315a2e",
+  "presentation_validation": "Attachment import, PDF/text extraction, image normalization, storage compatibility, picker/preview and connected keyboard behavior tested; physical-device feel not tested on this runner",
+  "ipa_bytes": 6496921,
+  "build_result": "passed",
+  "validated_feature_test_count": 10,
+  "signing": "Ad-hoc signature carries requested memory entitlements; installer and host must grant them",
+  "validation_scope": "10 scoped simulator checks: file/PDF extraction, image normalization, bounds, chat compatibility, drawer/model picker, composer/preview, keyboard/rotation and voice open/close; arm64 iPhone compilation",
+  "metal_inference": "Selected Qwen3.5 4B vision and text checks passed; no unrelated models rerun"
+}

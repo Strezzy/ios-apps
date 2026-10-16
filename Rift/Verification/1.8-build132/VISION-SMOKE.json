@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "answers": [
+    {
+      "input": 0,
+      "answer": "Red, Circle",
+      "passed": true
+    },
+    {
+      "input": 1,
+      "answer": "blue square",
+      "passed": true
+    },
+    {
+      "input": 2,
+      "answer": "RIFT42",
+      "passed": true
+    }
+  ],
+  "backend": "macOS Metal",
+  "vision_backend": "CPU",
+  "error": "",
+  "physical_iPhone_test": false,
+  "source": "65ea4249858e49aae5e0be9d3fb0a9b561e623ad",
+  "model_id": "qwen35-4b",
+  "model_sha256": "79e28ecacf84e75b6056cf4059636d435aa9eb67795780f7b7dbc7d32a962741",
+  "projector_sha256": "a1e32e86ea99aa7a56f3dcfe7e63c1d0be9439d31fd07087099f15bc0fda0f22",
+  "exit_code": 0
+}
