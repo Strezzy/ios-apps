@@ -1,0 +1,84 @@
+{
+  "app": "Rift",
+  "version": "1.9",
+  "build": "135",
+  "source": "1bc813ed8cb280bae35ac47975bbf2ff46e52dc6",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "passed",
+  "model_inference": "Not rerun: unchanged shipping inference retains verified 1.8 build 132 evidence",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "852a11b8727ba63d014a20af812075fba85d54f3aaf631873bbf0f477098f731",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftTests/PersonalVoiceTests/testProfilesPersistAndDeleteWithoutUsingNamesAsPaths"
+  ],
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "0183276C-C5F7-4A53-B0AF-C3D9117595F6",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 1,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift · Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1792278825.192,
+    "passedTests": 1,
+    "result": "Passed",
+    "skippedTests": 0,
+    "startTime": 1792278772.498,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 1
+  },
+  "iphone_compilation": "passed",
+  "executable_architecture": "Non-fat file: /Users/runner/work/ios-apps/ios-apps/Rift/Build/DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app/Rift is architecture: arm64",
+  "ipa_sha256": "4e76e310cd14d9d0cfa891858582af3dab1c484623c62e3de3fabb373bba592c",
+  "presentation_validation": "Personal Voice settings and connected composer controls checked; physical-device speech quality, latency and simultaneous LLM/TTS performance remain unmeasured",
+  "ipa_bytes": 17927815,
+  "build_result": "passed",
+  "retained_passing_checks": {
+    "source": "8bf64ccc22bdc4aa5bd11d4303d185d76191a39c",
+    "run": 39076196915,
+    "passedTests": 9,
+    "artifact_sha256": "6330c8806d3a03e4871087b9fdb8ab8f68522fc9c0c6484a08bc87583faa67fb",
+    "report": "Rift/Verification/pocket-preflight/BUILD-REPORT.json",
+    "scope": "Retains only nine passing checks; failed URL-spelling assertion corrected and rerun"
+  },
+  "validated_feature_test_count": 10,
+  "inference_evidence_source": "65ea4249858e49aae5e0be9d3fb0a9b561e623ad",
+  "signing": "Ad-hoc signature carries requested memory entitlements; installer and host must grant them",
+  "validation_scope": "10 focused checks across verified runs (nine retained on identical app source and one corrected path assertion): real Pocket streaming and offline cloned-voice round trip, personal voice persistence and input validation, fallback/cancel, Apple inventory, phrase streaming, personal voice settings and composer controls; arm64 iPhone compilation",
+  "metal_inference": "Chat inference retained from 1.8 build 132; only Pocket TTS and its cloning encoder downloaded and exercised"
+}
