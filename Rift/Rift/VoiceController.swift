@@ -88,6 +88,12 @@ import Combine
                   reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue else { return }
             Task { @MainActor in self?.pause(); self?.error = "Your audio device disconnected. Voice chat is paused." }
         }.store(in: &subscriptions)
+        NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification).sink { [weak self] _ in
+            Task { @MainActor in
+                self?.pocketPlayer.useFallback("Memory is low; using your Apple voice.")
+                await PocketSpeechEngine.shared.unload()
+            }
+        }.store(in: &subscriptions)
         NotificationCenter.default.publisher(for: AVSpeechSynthesizer.availableVoicesDidChangeNotification).sink { [weak self] _ in
             Task { @MainActor in self?.refreshVoices() }
         }.store(in: &subscriptions)
@@ -332,7 +338,7 @@ import Combine
             try session.setActive(true)
         } catch { pause(); self.error = error.localizedDescription; return }
         previewing = preview; phase = .speaking
-        if !pocketFailed && !applePreview && PocketVoiceSettings.shared.canUse(language: language) {
+        if !pocketFailed && !applePreview && PocketVoiceSettings.shared.canUse(language: preview ? "en" : language) {
             pocketPlayer.enqueue(chunks, profile: PocketVoiceSettings.shared.selectedProfile)
             return
         }

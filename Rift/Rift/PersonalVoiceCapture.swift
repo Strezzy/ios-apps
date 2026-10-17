@@ -78,6 +78,7 @@ import Combine
             player = try AVAudioPlayer(contentsOf: file); player?.play()
         } catch { self.error = error.localizedDescription }
     }
+    func stopPreview() { player?.stop(); player = nil }
     func clear() {
         identity = UUID(); requesting = false; timer?.cancel(); timer = nil
         recorder?.stop(); recorder = nil; player?.stop(); player = nil

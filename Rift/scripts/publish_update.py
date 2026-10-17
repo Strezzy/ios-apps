@@ -54,7 +54,7 @@ with zipfile.ZipFile(ipa) as z:
    assert model['uncensored']
    assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
 report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
-report.update(model_inference='Not rerun: unchanged shipping inference retains verified 1.8 build 132 evidence', validation_scope='10 focused checks: real Pocket streaming and offline cloned-voice round trip, personal voice persistence and input validation, fallback/cancel, Apple inventory, phrase streaming, personal voice settings and composer controls; arm64 iPhone compilation', metal_inference='Retained from 1.8 build 132; no model downloads or inference tests run')
+report.update(model_inference='Not rerun: unchanged shipping inference retains verified 1.8 build 132 evidence', validation_scope='10 focused checks: real Pocket streaming and offline cloned-voice round trip, personal voice persistence and input validation, fallback/cancel, Apple inventory, phrase streaming, personal voice settings and composer controls; arm64 iPhone compilation', metal_inference='Chat inference retained from 1.8 build 132; only Pocket TTS and its cloning encoder downloaded and exercised')
 save(OUT/'BUILD-REPORT.json',report)
 if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)

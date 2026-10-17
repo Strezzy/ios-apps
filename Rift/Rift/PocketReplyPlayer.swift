@@ -116,6 +116,7 @@ import FluidAudio
         let remaining = Array(chunks.dropFirst(completedUtterance + 1))
         stop(); onFailure?(remaining, message)
     }
+    func useFallback(_ message: String) { if active { fail(message) } }
     func stop() {
         identity = UUID(); active = false
         task?.cancel(); task = nil; watchdog?.cancel(); watchdog = nil

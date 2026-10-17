@@ -3,6 +3,7 @@ import AVFoundation
 
 struct VoiceSettingsView: View {
     @StateObject private var voice: VoiceController
+    @StateObject private var capture = PersonalVoiceCapture()
     @AppStorage("rift.voiceActivationSound") private var activationSound = true
     @AppStorage("rift.voiceHaptics") private var haptics = true
     @State private var downloadConsent = false
@@ -70,7 +71,7 @@ struct VoiceSettingsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             } else if voiceTab == "Personal Voice" {
-                PersonalVoiceView(settings: pocket, voice: voice)
+                PersonalVoiceView(settings: pocket, voice: voice, capture: capture)
             } else {
                 Section("Apple voice · fallback") {
                     Button("Use Apple speech") { pocket.enabled = false }.disabled(voice.active || pocket.busy)
@@ -104,7 +105,8 @@ struct VoiceSettingsView: View {
         }.tint(RiftTheme.accent)
             .navigationTitle("Voice & sound").navigationBarTitleDisplayMode(.inline)
             .task { await voice.load() }
-            .onDisappear { voice.pause(); pocket.cancel() }
+            .onDisappear { voice.pause(); pocket.cancel(); capture.clear() }
+            .onChange(of: voiceTab) { _, _ in capture.clear() }
             .onChange(of: scenePhase) { _, phase in if phase == .background { voice.pause() } }
             .confirmationDialog("Download Pocket TTS?", isPresented: $pocketConsent, titleVisibility: .visible) {
                 Button("Download voice pack") { pocket.install() }

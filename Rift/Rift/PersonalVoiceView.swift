@@ -5,7 +5,7 @@ import AVFoundation
 struct PersonalVoiceView: View {
     @ObservedObject var settings: PocketVoiceSettings
     @ObservedObject var voice: VoiceController
-    @StateObject private var capture = PersonalVoiceCapture()
+    @ObservedObject var capture: PersonalVoiceCapture
     @State private var importing = false
     @State private var name = "My Voice"
     @State private var deleting: PersonalVoice?
@@ -34,7 +34,7 @@ struct PersonalVoiceView: View {
                 Button("Preview recording") { voice.pause(); capture.previewRecording() }.disabled(settings.busy)
                 Button("Save personal voice") {
                     guard let file = capture.file else { return }
-                    voice.pause(); settings.importVoice(file, name: name)
+                    voice.pause(); capture.stopPreview(); settings.importVoice(file, name: name)
                 }.disabled(settings.busy).accessibilityIdentifier("savePersonalVoice")
                 Button("Discard recording", role: .destructive) { capture.clear() }.disabled(settings.busy)
             }
@@ -69,6 +69,6 @@ struct PersonalVoiceView: View {
         }
         .onChange(of: scenePhase) { _, phase in if phase != .active { capture.clear(); settings.cancel() } }
         .onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { _ in capture.clear() }
-        .onDisappear { settings.cancel(); capture.clear() }
+
     }
 }

@@ -16,7 +16,8 @@ final class RiftUITests: XCTestCase {
         app.buttons["Chat history"].tap()
         app.buttons["drawerSettings"].tap()
         let link = app.buttons["voiceSettingsLink"]
-        XCTAssertTrue(link.waitForExistence(timeout: 5)); link.tap()
+        for _ in 0..<4 { if link.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(link.isHittable); link.tap()
         let tabs = app.segmentedControls["voiceTypeTabs"]
         for _ in 0..<3 { if tabs.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(tabs.waitForExistence(timeout: 5))
