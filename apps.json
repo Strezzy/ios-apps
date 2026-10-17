@@ -314,12 +314,23 @@
     {
       "name": "Rift",
       "subtitle": "Private offline AI chat",
-      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height.",
+      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality.",
       "category": "utilities",
       "tintColor": "#D62947",
       "bundleIdentifier": "com.billy.rift",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "1.8.2",
+          "buildVersion": "134",
+          "buildNumber": "134",
+          "date": "2026-10-17T22:15:58Z",
+          "localizedDescription": "Rift 1.8.2 (134) · Installed voices and liquid controls\n\n- Waits asynchronously for the installed Apple voice inventory before starting voice mode, and honors the selected installed voice. Closing during lookup stays responsive and ignores late results.\n- Restores liquid glass button morphing and a short spring pulse on a separate visual layer, while keeping fresh, responsive send/voice/close touch targets.\n- Adds a short, candid uncensored Rift personality. Migrates only the previous built-in default; custom instructions remain unchanged.\n\nVerification: 4 focused voice/personality/control checks passed, plus arm64 iPhone compilation and signed-package checks. No model downloads or inference tests were rerun. Physical-device speech playback remains unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 34d1f76256c65b9286509d96c82f3388f2a9c934\nIPA SHA-256: f8cb1dd66fb1f756d58e579ddbf86258f419033d66b6a32c56fc7e43beb91710\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.8.2-build134/Rift.ipa",
+          "size": 6526204,
+          "minOSVersion": "26.0",
+          "sha256": "f8cb1dd66fb1f756d58e579ddbf86258f419033d66b6a32c56fc7e43beb91710"
+        },
         {
           "version": "1.8.1",
           "buildVersion": "133",
@@ -431,11 +442,11 @@
           "NSSpeechRecognitionUsageDescription": "Transcribe voice-chat turns using Apple's on-device speech model. No server recognition is used."
         }
       },
-      "version": "1.8.1",
-      "versionDate": "2026-10-16T01:32:45Z",
-      "versionDescription": "Rift 1.8.1 (133) · Responsive controls and full-height drawer\n\n- Makes the composer read its current send/stop/voice/close state on every tap and gives each role a fresh touch target. Decorative glass no longer owns interactive animation on that target.\n- Moves Apple voice enumeration off the UI thread so it cannot block close/send controls.\n- Removes drawer scaling and extends the sliding chat surface to the screen edges, preserving its full height and rounded corners.\n- Preserves models, attachments, voice processing, saved chats, the existing uncensored weights, and memory entitlements.\n\nVerification: 3 focused simulator UI checks passed, plus arm64 iPhone compilation and signed-package checks. No model downloads or inference tests were rerun; unchanged inference retains the verified 1.8 build 132 evidence. Physical-device timing remains unmeasured.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 7507f70575382f1727afb67c0f989e5f4f510480\nIPA SHA-256: b025c47dccd53467aaf0632b813b65de05fd753a6e0d470f0cbc037496e9d4fe\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.8.1-build133/Rift.ipa",
-      "size": 6499588
+      "version": "1.8.2",
+      "versionDate": "2026-10-17T22:15:58Z",
+      "versionDescription": "Rift 1.8.2 (134) · Installed voices and liquid controls\n\n- Waits asynchronously for the installed Apple voice inventory before starting voice mode, and honors the selected installed voice. Closing during lookup stays responsive and ignores late results.\n- Restores liquid glass button morphing and a short spring pulse on a separate visual layer, while keeping fresh, responsive send/voice/close touch targets.\n- Adds a short, candid uncensored Rift personality. Migrates only the previous built-in default; custom instructions remain unchanged.\n\nVerification: 4 focused voice/personality/control checks passed, plus arm64 iPhone compilation and signed-package checks. No model downloads or inference tests were rerun. Physical-device speech playback remains unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 34d1f76256c65b9286509d96c82f3388f2a9c934\nIPA SHA-256: f8cb1dd66fb1f756d58e579ddbf86258f419033d66b6a32c56fc7e43beb91710\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.8.2-build134/Rift.ipa",
+      "size": 6526204
     }
   ],
   "news": []
