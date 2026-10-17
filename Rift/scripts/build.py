@@ -58,7 +58,7 @@ def simulator():
     choices.sort(key=lambda d:('Pro' in d['name'],'18' in d['name'],'17' in d['name']),reverse=True)
     device=choices[0]; uid=device['udid']; report['simulator_device']=device['name']; save()
     if device['state']!='Booted': run(['xcrun','simctl','boot',uid],'simulator-boot')
-    common=['xcodebuild','-project',ROOT/'Rift.xcodeproj','-scheme','Rift','-configuration','Debug','-destination','id='+uid,'-derivedDataPath',BUILD/'DerivedData','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','CODE_SIGN_IDENTITY=','DEVELOPMENT_TEAM=']
+    common=['xcodebuild','-project',ROOT/'Rift.xcodeproj','-scheme','Rift','-configuration','Debug','-destination','id='+uid,'-derivedDataPath',BUILD/'DerivedData','-clonedSourcePackagesDirPath',BUILD/'SourcePackages','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','CODE_SIGN_IDENTITY=','DEVELOPMENT_TEAM=']
     result=BUILD/'Tests.xcresult'; shutil.rmtree(result,ignore_errors=True)
     try:
         # Compile while first-boot migration completes instead of serially waiting.
@@ -76,7 +76,7 @@ def simulator():
         subprocess.run(['xcrun','simctl','shutdown',uid],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     save()
 def iphone():
-    run(['xcodebuild','-project',ROOT/'Rift.xcodeproj','-scheme','Rift','-configuration','Release','-destination','generic/platform=iOS','-derivedDataPath',BUILD/'DeviceDerivedData','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','CODE_SIGN_IDENTITY=','DEVELOPMENT_TEAM=','build'],'iphone-build')
+    run(['xcodebuild','-project',ROOT/'Rift.xcodeproj','-scheme','Rift','-configuration','Release','-destination','generic/platform=iOS','-derivedDataPath',BUILD/'DeviceDerivedData','-clonedSourcePackagesDirPath',BUILD/'SourcePackages','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','CODE_SIGN_IDENTITY=','DEVELOPMENT_TEAM=','build'],'iphone-build')
     report['iphone_compilation']='passed'; save()
 def smoke():
     # CPU model tests must not compete with an unused simulator for unified RAM.

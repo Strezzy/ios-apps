@@ -9,7 +9,7 @@ final class PersonalVoiceTests: XCTestCase {
         let library = PersonalVoiceLibrary(root: root)
         let voice = try library.save(profile: Data(repeating: 0, count: 4096), name: "../../My voice")
         XCTAssertEqual(try PersonalVoiceLibrary(root: root).entries(), [voice])
-        XCTAssertEqual(library.profileURL(voice.id).deletingLastPathComponent(), root)
+        XCTAssertEqual(library.profileURL(voice.id).deletingLastPathComponent().path, root.path)
         try library.delete(voice)
         XCTAssertEqual(try library.entries(), [])
         XCTAssertThrowsError(try library.save(profile: Data(repeating: 0, count: 13), name: "Bad"))

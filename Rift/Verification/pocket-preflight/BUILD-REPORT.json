@@ -1,0 +1,82 @@
+{
+  "app": "Rift",
+  "version": "1.9",
+  "build": "135",
+  "source": "8bf64ccc22bdc4aa5bd11d4303d185d76191a39c",
+  "iPhone_inference": "not_tested",
+  "LiveContainer": "not_tested",
+  "thermal_performance": "not_tested",
+  "simulator": "not_run",
+  "model_inference": "not_run",
+  "dependency_notice_files": [
+    "LICENSE",
+    "cmake/license.cmake",
+    "gguf-py/LICENSE",
+    "licenses/LICENSE-jsonhpp",
+    "tools/ui/src/lib/vendors/big-integer/LICENSE",
+    "tools/ui/src/lib/vendors/decimal.js/LICENCE.md",
+    "tools/ui/src/lib/vendors/nerdamer-prime/LICENSE",
+    "vendor/cpp-httplib/LICENSE",
+    "vendor/hash/rotate-bits/LICENSE.md",
+    "vendor/hash/sha256/LICENSE",
+    "vendor/hash/xxhash/LICENSE"
+  ],
+  "dependency_notices_sha256": "852a11b8727ba63d014a20af812075fba85d54f3aaf631873bbf0f477098f731",
+  "simulator_device": "iPhone 17 Pro",
+  "test_selection": [
+    "RiftTests/PersonalVoiceTests",
+    "RiftTests/PocketSpeechIntegrationTests",
+    "RiftTests/VoicePatchTests/testStartupWaitsForInstalledVoiceAndHonorsSelection",
+    "RiftTests/VoicePatchTests/testCloseDuringVoiceLookupIgnoresLateResult",
+    "RiftTests/VoiceReplyStreamTests/testSpeaksCompletedPhraseBeforeGenerationFinishesWithoutRepeatingIt",
+    "RiftUITests/RiftUITests/testPersonalVoiceAndAppleFallbackSettingsAreReachable",
+    "RiftUITests/RiftUITests/testComposerRespondsImmediatelyAfterReplyAndVoiceOpen"
+  ],
+  "test_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "0183276C-C5F7-4A53-B0AF-C3D9117595F6",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23E254a",
+          "osVersion": "26.4.1",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 1,
+        "passedTests": 9,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "Rift \u00b7 Built with macOS 26.6.2",
+    "expectedFailures": 0,
+    "failedTests": 1,
+    "finishTime": 1792278048.993,
+    "passedTests": 9,
+    "result": "Failed",
+    "skippedTests": 0,
+    "startTime": 1792277669.486,
+    "statistics": [],
+    "testFailures": [
+      {
+        "failureText": "XCTAssertEqual failed: (\"file:///Users/runner/Library/Developer/CoreSimulator/Devices/0183276C-C5F7-4A53-B0AF-C3D9117595F6/data/Containers/Data/Application/5F4DCD41-B5EC-432D-96F6-1E85772D1B16/tmp/E6E8A753-15F3-4B4F-8DEE-694AF6F777D1/\") is not equal to (\"file:///Users/runner/Library/Developer/CoreSimulator/Devices/0183276C-C5F7-4A53-B0AF-C3D9117595F6/data/Containers/Data/Application/5F4DCD41-B5EC-432D-96F6-1E85772D1B16/tmp/E6E8A753-15F3-4B4F-8DEE-694AF6F777D1\")",
+        "targetName": "RiftTests",
+        "testIdentifier": 3,
+        "testIdentifierString": "PersonalVoiceTests/testProfilesPersistAndDeleteWithoutUsingNamesAsPaths()",
+        "testIdentifierURL": "test://com.apple.xcode/Rift/RiftTests/PersonalVoiceTests/testProfilesPersistAndDeleteWithoutUsingNamesAsPaths",
+        "testName": "testProfilesPersistAndDeleteWithoutUsingNamesAsPaths()"
+      }
+    ],
+    "title": "Test - Rift",
+    "topInsights": [],
+    "totalTestCount": 10
+  },
+  "build_result": "failed",
+  "failure": "native-tests failed with exit code 65"
+}

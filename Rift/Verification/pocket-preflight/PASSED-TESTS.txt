@@ -1,0 +1,9 @@
+Test Case '-[RiftTests.PersonalVoiceTests testCloseCancelsPendingNeuralStartupWithoutLateFallback]' passed (1.157 seconds).
+Test Case '-[RiftTests.PersonalVoiceTests testNeuralFailureReturnsQueuedTextForAppleFallback]' passed (0.036 seconds).
+Test Case '-[RiftTests.PersonalVoiceTests testRecordingValidationAcceptsSpeechLengthAndRejectsSilenceAndLongClips]' passed (0.128 seconds).
+[22:58:35.641] [INFO] [FluidAudio.PocketTtsModelStore] Mimi encoder lTest Case '-[RiftTests.PocketSpeechIntegrationTests testStreamsBeforeTextFinishesAndReloadsClonedVoiceOffline]' passed (64.209 seconds).
+Test Case '-[RiftTests.VoicePatchTests testCloseDuringVoiceLookupIgnoresLateResult]' passed (0.128 seconds).
+Test Case '-[RiftTests.VoicePatchTests testStartupWaitsForInstalledVoiceAndHonorsSelection]' passed (0.485 seconds).
+Test Case '-[RiftTests.VoiceReplyStreamTests testSpeaksCompletedPhraseBeforeGenerationFinishesWithoutRepeatingIt]' passed (0.002 seconds).
+Test Case '-[RiftUITests.RiftUITests testComposerRespondsImmediatelyAfterReplyAndVoiceOpen]' passed (62.600 seconds).
+Test Case '-[RiftUITests.RiftUITests testPersonalVoiceAndAppleFallbackSettingsAreReachable]' passed (26.425 seconds).
