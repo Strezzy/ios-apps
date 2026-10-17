@@ -314,12 +314,23 @@
     {
       "name": "Rift",
       "subtitle": "Private offline AI chat",
-      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality.",
+      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning.",
       "category": "utilities",
       "tintColor": "#D62947",
       "bundleIdentifier": "com.billy.rift",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "1.9",
+          "buildVersion": "135",
+          "buildNumber": "135",
+          "date": "2026-10-17T23:19:08Z",
+          "localizedDescription": "Rift 1.9 (135) · Pocket TTS and Personal Voice\n\n- Adds optional on-device Pocket TTS with phrase input and streamed audio playback. Apple speech stays available for fallback and unsupported languages.\n- Adds Personal Voice: import an existing 3–10 second audio clip or record up to ten seconds, preview it, name and save a reusable voice profile, select or delete saved voices.\n- Downloads a pinned English voice pack and cloning encoder once from Voice & sound. Speech and cloning are offline after setup; recordings are never uploaded.\n- Preserves the orb, liquid composer transitions, responsive close/send controls, chat models and assistant instructions.\n\nVerification: 10 focused speech/personal-voice/connected-control checks passed across the verified runs (nine retained on identical app source; one corrected test assertion rerun), including a real Pocket synthesis and saved-clone round trip, plus arm64 iPhone compilation and signed-package checks. No chat models were downloaded or retested. Physical-iPhone voice quality, first-audio latency, thermals and performance alongside LLM generation remain unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 1bc813ed8cb280bae35ac47975bbf2ff46e52dc6\nIPA SHA-256: 4e76e310cd14d9d0cfa891858582af3dab1c484623c62e3de3fabb373bba592c\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9-build135/Rift.ipa",
+          "size": 17927815,
+          "minOSVersion": "26.0",
+          "sha256": "4e76e310cd14d9d0cfa891858582af3dab1c484623c62e3de3fabb373bba592c"
+        },
         {
           "version": "1.8.2",
           "buildVersion": "134",
@@ -442,11 +453,11 @@
           "NSSpeechRecognitionUsageDescription": "Transcribe voice-chat turns using Apple's on-device speech model. No server recognition is used."
         }
       },
-      "version": "1.8.2",
-      "versionDate": "2026-10-17T22:15:58Z",
-      "versionDescription": "Rift 1.8.2 (134) · Installed voices and liquid controls\n\n- Waits asynchronously for the installed Apple voice inventory before starting voice mode, and honors the selected installed voice. Closing during lookup stays responsive and ignores late results.\n- Restores liquid glass button morphing and a short spring pulse on a separate visual layer, while keeping fresh, responsive send/voice/close touch targets.\n- Adds a short, candid uncensored Rift personality. Migrates only the previous built-in default; custom instructions remain unchanged.\n\nVerification: 4 focused voice/personality/control checks passed, plus arm64 iPhone compilation and signed-package checks. No model downloads or inference tests were rerun. Physical-device speech playback remains unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 34d1f76256c65b9286509d96c82f3388f2a9c934\nIPA SHA-256: f8cb1dd66fb1f756d58e579ddbf86258f419033d66b6a32c56fc7e43beb91710\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.8.2-build134/Rift.ipa",
-      "size": 6526204
+      "version": "1.9",
+      "versionDate": "2026-10-17T23:19:08Z",
+      "versionDescription": "Rift 1.9 (135) · Pocket TTS and Personal Voice\n\n- Adds optional on-device Pocket TTS with phrase input and streamed audio playback. Apple speech stays available for fallback and unsupported languages.\n- Adds Personal Voice: import an existing 3–10 second audio clip or record up to ten seconds, preview it, name and save a reusable voice profile, select or delete saved voices.\n- Downloads a pinned English voice pack and cloning encoder once from Voice & sound. Speech and cloning are offline after setup; recordings are never uploaded.\n- Preserves the orb, liquid composer transitions, responsive close/send controls, chat models and assistant instructions.\n\nVerification: 10 focused speech/personal-voice/connected-control checks passed across the verified runs (nine retained on identical app source; one corrected test assertion rerun), including a real Pocket synthesis and saved-clone round trip, plus arm64 iPhone compilation and signed-package checks. No chat models were downloaded or retested. Physical-iPhone voice quality, first-audio latency, thermals and performance alongside LLM generation remain unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 1bc813ed8cb280bae35ac47975bbf2ff46e52dc6\nIPA SHA-256: 4e76e310cd14d9d0cfa891858582af3dab1c484623c62e3de3fabb373bba592c\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9-build135/Rift.ipa",
+      "size": 17927815
     }
   ],
   "news": []
