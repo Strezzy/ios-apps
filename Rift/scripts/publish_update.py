@@ -10,12 +10,12 @@ def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(pat
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.8.2' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
+assert report['app']=='Rift' and report['version']=='1.9' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
 from voice_test_scope import VOICE_TESTS, EXPECTED_TESTS, selection_for_source
 summary=report['test_summary']
 selection, prior = selection_for_source(report['source'], ROOT/'Rift')
 assert summary['failedTests']==0 and summary['skippedTests']==0
-assert report['test_selection']==selection, 'Only the four reviewed voice/personality/control checks may gate this patch'
+assert report['test_selection']==selection, 'Only the reviewed neural speech, personal voice and connected regression checks may gate this update'
 assert prior is None and summary['passedTests'] == EXPECTED_TESTS
 validated_count = summary['passedTests']
 report['validated_feature_test_count'] = validated_count
@@ -26,7 +26,7 @@ assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes'
 assert feature_update, 'This patch only supports the scoped release path'
 # Reuse 1.8 inference evidence only when the shipping inference/download code is unchanged.
 baseline='65ea4249858e49aae5e0be9d3fb0a9b561e623ad'
-allowed={'Rift/Rift/ChatView.swift','Rift/Rift/DebugChatFixture.swift','Rift/Rift/SettingsView.swift','Rift/Rift/AppModel.swift','Rift/Rift/VoiceController.swift','Rift/Rift/RiftPersonality.swift'}
+allowed={'Rift/Rift/ChatView.swift','Rift/Rift/DebugChatFixture.swift','Rift/Rift/SettingsView.swift','Rift/Rift/AppModel.swift','Rift/Rift/VoiceController.swift','Rift/Rift/RiftPersonality.swift','Rift/Rift/VoiceSettingsView.swift','Rift/Rift/PocketSpeechEngine.swift','Rift/Rift/PocketReplyPlayer.swift','Rift/Rift/PersonalVoiceLibrary.swift','Rift/Rift/PersonalVoiceCapture.swift','Rift/Rift/PersonalVoiceView.swift','Rift/Rift/Resources/PocketTTS-Notices.txt'}
 changed=set(cmd('git','diff','--name-only',baseline,source,'--','Rift/Rift').splitlines())
 assert changed <= allowed, changed
 old=cmd('git','show',baseline+':Rift/Rift/AppModel.swift')
@@ -41,7 +41,7 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.8.2' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
@@ -54,18 +54,19 @@ with zipfile.ZipFile(ipa) as z:
    assert model['uncensored']
    assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
 report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
-report.update(model_inference='Not rerun: unchanged shipping inference retains verified 1.8 build 132 evidence', validation_scope='4 focused checks: delayed installed-voice lookup and selection, close during lookup, personality migration, animated send/voice/close controls; arm64 iPhone compilation', metal_inference='Retained from 1.8 build 132; no model downloads or inference tests run')
+report.update(model_inference='Not rerun: unchanged shipping inference retains verified 1.8 build 132 evidence', validation_scope='10 focused checks: real Pocket streaming and offline cloned-voice round trip, personal voice persistence and input validation, fallback/cancel, Apple inventory, phrase streaming, personal voice settings and composer controls; arm64 iPhone compilation', metal_inference='Retained from 1.8 build 132; no model downloads or inference tests run')
 save(OUT/'BUILD-REPORT.json',report)
 if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.8.2-build'+report['build']
-notes=f'''Rift 1.8.2 ({report['build']}) · Installed voices and liquid controls
+tag='rift-1.9-build'+report['build']
+notes=f'''Rift 1.9 ({report['build']}) · Pocket TTS and Personal Voice
 
-- Waits asynchronously for the installed Apple voice inventory before starting voice mode, and honors the selected installed voice. Closing during lookup stays responsive and ignores late results.
-- Restores liquid glass button morphing and a short spring pulse on a separate visual layer, while keeping fresh, responsive send/voice/close touch targets.
-- Adds a short, candid uncensored Rift personality. Migrates only the previous built-in default; custom instructions remain unchanged.
+- Adds optional on-device Pocket TTS with phrase input and streamed audio playback. Apple speech stays available for fallback and unsupported languages.
+- Adds Personal Voice: import an existing 3–10 second audio clip or record up to ten seconds, preview it, name and save a reusable voice profile, select or delete saved voices.
+- Downloads a pinned English voice pack and cloning encoder once from Voice & sound. Speech and cloning are offline after setup; recordings are never uploaded.
+- Preserves the orb, liquid composer transitions, responsive close/send controls, chat models and assistant instructions.
 
-Verification: {validated_count} focused voice/personality/control checks passed, plus arm64 iPhone compilation and signed-package checks. No model downloads or inference tests were rerun. Physical-device speech playback remains unmeasured by this runner.
+Verification: {validated_count} focused speech/personal-voice/connected-control checks passed, including a real Pocket synthesis and saved-clone round trip, plus arm64 iPhone compilation and signed-package checks. No chat models were downloaded or retested. Physical-iPhone voice quality, first-audio latency, thermals and performance alongside LLM generation remain unmeasured by this runner.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.
 Build source: {source}
@@ -79,21 +80,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality.'
+metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.8.2-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.9-build'+report['build'])
 for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.8.2 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.9 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.8.2 ({report['build']}) · Installed voices and liquid controls",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9 ({report['build']}) · Pocket TTS and Personal Voice",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -108,5 +109,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.8.2 ({report['build']}) Installed voices and liquid controls [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.9 ({report['build']}) Pocket TTS and Personal Voice [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)

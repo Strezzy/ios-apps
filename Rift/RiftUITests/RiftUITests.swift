@@ -8,6 +8,28 @@ final class RiftUITests: XCTestCase {
     override func tearDownWithError() throws {
         XCUIDevice.shared.orientation = .portrait
     }
+    func testPersonalVoiceAndAppleFallbackSettingsAreReachable() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Chat history"].waitForExistence(timeout: 15))
+        app.buttons["Chat history"].tap()
+        app.buttons["drawerSettings"].tap()
+        let link = app.buttons["voiceSettingsLink"]
+        XCTAssertTrue(link.waitForExistence(timeout: 5)); link.tap()
+        let tabs = app.segmentedControls["voiceTypeTabs"]
+        for _ in 0..<3 { if tabs.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(tabs.waitForExistence(timeout: 5))
+        tabs.buttons["Personal Voice"].tap()
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["importPersonalVoice"].exists)
+        XCTAssertTrue(app.buttons["recordPersonalVoice"].exists)
+        for _ in 0..<3 { if tabs.isHittable { break }; app.swipeDown() }
+        tabs.buttons["Apple"].tap()
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["previewVoice"].exists)
+        attach("Rift-personal-voice-settings")
+    }
     func testComposerRespondsImmediatelyAfterReplyAndVoiceOpen() {
         let app = XCUIApplication()
         app.launchArguments = ["--rift-ui-fixture", "--rift-ui-navigation", "--rift-ui-controls"]

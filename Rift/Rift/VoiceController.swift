@@ -23,6 +23,9 @@ import Combine
     private let speech: any VoiceSpeechService
     private let activationSound: any VoiceActivationPlaying
     private let synthesizer = AVSpeechSynthesizer()
+    private let pocketPlayer = PocketReplyPlayer()
+    private var pocketFailed = false
+    private var applePreview = false
     private var recorder: AVAudioRecorder?
     private var captureURL: URL?
     private var clock: Task<Void, Never>?
@@ -51,6 +54,18 @@ import Combine
         self.activationSound = activationSound ?? VoiceActivationSound()
         super.init()
         synthesizer.delegate = self
+        pocketPlayer.onLevel = { [weak self] energy in
+            guard let self, self.opened else { return }
+            self.level = energy; self.speechBeat = Date()
+        }
+        pocketPlayer.onDrained = { [weak self] in self?.playbackDrained() }
+        pocketPlayer.onFailure = { [weak self] remaining, message in
+            guard let self, self.opened else { return }
+            self.pocketFailed = true
+            PocketVoiceSettings.shared.error = message + " Apple speech remains available as fallback."
+            if remaining.isEmpty { self.playbackDrained() }
+            else { self.enqueue(remaining, preview: self.previewing) }
+        }
         model.$generating.removeDuplicates().sink { [weak self] value in
             guard !value else { return }
             Task { @MainActor in self?.generationFinished() }
@@ -81,6 +96,9 @@ import Combine
     func open(playActivationSound: Bool = false) async {
         guard opened else { return }
         wantsListening = true
+        if PocketVoiceSettings.shared.canUse(language: language) {
+            Task { await PocketSpeechEngine.shared.warm() }
+        }
         let id = token.renew()
         if playActivationSound && (UserDefaults.standard.object(forKey: "rift.voiceActivationSound") as? Bool ?? true) {
             await activationSound.play()
@@ -187,7 +205,7 @@ import Combine
             error = "Choose and download a chat model first, and finish any active reply or transfer."; return
         }
         guard assets == .ready else { error = "Prepare the on-device speech language first."; return }
-        guard chosenVoice != nil else { error = "Install an Apple speech voice in Settings → Accessibility → Read & Speak → Voices, then reopen voice mode."; return }
+        guard chosenVoice != nil || PocketVoiceSettings.shared.canUse(language: language) else { error = "Install an Apple speech voice in Settings → Accessibility → Read & Speak → Voices, then reopen voice mode."; return }
         pause()
         wantsListening = true
         error = nil; heard = ""; answer = ""; phase = .preparing
@@ -290,29 +308,35 @@ import Combine
         ownsGeneration = false
         if replyStream.diverged { pause(); error = "The reply changed while it was being spoken."; return }
         if !tail.isEmpty { enqueue(tail, preview: false) }
-        if queuedUtterances.isEmpty {
+        if pocketPlayer.active { pocketPlayer.finish() }
+        if queuedUtterances.isEmpty && !pocketPlayer.active {
             if replyStream.hasSpoken { playbackDrained() }
             else { phase = .idle; error = "There is no spoken answer yet. The model's output remains in your chat." }
         }
     }
-    func previewVoice() {
+    func previewVoice(appleOnly: Bool = false) {
         guard phase == .idle || (phase == .speaking && previewing) else { return }
-        pause(); error = nil
+        pause(); error = nil; applePreview = appleOnly
         say("Hello. This is how I will sound in Rift. Everything you hear is spoken on your device.", preview: true)
     }
     private func say(_ text: String, preview: Bool) {
         let chunks = VoiceText.chunks(text)
         guard !chunks.isEmpty else { phase = .idle; error = "There is no spoken answer yet. The model's output remains in your chat."; return }
         enqueue(chunks, preview: preview)
+        if preview && pocketPlayer.active { pocketPlayer.finish() }
     }
     private func enqueue(_ chunks: [String], preview: Bool) {
-        guard let voice = chosenVoice else { pause(); error = "No installed Apple voice is available."; return }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .spokenAudio)
             try session.setActive(true)
         } catch { pause(); self.error = error.localizedDescription; return }
         previewing = preview; phase = .speaking
+        if !pocketFailed && !applePreview && PocketVoiceSettings.shared.canUse(language: language) {
+            pocketPlayer.enqueue(chunks, profile: PocketVoiceSettings.shared.selectedProfile)
+            return
+        }
+        guard let voice = chosenVoice else { pause(); error = "No installed Apple fallback voice is available. Download an Apple voice or prepare Pocket TTS in Voice & sound."; return }
         for chunk in chunks {
             let utterance = AVSpeechUtterance(string: chunk)
             utterance.voice = voice
@@ -343,7 +367,7 @@ import Combine
         }
     }
     private func playbackDrained() {
-        guard queuedUtterances.isEmpty else { return }
+        guard queuedUtterances.isEmpty, !pocketPlayer.active else { return }
         level = 0
         if ownsGeneration { phase = .thinking; return }
         let again = handsFree && wantsListening && !previewing && opened
@@ -372,6 +396,7 @@ import Combine
         token.renew(); operation?.cancel(); operation = nil; deadline?.cancel(); deadline = nil
         clock?.cancel(); clock = nil; recorder?.stop(); recorder = nil
         if let captureURL { try? FileManager.default.removeItem(at: captureURL) }; captureURL = nil
+        pocketPlayer.stop(); pocketFailed = false; applePreview = false
         queuedUtterances.removeAll(); synthesizer.stopSpeaking(at: .immediate)
         speechCancellation = Task { await speech.cancel() }
         let cancelGeneration = ownsGeneration

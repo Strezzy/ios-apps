@@ -25,3 +25,16 @@ The 1.8 CI scope covers compilation and ten focused checks of attachments, drawe
 - https://support.apple.com/104993
 - https://kyutai.org/pocket-tts-technical-report/
 - https://github.com/RahulRachuri/pocket-tts-swift
+
+
+## Pocket TTS and Personal Voice (1.9)
+
+Settings → Voice & sound → Pocket TTS downloads the pinned English Core ML models and cloning encoder once. Pocket is preferred after setup; Apple remains selectable and is used before setup, for other speech languages, and after a neural speech failure. Current Pocket output uses the model's natural pace/pitch; Apple speed and pitch settings continue to apply to Apple voices.
+
+Personal Voice accepts imported WAV/M4A/MP3 audio or a fresh microphone recording. Use 3–10 seconds of clear mono/stereo speech (5–10 recommended, maximum 20 MB). Preview the recording, enter a name, and save. Only the conditioning profile and name persist, in protected local files excluded from backup. Temporary recordings are removed after saving, discarding or leaving the screen. Saved voices can be selected, previewed and deleted. This is Rift's local voice cloning, separate from Apple's accessibility Personal Voice feature.
+
+Speech reuses the existing stable-phrase splitter. A persistent Pocket session accepts each phrase while the LLM generates and streams 24 kHz PCM into AVAudioEngine. Listening resumes only when both generation and actual audio playback complete. Stop/close invalidates callbacks immediately and cancels synthesis asynchronously. On failure, Apple resumes from the unfinished phrase (the partial phrase may repeat). Model loading is asynchronous and warmed when voice mode opens; a stalled first audio falls back after eight seconds.
+
+FluidAudio revision: `2d6c42ca5f3accc0faf9fee9e0fff5b9b2cf6042`. Voice asset revision: `91748676fe3c8b2eb3007b3125253bcd898202c3`. English int8 FlowLM, GPU/CPU Core ML placement; Neural Engine placement is avoided due to reported upstream compilation failures. Models are pinned, and library network access is disabled outside explicit setup. See the bundled PocketTTS-Notices.txt for model/runtime attribution.
+
+The scoped release checks cover a real streaming-and-cloning round trip, storage/input validation, cancellation/fallback, installed Apple voices, settings and composer responsiveness. Simulator results do not establish iPhone audio quality, concurrent LLM/TTS latency, memory pressure or thermal performance.
