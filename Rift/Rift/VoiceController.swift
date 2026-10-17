@@ -19,6 +19,7 @@ import Combine
     @Published var rate = (UserDefaults.standard.object(forKey: "rift.voiceRate") as? Double) ?? 0.47 { didSet { UserDefaults.standard.set(rate, forKey: "rift.voiceRate") } }
     @Published var pitch = (UserDefaults.standard.object(forKey: "rift.voicePitch") as? Double) ?? 1.0 { didSet { UserDefaults.standard.set(pitch, forKey: "rift.voicePitch") } }
     let model: AppModel
+    private let voiceInventory: @Sendable () async -> [AVSpeechSynthesisVoice]
     private let speech: any VoiceSpeechService
     private let activationSound: any VoiceActivationPlaying
     private let synthesizer = AVSpeechSynthesizer()
@@ -43,7 +44,8 @@ import Combine
         FileManager.default.temporaryDirectory.appendingPathComponent("RiftVoiceTurns", isDirectory: true)
     }
 
-    init(model: AppModel, speech: any VoiceSpeechService = LocalSpeechService(), activationSound: (any VoiceActivationPlaying)? = nil) {
+    init(model: AppModel, speech: any VoiceSpeechService = LocalSpeechService(), activationSound: (any VoiceActivationPlaying)? = nil, voiceInventory: @escaping @Sendable () async -> [AVSpeechSynthesisVoice] = VoiceController.installedVoices) {
+        self.voiceInventory = voiceInventory
         self.model = model
         self.speech = speech
         self.activationSound = activationSound ?? VoiceActivationSound()
@@ -93,6 +95,8 @@ import Combine
         // Clean up only Rift's own short-lived audio, including after a prior crash.
         try? FileManager.default.removeItem(at: captureDirectory)
         refreshVoices()
+        await voiceRefresh?.value
+        guard opened, !Task.isCancelled else { return }
         let supported = await speech.languages()
         guard opened, !Task.isCancelled else { return }
         languages = supported
@@ -115,18 +119,23 @@ import Combine
         guard chosen == language, opened else { return }
         assets = result
     }
+    nonisolated static func installedVoices() async -> [AVSpeechSynthesisVoice] {
+        await Task.detached(priority: .utility) {
+            AVSpeechSynthesisVoice.speechVoices().filter {
+                $0.identifier.hasPrefix("com.apple.") && !$0.voiceTraits.contains(.isPersonalVoice)
+            }.sorted { ($0.language, $0.name, $0.identifier) < ($1.language, $1.name, $1.identifier) }
+        }.value
+    }
     func refreshVoices() {
-        voiceRefresh?.cancel()
+        // Coalesce notifications with startup so load() awaits the inventory
+        // actually used by talk(), rather than a cancelled earlier refresh.
+        guard voiceRefresh == nil else { return }
+        let inventory = voiceInventory
         voiceRefresh = Task { [weak self] in
-            // Apple's first voice inventory lookup can block for many seconds.
-            // Keep the composer and close control responsive while it completes.
-            let available = await Task.detached(priority: .utility) {
-                AVSpeechSynthesisVoice.speechVoices().filter {
-                    $0.identifier.hasPrefix("com.apple.") && !$0.voiceTraits.contains(.isPersonalVoice)
-                }.sorted { ($0.language, $0.name, $0.identifier) < ($1.language, $1.name, $1.identifier) }
-            }.value
+            let available = await inventory()
             guard let self, self.opened, !Task.isCancelled else { return }
             self.voices = available
+            self.voiceRefresh = nil
         }
     }
     var chosenVoice: AVSpeechSynthesisVoice? {

@@ -39,7 +39,7 @@ struct SettingsView: View {
                     }
                     Section("Assistant instructions") {
                         TextEditor(text:$model.systemPrompt).frame(minHeight:90).disabled(model.generating)
-                        Button("Restore default instructions") { model.systemPrompt="You are Rift, a helpful local assistant. Answer clearly." }.disabled(model.generating)
+                        Button("Restore default instructions") { model.systemPrompt=RiftPersonality.defaultPrompt }.disabled(model.generating)
                     }
                     Section("This iPhone") {
                         LabeledContent("Device",value:model.device.name)
@@ -73,7 +73,7 @@ struct SettingsView: View {
                     }
                     Section("Credits") {
                         Text("Inference: llama.cpp and ggml (MIT), with their bundled chat-template runtime. Models retain their respective authors' licenses; see each download's source and license.").font(.caption)
-                        Text("Rift 1.8.1 · Strezzy").font(.caption).foregroundStyle(.secondary)
+                        Text("Rift 1.8.2 · Strezzy").font(.caption).foregroundStyle(.secondary)
                     }
                 }.scrollContentBackground(.hidden)
             }.task {

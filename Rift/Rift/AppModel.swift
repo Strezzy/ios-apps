@@ -91,7 +91,7 @@ final class InferenceService: @unchecked Sendable {
     @AppStorage("rift.temperature") var temperature = 0.7
     @AppStorage("rift.thinking") var thinking = false
     @AppStorage("rift.cellular") var cellular = false
-    @AppStorage("rift.systemPrompt") var systemPrompt = "You are Rift, a helpful local assistant. Answer clearly."
+    @AppStorage("rift.systemPrompt") var systemPrompt = RiftPersonality.defaultPrompt
     private(set) var storage: LocalStorage?
     let device = DeviceProfile.current
     private let inference = InferenceService()
@@ -119,6 +119,7 @@ final class InferenceService: @unchecked Sendable {
     func bootstrap() async {
         guard !started else { return }; started = true
         PrivacyPreferences.migrate()
+        RiftPersonality.migrate()
         let root = bootstrapRoot
         do {
             let snapshot = try await Task.detached(priority: .userInitiated) { () throws -> (LocalStorage, [CatalogModel], [InstalledModel], [Conversation]) in

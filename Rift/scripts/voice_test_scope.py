@@ -1,10 +1,9 @@
-"""Only the composer and full-height drawer patch; no model downloads or inference."""
+"""Only voice inventory, prompt migration and animated composer responsiveness."""
 VOICE_TESTS = [
+    'RiftTests/VoicePatchTests',
     'RiftUITests/RiftUITests/testComposerRespondsImmediatelyAfterReplyAndVoiceOpen',
-    'RiftUITests/RiftUITests/testDrawerRevealSelectionAndSettings',
-    'RiftUITests/RiftUITests/testLatestReplyMovesAboveKeyboardWhileStreamingAndRotating',
 ]
-EXPECTED_TESTS = 3
+EXPECTED_TESTS = 4
 
 def selection_for_source(source, root):
     return VOICE_TESTS, None

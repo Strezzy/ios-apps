@@ -269,17 +269,7 @@ struct ChatView: View {
                     .font(.body).lineLimit(1...4).focused($composing)
                     .padding(.leading, 2).padding(.vertical, 14)
                     .submitLabel(.send).onSubmit(send).accessibilityIdentifier("messageInput")
-                Button {
-                    switch composerAction {
-                    case .close: closeVoice()
-                    case .stop: model.stop()
-                    case .send: send()
-                    case .voice:
-                        composing = false
-                        VoiceOrbFeedback.play(appearing: true)
-                        voiceSession = VoiceController(model: model)
-                    }
-                } label: {
+                ZStack {
                     Image(systemName: action.symbol)
                         .font(.system(size: 18, weight: .semibold))
                         .contentTransition(.symbolEffect(.replace))
@@ -292,10 +282,33 @@ struct ChatView: View {
                         }
                         .contentShape(Circle())
                         .padding(3)
-                }.buttonStyle(.plain)
-                    .id(action.identifier) // A new role must never retain the previous role’s touch action.
-                    .accessibilityLabel(action.label).accessibilityIdentifier(action.identifier)
-                    .disabled(action == .send ? (model.selectedModel == nil || !model.ready || model.busy || readingAttachment || (attachment?.isImage == true && !imageSupportReady)) : (action == .voice && (model.busy || readingAttachment)))
+                        .keyframeAnimator(initialValue: CGFloat(1), trigger: action.identifier) { view, scale in
+                            view.scaleEffect(reduceMotion ? 1 : scale)
+                        } keyframes: { _ in
+                            SpringKeyframe(0.88, duration: 0.12)
+                            SpringKeyframe(1.06, duration: 0.16)
+                            SpringKeyframe(1, duration: 0.18)
+                        }
+                        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: action)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+
+                    Button {
+                    switch composerAction {
+                    case .close: closeVoice()
+                    case .stop: model.stop()
+                    case .send: send()
+                    case .voice:
+                        composing = false
+                        VoiceOrbFeedback.play(appearing: true)
+                        voiceSession = VoiceController(model: model)
+                    }
+                    } label: {
+                        Circle().fill(.clear).frame(width: 52, height: 52).contentShape(Circle())
+                    }.buttonStyle(.plain)
+                        .id(action.identifier)
+                        .accessibilityLabel(action.label).accessibilityIdentifier(action.identifier)
+                        .disabled(action == .send ? (model.selectedModel == nil || !model.ready || model.busy || readingAttachment || (attachment?.isImage == true && !imageSupportReady)) : (action == .voice && (model.busy || readingAttachment)))
+                }.frame(width: 52, height: 52)
             }
             .padding(.horizontal, 3).padding(.vertical, 2)
             .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 29))

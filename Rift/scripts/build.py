@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; BUILD=ROOT/'Build'; LOGS=BUILD/'Logs'; SHOTS=BUILD/'Screenshots'
 for path in [BUILD,LOGS,SHOTS]: path.mkdir(parents=True,exist_ok=True)
 REPORT=BUILD/'BUILD-REPORT.json'
-report=json.loads(REPORT.read_text()) if REPORT.exists() else {'app':'Rift','version':'1.8.1','build':str(os.getenv('RIFT_BUILD_NUMBER','1')),'source':os.getenv('RIFT_SOURCE',os.getenv('GITHUB_SHA','local')),'iPhone_inference':'not_tested','LiveContainer':'not_tested','thermal_performance':'not_tested','simulator':'not_run','model_inference':'not_run'}
+report=json.loads(REPORT.read_text()) if REPORT.exists() else {'app':'Rift','version':'1.8.2','build':str(os.getenv('RIFT_BUILD_NUMBER','1')),'source':os.getenv('RIFT_SOURCE',os.getenv('GITHUB_SHA','local')),'iPhone_inference':'not_tested','LiveContainer':'not_tested','thermal_performance':'not_tested','simulator':'not_run','model_inference':'not_run'}
 def save(): REPORT.write_text(json.dumps(report,indent=2)+'\n')
 def run(command,name,cwd=ROOT):
     print('+',' '.join(map(str,command)),flush=True)
@@ -17,7 +17,7 @@ def run(command,name,cwd=ROOT):
 def capture(command): return subprocess.check_output(list(map(str,command)),text=True)
 def notices():
     source=ROOT/'ThirdParty/llama'
-    sections=['Rift 1.8.1 dependency notices\nllama.cpp revision 8345f333951c661d166b00e6f9362e553768f292\nhttps://github.com/ggml-org/llama.cpp\n\nThe following notices accompany the pinned source tree. Some components are not linked in this build.']
+    sections=['Rift 1.8.2 dependency notices\nllama.cpp revision 8345f333951c661d166b00e6f9362e553768f292\nhttps://github.com/ggml-org/llama.cpp\n\nThe following notices accompany the pinned source tree. Some components are not linked in this build.']
     names=[]
     for path in sorted(source.rglob('*')):
         if not path.is_file() or path.is_symlink(): continue
