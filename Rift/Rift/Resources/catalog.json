@@ -40,6 +40,26 @@
     "uncensored": true
   },
   {
+    "id": "qwen35-4b-q6-k",
+    "name": "Qwen3.5 4B \u00b7 Q6_K",
+    "family": "Qwen",
+    "badge": "Higher precision",
+    "detail": "Q6_K of the same Aggressive uncensored model. Higher precision with a larger download and memory footprint.",
+    "repo": "HauhauCS/Qwen3.5-4B-Uncensored-HauhauCS-Aggressive",
+    "minimumRAM": 8,
+    "workingGB": 4.6,
+    "rank": 41,
+    "architecture": "qwen35",
+    "revision": "c09cdbcdb1fefad6d335809d445621b5f5ba0c6e",
+    "filename": "Qwen3.5-4B-Uncensored-HauhauCS-Aggressive-Q6_K.gguf",
+    "bytes": 3464055136,
+    "sha256": "ba93c21300854075ab42655bc30dca82c7c6c958f511d1ec9ea2b3e750b4b75f",
+    "variant": "Q6_K",
+    "license": "apache-2.0",
+    "licenseText": "The model remains under its publisher's and base model's license. Review the source and license before downloading. Rift does not bundle model weights.",
+    "uncensored": true
+  },
+  {
     "id": "qwen35-9b",
     "name": "Qwen3.5 9B",
     "family": "Qwen",
