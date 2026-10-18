@@ -314,12 +314,23 @@
     {
       "name": "Rift",
       "subtitle": "Private offline AI chat",
-      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning. Version 1.9.1 adds floating particle history that reassembles while browsing earlier messages. Version 1.9.2 makes history particles more animated and keeps the effect active while scrolling. Version 1.9.3 adds the Q6_K download option for Qwen3.5 4B Aggressive uncensored.",
+      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning. Version 1.9.1 adds floating particle history that reassembles while browsing earlier messages. Version 1.9.2 makes history particles more animated and keeps the effect active while scrolling. Version 1.9.3 adds the Q6_K download option for Qwen3.5 4B Aggressive uncensored. Version 1.9.4 reduces repeated UI and persistence work while preserving existing features and appearance.",
       "category": "utilities",
       "tintColor": "#D62947",
       "bundleIdentifier": "com.billy.rift",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "1.9.4",
+          "buildVersion": "139",
+          "buildNumber": "139",
+          "date": "2026-10-18T04:57:10Z",
+          "localizedDescription": "Rift 1.9.4 (139) · Streaming performance\n\n- Avoids rebuilding unchanged message rows while replies stream and history scrolls.\n- Skips unnecessary animation attributes for settled text while preserving all animation timing and styles.\n- Checkpoints only the active chat during streaming, with the same one-second recovery interval and full saves at completion.\n- Avoids rewriting unchanged model metadata and redundant delayed saves.\n- Keeps the existing appearance, models, voice functionality, shaders and inference settings.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 9d235e4dab49245185a0762d87dc8c9f9a94004b\nIPA SHA-256: f3426912288849ebf9783bb55d8dc5d1bd848e1e514aef258e6d7865bcd50870\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.4-build139/Rift.ipa",
+          "size": 17962268,
+          "minOSVersion": "26.0",
+          "sha256": "f3426912288849ebf9783bb55d8dc5d1bd848e1e514aef258e6d7865bcd50870"
+        },
         {
           "version": "1.9.3",
           "buildVersion": "138",
@@ -486,11 +497,11 @@
           "NSSpeechRecognitionUsageDescription": "Transcribe voice-chat turns using Apple's on-device speech model. No server recognition is used."
         }
       },
-      "version": "1.9.3",
-      "versionDate": "2026-10-18T03:35:40Z",
-      "versionDescription": "Rift 1.9.3 (138) · Qwen3.5 4B Q6_K\n\n- Adds Q6_K as a download choice for the same HauhauCS Qwen3.5 4B Aggressive uncensored model.\n- Keeps the existing Q4_K_M choice. No other app-content or behavior changes.\n- Download: 3.46 GB, pinned to the publisher's existing revision and SHA-256.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Q6_K inference and device performance have not been tested in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 5253829074f5fdc72dd5cc5197eebc53b27e305d\nIPA SHA-256: 0d9c5fd915e42d6033989a91732a79b3ec8487bc2fd04aafa3ec1a02eae82493\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.3-build138/Rift.ipa",
-      "size": 17949184
+      "version": "1.9.4",
+      "versionDate": "2026-10-18T04:57:10Z",
+      "versionDescription": "Rift 1.9.4 (139) · Streaming performance\n\n- Avoids rebuilding unchanged message rows while replies stream and history scrolls.\n- Skips unnecessary animation attributes for settled text while preserving all animation timing and styles.\n- Checkpoints only the active chat during streaming, with the same one-second recovery interval and full saves at completion.\n- Avoids rewriting unchanged model metadata and redundant delayed saves.\n- Keeps the existing appearance, models, voice functionality, shaders and inference settings.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 9d235e4dab49245185a0762d87dc8c9f9a94004b\nIPA SHA-256: f3426912288849ebf9783bb55d8dc5d1bd848e1e514aef258e6d7865bcd50870\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.4-build139/Rift.ipa",
+      "size": 17962268
     }
   ],
   "news": []
