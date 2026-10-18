@@ -103,6 +103,7 @@ final class InferenceService: @unchecked Sendable {
     private var pauseOperation: UUID?
     private var stopping = false
     private let diskQueue = DispatchQueue(label: "com.billy.rift.persistence", qos: .utility)
+    private let persistence = ConversationPersistence()
     var selectedModel: InstalledModel? { installed.first { $0.id == selectedModelID } }
     var activeChat: Conversation? { conversations.first { $0.id == activeChatID } }
     var busy: Bool { transferID != nil || importing || pausing }
@@ -129,7 +130,7 @@ final class InferenceService: @unchecked Sendable {
                 guard !catalog.isEmpty, catalog.allSatisfy({ $0.uncensored && $0.sha256.count == 64 && $0.revision.count == 40 && $0.bytes > 0 }) else { throw RiftFailure("The model catalog did not pass validation.") }
                 let installed: [InstalledModel] = try store.read("models.json", fallback: [])
                 let existing = installed.filter { FileManager.default.fileExists(atPath: store.url(for: $0).path) }
-                let chats: [Conversation] = try store.read("chats.json", fallback: [])
+                let chats = try ConversationPersistence.read(from: store)
                 return (store, catalog, existing, chats)
             }.value
             storage = snapshot.0; catalog = snapshot.1; installed = snapshot.2; conversations = snapshot.3
@@ -160,16 +161,27 @@ final class InferenceService: @unchecked Sendable {
     }
     func dismissError() { error = nil }
     private func save() {
+        saveTask?.cancel(); saveTask = nil
         guard let storage, startupError == nil else { return }
-        let chats = conversations, models = installed
+        let chats = conversations, models = installed, persistence = persistence
         diskQueue.async { [weak self] in
-            do { try storage.write(chats, name: "chats.json"); try storage.write(models, name: "models.json") }
+            do { try persistence.save(chats: chats, models: models, to: storage) }
             catch { let message = error.localizedDescription; Task { @MainActor in self?.error = "Could not save local data: " + message } }
         }
     }
-    private func scheduleSave() {
+    private func scheduleSave(chatID: UUID) {
         guard saveTask == nil else { return }
-        saveTask = Task { try? await Task.sleep(for: .seconds(1)); self.saveTask = nil; self.save() }
+        saveTask = Task {
+            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            self.saveTask = nil
+            guard let storage, startupError == nil,
+                  let chat = conversations.first(where: { $0.id == chatID }) else { return }
+            let persistence = persistence
+            diskQueue.async { [weak self] in
+                do { try persistence.checkpoint(chat, to: storage) }
+                catch { let message = error.localizedDescription; Task { @MainActor in self?.error = "Could not save local data: " + message } }
+            }
+        }
     }
     func newChat() { guard !generating else { return }; activeChatID = nil; status = "On device" }
     func select(_ model: InstalledModel) {
@@ -273,7 +285,7 @@ final class InferenceService: @unchecked Sendable {
                 let finalText = try await inference.run(model: model, url: storage.url(for: model), messages: messages, projector: projector, context: context, maxTokens: maxTokens, temperature: Float(temperature), thinking: thinking, workingGB: working, text: { [weak self] text in
                     Task { @MainActor in
                         guard let self, self.generationID == operation, let c = self.conversations.firstIndex(where: { $0.id == chatID }), let m = self.conversations[c].messages.firstIndex(where: { $0.id == replyID }) else { return }
-                        self.conversations[c].messages[m].content = text; self.scheduleSave()
+                        self.conversations[c].messages[m].content = text; self.scheduleSave(chatID: chatID)
                     }
                 }, status: { [weak self] status in
                     Task { @MainActor in guard let self, self.generationID == operation else { return }; self.status = status }

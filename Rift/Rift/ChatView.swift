@@ -173,7 +173,12 @@ struct ChatView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     ForEach(model.activeChat?.messages ?? []) { message in
-                        MessageView(message: message, isStreaming: model.generating && message.id == model.activeChat?.messages.last?.id)
+                        MessageView(message: message,
+                                    isStreaming: model.generating && message.id == model.activeChat?.messages.last?.id,
+                                    canRegenerate: message.id == model.activeChat?.messages.last?.id,
+                                    generating: model.generating,
+                                    regenerate: { model.regenerate() })
+                            .equatable()
                             .modifier(HistoryDissolve(viewportHeight: viewport.height,
                                 scrollable: viewport.overflows))
                             .id(message.id)
@@ -361,10 +366,16 @@ struct ChatView: View {
         if model.send(draft, attachments: attachment.map { [$0] } ?? []) { draft = ""; attachment = nil; followLatest() }
     }
 }
-struct MessageView: View {
-    @EnvironmentObject var model: AppModel
+struct MessageView: View, Equatable {
     let message: ChatMessage
     let isStreaming: Bool
+    let canRegenerate: Bool
+    let generating: Bool
+    let regenerate: () -> Void
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.message == rhs.message && lhs.isStreaming == rhs.isStreaming
+            && lhs.canRegenerate == rhs.canRegenerate && lhs.generating == rhs.generating
+    }
     var body: some View {
         let user=message.role == "user", parts=ReplyParts.parse(message.content)
         HStack(alignment:.top) {
@@ -389,7 +400,7 @@ struct MessageView: View {
                     }
                     HStack(spacing:18) {
                         Button { UIPasteboard.general.string=message.content } label: { Image(systemName:"document.on.document") }.accessibilityLabel("Copy reply")
-                        if message.id == model.activeChat?.messages.last?.id { Button { model.regenerate() } label: { Label(message.isFailedReply ? "Retry reply" : "Regenerate", systemImage:"arrow.clockwise") }.disabled(model.generating).accessibilityLabel("Regenerate reply") }
+                        if canRegenerate { Button(action: regenerate) { Label(message.isFailedReply ? "Retry reply" : "Regenerate", systemImage:"arrow.clockwise") }.disabled(generating).accessibilityLabel("Regenerate reply") }
                         if message.interrupted { Text("Interrupted").font(.caption2) }
                     }.font(.caption).foregroundStyle(.secondary).buttonStyle(.plain)
                 }

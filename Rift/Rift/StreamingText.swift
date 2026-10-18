@@ -174,7 +174,10 @@ struct StreamingText: View {
         .task(id: animationCompletion) {
             guard !settled, animationCompletion.isFinite else { return }
             let wait = max(0, animationCompletion - Date.timeIntervalSinceReferenceDate)
-            do { try await Task.sleep(for: .seconds(wait)); settled = true } catch { }
+            do {
+                try await Task.sleep(for: .seconds(wait))
+                settled = true; assembled = Text(richText)
+            } catch { }
         }
     }
     private func update() {
@@ -183,13 +186,20 @@ struct StreamingText: View {
         let now = Date.timeIntervalSinceReferenceDate
         let animate = (isStreaming || hasStreamed) && !interrupted && style != .instant
         schedule.ingest(String(richText.characters), now: now, animate: animate)
-        assembled = ReplyTextComposition.make(richText, arrivals: schedule.arrivals)
+        // Historical messages need formatted text, not per-word animation
+        // attributes and character arrays that will never be rendered.
+        guard animate else {
+            assembled = Text(richText); settled = true
+            hasStreamed = hasStreamed || isStreaming
+            return
+        }
         hasStreamed = hasStreamed || isStreaming
         settled = !animate || now >= animationCompletion
+        assembled = settled ? Text(richText) : ReplyTextComposition.make(richText, arrivals: schedule.arrivals)
     }
     private func finish() {
         schedule.finishImmediately(now: Date.timeIntervalSinceReferenceDate)
-        assembled = ReplyTextComposition.make(richText, arrivals: schedule.arrivals)
+        assembled = Text(richText)
         settled = true
     }
 }

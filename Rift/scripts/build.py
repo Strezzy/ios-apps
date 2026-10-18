@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; BUILD=ROOT/'Build'; LOGS=BUILD/'Logs'; SHOTS=BUILD/'Screenshots'
 for path in [BUILD,LOGS,SHOTS]: path.mkdir(parents=True,exist_ok=True)
 REPORT=BUILD/'BUILD-REPORT.json'
-report=json.loads(REPORT.read_text()) if REPORT.exists() else {'app':'Rift','version':'1.9.3','build':str(os.getenv('RIFT_BUILD_NUMBER','1')),'source':os.getenv('RIFT_SOURCE',os.getenv('GITHUB_SHA','local')),'iPhone_inference':'not_tested','LiveContainer':'not_tested','thermal_performance':'not_tested','simulator':'not_run','model_inference':'not_run'}
+report=json.loads(REPORT.read_text()) if REPORT.exists() else {'app':'Rift','version':'1.9.4','build':str(os.getenv('RIFT_BUILD_NUMBER','1')),'source':os.getenv('RIFT_SOURCE',os.getenv('GITHUB_SHA','local')),'iPhone_inference':'not_tested','LiveContainer':'not_tested','thermal_performance':'not_tested','simulator':'not_run','model_inference':'not_run'}
 def save(): REPORT.write_text(json.dumps(report,indent=2)+'\n')
 def run(command,name,cwd=ROOT):
     print('+',' '.join(map(str,command)),flush=True)
@@ -17,7 +17,7 @@ def run(command,name,cwd=ROOT):
 def capture(command): return subprocess.check_output(list(map(str,command)),text=True)
 def notices():
     source=ROOT/'ThirdParty/llama'
-    sections=['Rift 1.9.3 dependency notices\nllama.cpp revision 8345f333951c661d166b00e6f9362e553768f292\nhttps://github.com/ggml-org/llama.cpp\n\nThe following notices accompany the pinned source tree. Some components are not linked in this build.']
+    sections=['Rift 1.9.4 dependency notices\nllama.cpp revision 8345f333951c661d166b00e6f9362e553768f292\nhttps://github.com/ggml-org/llama.cpp\n\nThe following notices accompany the pinned source tree. Some components are not linked in this build.']
     names=[]
     for path in sorted(source.rglob('*')):
         if not path.is_file() or path.is_symlink(): continue
@@ -83,14 +83,14 @@ def smoke():
     subprocess.run(['xcrun','simctl','shutdown','all'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     run([sys.executable,ROOT/'scripts/smoke.py'],'model-inference')
     report['model_inference']='all catalog entries passed actual macOS CPU smoke'; save()
-def package(require_models=True, catalog_only=False):
+def package(require_models=True, scoped_no_tests=False):
     assert report.get('iphone_compilation') == 'passed', 'iPhone build did not pass'
-    if catalog_only:
-        from catalog_release import verify_source
+    if scoped_no_tests:
+        from performance_release import verify_source
         verify_source(ROOT.parent, report['source'])
         assert report['simulator'] == 'not_run' and 'test_summary' not in report
         report['tests'] = 'Not run, as requested by the user'
-        report['release_scope'] = 'catalog-only-qwen35-4b-q6-k'
+        report['release_scope'] = 'streaming-and-persistence-performance'
     else:
         assert report['simulator']=='passed' and (not require_models or report['model_inference'].startswith('all catalog')), 'Required validation did not pass'
     app=BUILD/'DeviceDerivedData/Build/Products/Release-iphoneos/Rift.app'
@@ -108,7 +108,7 @@ def package(require_models=True, catalog_only=False):
     ipa=BUILD/'Rift.ipa'; ipa.unlink(missing_ok=True)
     run(['ditto','-c','-k','--keepParent',payload,ipa],'package')
     with ipa.open('rb') as f: report['ipa_sha256']=hashlib.file_digest(f,'sha256').hexdigest()
-    report['presentation_validation']='Not rerun: catalog-only release' if catalog_only else 'History particle motion and scrolling layout checked; physical-device particle performance and thermals remain unmeasured'; report['ipa_bytes']=ipa.stat().st_size; report['build_result']='passed' if require_models else 'native_passed'; save()
+    report['presentation_validation']='Not run: requested no-test performance release' if scoped_no_tests else 'History particle motion and scrolling layout checked; physical-device particle performance and thermals remain unmeasured'; report['ipa_bytes']=ipa.stat().st_size; report['build_result']='passed' if require_models else 'native_passed'; save()
     with zipfile.ZipFile(BUILD/'Rift-Source.zip','w',zipfile.ZIP_DEFLATED) as z:
         for path in ROOT.rglob('*'):
             if path.is_file() and not any(part in ['Build','ThirdParty','Rift.xcodeproj','__pycache__'] for part in path.relative_to(ROOT).parts): z.write(path,'Rift/'+str(path.relative_to(ROOT)))
@@ -121,6 +121,6 @@ try:
     if phase in ['smoke','all']: smoke()
     if phase in ['package','all']: package()
     if phase == 'candidate': package(require_models=False)
-    if phase == 'catalog-candidate': package(require_models=False, catalog_only=True)
+    if phase == 'performance-candidate': package(require_models=False, scoped_no_tests=True)
 except Exception as error:
     report['build_result']='failed'; report['failure']=str(error); save(); raise

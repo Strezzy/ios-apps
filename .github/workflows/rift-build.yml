@@ -65,11 +65,11 @@ jobs:
         with:
           path: Rift/Build/Native
           key: rift-8345f333-vision-metal-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      # Catalog-only release: no simulator, UI, unit or model tests requested.
+      # Scoped performance release: no simulator, UI, unit or model tests requested.
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone
       - name: Package iPhone candidate with requested memory entitlements
-        run: python Rift/scripts/build.py catalog-candidate
+        run: python Rift/scripts/build.py performance-candidate
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -100,7 +100,7 @@ jobs:
         with:
           name: Rift-Native-Candidate
           path: RiftRelease
-      - name: Publish the catalog-only IPA and update the download listing
+      - name: Publish the performance update IPA and update the download listing
         run: python3 Rift/scripts/publish_update.py RiftRelease
       - uses: actions/upload-artifact@v7
         if: always()

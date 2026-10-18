@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish the catalog-only IPA without tests and update only Rift's listing."""
+"""Publish the scoped performance IPA without tests and update only Rift's listing."""
 import copy,hashlib,json,os,plistlib,re,subprocess,sys,tempfile,zipfile
 from pathlib import Path
 ROOT=Path.cwd(); OUT=Path(sys.argv[1]).resolve(); REPO='Strezzy/ios-apps'
@@ -10,9 +10,9 @@ def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(pat
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.9.3' and report['iphone_compilation']=='passed'
+assert report['app']=='Rift' and report['version']=='1.9.4' and report['iphone_compilation']=='passed'
 assert report['simulator']=='not_run' and 'test_summary' not in report
-assert report['release_scope']=='catalog-only-qwen35-4b-q6-k'
+assert report['release_scope']=='streaming-and-persistence-performance'
 report['validated_feature_test_count'] = 0
 report['tests'] = 'Not run, as requested by the user'
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
@@ -20,14 +20,14 @@ source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==o
 assert subprocess.run(['git','diff','--quiet',source,'HEAD','--','Rift/Rift','Rift/RiftTests','Rift/RiftUITests','Rift/project.yml']).returncode==0, 'Newer Rift source exists; wait for its verified build'
 assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes']
 assert feature_update, 'This patch only supports the scoped release path'
-from catalog_release import verify_source
+from performance_release import verify_source
 verify_source(ROOT, source)
-report['previous_release_evidence']='Rift/Verification/1.9.2-build137/BUILD-REPORT.json'
+report['previous_release_evidence']='Rift/Verification/1.9.3-build138/BUILD-REPORT.json'
 sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9.3' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9.4' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
@@ -35,17 +35,19 @@ with zipfile.ZipFile(ipa) as z:
  catalog=json.loads(z.read('Payload/Rift.app/catalog.json'))
  assert catalog==json.loads((ROOT/'Rift/Rift/Resources/catalog.json').read_text())
 report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
-report.update(model_inference='Not run: catalog addition only; Q6_K inference not tested', validation_scope='arm64 iPhone build and signed-package integrity only; no simulator, UI, unit or model tests', metal_inference='Not run')
+report.update(model_inference='Not run: inference source unchanged', validation_scope='arm64 iPhone build and signed-package integrity only; no simulator, UI, unit or model tests', metal_inference='Not run')
 save(OUT/'BUILD-REPORT.json',report)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.9.3-build'+report['build']
-notes=f'''Rift 1.9.3 ({report['build']}) · Qwen3.5 4B Q6_K
+tag='rift-1.9.4-build'+report['build']
+notes=f'''Rift 1.9.4 ({report['build']}) · Streaming performance
 
-- Adds Q6_K as a download choice for the same HauhauCS Qwen3.5 4B Aggressive uncensored model.
-- Keeps the existing Q4_K_M choice. No other app-content or behavior changes.
-- Download: 3.46 GB, pinned to the publisher's existing revision and SHA-256.
+- Avoids rebuilding unchanged message rows while replies stream and history scrolls.
+- Skips unnecessary animation attributes for settled text while preserving all animation timing and styles.
+- Checkpoints only the active chat during streaming, with the same one-second recovery interval and full saves at completion.
+- Avoids rewriting unchanged model metadata and redundant delayed saves.
+- Keeps the existing appearance, models, voice functionality, shaders and inference settings.
 
-No tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Q6_K inference and device performance have not been tested in this release.
+No tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.
 Build source: {source}
@@ -59,21 +61,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9.3 adds the Q6_K download option for Qwen3.5 4B Aggressive uncensored.'
+metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9.4 reduces repeated UI and persistence work while preserving existing features and appearance.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.9.3-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.9.4-build'+report['build'])
 for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.9.3 catalog release build record [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.9.4 performance release build record [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9.3 ({report['build']}) · Qwen3.5 4B Q6_K",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9.4 ({report['build']}) · Streaming performance",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -88,5 +90,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.9.3 ({report['build']}) Qwen3.5 4B Q6_K [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.9.4 ({report['build']}) Streaming performance [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)
