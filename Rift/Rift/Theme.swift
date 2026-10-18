@@ -31,16 +31,25 @@ struct RiftBackdrop: View {
     }
 }
 struct RiftBackground: View {
+    var paused = false
     @Environment(\.colorScheme) private var scheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @State private var pauseDate: Date?
+    @State private var pausedDuration: TimeInterval = 0
     var body: some View {
         let still = reduceMotion || lowPower || scenePhase != .active
-        TimelineView(.animation(minimumInterval: 1.0 / 20, paused: still)) { tick in
-            RiftBackdrop(time: still ? 0 : tick.date.timeIntervalSinceReferenceDate, dark: scheme == .dark)
+        TimelineView(.animation(minimumInterval: 1.0 / 20, paused: still || paused)) { tick in
+            RiftBackdrop(time: still ? 0 : (pauseDate ?? tick.date).timeIntervalSinceReferenceDate - pausedDuration, dark: scheme == .dark)
         }
         .ignoresSafeArea(.all).allowsHitTesting(false).accessibilityHidden(true)
+        .onChange(of: paused) { _, value in
+            if value { pauseDate = Date() }
+            else if let start = pauseDate {
+                pausedDuration += Date().timeIntervalSince(start); pauseDate = nil
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         }

@@ -106,23 +106,28 @@ struct ChatView: View {
             ZStack {
                 if let startup=model.startupError { ContentUnavailableView("Local data unavailable",systemImage:"externaldrive.badge.exclamationmark",description:Text(startup)).padding() }
                 else {
-                    VStack(spacing:0) {
-                        ErrorBanner()
-                        if model.activeChat?.messages.isEmpty != false { welcome }
-                        else { messages }
-                    }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    if !voiceVisible {
+                        VStack(spacing:0) {
+                            ErrorBanner()
+                            if model.activeChat?.messages.isEmpty != false { welcome }
+                            else { messages }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .transition(reduceMotion ? .opacity : .modifier(
+                            active: VoiceTextScatter(amount: 1), identity: VoiceTextScatter(amount: 0)))
+                    }
+                    if let voiceSession {
+                        VoiceConversationView(voice: voiceSession)
+                            .id(ObjectIdentifier(voiceSession))
+                            .transition(reduceMotion ? .opacity : .modifier(
+                                active: VoiceSceneTransition(progress: 0), identity: VoiceSceneTransition(progress: 1)))
+                            .zIndex(1)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background { RiftBackground() }
-            .overlay(alignment: .bottomTrailing) {
-                if let voiceSession {
-                    VoiceConversationView(voice: voiceSession)
-                        .id(ObjectIdentifier(voiceSession))
-                        .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity, removal: .scale(scale: 0.12, anchor: .bottomTrailing).combined(with: .opacity)))
-                }
-            }
-            .animation(reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.8), value: voiceVisible)
+            .background { RiftBackground(paused: voiceVisible) }
+            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.8), value: voiceVisible)
             .onChange(of: composing) { _, value in if value { closeVoice(feedback: false) } }
             .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer(width: width) } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)
@@ -160,7 +165,7 @@ struct ChatView: View {
                     }.disabled(model.generating).accessibilityLabel("New chat")
                 }
             }
-        }.background { RiftBackground() }
+        }.background { RiftBackground(paused: voiceVisible) }
     }
     private var welcome: some View {
         ZStack { RiftMark() }.frame(width: 84, height: 102)
