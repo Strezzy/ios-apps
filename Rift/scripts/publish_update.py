@@ -10,9 +10,9 @@ def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(pat
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.9.6' and report['iphone_compilation']=='passed'
+assert report['app']=='Rift' and report['version']=='1.9.7' and report['iphone_compilation']=='passed'
 assert report['simulator']=='not_run' and 'test_summary' not in report
-assert report['release_scope']=='chat-visibility-fix'
+assert report['release_scope']=='voice-latency-and-void-scene'
 report['validated_feature_test_count'] = 0
 report['tests'] = 'Not run, as requested by the user'
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
@@ -22,12 +22,12 @@ assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes'
 assert feature_update, 'This patch only supports the scoped release path'
 from voice_scene_release import verify_source
 verify_source(ROOT, source)
-report['previous_release_evidence']='Rift/Verification/1.9.5-build140/BUILD-REPORT.json'
+report['previous_release_evidence']='Rift/Verification/1.9.6-build141/BUILD-REPORT.json'
 sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9.6' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9.7' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
@@ -38,13 +38,15 @@ report.update(build_result='passed',signing='Ad-hoc signature carries requested 
 report.update(model_inference='Not run: inference source unchanged', validation_scope='arm64 iPhone build and signed-package integrity only; no simulator, UI, unit or model tests', metal_inference='Not run')
 save(OUT/'BUILD-REPORT.json',report)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.9.6-build'+report['build']
-notes=f'''Rift 1.9.6 ({report['build']}) · Chat visibility fix
+tag='rift-1.9.7-build'+report['build']
+notes=f'''Rift 1.9.7 ({report['build']}) · Voice in the void
 
-- Removes the full-chat shader layer that could hide the interface behind the gradient background.
-- Leaves normal startup and text chat outside the voice scatter shader entirely.
-- Applies scatter/reassembly only to message surfaces and the welcome mark during voice transitions.
-- Preserves the centered orb, reactive particles, immediate close control, and all existing model and voice behavior.
+- Shortens the end-of-speech silence wait from 1.3 to 1.0 seconds and the first streaming speech chunk target from 96 to 56 characters, keeping complete-word boundaries and longer later chunks.
+- Fades voice mode into a darker maroon background and restores the text-mode colors on exit.
+- Adds more particles behind the glass orb and occasional neural-style connections, capped at 224 particles and eight visible links on one animation clock.
+- Folds the glass inward while listening; speaking retains the outward pulse and glow.
+- Smooths the exit by preserving message view identity and reducing the scatter shader neighborhood from 25 to nine cells, without filtering the chat container.
+- Keeps streaming speech, personal voices, Apple fallback, model settings and normal text mode intact.
 
 No tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.
 
@@ -60,21 +62,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9.6 fixes chat visibility by limiting the voice scatter shader to individual message surfaces during transitions.'
+metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9.7 reduces voice response waits and adds a darker maroon voice scene, inward listening motion, denser rear particles and occasional neural connections.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.9.6-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.9.7-build'+report['build'])
 for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.9.6 visibility patch build record [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.9.7 voice refinement build record [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9.6 ({report['build']}) · Chat visibility fix",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9.7 ({report['build']}) · Voice in the void",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -89,5 +91,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.9.6 ({report['build']}) Chat visibility fix [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.9.7 ({report['build']}) Voice in the void [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)

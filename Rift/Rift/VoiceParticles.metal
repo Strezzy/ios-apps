@@ -6,23 +6,23 @@ static float voiceScatterHash(float2 p) {
     return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
 }
 
-// The same seven-point fragments as history dissolve, applied to the whole
-// transcript for 0.8 seconds only. Reversing amount reassembles the real text.
+// A compact 3x3 search on individual message surfaces during transitions only.
+// Ten-point source cells bound all drifting fragments within this neighborhood.
 [[ stitchable ]] half4 voiceTextScatter(float2 position, SwiftUI::Layer layer, float amount) {
     half4 original = layer.sample(position);
     if (amount <= 0.001) return original;
     if (amount >= 0.999) return half4(0);
-    const float cellSize = 7.0;
+    const float cellSize = 10.0;
     float2 cell = floor(position / cellSize);
     half4 fragments = half4(0);
-    for (int row = -2; row <= 2; ++row) {
-        for (int col = -2; col <= 2; ++col) {
+    for (int row = -1; row <= 1; ++row) {
+        for (int col = -1; col <= 1; ++col) {
             float2 id = cell + float2(col, row);
             float seed = voiceScatterHash(id);
             float phase = seed * 19.0;
             float scatter = smoothstep(seed * 0.12, 0.65 + seed * 0.12, amount);
             float2 source = (id + 0.5) * cellSize;
-            float2 drift = float2(sin(phase) * 12, cos(phase * 1.3) * 12 - 1) * scatter;
+            float2 drift = float2(sin(phase) * 8, cos(phase * 1.3) * 8 - 1) * scatter;
             float angle = sin(phase) * scatter * 1.1;
             float2 local = position - source - drift;
             float2 delta = abs(float2(cos(angle) * local.x - sin(angle) * local.y,

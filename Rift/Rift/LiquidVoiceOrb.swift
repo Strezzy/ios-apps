@@ -4,9 +4,10 @@ import SwiftUI
 struct LiquidOrbShape: Shape {
     var time: Double
     var energy: Double
-    var animatableData: AnimatablePair<Double, Double> {
-        get { .init(time, energy) }
-        set { time = newValue.first; energy = newValue.second }
+    var inward: Double = 0
+    var animatableData: AnimatablePair<Double, AnimatablePair<Double, Double>> {
+        get { .init(time, .init(energy, inward)) }
+        set { time = newValue.first; energy = newValue.second.first; inward = newValue.second.second }
     }
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -17,7 +18,9 @@ struct LiquidOrbShape: Shape {
             let wave = sin(angle * 3 + time * 1.3) * strength
                 + sin(angle * 2 - time * 0.85) * 0.045
                 + cos(angle * 5 + time * 0.65) * 0.016
-            let r = radius * (1 + wave)
+            // Listening folds the glass inward; speaking keeps the outward wave.
+            let fold = pow(max(0, sin(angle * 3 - time * 1.4)), 2)
+            let r = radius * (1 + wave - inward * (0.045 + fold * 0.085))
             let point = CGPoint(x: rect.midX + cos(angle) * r, y: rect.midY + sin(angle) * r)
             if step == 0 { path.move(to: point) } else { path.addLine(to: point) }
         }
@@ -63,13 +66,15 @@ struct LiquidVoiceOrb: View {
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
         .accessibilityHidden(true)
+        .animation(.easeOut(duration: 0.12), value: level)
     }
     private func surface(at date: Date, quiet: Bool) -> some View {
         let age = max(0, date.timeIntervalSince(animationEpoch ?? epoch))
         let t = quiet ? 0 : age
         let speaking = phase == .speaking
         let energy = quiet ? 0 : min(1, max(0, speaking ? level * exp(-max(0, date.timeIntervalSince(speechBeat)) * 4) : level))
-        let shape = LiquidOrbShape(time: t * (speaking ? 1.2 : 1), energy: energy)
+        let inward = phase == .listening ? max(0, (energy - 0.15) / 0.85) : 0
+        let shape = LiquidOrbShape(time: t * (speaking ? 1.2 : 1), energy: energy, inward: inward)
         let entrance = LiquidOrbEntrance(age: age, reduced: quiet)
         return ZStack {
             // A ring of light behind the glass, never an opaque painted sphere.
@@ -93,8 +98,8 @@ struct LiquidVoiceOrb: View {
                 .stroke(ArrivalEffects.amber.opacity(0.48), style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .blur(radius: 2.5).scaleEffect(0.97)
         }
-        .scaleEffect(x: entrance.scale * (1 + entrance.squash + energy * 0.035),
-                     y: entrance.scale * (1 - entrance.squash + energy * 0.035))
+        .scaleEffect(x: entrance.scale * (1 + entrance.squash + (speaking ? energy * 0.035 : -inward * 0.04)),
+                     y: entrance.scale * (1 - entrance.squash + (speaking ? energy * 0.035 : -inward * 0.04)))
         .rotationEffect(.degrees(quiet ? 0 : sin(t * 0.7) * 4))
         .shadow(color: RiftTheme.wine.opacity(0.12), radius: 10, y: 7)
     }

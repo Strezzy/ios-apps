@@ -35,7 +35,7 @@ struct VoiceSilenceGate {
         } else if !heardSpeech { voicedSamples = 0 }
     }
     func shouldFinish(elapsed: TimeInterval, handsFree: Bool) -> Bool {
-        elapsed >= 45 || (handsFree && heardSpeech && elapsed >= 1.5 && elapsed - lastVoice > 1.3)
+        elapsed >= 45 || (handsFree && heardSpeech && elapsed >= 1.5 && elapsed - lastVoice > 1.0)
     }
 }
 

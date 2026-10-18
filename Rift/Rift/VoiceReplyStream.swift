@@ -15,7 +15,9 @@ struct VoiceReplyStream {
         while !remainder.isEmpty {
             let cut: String.SubSequence.Index
             if final { cut = remainder.endIndex }
-            else if let boundary = Self.phraseEnd(remainder, target: hasSpoken ? 180 : 96) { cut = boundary }
+            // Start with a shorter, complete-word phrase; keep later chunks
+            // long enough for natural prosody and efficient neural synthesis.
+            else if let boundary = Self.phraseEnd(remainder, target: hasSpoken ? 180 : 56) { cut = boundary }
             else { break }
             let rawPiece = String(remainder[..<cut])
             let piece = rawPiece.trimmingCharacters(in: .whitespacesAndNewlines)

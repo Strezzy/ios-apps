@@ -11,8 +11,8 @@ settings:
     CODE_SIGNING_REQUIRED: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     TARGETED_DEVICE_FAMILY: '1'
-    MARKETING_VERSION: '1.9.6'
-    CURRENT_PROJECT_VERSION: '141'
+    MARKETING_VERSION: '1.9.7'
+    CURRENT_PROJECT_VERSION: '142'
 packages:
   FluidAudio:
     url: https://github.com/FluidInference/FluidAudio.git
@@ -30,8 +30,8 @@ targets:
       path: Rift/Info.plist
       properties:
         CFBundleDisplayName: Rift
-        CFBundleShortVersionString: '1.9.6'
-        CFBundleVersion: '141'
+        CFBundleShortVersionString: '1.9.7'
+        CFBundleVersion: '142'
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true

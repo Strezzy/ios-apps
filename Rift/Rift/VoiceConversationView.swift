@@ -18,7 +18,7 @@ struct VoiceConversationView: View {
             let energy = quiet ? 0 : min(1, max(0, voice.phase == .speaking
                 ? voice.level * exp(-max(0, tick.date.timeIntervalSince(voice.speechBeat)) * 4) : voice.level))
             ZStack {
-                VoiceParticleField(time: tick.date.timeIntervalSince(epoch), energy: energy,
+                VoiceParticleField(time: tick.date.timeIntervalSince(epoch), energy: voice.phase == .listening ? -energy * 0.4 : energy,
                                    progress: progress, orbSize: orbSize, quiet: quiet)
                 Button {
                     if voice.phase == .listening { voice.pause() }
@@ -37,6 +37,7 @@ struct VoiceConversationView: View {
                     .accessibilityIdentifier("voiceOrb")
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .environment(\.colorScheme, .dark)
         .overlay(alignment: .top) { notices.padding(.top, 12).opacity(min(1, progress * 2)) }
         .accessibilityElement(children: .contain).accessibilityIdentifier("voiceOverlay")
         .task { await voice.open(playActivationSound: true) }

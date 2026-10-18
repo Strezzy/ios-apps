@@ -127,7 +127,7 @@ struct ChatView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background { RiftBackground(paused: voiceVisible) }
-            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.8), value: voiceVisible)
+            .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.95), value: voiceVisible)
             .onChange(of: composing) { _, value in if value { closeVoice(feedback: false) } }
             .safeAreaInset(edge: .bottom, spacing: 0) { if model.startupError == nil { composer(width: width) } }
             .navigationTitle("Rift").navigationBarTitleDisplayMode(.inline)

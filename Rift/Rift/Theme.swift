@@ -43,6 +43,13 @@ struct RiftBackground: View {
         TimelineView(.animation(minimumInterval: 1.0 / 20, paused: still || paused)) { tick in
             RiftBackdrop(time: still ? 0 : (pauseDate ?? tick.date).timeIntervalSinceReferenceDate - pausedDuration, dark: scheme == .dark)
         }
+        .overlay {
+            LinearGradient(colors: [Color(red: 0.025, green: 0.004, blue: 0.015),
+                                    Color(red: 0.085, green: 0.009, blue: 0.035)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                .opacity(paused ? (scheme == .dark ? 0.72 : 0.96) : 0)
+                .animation(.easeInOut(duration: reduceMotion ? 0.2 : 0.95), value: paused)
+        }
         .ignoresSafeArea(.all).allowsHitTesting(false).accessibilityHidden(true)
         .onChange(of: paused) { _, value in
             if value { pauseDate = Date() }
