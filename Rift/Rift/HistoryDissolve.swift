@@ -4,7 +4,7 @@ import SwiftUI
 /// accessibility stay on the original views; no message snapshots are retained.
 struct HistoryDissolve: ViewModifier {
     let viewportHeight: Double
-    let readingHistory: Bool
+    let scrollable: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @Environment(\.scenePhase) private var scenePhase
@@ -14,14 +14,15 @@ struct HistoryDissolve: ViewModifier {
 
     func body(content: Content) -> some View {
         let available = !reduceMotion && !voiceOver && !lowPower && scenePhase == .active
-        let dissolving = available && !readingHistory
-        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: !dissolving || !intersectsBand)) { tick in
+        // Position in the viewport alone controls reassembly, even during a drag.
+        let dissolving = available && scrollable
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !dissolving || !intersectsBand)) { tick in
             content.modifier(HistoryDissolveShader(
                 height: viewportHeight,
                 time: tick.date.timeIntervalSince(epoch),
                 strength: dissolving ? 1 : 0,
                 visible: intersectsBand && available))
-                .animation(reduceMotion ? nil : .easeInOut(duration: readingHistory ? 0.28 : 0.8), value: dissolving)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: dissolving)
         }
         .onGeometryChange(for: Bool.self) { proxy in
             let frame = proxy.frame(in: .scrollView(axis: .vertical))
@@ -48,7 +49,7 @@ private struct HistoryDissolveShader: ViewModifier, Animatable {
                 ShaderLibrary.historyDissolve(
                     .float(Float(geometry.frame(in: .scrollView(axis: .vertical)).minY)),
                     .float(Float(height)), .float(Float(time)), .float(Float(strength))),
-                maxSampleOffset: CGSize(width: 16, height: 16),
+                maxSampleOffset: CGSize(width: 24, height: 24),
                 isEnabled: visible && strength > 0.001)
         }
     }

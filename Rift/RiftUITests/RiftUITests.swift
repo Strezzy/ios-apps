@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class RiftUITests: XCTestCase {
     override func setUpWithError() throws {
@@ -157,7 +158,7 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(mark.exists)
         XCTAssertEqual(app.staticTexts["chatFooter"].label, "Unrestricted On-device AI")
     }
-    func testHistoryDissolveReassemblesAndPreservesMessageLayout() {
+    func testHistoryParticlesKeepMovingWhileBrowsing() {
         let app = XCUIApplication()
         app.launchArguments = ["--rift-ui-fixture"]
         app.launch()
@@ -172,9 +173,17 @@ final class RiftUITests: XCTestCase {
         let latest = app.buttons["jumpToLatest"]
         XCTAssertTrue(latest.waitForExistence(timeout: 5), "Browsing must release automatic following")
         Thread.sleep(forTimeInterval: 0.5)
-        attach("Rift-history-reassembled-for-reading")
-        // Stay readable after the finger lifts, not only during the gesture.
-        Thread.sleep(forTimeInterval: 1)
+        attach("Rift-history-browsing-particles-A")
+        let before = app.screenshot().image
+        Thread.sleep(forTimeInterval: 0.8)
+        let after = app.screenshot().image
+        attach("Rift-history-browsing-particles-B")
+        // Compare small-scale detail, not the app's slow moving background.
+        // This catches both a frozen clock and the old scroll-to-disable behavior.
+        let band = CGRect(x: scroll.frame.minX + 20, y: scroll.frame.minY + 20,
+                          width: scroll.frame.width - 40, height: scroll.frame.height / 3 - 20)
+        XCTAssertGreaterThan(detailMotion(before, after, band: band, screen: app.frame), 0.15,
+                             "Particles must keep moving after scrolling into history")
         XCTAssertTrue(latest.exists)
         latest.tap()
         XCTAssertTrue(last.waitForExistence(timeout: 5))
@@ -183,6 +192,35 @@ final class RiftUITests: XCTestCase {
         XCTAssertFalse(latest.exists)
         XCTAssertTrue(app.staticTexts["Latest reply stays above the keyboard."].exists)
         attach("Rift-history-particles-returned")
+    }
+    private func detailMotion(_ first: UIImage, _ second: UIImage, band: CGRect, screen: CGRect) -> Double {
+        guard let a = first.cgImage, let b = second.cgImage, a.width == b.width, a.height == b.height else { return 0 }
+        let width = a.width, height = a.height
+        func pixels(_ image: CGImage) -> [UInt8] {
+            var bytes = [UInt8](repeating: 0, count: width * height * 4)
+            bytes.withUnsafeMutableBytes { buffer in
+                let context = CGContext(data: buffer.baseAddress, width: width, height: height,
+                    bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                context.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height)))
+            }
+            return bytes
+        }
+        let p = pixels(a), q = pixels(b), scale = CGFloat(width) / screen.width
+        let left = max(2, Int(band.minX * scale)), right = min(width - 2, Int(band.maxX * scale))
+        let top = max(2, Int(band.minY * scale)), bottom = min(height - 2, Int(band.maxY * scale))
+        guard left < right, top < bottom else { return 0 }
+        var total = 0.0, count = 0
+        for y in stride(from: top, to: bottom, by: 2) {
+            for x in stride(from: left, to: right, by: 2) {
+                let i = (y * width + x) * 4
+                // Green-channel second derivative removes nearly linear gradients.
+                let firstDetail = 2 * Int(p[i + 1]) - Int(p[i - 8 + 1]) - Int(p[i + 8 + 1])
+                let secondDetail = 2 * Int(q[i + 1]) - Int(q[i - 8 + 1]) - Int(q[i + 8 + 1])
+                total += Double(abs(firstDetail - secondDetail)); count += 1
+            }
+        }
+        return total / Double(count)
     }
     func testShortBubbleTypingDotsAndStreamingStayAnchored() {
         let app = XCUIApplication()

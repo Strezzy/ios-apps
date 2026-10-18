@@ -7,8 +7,9 @@ static float historyHash(float2 p) {
 }
 
 // Sample the actual message layer, including sent bubbles and attachments.
-// Only the upper third pays for particle samples. Nine nearby cells suffice:
-// drift is bounded to four points, and every sample stays within 16 points.
+// Only the upper third pays for particle work. The wider cell search supports
+// twelve-point swirling motion; every texture sample stays within 24 points.
+// Empty cells are rejected before reading the message texture.
 [[ stitchable ]] half4 historyDissolve(float2 position, SwiftUI::Layer layer,
                                      float originY, float height, float time, float strength) {
     half4 original = layer.sample(position);
@@ -20,14 +21,19 @@ static float historyHash(float2 p) {
     const float cellSize = 7.0;
     float2 cell = floor(position / cellSize);
     half4 particles = half4(0);
-    for (int row = -1; row <= 1; ++row) {
-        for (int col = -1; col <= 1; ++col) {
+    for (int row = -2; row <= 2; ++row) {
+        for (int col = -2; col <= 2; ++col) {
             float2 id = cell + float2(col, row);
             float seed = historyHash(id);
             float2 source = (id + 0.5) * cellSize;
-            float2 drift = float2(sin(time * 0.65 + seed * 19.0) * 3.4,
-                                 cos(time * 0.48 + seed * 27.0) * 2.5 - 1.5) * amount;
-            float2 delta = abs(position - source - drift);
+            // Layered orbits avoid a synchronized sway or a static pixel grid.
+            float phase = seed * 19.0;
+            float2 drift = float2(sin(time * 1.7 + phase) * 9.0 + cos(time * 2.6 + phase) * 3.0,
+                                 cos(time * 1.35 + phase) * 8.0 + sin(time * 2.2 + phase) * 2.0 - 1.0) * amount;
+            float angle = sin(time * 1.8 + phase) * amount * 1.1;
+            float2 local = position - source - drift;
+            float2 delta = abs(float2(cos(angle) * local.x - sin(angle) * local.y,
+                                     sin(angle) * local.x + cos(angle) * local.y));
             float2 halfSize = mix(float2(2.9), float2(0.65 + seed * 0.9, 0.55 + seed * 0.45), amount);
             float edge = max(delta.x - halfSize.x, delta.y - halfSize.y);
             float coverage = 1.0 - smoothstep(-0.25, 0.9, edge);
