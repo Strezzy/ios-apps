@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the scoped history particle update, publish the exact IPA, update only Rift's listing."""
+"""Publish the catalog-only IPA without tests and update only Rift's listing."""
 import copy,hashlib,json,os,plistlib,re,subprocess,sys,tempfile,zipfile
 from pathlib import Path
 ROOT=Path.cwd(); OUT=Path(sys.argv[1]).resolve(); REPO='Strezzy/ios-apps'
@@ -10,60 +10,42 @@ def save(path,data):Path(path).parent.mkdir(parents=True,exist_ok=True);Path(pat
 def api(path):return json.loads(cmd('gh','api','repos/'+REPO+'/'+path))
 feature_update=os.getenv('RIFT_FEATURE_UPDATE')=='1'
 report=json.loads((OUT/'BUILD-REPORT.json').read_text()); ipa=OUT/'Rift.ipa'
-assert report['app']=='Rift' and report['version']=='1.9.2' and report['simulator']=='passed' and report['iphone_compilation']=='passed'
-from voice_test_scope import VOICE_TESTS, EXPECTED_TESTS, selection_for_source
-summary=report['test_summary']
-selection, prior = selection_for_source(report['source'], ROOT/'Rift')
-assert summary['failedTests']==0 and summary['skippedTests']==0
-assert report['test_selection']==selection, 'Only the reviewed particle and connected scrolling/streaming checks may gate this update'
-assert summary['passedTests'] == (1 if prior else EXPECTED_TESTS)
-validated_count = summary['passedTests'] + (prior['passedTests'] if prior else 0)
-assert validated_count == EXPECTED_TESTS
-if prior: report['retained_passing_checks'] = prior
-report['validated_feature_test_count'] = validated_count
+assert report['app']=='Rift' and report['version']=='1.9.3' and report['iphone_compilation']=='passed'
+assert report['simulator']=='not_run' and 'test_summary' not in report
+assert report['release_scope']=='catalog-only-qwen35-4b-q6-k'
+report['validated_feature_test_count'] = 0
+report['tests'] = 'Not run, as requested by the user'
 source=report['source'];assert re.fullmatch('[0-9a-f]{40}',source) and source==os.environ['RIFT_SOURCE']
 # Other apps may publish concurrently. Only newer Rift source invalidates this IPA.
 assert subprocess.run(['git','diff','--quiet',source,'HEAD','--','Rift/Rift','Rift/RiftTests','Rift/RiftUITests','Rift/project.yml']).returncode==0, 'Newer Rift source exists; wait for its verified build'
 assert sha(ipa)==report['ipa_sha256'] and ipa.stat().st_size==report['ipa_bytes']
 assert feature_update, 'This patch only supports the scoped release path'
-# Only message presentation changes; retain previously verified voice/inference.
-baseline='1bc813ed8cb280bae35ac47975bbf2ff46e52dc6'
-allowed={'Rift/Rift/ChatView.swift','Rift/Rift/HistoryDissolve.swift','Rift/Rift/HistoryDissolve.metal'}
-changed=set(cmd('git','diff','--name-only',baseline,source,'--','Rift/Rift').splitlines())
-assert changed <= allowed, changed
-prior=json.loads((ROOT/'Rift/Verification/1.9-build135/BUILD-REPORT.json').read_text())
-assert prior['build_result']=='passed' and prior['source']==baseline
-report['retained_voice_and_inference_evidence']='Rift/Verification/1.9-build135/BUILD-REPORT.json'
+from catalog_release import verify_source
+verify_source(ROOT, source)
+report['previous_release_evidence']='Rift/Verification/1.9.2-build137/BUILD-REPORT.json'
 sys.path.insert(0,str(ROOT/'scripts'))
 from publish_rift import verify_executable
 from update_catalog import inspect_ipa,update,render_readme
 info,permissions=inspect_ipa(ipa)
-assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9.2' and info['CFBundleVersion']==report['build']
+assert info['CFBundleIdentifier']=='com.billy.rift' and info['CFBundleShortVersionString']=='1.9.3' and info['CFBundleVersion']==report['build']
 assert set(permissions['entitlements'])=={'com.apple.developer.kernel.increased-memory-limit','com.apple.developer.kernel.extended-virtual-addressing'}
 with zipfile.ZipFile(ipa) as z:
  assert z.testzip() is None
  verify_executable(z.read('Payload/Rift.app/Rift'))
  catalog=json.loads(z.read('Payload/Rift.app/catalog.json'))
  assert catalog==json.loads((ROOT/'Rift/Rift/Resources/catalog.json').read_text())
- if not feature_update:
-  assert {m['id'] for m in catalog}=={c['id'] for c in checks}
-  for model in catalog:
-   assert model['uncensored']
-   assert next(c for c in checks if c['id']==model['id'])['file_sha256']==model['sha256']
 report.update(build_result='passed',signing='Ad-hoc signature carries requested memory entitlements; installer and host must grant them')
-report.update(model_inference='Not rerun: shipping inference and voice code unchanged from 1.9 build 135', validation_scope='Two focused checks: compiled particle shader and pixel-motion/scrolling regression while browsing history; arm64 iPhone compilation', metal_inference='No chat or speech models downloaded or retested')
+report.update(model_inference='Not run: catalog addition only; Q6_K inference not tested', validation_scope='arm64 iPhone build and signed-package integrity only; no simulator, UI, unit or model tests', metal_inference='Not run')
 save(OUT/'BUILD-REPORT.json',report)
-if not feature_update:save(OUT/'MODEL-SMOKE.json',checks)
 if '--verify-only' in sys.argv:print('VERIFIED',report['build']);sys.exit(0)
-tag='rift-1.9.2-build'+report['build']
-notes=f'''Rift 1.9.2 ({report['build']}) · Living message history
+tag='rift-1.9.3-build'+report['build']
+notes=f'''Rift 1.9.3 ({report['build']}) · Qwen3.5 4B Q6_K
 
-- Particles now swirl faster, travel farther and rotate for more visible movement.
-- The top-third effect stays active while browsing history. Messages assemble as they move below the band and dissolve again as they move upward.
-- Render-only effect preserves message layout, selection, accessibility, voice mode and composer animations. Pauses outside the visible band and leaves text clear with Reduce Motion, VoiceOver or Low Power Mode.
-- Memory Saver settings are deferred to a later update.
+- Adds Q6_K as a download choice for the same HauhauCS Qwen3.5 4B Aggressive uncensored model.
+- Keeps the existing Q4_K_M choice. No other app-content or behavior changes.
+- Download: 3.46 GB, pinned to the publisher's existing revision and SHA-256.
 
-Verification: {validated_count} focused shader/particle-motion/scrolling checks, arm64 iPhone compilation and signed-package checks. No chat or voice models were downloaded or retested. Physical-iPhone animation performance and thermals remain unmeasured by this runner.
+No tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Q6_K inference and device performance have not been tested in this release.
 
 Update the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.
 Build source: {source}
@@ -77,21 +59,21 @@ files.append(OUT/'SHA256SUMS.txt')
 registry=json.loads((ROOT/'app-registry.json').read_text())
 metadata=copy.deepcopy(registry['com.billy.rift'])
 metadata['subtitle']='Private offline AI chat'
-metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9.2 makes history particles more animated and keeps the effect active while scrolling.'
+metadata['localizedDescription']=metadata['localizedDescription'] + ' Version 1.9.3 adds the Q6_K download option for Qwen3.5 4B Aggressive uncensored.'
 registry['com.billy.rift']=metadata;save(ROOT/'app-registry.json',registry)
-verification=ROOT/'Rift/Verification'/('1.9.2-build'+report['build'])
+verification=ROOT/'Rift/Verification'/('1.9.3-build'+report['build'])
 for filename in evidence_files:
  save(verification/filename,json.loads((OUT/filename).read_text()))
 cmd('git','config','user.name','github-actions[bot]');cmd('git','config','user.email','41898282+github-actions[bot]@users.noreply.github.com')
 cmd('git','add','app-registry.json','Rift/Verification')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m','Record Rift 1.9.2 verified test evidence [skip ci]');cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m','Record Rift 1.9.3 catalog release build record [skip ci]');cmd('git','push','origin','HEAD:main')
 # Target a main snapshot whose workflow is already present, not an unmerged branch.
 snapshot=cmd('git','rev-parse','HEAD')
 existing=subprocess.run(['gh','release','view',tag,'--repo',REPO,'--json','isDraft,url'],capture_output=True,text=True)
 if existing.returncode:
  assert 'release not found' in existing.stderr.lower(),existing.stderr
- cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9.2 ({report['build']}) · Living message history",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
+ cmd('gh','release','create',tag,*files,'--repo',REPO,'--target',snapshot,'--title',f"Rift 1.9.3 ({report['build']}) · Qwen3.5 4B Q6_K",'--notes-file',OUT/'RELEASE-NOTES.md','--draft')
 with tempfile.TemporaryDirectory() as temp:
  cmd('gh','release','download',tag,'--repo',REPO,'--pattern','Rift.ipa','--dir',temp)
  assert sha(Path(temp)/'Rift.ipa')==report['ipa_sha256']
@@ -106,5 +88,5 @@ update(isolated,{'com.billy.rift':metadata},[ipa],tag,release['published_at'],no
 allapps['apps']=others+isolated['apps'];save(ROOT/'apps.json',allapps);render_readme(allapps)
 cmd('git','add','apps.json','README.md')
 if subprocess.run(['git','diff','--cached','--quiet']).returncode:
- cmd('git','commit','-m',f"Publish Rift 1.9.2 ({report['build']}) Living message history [skip ci]");cmd('git','push','origin','HEAD:main')
+ cmd('git','commit','-m',f"Publish Rift 1.9.3 ({report['build']}) Qwen3.5 4B Q6_K [skip ci]");cmd('git','push','origin','HEAD:main')
 print('PUBLISHED',release['html_url'],flush=True)

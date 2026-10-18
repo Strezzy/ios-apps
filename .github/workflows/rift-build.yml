@@ -32,7 +32,6 @@ jobs:
     env:
       RIFT_SOURCE: ${{ needs.prepare.outputs.source }}
       RIFT_BUILD_NUMBER: ${{ needs.prepare.outputs.build }}
-      RIFT_TEST_SCOPE: controls
       RIFT_MAC_METAL: '1'
     steps:
       - uses: actions/checkout@v7
@@ -60,18 +59,17 @@ jobs:
       - name: Prepare pinned dependency sources
         run: python Rift/scripts/build.py prepare
       - name: Compile the native inference runtimes
-        run: python Rift/scripts/native.py iphonesimulator iphoneos macosx
+        run: python Rift/scripts/native.py iphoneos
       - uses: actions/cache/save@v4
         if: steps.cache.outputs.cache-hit != 'true'
         with:
           path: Rift/Build/Native
           key: rift-8345f333-vision-metal-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Test only particle motion and connected history scrolling
-        run: python Rift/scripts/build.py simulator
+      # Catalog-only release: no simulator, UI, unit or model tests requested.
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone
       - name: Package iPhone candidate with requested memory entitlements
-        run: python Rift/scripts/build.py candidate
+        run: python Rift/scripts/build.py catalog-candidate
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -102,7 +100,7 @@ jobs:
         with:
           name: Rift-Native-Candidate
           path: RiftRelease
-      - name: Verify the scoped tests and publish the exact IPA and source listing
+      - name: Publish the catalog-only IPA and update the download listing
         run: python3 Rift/scripts/publish_update.py RiftRelease
       - uses: actions/upload-artifact@v7
         if: always()
