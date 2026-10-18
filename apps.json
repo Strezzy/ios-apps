@@ -314,12 +314,23 @@
     {
       "name": "Rift",
       "subtitle": "Private offline AI chat",
-      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning. Version 1.9.1 adds floating particle history that reassembles while browsing earlier messages. Version 1.9.2 makes history particles more animated and keeps the effect active while scrolling. Version 1.9.3 adds the Q6_K download option for Qwen3.5 4B Aggressive uncensored. Version 1.9.4 reduces repeated UI and persistence work while preserving existing features and appearance. Version 1.9.5 adds a centered voice orb with reactive particles and reversible chat scattering, while suspending chat rendering during voice mode.",
+      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning. Version 1.9.1 adds floating particle history that reassembles while browsing earlier messages. Version 1.9.2 makes history particles more animated and keeps the effect active while scrolling. Version 1.9.3 adds the Q6_K download option for Qwen3.5 4B Aggressive uncensored. Version 1.9.4 reduces repeated UI and persistence work while preserving existing features and appearance. Version 1.9.5 adds a centered voice orb with reactive particles and reversible chat scattering, while suspending chat rendering during voice mode. Version 1.9.6 fixes chat visibility by limiting the voice scatter shader to individual message surfaces during transitions.",
       "category": "utilities",
       "tintColor": "#D62947",
       "bundleIdentifier": "com.billy.rift",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "1.9.6",
+          "buildVersion": "141",
+          "buildNumber": "141",
+          "date": "2026-10-18T05:32:25Z",
+          "localizedDescription": "Rift 1.9.6 (141) · Chat visibility fix\n\n- Removes the full-chat shader layer that could hide the interface behind the gradient background.\n- Leaves normal startup and text chat outside the voice scatter shader entirely.\n- Applies scatter/reassembly only to message surfaces and the welcome mark during voice transitions.\n- Preserves the centered orb, reactive particles, immediate close control, and all existing model and voice behavior.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 4e9a10e4cdcfc7937fc74a3c6896079639da9d43\nIPA SHA-256: 2473c1f4d4664d7ed1179682ca23aac439081d9edc64f41a27f4efc81602ff5e\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.6-build141/Rift.ipa",
+          "size": 17990011,
+          "minOSVersion": "26.0",
+          "sha256": "2473c1f4d4664d7ed1179682ca23aac439081d9edc64f41a27f4efc81602ff5e"
+        },
         {
           "version": "1.9.5",
           "buildVersion": "140",
@@ -508,11 +519,11 @@
           "NSSpeechRecognitionUsageDescription": "Transcribe voice-chat turns using Apple's on-device speech model. No server recognition is used."
         }
       },
-      "version": "1.9.5",
-      "versionDate": "2026-10-18T05:21:43Z",
-      "versionDescription": "Rift 1.9.5 (140) · Centered voice particles\n\n- Centers the liquid-glass orb within a drifting crimson and amber particle field during voice chat.\n- Scatters the visible chat into fragments on entry and reassembles the latest transcript when closing with X.\n- Uses the same clock for the orb and a capped 160-particle canvas, with particles reacting to speech energy.\n- Removes chat text/history rendering during voice mode and pauses the moving backdrop until text mode returns.\n- Preserves text mode, immediate voice cancellation, activation sounds/haptics, streaming speech, personal voices and Apple fallback.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 608add0613087b102cf93bffe7518f3cc87698f7\nIPA SHA-256: ee83371c1c77c9ab4b278be2d5af0cdda48244344f58e67a907bd04251f8fbe9\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.5-build140/Rift.ipa",
-      "size": 17985247
+      "version": "1.9.6",
+      "versionDate": "2026-10-18T05:32:25Z",
+      "versionDescription": "Rift 1.9.6 (141) · Chat visibility fix\n\n- Removes the full-chat shader layer that could hide the interface behind the gradient background.\n- Leaves normal startup and text chat outside the voice scatter shader entirely.\n- Applies scatter/reassembly only to message surfaces and the welcome mark during voice transitions.\n- Preserves the centered orb, reactive particles, immediate close control, and all existing model and voice behavior.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 4e9a10e4cdcfc7937fc74a3c6896079639da9d43\nIPA SHA-256: 2473c1f4d4664d7ed1179682ca23aac439081d9edc64f41a27f4efc81602ff5e\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.6-build141/Rift.ipa",
+      "size": 17990011
     }
   ],
   "news": []
