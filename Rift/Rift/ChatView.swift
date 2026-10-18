@@ -169,6 +169,7 @@ struct ChatView: View {
     }
     private var welcome: some View {
         ZStack { RiftMark() }.frame(width: 84, height: 102)
+            .modifier(VoiceFragmentSurface())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Rift").accessibilityIdentifier("emptyChatMark")
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -186,6 +187,7 @@ struct ChatView: View {
                             .equatable()
                             .modifier(HistoryDissolve(viewportHeight: viewport.height,
                                 scrollable: viewport.overflows))
+                            .modifier(VoiceFragmentSurface())
                             .id(message.id)
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("chatMessage-\(message.id.uuidString)")

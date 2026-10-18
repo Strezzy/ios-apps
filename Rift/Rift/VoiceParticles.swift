@@ -3,10 +3,17 @@ import SwiftUI
 private struct VoiceSceneProgressKey: EnvironmentKey {
     static let defaultValue: Double = 1
 }
+private struct VoiceTextScatterAmountKey: EnvironmentKey {
+    static let defaultValue: Double = 0
+}
 extension EnvironmentValues {
     var voiceSceneProgress: Double {
         get { self[VoiceSceneProgressKey.self] }
         set { self[VoiceSceneProgressKey.self] = newValue }
+    }
+    var voiceTextScatterAmount: Double {
+        get { self[VoiceTextScatterAmountKey.self] }
+        set { self[VoiceTextScatterAmountKey.self] = newValue }
     }
 }
 
@@ -22,8 +29,8 @@ struct VoiceSceneTransition: ViewModifier, Animatable {
     }
 }
 
-/// Samples actual chat pixels only during the brief transition. The transcript
-/// and its per-message renderers leave the view tree once voice mode is open.
+/// Animate a value through the transcript, never a shader over its ScrollView.
+/// Filtering the container can prevent UIKit-backed content from rendering.
 struct VoiceTextScatter: ViewModifier, Animatable {
     var amount: Double
     var animatableData: Double {
@@ -31,9 +38,21 @@ struct VoiceTextScatter: ViewModifier, Animatable {
         set { amount = newValue }
     }
     func body(content: Content) -> some View {
-        content.layerEffect(ShaderLibrary.voiceTextScatter(.float(Float(amount))),
-                            maxSampleOffset: CGSize(width: 24, height: 24),
-                            isEnabled: amount > 0.001)
+        content.environment(\.voiceTextScatterAmount, amount)
+    }
+}
+
+/// Only individual message surfaces and the welcome mark enter a filtered
+/// layer, and only during the transition. Normal chat has no scatter shader.
+struct VoiceFragmentSurface: ViewModifier {
+    @Environment(\.voiceTextScatterAmount) private var amount
+    @ViewBuilder func body(content: Content) -> some View {
+        if amount > 0.001 {
+            content.layerEffect(ShaderLibrary.voiceTextScatter(.float(Float(amount))),
+                                maxSampleOffset: CGSize(width: 24, height: 24))
+        } else {
+            content
+        }
     }
 }
 
