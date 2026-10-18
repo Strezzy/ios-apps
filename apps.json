@@ -314,12 +314,23 @@
     {
       "name": "Rift",
       "subtitle": "Private offline AI chat",
-      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning. Version 1.9.1 adds floating particle history that reassembles while browsing earlier messages.",
+      "localizedDescription": "Private offline iPhone chat with downloaded uncensored community models or an imported GGUF. Version 1.8 adds local image and file attachments from the composer’s plus button. Qwen3.5 4B image understanding uses the matching publisher vision encoder, an optional verified 676 MB download. Text and text-based PDFs are read locally. The same uncensored weights are retained, with no added content filter or cloud moderation. Includes the left conversation drawer, quick model menu, morphing composer and living crimson background. No accounts, analytics, uploaded recordings or cloud inference. Larger models and images depend on device and host memory. Version 1.8.1 fixes composer responsiveness and keeps the conversation drawer transition full height. Version 1.8.2 fixes installed-voice startup, restores liquid composer transitions, and adds a short uncensored default personality. Version 1.9 adds offline Pocket TTS streaming, Apple speech fallback, and Personal Voice import, recording and saved voice cloning. Version 1.9.1 adds floating particle history that reassembles while browsing earlier messages. Version 1.9.2 makes history particles more animated and keeps the effect active while scrolling.",
       "category": "utilities",
       "tintColor": "#D62947",
       "bundleIdentifier": "com.billy.rift",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "1.9.2",
+          "buildVersion": "137",
+          "buildNumber": "137",
+          "date": "2026-10-18T00:38:00Z",
+          "localizedDescription": "Rift 1.9.2 (137) · Living message history\n\n- Particles now swirl faster, travel farther and rotate for more visible movement.\n- The top-third effect stays active while browsing history. Messages assemble as they move below the band and dissolve again as they move upward.\n- Render-only effect preserves message layout, selection, accessibility, voice mode and composer animations. Pauses outside the visible band and leaves text clear with Reduce Motion, VoiceOver or Low Power Mode.\n- Memory Saver settings are deferred to a later update.\n\nVerification: 2 focused shader/particle-motion/scrolling checks, arm64 iPhone compilation and signed-package checks. No chat or voice models were downloaded or retested. Physical-iPhone animation performance and thermals remain unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 30de27661984ebf79440e31dca2a75df6a0ab38e\nIPA SHA-256: 5b594e22ab7a1461912abc1f91e82a9183eef413cc659fbea2ca6c12b9efc338\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.2-build137/Rift.ipa",
+          "size": 17949065,
+          "minOSVersion": "26.0",
+          "sha256": "5b594e22ab7a1461912abc1f91e82a9183eef413cc659fbea2ca6c12b9efc338"
+        },
         {
           "version": "1.9.1",
           "buildVersion": "136",
@@ -464,11 +475,11 @@
           "NSSpeechRecognitionUsageDescription": "Transcribe voice-chat turns using Apple's on-device speech model. No server recognition is used."
         }
       },
-      "version": "1.9.1",
-      "versionDate": "2026-10-18T00:16:44Z",
-      "versionDescription": "Rift 1.9.1 (136) · Living message history\n\n- Older messages and sent bubbles softly dissolve into floating crimson-tinted data fragments in the top third of the chat.\n- Scrolling back smoothly restores clear history, which stays readable while browsing. Returning to the latest reply brings the particles back.\n- Render-only effect preserves message layout, selection, accessibility, voice mode and composer animations. Pauses outside the visible band and leaves text clear with Reduce Motion, VoiceOver or Low Power Mode.\n- Memory Saver settings are deferred to a later update.\n\nVerification: 3 focused shader/scrolling/streaming checks, arm64 iPhone compilation and signed-package checks. No chat or voice models were downloaded or retested. Physical-iPhone animation performance and thermals remain unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: b8d8c9c8f7470b3328afaef76d3138c4deebba19\nIPA SHA-256: c163b34d2c22454c104a0e69bd81182e1281e555818cf91d0efdebe8e0543d96\n",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.1-build136/Rift.ipa",
-      "size": 17949181
+      "version": "1.9.2",
+      "versionDate": "2026-10-18T00:38:00Z",
+      "versionDescription": "Rift 1.9.2 (137) · Living message history\n\n- Particles now swirl faster, travel farther and rotate for more visible movement.\n- The top-third effect stays active while browsing history. Messages assemble as they move below the band and dissolve again as they move upward.\n- Render-only effect preserves message layout, selection, accessibility, voice mode and composer animations. Pauses outside the visible band and leaves text clear with Reduce Motion, VoiceOver or Low Power Mode.\n- Memory Saver settings are deferred to a later update.\n\nVerification: 2 focused shader/particle-motion/scrolling checks, arm64 iPhone compilation and signed-package checks. No chat or voice models were downloaded or retested. Physical-iPhone animation performance and thermals remain unmeasured by this runner.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: 30de27661984ebf79440e31dca2a75df6a0ab38e\nIPA SHA-256: 5b594e22ab7a1461912abc1f91e82a9183eef413cc659fbea2ca6c12b9efc338\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.2-build137/Rift.ipa",
+      "size": 17949065
     }
   ],
   "news": []
