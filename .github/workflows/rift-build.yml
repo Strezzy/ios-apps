@@ -66,7 +66,7 @@ jobs:
         with:
           path: Rift/Build/Native
           key: rift-8345f333-vision-metal-v2-${{ runner.arch }}-${{ steps.tools.outputs.xcode }}
-      - name: Test only Pocket speech, personal voices, fallback and connected controls
+      - name: Test only particle history and connected scrolling/streaming layout
         run: python Rift/scripts/build.py simulator
       - name: Compile the arm64 iPhone app
         run: python Rift/scripts/build.py iphone

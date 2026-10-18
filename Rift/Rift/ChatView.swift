@@ -174,6 +174,8 @@ struct ChatView: View {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     ForEach(model.activeChat?.messages ?? []) { message in
                         MessageView(message: message, isStreaming: model.generating && message.id == model.activeChat?.messages.last?.id)
+                            .modifier(HistoryDissolve(viewportHeight: viewport.height,
+                                readingHistory: !viewport.overflows || following.userScrolling || !following.followsLatest))
                             .id(message.id)
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("chatMessage-\(message.id.uuidString)")

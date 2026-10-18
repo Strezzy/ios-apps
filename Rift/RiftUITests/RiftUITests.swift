@@ -157,6 +157,33 @@ final class RiftUITests: XCTestCase {
         XCTAssertTrue(mark.exists)
         XCTAssertEqual(app.staticTexts["chatFooter"].label, "Unrestricted On-device AI")
     }
+    func testHistoryDissolveReassemblesAndPreservesMessageLayout() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--rift-ui-fixture"]
+        app.launch()
+        let scroll = app.scrollViews["chatScrollView"]
+        let last = app.descendants(matching: .any)["chatMessage-00000000-0000-0000-0000-000000000099"].firstMatch
+        XCTAssertTrue(last.waitForExistence(timeout: 15))
+        Thread.sleep(forTimeInterval: 1)
+        let original = last.frame
+        attach("Rift-history-particles-at-latest")
+        XCTAssertEqual(last.frame.minY, original.minY, accuracy: 2)
+        scroll.swipeDown()
+        let latest = app.buttons["jumpToLatest"]
+        XCTAssertTrue(latest.waitForExistence(timeout: 5), "Browsing must release automatic following")
+        Thread.sleep(forTimeInterval: 0.5)
+        attach("Rift-history-reassembled-for-reading")
+        // Stay readable after the finger lifts, not only during the gesture.
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertTrue(latest.exists)
+        latest.tap()
+        XCTAssertTrue(last.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertEqual(last.frame.minY, original.minY, accuracy: 2, "Particles must never alter layout or scroll anchoring")
+        XCTAssertFalse(latest.exists)
+        XCTAssertTrue(app.staticTexts["Latest reply stays above the keyboard."].exists)
+        attach("Rift-history-particles-returned")
+    }
     func testShortBubbleTypingDotsAndStreamingStayAnchored() {
         let app = XCUIApplication()
         app.launchArguments = ["--rift-ui-fixture", "--rift-ui-short-stream"]
