@@ -1,0 +1,95 @@
+name: Prepare verified Velvet 0.2 release
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/recover-velvet.yml']
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: velvet-0.2-recovery
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: 589765fa0652cdf8276e32b2d66b34745f11fa30
+      SOURCE_RUN: '39920197960'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 589765fa0652cdf8276e32b2d66b34745f11fa30
+      - name: Confirm source build and test steps passed
+        run: |
+          gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN/jobs" > /tmp/velvet-jobs.json
+          gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN" > /tmp/velvet-run.json
+          python3 - <<'PY'
+          import json, os
+          assert json.load(open('/tmp/velvet-run.json'))['head_sha'] == os.environ['SOURCE_SHA']
+          steps = json.load(open('/tmp/velvet-jobs.json'))['jobs'][0]['steps']
+          for name in ['Source privacy checks', 'Build native iPhone app', 'Test storage, search, camera and interface', 'Collect native interface screenshots']:
+              assert next(s for s in steps if s['name'] == name)['conclusion'] == 'success', name
+          PY
+      - uses: actions/download-artifact@v7
+        with:
+          name: Velvet-iOS-Build
+          path: Velvet/Build
+          run-id: 39920197960
+          github-token: ${{ github.token }}
+      - name: Verify exact tested IPA and prepare release notes
+        working-directory: Velvet
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, plistlib, zipfile
+          from pathlib import Path
+          report = json.load(open('Build/BUILD-REPORT.json'))
+          tests = json.load(open('Build/TEST-RESULTS.json'))
+          assert report['sourceCommit'] == os.environ['SOURCE_SHA']
+          assert report['version'] == '0.2.0' and report['build'] == '3'
+          assert tests['passedTests'] == 58 and tests['failedTests'] == 0 and tests['skippedTests'] == 0, tests
+          ipa = Path('Build/Velvet-unsigned.ipa')
+          assert hashlib.sha256(ipa.read_bytes()).hexdigest() == report['sha256']
+          with zipfile.ZipFile(ipa) as z:
+              info = plistlib.loads(z.read('Payload/Velvet.app/Info.plist'))
+          assert info['CFBundleIdentifier'] == 'com.billy.velvet'
+          assert info['CFBundleShortVersionString'] == '0.2.0' and info['CFBundleVersion'] == '3'
+          Path('Build/Velvet.ipa').write_bytes(ipa.read_bytes())
+          Path('Build/SHA256SUMS.txt').write_text(report['sha256'] + '  Velvet.ipa\n')
+          notes = Path('docs/RELEASE.md').read_text()
+          notes += f"\nAutomated results: {tests['passedTests']} passed, 0 failed, 0 skipped. Eight native interface renders were reviewed.\n"
+          notes += f"\nSource: {report['sourceCommit']}\nIPA SHA-256: {report['sha256']}\n"
+          Path('Build/RELEASE-NOTES.md').write_text(notes)
+          print(json.dumps({'version': report['version'], 'build': report['build'], 'source': report['sourceCommit'], 'sha256': report['sha256'], 'passedTests': tests['passedTests']}, indent=2))
+          PY
+      - name: Package matching source and generated project
+        working-directory: Velvet
+        run: |
+          command -v xcodegen || brew install xcodegen
+          mkdir -p Velvet/Resources/Models
+          xcodegen generate
+          git archive -o Build/Velvet-Source.zip HEAD:Velvet
+          zip -r Build/Velvet-XcodeProject.zip Velvet.xcodeproj
+      - name: Prepare draft from reviewed artifacts
+        working-directory: Velvet
+        run: |
+          shopt -s nullglob
+          ASSETS=(Build/Velvet.ipa Build/Velvet-Source.zip Build/Velvet-XcodeProject.zip Build/BUILD-REPORT.json Build/TEST-RESULTS.json Build/SHA256SUMS.txt Build/UITestSnapshots/*.png)
+          gh release create velvet-0.2.0-build3 "${ASSETS[@]}" --target "$SOURCE_SHA" --draft --latest=false --title 'Velvet 0.2.0 (3) · Camera and Photos update' --notes-file Build/RELEASE-NOTES.md
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Velvet-0.2-Release-Reports
+          path: |
+            Velvet/Build/BUILD-REPORT.json
+            Velvet/Build/TEST-RESULTS.json
+            Velvet/Build/SHA256SUMS.txt
+            Velvet/Build/RELEASE-NOTES.md
+          retention-days: 30
