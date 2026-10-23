@@ -16,6 +16,41 @@ final class CameraConfigurationTests: XCTestCase {
         XCTAssertEqual(CameraConfigurationPolicy.videoMode(in: [cinematic, highQuality], retaining: cinematic, isFront: false), cinematic)
     }
 
+    func testHighFrameRateRequiresExplicitSelectionAndDoesNotDisplace4K60() {
+        let fast = VideoMode(width: 3840, height: 2160, fps: 120, codec: "hevc")
+        let modes = [fast, highQuality, VideoMode.standard]
+        XCTAssertEqual(CameraConfigurationPolicy.videoMode(in: modes, retaining: nil, isFront: false), highQuality)
+        XCTAssertEqual(CameraConfigurationPolicy.videoMode(in: modes, retaining: fast, isFront: false), fast)
+        XCTAssertEqual(CameraConfigurationPolicy.videoMode(in: [fast, .standard], retaining: nil, isFront: false), .standard)
+        XCTAssertNil(CameraConfigurationPolicy.videoMode(in: [fast], retaining: nil, isFront: false))
+        XCTAssertEqual(CameraConfigurationPolicy.captureCodecs(width: 3840, height: 2160, fps: 120), ["hevc"])
+    }
+
+    func testProcessedVideoPathDoesNotAcceptBayerOrUnrelatedPixelFormats() {
+        XCTAssertTrue(CameraConfigurationPolicy.isProcessedVideoSource(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange))
+        XCTAssertTrue(CameraConfigurationPolicy.isProcessedVideoSource(kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange))
+        XCTAssertFalse(CameraConfigurationPolicy.isProcessedVideoSource(kCVPixelFormatType_32BGRA))
+        XCTAssertFalse(CameraConfigurationPolicy.isProcessedVideoSource(kCVPixelFormatType_14Bayer_RGGB))
+        XCTAssertFalse(CameraConfigurationPolicy.isProcessedVideoSource(0))
+    }
+
+    func testVirtualPresetMappingUsesActualNativeSwitchFactors() {
+        XCTAssertEqual(CameraConfigurationPolicy.nativeZoomFactors(constituentIDs: ["ultra", "wide", "tele"], switchFactors: [2, 8]),
+                       ["ultra": 1, "wide": 2, "tele": 8])
+        XCTAssertEqual(CameraConfigurationPolicy.nativeZoomFactors(constituentIDs: ["wide", "tele"], switchFactors: [5]),
+                       ["wide": 1, "tele": 5])
+        for invalid in [[2.0], [2.0, .nan], [4.0, 2.0]] {
+            XCTAssertTrue(CameraConfigurationPolicy.nativeZoomFactors(constituentIDs: ["ultra", "wide", "tele"], switchFactors: invalid).isEmpty)
+        }
+    }
+
+    func testFocusCoordinatesRejectInvalidValuesAndClampPreviewEdges() {
+        XCTAssertEqual(CameraConfigurationPolicy.clampedFocusPoint(CGPoint(x: -0.1, y: 1.2)), CGPoint(x: 0, y: 1))
+        XCTAssertEqual(CameraConfigurationPolicy.clampedFocusPoint(CGPoint(x: 0.3, y: 0.7)), CGPoint(x: 0.3, y: 0.7))
+        XCTAssertNil(CameraConfigurationPolicy.clampedFocusPoint(CGPoint(x: CGFloat.nan, y: 0)))
+        XCTAssertNil(CameraConfigurationPolicy.clampedFocusPoint(CGPoint(x: 0, y: CGFloat.infinity)))
+    }
+
     func testUnsupportedLensModeFallsBackToAnActualCapability() {
         let available = [VideoMode.standard, VideoMode(width: 1280, height: 720, fps: 60, codec: "h264")]
         XCTAssertEqual(CameraConfigurationPolicy.videoMode(in: available, retaining: highQuality, isFront: false), .standard)
@@ -66,11 +101,15 @@ final class CameraConfigurationTests: XCTestCase {
         controller.setCaptureMode(video: true)
         controller.selectVideoMode(highQuality)
         await controller.startRecording()
+        controller.focus(at: CGPoint(x: 0.5, y: 0.5))
         XCTAssertFalse(controller.isReady)
         XCTAssertFalse(controller.isConfiguring)
         XCTAssertFalse(controller.isVideoMode)
         XCTAssertFalse(controller.isRecording)
         XCTAssertFalse(controller.session.isRunning)
+        XCTAssertFalse(controller.isLensTransitioning)
+        XCTAssertEqual(controller.focusState, .idle)
+        XCTAssertNil(controller.focusPoint)
         controller.stop()
     }
 
@@ -88,7 +127,7 @@ final class CameraConfigurationTests: XCTestCase {
     /// recording start is stored in the real encrypted movie's track metadata.
     func testEncryptedMoviePreservesPortraitAndLandscapeTransforms() async throws {
         for angle in [CGFloat(0), 90, 180] {
-            let transform = try await recordedTransform(angle: angle)
+            let transform = try await recordedTrackProperties(angle: angle).transform
             let radians = angle * .pi / 180
             XCTAssertEqual(transform.a, cos(radians), accuracy: 0.001)
             XCTAssertEqual(transform.b, sin(radians), accuracy: 0.001)
@@ -97,7 +136,12 @@ final class CameraConfigurationTests: XCTestCase {
         }
     }
 
-    private func recordedTransform(angle: CGFloat) async throws -> CGAffineTransform {
+    func testEncryptedMoviePreserves120FrameTimeline() async throws {
+        let properties = try await recordedTrackProperties(angle: 0, fps: 120)
+        XCTAssertEqual(properties.frameRate, 120, accuracy: 1)
+    }
+
+    private func recordedTrackProperties(angle: CGFloat, fps: Int = 30) async throws -> (transform: CGAffineTransform, frameRate: Float) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try ProtectedFiles.createDirectory(directory)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -107,7 +151,7 @@ final class CameraConfigurationTests: XCTestCase {
         let writer = VaultVideoWriter(id: id, key: key, wrappedKey: Data(), directory: directory,
                                       session: session, fileExtension: "mp4", width: 320, height: 240)
         let recorder = try SegmentedVideoRecorder(vaultWriter: writer,
-            mode: VideoMode(width: 320, height: 240, fps: 30, codec: "h264"), audio: false, rotationAngle: angle)
+            mode: VideoMode(width: 320, height: 240, fps: fps, codec: "h264"), audio: false, rotationAngle: angle)
         var buffer: CVPixelBuffer?
         XCTAssertEqual(CVPixelBufferCreate(kCFAllocatorDefault, 320, 240, kCVPixelFormatType_32BGRA,
             [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &buffer), kCVReturnSuccess)
@@ -122,8 +166,8 @@ final class CameraConfigurationTests: XCTestCase {
             imageBuffer: pixels, formatDescriptionOut: &description), noErr)
         let format = try XCTUnwrap(description)
         for frame in 0..<16 {
-            var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: 30),
-                presentationTimeStamp: CMTime(value: Int64(300 + frame), timescale: 30), decodeTimeStamp: .invalid)
+            var timing = CMSampleTimingInfo(duration: CMTime(value: 1, timescale: CMTimeScale(fps)),
+                presentationTimeStamp: CMTime(value: Int64(10 * fps + frame), timescale: CMTimeScale(fps)), decodeTimeStamp: .invalid)
             var sample: CMSampleBuffer?
             XCTAssertEqual(CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault,
                 imageBuffer: pixels, formatDescription: format, sampleTiming: &timing, sampleBufferOut: &sample), noErr)
@@ -143,6 +187,8 @@ final class CameraConfigurationTests: XCTestCase {
         let asset = try XCTUnwrap(playback.player.currentItem?.asset)
         let tracks = try await asset.loadTracks(withMediaType: .video)
         let track = try XCTUnwrap(tracks.first)
-        return try await track.load(.preferredTransform)
+        let transform = try await track.load(.preferredTransform)
+        let frameRate = try await track.load(.nominalFrameRate)
+        return (transform, frameRate)
     }
 }

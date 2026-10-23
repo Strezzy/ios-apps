@@ -6,9 +6,11 @@ struct CameraScreen: View {
     var startsCaptureSession = true
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var vault: VaultStore
-    @State private var showGrid = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var zoomSelection
+    @AppStorage("camera.showGrid") private var showGrid = false
     @State private var controls = false
-    @State private var timer = 0
+    @AppStorage("camera.timer") private var timer = 0
     @State private var countdown = 0
     @State private var captureTask: Task<Void, Never>?
 
@@ -26,6 +28,8 @@ struct CameraScreen: View {
                     Color.black
                     ZStack {
                         CameraPreview(controller: controller)
+                            .opacity(controller.isLensTransitioning ? 0.82 : 1)
+                            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: controller.isLensTransitioning)
                         if showGrid { CameraGrid().allowsHitTesting(false) }
                         if !controller.isReady {
                             VStack(spacing: 12) {
@@ -106,23 +110,9 @@ struct CameraScreen: View {
                 }.font(.subheadline.weight(.semibold))
                     .accessibilityLabel("Recording \(Int(controller.recordingSeconds)) seconds")
             } else if video {
-                Menu {
-                    Picker("Video format", selection: videoModeBinding) {
-                        ForEach(controller.videoModes) { mode in Text(mode.label).tag(mode) }
-                    }
-                } label: {
-                    HStack(spacing: 7) {
-                        Text(controller.selectedVideoMode.height == 2160 ? "4K" : "\(controller.selectedVideoMode.height)p")
-                        Text("\(controller.selectedVideoMode.fps)").monospacedDigit()
-                        Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-                    }.font(.system(size: 13, weight: .semibold)).frame(minHeight: 44)
-                }.accessibilityLabel("Video format, \(controller.selectedVideoMode.label)")
-                    .disabled(controlsUnavailable)
+                videoFormatControls
             } else {
-                HStack(spacing: 8) {
-                    Text(controller.photoFormat.label)
-                    if timer > 0 { Label("\(timer)s", systemImage: "timer") }
-                }.font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+                photoFormatControls
             }
             Spacer()
             Button { controls = true } label: {
@@ -146,7 +136,10 @@ struct CameraScreen: View {
                         Text(lens.label).font(.system(size: 14, weight: .semibold))
                             .rotationEffect(controlAngle).frame(width: 40, height: 40)
                             .background {
-                                if controller.selectedLensID == lens.id { Circle().fill(VelvetTheme.accent.opacity(0.9)) }
+                                if controller.selectedLensID == lens.id {
+                                    Circle().fill(VelvetTheme.accent.opacity(0.9))
+                                        .matchedGeometryEffect(id: "selectedLens", in: zoomSelection)
+                                }
                             }
                     }
                     .accessibilityLabel("\(lens.label) camera")
@@ -158,7 +151,75 @@ struct CameraScreen: View {
         .glassEffect(.regular, in: .capsule)
         .disabled(controlsUnavailable || !controller.isReady)
         .opacity(controller.availableLenses.isEmpty ? 0 : 1)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: controller.selectedLensID)
         .animation(.easeInOut(duration: 0.2), value: controller.controlRotationDegrees)
+    }
+
+    private var photoFormatControls: some View {
+        HStack(spacing: 12) {
+            Menu {
+                Picker("Photo format", selection: $controller.photoFormat) {
+                    if controller.supportsHEIF { Text("HEIF").tag(PhotoFormat.heif) }
+                    Text("JPEG").tag(PhotoFormat.jpeg)
+                    if controller.supportsRAW { Text("RAW + JPEG").tag(PhotoFormat.raw) }
+                }
+            } label: {
+                Text(controller.photoFormat == .raw ? "JPEG +" : controller.photoFormat.label)
+                    .frame(minHeight: 44)
+            }.accessibilityLabel("Photo format, \(controller.photoFormat.label)")
+            if controller.supportsRAW {
+                Button {
+                    controller.photoFormat = controller.photoFormat == .raw
+                        ? (controller.supportsHEIF ? .heif : .jpeg) : .raw
+                } label: {
+                    Text("RAW").strikethrough(controller.photoFormat != .raw, color: .white.opacity(0.7))
+                        .foregroundStyle(controller.photoFormat == .raw ? VelvetTheme.accent : .white.opacity(0.65))
+                        .frame(minWidth: 44, minHeight: 44)
+                }.accessibilityLabel("RAW photo")
+                    .accessibilityValue(controller.photoFormat == .raw ? "On, RAW and JPEG" : "Off")
+                    .accessibilityHint("Saves a RAW photo and a JPEG copy")
+                    .accessibilityIdentifier("camera.rawPhoto")
+            }
+            if timer > 0 { Label("\(timer)s", systemImage: "timer").labelStyle(.titleAndIcon) }
+        }.font(.system(size: 12, weight: .semibold))
+            .disabled(controlsUnavailable)
+    }
+
+    private var videoFormatControls: some View {
+        HStack(spacing: 4) {
+            Menu {
+                ForEach(Array(Set(controller.videoModes.map(\.height))).sorted(by: >), id: \.self) { height in
+                    Button(height == 2160 ? "4K" : "\(height)p") {
+                        let modes = controller.videoModes.filter { $0.height == height }
+                        let rates = Set(modes.map(\.fps))
+                        let fps = rates.contains(controller.selectedVideoMode.fps)
+                            ? controller.selectedVideoMode.fps : (rates.filter { $0 <= 60 }.max() ?? 30)
+                        selectVideoFormat(height: height, fps: fps)
+                    }
+                }
+            } label: {
+                Text(controller.selectedVideoMode.height == 2160 ? "4K" : "\(controller.selectedVideoMode.height)p")
+                    .frame(minWidth: 44, minHeight: 44)
+            }.accessibilityLabel("Video resolution, \(controller.selectedVideoMode.height == 2160 ? "4K" : "\(controller.selectedVideoMode.height)p")")
+            Menu {
+                ForEach(Array(Set(controller.videoModes.filter { $0.height == controller.selectedVideoMode.height }.map(\.fps))).sorted(), id: \.self) { fps in
+                    Button("\(fps) fps") { selectVideoFormat(height: controller.selectedVideoMode.height, fps: fps) }
+                }
+            } label: {
+                Text("\(controller.selectedVideoMode.fps)").monospacedDigit()
+                    .foregroundStyle(controller.selectedVideoMode.fps > 60 ? VelvetTheme.accent : .white)
+                    .frame(minWidth: 44, minHeight: 44)
+            }.accessibilityLabel("Frame rate, \(controller.selectedVideoMode.fps) frames per second")
+                .accessibilityIdentifier("camera.frameRate")
+        }.font(.system(size: 13, weight: .semibold)).disabled(controlsUnavailable)
+    }
+
+    private func selectVideoFormat(height: Int, fps: Int) {
+        let modes = controller.videoModes.filter { $0.height == height && $0.fps == fps }
+        if let mode = modes.first(where: { $0.codec == controller.selectedVideoMode.codec })
+            ?? modes.first(where: { $0.codec == "hevc" }) ?? modes.first {
+            controller.selectVideoMode(mode)
+        }
     }
 
     private var modeControls: some View {
@@ -234,19 +295,14 @@ struct CameraScreen: View {
     private var cameraControls: some View {
         NavigationStack {
             Form {
-                Section("Composition") { Toggle("Grid", isOn: $showGrid) }
-                Section("Exposure") {
-                    HStack { Text("Compensation"); Spacer(); Text(String(format: "%+.1f EV", controller.exposureBias)).monospacedDigit() }
-                    Slider(value: Binding(get: { Double(controller.exposureBias) }, set: { controller.setExposureBias(Float($0)) }), in: Double(min(controller.minimumExposureBias, -0.1))...Double(max(controller.maximumExposureBias, 0.1)), step: 0.1)
-                        .disabled(controller.manualCapabilities?.exposureIsManual == true)
-                    Text("Tap the preview to set focus and exposure.").font(.caption).foregroundStyle(.secondary)
-                }
+                Section { Toggle("Grid", isOn: $showGrid) }
                 if video {
                     Section("Video") {
                         Picker("Format", selection: videoModeBinding) {
                             ForEach(controller.videoModes) { mode in Text(mode.label).tag(mode) }
                         }
                         Toggle("Microphone", isOn: $controller.microphoneEnabled)
+                        Text("RAW video is not available.").font(.caption).foregroundStyle(.secondary)
                     }.disabled(controlsUnavailable)
                 } else {
                     Section("Photo") {
@@ -260,11 +316,43 @@ struct CameraScreen: View {
                         }
                         Picker("Timer", selection: $timer) { Text("Off").tag(0); Text("3 seconds").tag(3); Text("10 seconds").tag(10) }
                     }
-                    ManualCameraControls(controller: controller)
+                }
+                exposureControls
+                if !video {
+                    Section {
+                        NavigationLink("Manual controls") {
+                            Form { ManualCameraControls(controller: controller) }
+                                .navigationTitle("Manual controls").navigationBarTitleDisplayMode(.inline)
+                        }
+                    }.disabled(controlsUnavailable)
                 }
             }.navigationTitle("Camera settings").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { controls = false } } }
         }
+    }
+
+    private var exposureControls: some View {
+        Section {
+            Stepper(onIncrement: { adjustExposure(by: 1.0 / 3.0) }, onDecrement: { adjustExposure(by: -1.0 / 3.0) }) {
+                LabeledContent("Exposure", value: String(format: "%+.1f EV", controller.exposureBias))
+                    .monospacedDigit()
+            }
+            .disabled(controlsUnavailable || controller.manualCapabilities?.exposureIsManual == true ||
+                      controller.maximumExposureBias <= controller.minimumExposureBias)
+            if abs(controller.exposureBias) > 0.01 {
+                Button("Reset exposure") { controller.setExposureBias(0) }
+                    .disabled(controlsUnavailable || controller.manualCapabilities?.exposureIsManual == true)
+            }
+        } footer: {
+            Text(controller.manualCapabilities?.exposureIsManual == true
+                 ? "Turn off manual exposure to adjust brightness here."
+                 : "Tap the viewfinder to focus. Exposure adjusts brightness.")
+        }
+    }
+
+    private func adjustExposure(by amount: Float) {
+        let requested = (controller.exposureBias * 3).rounded() / 3 + amount
+        controller.setExposureBias(min(controller.maximumExposureBias, max(controller.minimumExposureBias, requested)))
     }
 }
 

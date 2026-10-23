@@ -122,11 +122,9 @@ struct RootView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if vault.isUnlocked {
-                TabView(selection: $model.tab) {
-                    Tab("Camera", systemImage: "camera", value: 0) { CameraScreen(controller: model.camera) }
-                    Tab("Photos", systemImage: "photo.on.rectangle", value: 1) { GalleryScreen() }
-                    Tab("Search", systemImage: "magnifyingglass", value: 2) { SearchScreen() }
-                    Tab("Settings", systemImage: "slider.horizontal.3", value: 3) { SettingsScreen() }
+                Group {
+                    if model.tab == 0 { CameraScreen(controller: model.camera) }
+                    else { GalleryScreen() }
                 }
                 .onChange(of: model.tab) { _, value in
                     InterfaceOrientation.update(cameraIsVisible: value == 0)
@@ -134,7 +132,6 @@ struct RootView: View {
                         model.camera.stop()
                         Task { await model.reindex(onlyMissing: true) }
                     }
-                    else { Task { await model.camera.start() } }
                 }
             } else { LockScreen() }
             if model.concealed || UIScreen.main.isCaptured {

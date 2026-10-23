@@ -23,10 +23,19 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     private var recordingRotationAngle: CGFloat = 0
     private var earliestRecordingTime: CMTime?
     private var activeVideoMode: VideoMode?
+    private var selectedPhysicalLensID: String?
+    private var focusObservation: NSKeyValueObservation?
+    private var focusObservationID = UUID()
+    private var subjectAreaObserver: NSObjectProtocol?
+    private var activeFocusRequest: UUID?
+    private var focusAdjustmentStarted = false
+    private var configurationInFlight = false
+    private var zoomTransitionID: UUID?
     var onError: ((Error) -> Void)?
     var onControlError: ((Error) -> Void)?
     var onProgress: ((Double, Int64) -> Void)?
     var onManualCapabilities: ((CameraManualCapabilities) -> Void)?
+    var onFocusChange: ((UUID, CameraFocusState) -> Void)?
 
     override init() {
         super.init()
@@ -47,7 +56,10 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         })
     }
 
-    deinit { observers.forEach(NotificationCenter.default.removeObserver) }
+    deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+        if let subjectAreaObserver { NotificationCenter.default.removeObserver(subjectAreaObserver) }
+    }
 
     func start(video: Bool, preferredMode: VideoMode?) async throws -> CameraCapabilities {
         try await withCheckedThrowingContinuation { continuation in
@@ -72,9 +84,15 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         try await withCheckedThrowingContinuation { continuation in
             queue.async { [self] in
                 do {
-                    guard desiredRunning, session.isRunning, recorder == nil,
+                    guard desiredRunning, session.isRunning, !configurationInFlight, recorder == nil,
                           finishingRecorder == nil, photoDelegates.isEmpty else { throw CameraError.unavailable }
-                    continuation.resume(returning: try applyPreviewConfiguration(video: video, preferredMode: preferredMode, lensID: lensID))
+                    let capabilities = try applyPreviewConfiguration(video: video, preferredMode: preferredMode, lensID: lensID)
+                    if let device = cameraInput?.device, device.isRampingVideoZoom {
+                        configurationInFlight = true
+                        let identifier = UUID()
+                        zoomTransitionID = identifier
+                        completeZoomTransition(identifier: identifier, device: device, capabilities: capabilities, remainingChecks: 60, continuation: continuation)
+                    } else { continuation.resume(returning: capabilities) }
                 } catch { continuation.resume(throwing: error) }
             }
         }
@@ -83,6 +101,13 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     func stop() {
         queue.async { [self] in
             desiredRunning = false
+            configurationInFlight = false
+            zoomTransitionID = nil
+            resetFocusObservation()
+            if let device = cameraInput?.device, (try? device.lockForConfiguration()) != nil {
+                device.cancelVideoZoomRamp()
+                device.unlockForConfiguration()
+            }
             abortRecording()
             releaseRecordingAudio()
             if session.isRunning { session.stopRunning() }
@@ -105,6 +130,7 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         }
         session.addInput(input)
         cameraInput = input
+        selectedPhysicalLensID = device.uniqueID
         session.addOutput(photoOutput)
         session.addOutput(videoOutput)
         videoOutput.alwaysDiscardsLateVideoFrames = true
@@ -131,13 +157,11 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         var supported = Set<VideoMode>()
         let verifier = AVAssetWriter(contentType: .mpeg4Movie)
         for format in device.formats {
+            guard CameraConfigurationPolicy.isProcessedVideoSource(CMFormatDescriptionGetMediaSubType(format.formatDescription)) else { continue }
             let dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
             guard [(1280, 720), (1920, 1080), (3840, 2160)].contains(where: { $0.0 == Int(dimensions.width) && $0.1 == Int(dimensions.height) }) else { continue }
             for fps in [24, 25, 30, 60, 100, 120] where format.videoSupportedFrameRateRanges.contains(where: { $0.minFrameRate <= Double(fps) && $0.maxFrameRate >= Double(fps) }) {
-                // The high-rate/HDR/ProRes pipeline remains unavailable until it
-                // has passed physical-device privacy, memory and thermal tests.
-                guard fps <= 60 else { continue }
-                for codec in ["h264", "hevc"] {
+                for codec in CameraConfigurationPolicy.captureCodecs(width: Int(dimensions.width), height: Int(dimensions.height), fps: fps) {
                     let mode = VideoMode(width: Int(dimensions.width), height: Int(dimensions.height), fps: fps, codec: codec)
                     if verifier.canApply(outputSettings: mode.outputSettings, forMediaType: .video) { supported.insert(mode) }
                 }
@@ -175,11 +199,14 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         let dimensions = photoOutput.maxPhotoDimensions
         let megapixels = Double(dimensions.width) * Double(dimensions.height) / 1_000_000
         publishManualCapabilities()
-        return CameraCapabilities(lenses: lenses, selectedLens: device.uniqueID, modes: availableModes(device: device),
+        let selectedID = selectedPhysicalLensID ?? device.uniqueID
+        let selectedDevice = AVCaptureDevice(uniqueID: selectedID) ?? device
+        return CameraCapabilities(lenses: lenses, selectedLens: selectedID, modes: availableModes(device: selectedDevice),
             supportsRAW: !photoOutput.availableRawPhotoPixelFormatTypes.isEmpty,
             supportsHEIF: photoOutput.availablePhotoCodecTypes.contains(.hevc),
             resolution: String(format: "Up to %.0f MP", megapixels),
             minimumExposureBias: device.minExposureTargetBias, maximumExposureBias: device.maxExposureTargetBias,
+            currentExposureBias: device.exposureTargetBias,
             activeVideoMode: activeVideoMode)
     }
 
@@ -203,9 +230,10 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         guard let device = cameraInput?.device else { return }
         let format = device.activeFormat
         let minimum = format.minExposureDuration.seconds
-        let maximum = format.maxExposureDuration.seconds
+        let maximum = min(format.maxExposureDuration.seconds, activeVideoMode.map { 1.0 / Double($0.fps) } ?? .infinity)
         let gains = device.deviceWhiteBalanceGains
         onManualCapabilities?(CameraManualCapabilities(
+            exposureBias: device.exposureTargetBias,
             supportsExposure: device.isExposureModeSupported(.custom) && minimum.isFinite && maximum.isFinite && minimum > 0 && maximum > minimum && format.minISO > 0 && format.maxISO > format.minISO,
             minimumISO: format.minISO, maximumISO: format.maxISO,
             minimumShutterSeconds: minimum, maximumShutterSeconds: maximum,
@@ -217,35 +245,82 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
             whiteBalanceIsLocked: device.whiteBalanceMode == .locked))
     }
 
+    private func rearVirtualDevice(containing physical: AVCaptureDevice) -> AVCaptureDevice? {
+        guard physical.position == .back else { return nil }
+        let discovery = AVCaptureDevice.DiscoverySession(deviceTypes: [.builtInTripleCamera, .builtInDualCamera, .builtInDualWideCamera], mediaType: .video, position: .back)
+        return discovery.devices.first { $0.constituentDevices.contains(where: { $0.uniqueID == physical.uniqueID }) }
+    }
+
+    private func virtualZoomFactor(device: AVCaptureDevice, physicalID: String) -> CGFloat? {
+        guard device.isVirtualDevice else { return nil }
+        let factors = CameraConfigurationPolicy.nativeZoomFactors(
+            constituentIDs: device.constituentDevices.map { $0.uniqueID },
+            switchFactors: device.virtualDeviceSwitchOverVideoZoomFactors.map { $0.doubleValue })
+        guard let factor = factors[physicalID] else { return nil }
+        return CGFloat(factor)
+    }
+
+    /// Use the virtual camera only when it supports the exact physical lens's
+    /// requested format. Otherwise a transactional physical-input switch keeps
+    /// the selected resolution and frame rate truthful.
+    private func captureDevice(for physical: AVCaptureDevice, mode: VideoMode?) -> AVCaptureDevice {
+        guard let virtual = rearVirtualDevice(containing: physical),
+              virtualZoomFactor(device: virtual, physicalID: physical.uniqueID) != nil else { return physical }
+        if let mode, !availableModes(device: virtual).contains(mode) { return physical }
+        return virtual
+    }
+
     /// Transactional preview reconfiguration runs before the controller advertises
     /// the new mode. Recording never switches the camera back to a photo preset.
-    private func applyPreviewConfiguration(video: Bool, preferredMode: VideoMode?, lensID: String?) throws -> CameraCapabilities {
+    private func applyPreviewConfiguration(video: Bool, preferredMode: VideoMode?, lensID: String?, allowVirtual: Bool = true) throws -> CameraCapabilities {
         guard let originalInput = cameraInput else { throw CameraError.unavailable }
-        let device: AVCaptureDevice
-        if let lensID, lensID != originalInput.device.uniqueID {
-            guard let selected = AVCaptureDevice(uniqueID: lensID) else { throw CameraError.unsupported }
-            device = selected
-        } else { device = originalInput.device }
-        let replacement = device.uniqueID == originalInput.device.uniqueID ? originalInput : try AVCaptureDeviceInput(device: device)
-        let modes = availableModes(device: device)
-        let mode = video ? CameraConfigurationPolicy.videoMode(in: modes, retaining: preferredMode, isFront: device.position == .front) : nil
+        let physicalID = lensID ?? selectedPhysicalLensID ?? originalInput.device.uniqueID
+        guard let physical = AVCaptureDevice(uniqueID: physicalID) else { throw CameraError.unsupported }
+        let modes = availableModes(device: physical)
+        let mode = video ? CameraConfigurationPolicy.videoMode(in: modes, retaining: preferredMode, isFront: physical.position == .front) : nil
         guard !video || mode != nil else { throw CameraError.unsupported }
+        let device = allowVirtual ? captureDevice(for: physical, mode: mode) : physical
+        let targetZoom = virtualZoomFactor(device: device, physicalID: physical.uniqueID) ?? device.minAvailableVideoZoomFactor
         let previousMode = activeVideoMode
+        let previousLensID = selectedPhysicalLensID
+        let previousZoom = originalInput.device.videoZoomFactor
+
+        // No graph/preset change is needed for compatible rear-camera presets.
+        // AVFoundation performs the optical handoff during this native zoom ramp.
+        if session.isRunning, device.uniqueID == originalInput.device.uniqueID,
+           mode == previousMode, physicalID != previousLensID {
+            guard targetZoom >= device.minAvailableVideoZoomFactor,
+                  targetZoom <= device.maxAvailableVideoZoomFactor else { throw CameraError.unsupported }
+            try device.lockForConfiguration()
+            device.cancelVideoZoomRamp()
+            configureContinuousFocus(device, center: true)
+            device.ramp(toVideoZoomFactor: targetZoom, withRate: 4)
+            device.unlockForConfiguration()
+            selectedPhysicalLensID = physicalID
+            return try capabilities()
+        }
+
+        let replacement: AVCaptureDeviceInput
+        if device.uniqueID == originalInput.device.uniqueID { replacement = originalInput }
+        else { replacement = try AVCaptureDeviceInput(device: device) }
         session.beginConfiguration()
         do {
-            // Remove explicit old dimensions before changing to a differently sized sensor.
             videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]
             if replacement !== originalInput {
                 session.removeInput(originalInput)
-                guard session.canAddInput(replacement) else {
-                    session.addInput(originalInput)
-                    throw CameraError.unsupported
-                }
+                guard session.canAddInput(replacement) else { throw CameraError.unsupported }
                 session.addInput(replacement)
                 cameraInput = replacement
             }
-            try applyFormat(mode, device: device)
+            try applyFormat(mode, device: device, zoomFactor: targetZoom)
+            // Some virtual devices cannot deliver Bayer RAW although their
+            // physical cameras can. Preserve those still-photo controls by
+            // falling back to the physical input instead of hiding RAW.
+            if mode == nil, device.isVirtualDevice, photoOutput.availableRawPhotoPixelFormatTypes.isEmpty {
+                throw CameraError.unsupported
+            }
             activeVideoMode = mode
+            selectedPhysicalLensID = physicalID
             session.commitConfiguration()
         } catch {
             let configurationError = error
@@ -256,17 +331,62 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
                     session.addInput(originalInput)
                     cameraInput = originalInput
                 }
-                try applyFormat(previousMode, device: originalInput.device)
+                try applyFormat(previousMode, device: originalInput.device, zoomFactor: previousZoom)
                 activeVideoMode = previousMode
+                selectedPhysicalLensID = previousLensID
             } catch {
                 session.commitConfiguration()
                 resetSessionAfterConfigurationFailure()
                 throw CameraError.configurationLost
             }
             session.commitConfiguration()
+            observeFocus(on: originalInput.device)
+            if device.isVirtualDevice, allowVirtual {
+                return try applyPreviewConfiguration(video: video, preferredMode: preferredMode, lensID: physicalID, allowVirtual: false)
+            }
             throw configurationError
         }
+        observeFocus(on: device)
         return try capabilities()
+    }
+
+    private func completeZoomTransition(identifier: UUID, device: AVCaptureDevice, capabilities: CameraCapabilities,
+                                        remainingChecks: Int, continuation: CheckedContinuation<CameraCapabilities, Error>) {
+        queue.asyncAfter(deadline: .now() + 0.05) { [self] in
+            guard zoomTransitionID == identifier else { continuation.resume(throwing: CameraError.interrupted); return }
+            guard desiredRunning, session.isRunning, cameraInput?.device.uniqueID == device.uniqueID else {
+                configurationInFlight = false
+                zoomTransitionID = nil
+                continuation.resume(throwing: CameraError.interrupted)
+                return
+            }
+            if device.isRampingVideoZoom, remainingChecks > 0 {
+                completeZoomTransition(identifier: identifier, device: device, capabilities: capabilities,
+                                       remainingChecks: remainingChecks - 1, continuation: continuation)
+                return
+            }
+            if device.isRampingVideoZoom {
+                // A stalled system ramp is ended under the device lock. Never
+                // leave controls waiting indefinitely for a KVO notification.
+                do {
+                    try device.lockForConfiguration()
+                    device.cancelVideoZoomRamp()
+                    if let factor = virtualZoomFactor(device: device, physicalID: capabilities.selectedLens) {
+                        device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, factor))
+                    }
+                    device.unlockForConfiguration()
+                } catch {
+                    configurationInFlight = false
+                    zoomTransitionID = nil
+                    resetSessionAfterConfigurationFailure()
+                    continuation.resume(throwing: CameraError.configurationLost)
+                    return
+                }
+            }
+            configurationInFlight = false
+            zoomTransitionID = nil
+            continuation.resume(returning: capabilities)
+        }
     }
 
     private func resetSessionAfterConfigurationFailure() {
@@ -275,6 +395,8 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         session.beginConfiguration()
         for input in session.inputs { session.removeInput(input) }
         for output in session.outputs { session.removeOutput(output) }
+        resetFocusObservation()
+        selectedPhysicalLensID = nil
         cameraInput = nil
         microphoneInput = nil
         activeVideoMode = nil
@@ -282,24 +404,30 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     }
 
     /// Caller owns beginConfiguration/commitConfiguration.
-    private func applyFormat(_ mode: VideoMode?, device: AVCaptureDevice) throws {
+    private func applyFormat(_ mode: VideoMode?, device: AVCaptureDevice, zoomFactor: CGFloat) throws {
         videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]
         if let mode {
             guard let format = device.formats.first(where: {
                 let size = CMVideoFormatDescriptionGetDimensions($0.formatDescription)
-                return Int(size.width) == mode.width && Int(size.height) == mode.height && $0.videoSupportedFrameRateRanges.contains {
+                return CameraConfigurationPolicy.isProcessedVideoSource(CMFormatDescriptionGetMediaSubType($0.formatDescription)) &&
+                    Int(size.width) == mode.width && Int(size.height) == mode.height && $0.videoSupportedFrameRateRanges.contains {
                     $0.minFrameRate <= Double(mode.fps) && $0.maxFrameRate >= Double(mode.fps)
                 }
             }) else { throw CameraError.unsupported }
             session.sessionPreset = .inputPriority
-            try device.lockForConfiguration()
-            device.activeFormat = format
-            if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
-            device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: CMTimeScale(mode.fps))
-            device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: CMTimeScale(mode.fps))
-            if format.isVideoHDRSupported { device.automaticallyAdjustsVideoHDREnabled = false; device.isVideoHDREnabled = false }
-            device.videoZoomFactor = device.minAvailableVideoZoomFactor
-            device.unlockForConfiguration()
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+                device.activeFormat = format
+                if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+                device.activeVideoMinFrameDuration = CMTime(value: 1, timescale: CMTimeScale(mode.fps))
+                device.activeVideoMaxFrameDuration = CMTime(value: 1, timescale: CMTimeScale(mode.fps))
+                if format.isVideoHDRSupported { device.automaticallyAdjustsVideoHDREnabled = false; device.isVideoHDREnabled = false }
+                guard zoomFactor >= device.minAvailableVideoZoomFactor, zoomFactor <= device.maxAvailableVideoZoomFactor else { throw CameraError.unsupported }
+                device.cancelVideoZoomRamp()
+                device.videoZoomFactor = zoomFactor
+                configureContinuousFocus(device, center: true, video: true)
+            }
             if let connection = videoOutput.connection(with: .video), connection.isVideoRotationAngleSupported(0) { connection.videoRotationAngle = 0 }
             videoOutput.deliversPreviewSizedOutputBuffers = false
             videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
@@ -308,9 +436,14 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
             videoOutput.deliversPreviewSizedOutputBuffers = true
             guard session.canSetSessionPreset(.photo) else { throw CameraError.unsupported }
             session.sessionPreset = .photo
-            try device.lockForConfiguration()
-            device.videoZoomFactor = device.minAvailableVideoZoomFactor
-            device.unlockForConfiguration()
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+                guard zoomFactor >= device.minAvailableVideoZoomFactor, zoomFactor <= device.maxAvailableVideoZoomFactor else { throw CameraError.unsupported }
+                device.cancelVideoZoomRamp()
+                device.videoZoomFactor = zoomFactor
+                configureContinuousFocus(device, center: true, video: false)
+            }
         }
         configurePhotoQuality()
         if let connection = videoOutput.connection(with: .video) {
@@ -323,7 +456,7 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
     func capturePhoto(format: PhotoFormat, flash: CameraFlash, rotationAngle: CGFloat) async throws -> [CapturedPhoto] {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[CapturedPhoto], Error>) in
             queue.async { [self] in
-                guard session.isRunning, activeVideoMode == nil, recorder == nil, finishingRecorder == nil, photoDelegates.isEmpty else {
+                guard session.isRunning, !configurationInFlight, activeVideoMode == nil, recorder == nil, finishingRecorder == nil, photoDelegates.isEmpty else {
                     continuation.resume(throwing: CameraError.unavailable); return
                 }
                 let settings: AVCapturePhotoSettings
@@ -362,7 +495,7 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [self] in
                 do {
-                    guard session.isRunning, recorder == nil, finishingRecorder == nil, photoDelegates.isEmpty,
+                    guard session.isRunning, !configurationInFlight, recorder == nil, finishingRecorder == nil, photoDelegates.isEmpty,
                           activeVideoMode == mode else { throw CameraError.unsupported }
                     if withAudio {
                         session.beginConfiguration()
@@ -450,27 +583,124 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         earliestRecordingTime = nil
     }
 
-    func focus(at point: CGPoint) {
-        configureDevice { device in
-            if device.isFocusPointOfInterestSupported {
-                device.focusPointOfInterest = point
+    /// Caller holds the device lock. Every configuration restores a supported
+    /// continuous mode; a previous tap must never strand the lens in autoFocus.
+    private func configureContinuousFocus(_ device: AVCaptureDevice, center: Bool, video: Bool? = nil) {
+        activeFocusRequest = nil
+        focusAdjustmentStarted = false
+        if center, device.isFocusPointOfInterestSupported { device.focusPointOfInterest = CGPoint(x: 0.5, y: 0.5) }
+        if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+        else if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
+        if device.isAutoFocusRangeRestrictionSupported { device.autoFocusRangeRestriction = .none }
+        if device.isSmoothAutoFocusSupported { device.isSmoothAutoFocusEnabled = video ?? (activeVideoMode != nil) }
+        device.isSubjectAreaChangeMonitoringEnabled = true
+    }
+
+    private func resetFocusObservation() {
+        focusObservationID = UUID()
+        focusObservation = nil
+        if let subjectAreaObserver { NotificationCenter.default.removeObserver(subjectAreaObserver) }
+        subjectAreaObserver = nil
+        activeFocusRequest = nil
+        focusAdjustmentStarted = false
+    }
+
+    private func observeFocus(on device: AVCaptureDevice) {
+        resetFocusObservation()
+        let observationID = focusObservationID
+        focusObservation = device.observe(\.isAdjustingFocus, options: [.new]) { [weak self, weak device] observed, _ in
+            let adjusting = observed.isAdjustingFocus
+            self?.queue.async { [weak self, weak device] in
+                guard let self, let device, desiredRunning, focusObservationID == observationID, cameraInput?.device.uniqueID == device.uniqueID,
+                      let request = activeFocusRequest else { return }
+                if adjusting { focusAdjustmentStarted = true; onFocusChange?(request, .adjusting) }
+                else if focusAdjustmentStarted { finishTapFocus(device: device, request: request) }
+            }
+        }
+        subjectAreaObserver = NotificationCenter.default.addObserver(forName: AVCaptureDevice.subjectAreaDidChangeNotification,
+            object: device, queue: nil) { [weak self, weak device] _ in
+                self?.queue.async { [weak self, weak device] in
+                    guard let self, let device, desiredRunning, focusObservationID == observationID, cameraInput?.device.uniqueID == device.uniqueID else { return }
+                    do {
+                        try device.lockForConfiguration()
+                        if let request = activeFocusRequest { onFocusChange?(request, .settled) }
+                        configureContinuousFocus(device, center: true)
+                        if device.exposureMode != .custom, device.isExposurePointOfInterestSupported {
+                            device.exposurePointOfInterest = CGPoint(x: 0.5, y: 0.5)
+                        }
+                        device.unlockForConfiguration()
+                    } catch { onControlError?(CameraError.unsupported) }
+                }
+            }
+    }
+
+    func focus(at point: CGPoint, request: UUID) {
+        queue.async { [self] in
+            guard desiredRunning, session.isRunning, !configurationInFlight,
+                  let point = CameraConfigurationPolicy.clampedFocusPoint(point), let device = cameraInput?.device else {
+                onFocusChange?(request, .idle); return
+            }
+            do {
+                try device.lockForConfiguration()
+                activeFocusRequest = request
+                focusAdjustmentStarted = false
+                if device.isFocusPointOfInterestSupported { device.focusPointOfInterest = point }
                 if device.isFocusModeSupported(.autoFocus) { device.focusMode = .autoFocus }
-            }
-            if device.isExposurePointOfInterestSupported {
-                device.exposurePointOfInterest = point
-                if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
-            }
+                else if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+                if device.exposureMode != .custom, device.isExposurePointOfInterestSupported {
+                    device.exposurePointOfInterest = point
+                    if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
+                }
+                device.isSubjectAreaChangeMonitoringEnabled = true
+                device.unlockForConfiguration()
+                onFocusChange?(request, .adjusting)
+                // Fixed-focus lenses and taps on an already sharp subject may
+                // not emit an adjusting->idle edge. Bound this wait as well.
+                settleTapFocus(device: device, request: request, remainingChecks: 10)
+            } catch { onFocusChange?(request, .idle); onControlError?(CameraError.unsupported) }
         }
     }
 
+    private func settleTapFocus(device: AVCaptureDevice, request: UUID, remainingChecks: Int) {
+        queue.asyncAfter(deadline: .now() + 0.3) { [self] in
+            guard desiredRunning, cameraInput?.device.uniqueID == device.uniqueID, activeFocusRequest == request else { return }
+            if device.isAdjustingFocus, remainingChecks > 0 {
+                settleTapFocus(device: device, request: request, remainingChecks: remainingChecks - 1)
+            } else { finishTapFocus(device: device, request: request) }
+        }
+    }
+
+    private func finishTapFocus(device: AVCaptureDevice, request: UUID) {
+        guard activeFocusRequest == request else { return }
+        do {
+            try device.lockForConfiguration()
+            configureContinuousFocus(device, center: false)
+            device.unlockForConfiguration()
+            onFocusChange?(request, .settled)
+        } catch { activeFocusRequest = nil; onFocusChange?(request, .idle) }
+    }
+
     func exposureBias(_ value: Float) {
-        configureDevice { device in device.setExposureTargetBias(min(device.maxExposureTargetBias, max(device.minExposureTargetBias, value)), completionHandler: nil) }
+        queue.async { [self] in
+            guard desiredRunning, session.isRunning, !configurationInFlight, value.isFinite, let device = cameraInput?.device else { return }
+            do {
+                try device.lockForConfiguration()
+                device.setExposureTargetBias(min(device.maxExposureTargetBias, max(device.minExposureTargetBias, value))) { [weak self, weak device] _ in
+                    self?.queue.async { [weak self, weak device] in
+                        guard let self, let device, desiredRunning, cameraInput?.device.uniqueID == device.uniqueID else { return }
+                        publishManualCapabilities()
+                    }
+                }
+                device.unlockForConfiguration()
+            } catch { onControlError?(CameraError.unsupported) }
+        }
     }
 
     func manualExposure(iso: Float, shutterSeconds: Double) {
         configureDevice { device in
             guard device.isExposureModeSupported(.custom) else { throw CameraError.unsupported }
-            let duration = min(CMTimeGetSeconds(device.activeFormat.maxExposureDuration), max(CMTimeGetSeconds(device.activeFormat.minExposureDuration), shutterSeconds))
+            let maximum = min(CMTimeGetSeconds(device.activeFormat.maxExposureDuration), self.activeVideoMode.map { 1.0 / Double($0.fps) } ?? .infinity)
+            let duration = min(maximum, max(CMTimeGetSeconds(device.activeFormat.minExposureDuration), shutterSeconds))
             device.setExposureModeCustom(duration: CMTime(seconds: duration, preferredTimescale: 1_000_000_000), iso: min(device.activeFormat.maxISO, max(device.activeFormat.minISO, iso)), completionHandler: nil)
         }
     }
@@ -510,19 +740,22 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
 
     func automaticControls() {
         configureDevice { device in
-            if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
+            self.configureContinuousFocus(device, center: true)
             if device.isExposureModeSupported(.continuousAutoExposure) { device.exposureMode = .continuousAutoExposure }
             if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) { device.whiteBalanceMode = .continuousAutoWhiteBalance }
         }
     }
 
     func zoom(_ factor: CGFloat) {
-        configureDevice { device in device.videoZoomFactor = min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, factor)) }
+        configureDevice { device in
+            guard factor.isFinite else { throw CameraError.unsupported }
+            device.ramp(toVideoZoomFactor: min(device.maxAvailableVideoZoomFactor, max(device.minAvailableVideoZoomFactor, factor)), withRate: 4)
+        }
     }
 
     private func configureDevice(_ operation: @escaping (AVCaptureDevice) throws -> Void) {
         queue.async { [self] in
-            guard let device = cameraInput?.device else { return }
+            guard desiredRunning, session.isRunning, !configurationInFlight, let device = cameraInput?.device else { return }
             do {
                 try device.lockForConfiguration()
                 defer { device.unlockForConfiguration() }

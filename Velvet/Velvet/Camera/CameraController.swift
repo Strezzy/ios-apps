@@ -9,6 +9,9 @@ final class CameraController: ObservableObject {
     @Published private(set) var isRecording = false
     @Published private(set) var isCapturing = false
     @Published private(set) var isConfiguring = false
+    @Published private(set) var isLensTransitioning = false
+    @Published private(set) var focusState: CameraFocusState = .idle
+    @Published private(set) var focusPoint: CGPoint?
     @Published private(set) var isVideoMode = false
     @Published private(set) var isFrontCamera = false
     @Published private(set) var controlRotationDegrees: Double = 0
@@ -44,6 +47,8 @@ final class CameraController: ObservableObject {
     private let vault: VaultStore
     private var generation = UUID()
     private var isStarting = false
+    private var focusRequest: UUID?
+    private var focusDismissTask: Task<Void, Never>?
 
     init(vault: VaultStore) {
         self.vault = vault
@@ -65,7 +70,27 @@ final class CameraController: ObservableObject {
             }
         }
         engine.onManualCapabilities = { [weak self] capabilities in
-            Task { @MainActor [weak self] in self?.manualCapabilities = capabilities }
+            Task { @MainActor [weak self] in
+                guard let self, vault.isUnlocked else { return }
+                manualCapabilities = capabilities
+                exposureBias = capabilities.exposureBias
+            }
+        }
+        engine.onFocusChange = { [weak self] identifier, state in
+            Task { @MainActor [weak self] in
+                guard let self, vault.isUnlocked, isReady, focusRequest == identifier else { return }
+                focusState = state
+                if state == .settled || state == .idle {
+                    focusDismissTask?.cancel()
+                    focusDismissTask = Task { [weak self] in
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                        guard !Task.isCancelled, let self, focusRequest == identifier else { return }
+                        focusPoint = nil
+                        focusState = .idle
+                        focusRequest = nil
+                    }
+                }
+            }
         }
     }
 
@@ -112,6 +137,7 @@ final class CameraController: ObservableObject {
         photoResolutionLabel = capabilities.resolution
         minimumExposureBias = capabilities.minimumExposureBias
         maximumExposureBias = capabilities.maximumExposureBias
+        exposureBias = capabilities.currentExposureBias
         if !isVideoMode {
             if photoFormat == .raw && !supportsRAW { photoFormat = supportsHEIF ? .heif : .jpeg }
             if photoFormat == .heif && !supportsHEIF { photoFormat = .jpeg }
@@ -136,9 +162,11 @@ final class CameraController: ObservableObject {
     private func requestConfiguration(video: Bool, mode: VideoMode?, lensID: String? = nil) {
         guard vault.isUnlocked, isReady, !isConfiguring, !isRecording, !isCapturing else { return }
         isConfiguring = true
+        isLensTransitioning = lensID != nil
+        clearFocusIndicator()
         let expected = generation
         Task {
-            defer { if generation == expected { isConfiguring = false } }
+            defer { if generation == expected { isConfiguring = false; isLensTransitioning = false } }
             do {
                 let capabilities = try await engine.configure(video: video, preferredMode: mode, lensID: lensID)
                 guard expected == generation, vault.isUnlocked else { return }
@@ -164,6 +192,8 @@ final class CameraController: ObservableObject {
         endOrientationTracking()
         isStarting = false
         isConfiguring = false
+        isLensTransitioning = false
+        clearFocusIndicator()
         isReady = false
         isRecording = false
         isCapturing = false
@@ -232,7 +262,23 @@ final class CameraController: ObservableObject {
             : availableLenses.first(where: { $0.isFront })
         if let target { selectLens(target.id) }
     }
-    func focus(at point: CGPoint) { engine.focus(at: point) }
+    func focus(at point: CGPoint, previewPoint: CGPoint? = nil) {
+        guard vault.isUnlocked, isReady, !isConfiguring,
+              let validPoint = CameraConfigurationPolicy.clampedFocusPoint(point) else { return }
+        clearFocusIndicator()
+        let request = UUID()
+        focusRequest = request
+        focusPoint = CameraConfigurationPolicy.clampedFocusPoint(previewPoint ?? CGPoint(x: 0.5, y: 0.5))
+        focusState = .adjusting
+        engine.focus(at: validPoint, request: request)
+    }
+    private func clearFocusIndicator() {
+        focusDismissTask?.cancel()
+        focusDismissTask = nil
+        focusRequest = nil
+        focusPoint = nil
+        focusState = .idle
+    }
     func setExposureBias(_ value: Float) { exposureBias = value; engine.exposureBias(value) }
     func setManualExposure(iso: Float, shutterSeconds: Double) { engine.manualExposure(iso: iso, shutterSeconds: shutterSeconds) }
     func setWhiteBalance(kelvin: Float) { engine.whiteBalance(kelvin: kelvin) }
@@ -306,12 +352,13 @@ struct CameraPreview: UIViewRepresentable {
         let view = CameraPreviewView()
         view.previewLayer.session = controller.session
         view.previewLayer.videoGravity = .resizeAspectFill
-        view.onFocus = { [weak controller] in controller?.focus(at: $0) }
+        view.onFocus = { [weak controller] point, previewPoint in controller?.focus(at: point, previewPoint: previewPoint) }
         return view
     }
     func updateUIView(_ uiView: CameraPreviewView, context: Context) {
         if uiView.previewLayer.session !== controller.session { uiView.previewLayer.session = controller.session }
         uiView.updateRotation()
+        uiView.updateFocus(point: controller.focusPoint, state: controller.focusState)
     }
     static func dismantleUIView(_ uiView: CameraPreviewView, coordinator: ()) { uiView.previewLayer.session = nil }
 }
@@ -319,15 +366,47 @@ struct CameraPreview: UIViewRepresentable {
 final class CameraPreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
-    var onFocus: ((CGPoint) -> Void)?
+    var onFocus: ((CGPoint, CGPoint) -> Void)?
+    private let focusReticle = UIView()
+    private var displayedFocusPoint: CGPoint?
+    private var displayedFocusState: CameraFocusState = .idle
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
         addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapped(_:))))
+        focusReticle.isUserInteractionEnabled = false
+        focusReticle.layer.borderWidth = 1.5
+        focusReticle.layer.borderColor = UIColor.systemYellow.cgColor
+        focusReticle.layer.cornerRadius = 8
+        focusReticle.alpha = 0
+        addSubview(focusReticle)
+        isAccessibilityElement = true
+        accessibilityTraits = .button
         accessibilityLabel = "Camera viewfinder. Tap to focus."
+        accessibilityHint = "Double-tap to focus at the center of the viewfinder."
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    override func layoutSubviews() { super.layoutSubviews(); updateRotation() }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        updateRotation()
+        if let point = displayedFocusPoint { focusReticle.center = CGPoint(x: point.x * bounds.width, y: point.y * bounds.height) }
+    }
+    func updateFocus(point: CGPoint?, state: CameraFocusState) {
+        guard point != displayedFocusPoint || state != displayedFocusState else { return }
+        displayedFocusPoint = point
+        displayedFocusState = state
+        guard let point, state != .idle else {
+            UIView.animate(withDuration: UIAccessibility.isReduceMotionEnabled ? 0 : 0.2) { self.focusReticle.alpha = 0 }
+            return
+        }
+        focusReticle.bounds = CGRect(x: 0, y: 0, width: 64, height: 64)
+        focusReticle.center = CGPoint(x: point.x * bounds.width, y: point.y * bounds.height)
+        let scale: CGFloat = state == .adjusting && !UIAccessibility.isReduceMotionEnabled ? 1.15 : 1
+        UIView.animate(withDuration: UIAccessibility.isReduceMotionEnabled ? 0 : 0.2) {
+            self.focusReticle.alpha = state == .adjusting ? 1 : 0.75
+            self.focusReticle.transform = CGAffineTransform(scaleX: scale, y: scale)
+        }
+    }
     func updateRotation() {
         // A stationary portrait viewfinder is independent of capture metadata
         // and of the app's other tabs, which may support landscape layouts.
@@ -336,7 +415,16 @@ final class CameraPreviewView: UIView {
         }
     }
     @objc private func tapped(_ gesture: UITapGestureRecognizer) {
-        onFocus?(previewLayer.captureDevicePointConverted(fromLayerPoint: gesture.location(in: self)))
+        focus(at: gesture.location(in: self))
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+    override func accessibilityActivate() -> Bool {
+        focus(at: CGPoint(x: bounds.midX, y: bounds.midY))
+        return true
+    }
+    private func focus(at location: CGPoint) {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        let previewPoint = CGPoint(x: location.x / bounds.width, y: location.y / bounds.height)
+        onFocus?(previewLayer.captureDevicePointConverted(fromLayerPoint: location), previewPoint)
     }
 }

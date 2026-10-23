@@ -40,15 +40,23 @@ final class InterfaceLayoutTests: XCTestCase {
 
     func testPhotosCompactPortraitEmptyState() async throws {
         let snapshot = try await render(name: "photos-compact-320x568", size: compact) { _ in GalleryScreen() }
-        assertVisible("Photos", in: snapshot)
-        assertVisible("No Photos or Videos", in: snapshot)
+        assertPhotoNavigation(in: snapshot)
         assertNoRetiredCopy(in: snapshot)
     }
 
     func testPhotosStandardPortraitEmptyState() async throws {
         let snapshot = try await render(name: "photos-portrait-393x852", size: standard) { _ in GalleryScreen() }
-        assertVisible("Photos", in: snapshot)
+        assertPhotoNavigation(in: snapshot)
+        assertVisible("No Photos or Videos", in: snapshot)
         assertVisible("Import Photos", in: snapshot)
+        assertNoRetiredCopy(in: snapshot)
+    }
+
+    func testPhotosAccessibilityTextSizeKeepsSearchAndBottomNavigationVisible() async throws {
+        let snapshot = try await render(name: "photos-accessibility-320x568", size: compact, textSize: .accessibility2) { _ in GalleryScreen() }
+        // The empty-state explanation may scroll below the viewport. Search and
+        // library navigation must remain usable without requiring smaller text.
+        assertPhotoNavigation(in: snapshot)
         assertNoRetiredCopy(in: snapshot)
     }
 
@@ -98,6 +106,13 @@ final class InterfaceLayoutTests: XCTestCase {
     private struct RenderedSnapshot {
         let recognizedText: String
         let accessibilityText: String
+        let textRegions: [TextRegion]
+    }
+
+    private struct TextRegion {
+        let text: String
+        /// Normalized screenshot coordinates, with the origin at the top left.
+        let bounds: CGRect
     }
 
     private func render<Content: View>(name: String, size: CGSize, textSize: DynamicTypeSize = .large,
@@ -163,7 +178,12 @@ final class InterfaceLayoutTests: XCTestCase {
         request.recognitionLanguages = ["en-US"]
         request.usesLanguageCorrection = false
         try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
-        let recognizedText = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+        let textRegions = (request.results ?? []).compactMap { observation -> TextRegion? in
+            guard let text = observation.topCandidates(1).first?.string else { return nil }
+            let box = observation.boundingBox
+            return TextRegion(text: text, bounds: CGRect(x: box.minX, y: 1 - box.maxY, width: box.width, height: box.height))
+        }
+        let recognizedText = textRegions.map(\.text).joined(separator: "\n")
         let accessibilityText = labels(in: controller.view).joined(separator: "\n")
         try ("RENDERED TEXT\n" + recognizedText + "\n\nUIKIT ACCESSIBILITY\n" + accessibilityText)
             .write(to: directory.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
@@ -171,7 +191,23 @@ final class InterfaceLayoutTests: XCTestCase {
         XCTAssertFalse(model.vault.isUnlocked, "Rendering must not unlock the vault")
         XCTAssertTrue(model.vault.items.isEmpty, "Synthetic screenshots must contain no private media")
         XCTAssertFalse(model.camera.isReady, "Layout tests must not start a capture session")
-        return RenderedSnapshot(recognizedText: recognizedText, accessibilityText: accessibilityText)
+        return RenderedSnapshot(recognizedText: recognizedText, accessibilityText: accessibilityText, textRegions: textRegions)
+    }
+
+    private func assertPhotoNavigation(in snapshot: RenderedSnapshot, file: StaticString = #filePath, line: UInt = #line) {
+        assertVisible("Photos", in: snapshot, file: file, line: line)
+        assertVisible("Search", in: snapshot, file: file, line: line)
+        assertVisible("Library", in: snapshot, file: file, line: line)
+        assertVisible("Albums", in: snapshot, file: file, line: line)
+        if let search = snapshot.textRegions.first(where: { normalized($0.text).contains("search") }) {
+            XCTAssertLessThan(search.bounds.midY, 0.55, "Search should remain near the top of Photos", file: file, line: line)
+        }
+        for label in ["library", "albums"] {
+            if let tab = snapshot.textRegions.first(where: { normalized($0.text).contains(label) }) {
+                XCTAssertGreaterThan(tab.bounds.midY, 0.65, "\(label) should remain in the bottom navigation", file: file, line: line)
+                XCTAssertLessThanOrEqual(tab.bounds.maxY, 1, "Bottom navigation must fit in the viewport", file: file, line: line)
+            }
+        }
     }
 
     private func assertVisible(_ text: String, in snapshot: RenderedSnapshot, file: StaticString = #filePath, line: UInt = #line) {

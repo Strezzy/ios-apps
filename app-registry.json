@@ -58,7 +58,7 @@
   "com.billy.velvet": {
     "name": "Velvet",
     "subtitle": "Camera, photos and local search",
-    "localizedDescription": "Capture photos and videos, browse albums and favorites, and search your library on iPhone. Version 0.2 keeps camera controls in place as you turn the phone, simplifies rear lens selection and front-camera switching, and applies the selected video format to the preview, preferring 4K60 where supported. Photos and Search have cleaner layouts with the same burgundy accents. Media and search data remain encrypted on device. No accounts, analytics or runtime model download. Requires iOS 27. Physical camera performance and LiveContainer behavior still need device validation.",
+    "localizedDescription": "Capture photos and videos, browse albums and favorites, and search your library on iPhone. Version 0.3 improves continuous autofocus and lens transitions, moves Search into Photos, and adds a bottom glass Library/Albums selector with a floating camera button. Supported cameras have a RAW photo toggle and 100/120 fps video choices, including 4K120 HEVC where available. Rear video still prefers 4K60. Camera settings use exposure steps and a separate manual-controls page. Media and search data remain encrypted on device. No accounts, analytics or runtime model download. Requires iOS 27. RAW video is unavailable; physical camera performance and LiveContainer behavior still need device validation.",
     "icon": "Velvet.png",
     "category": "photo-video",
     "tintColor": "#943954"

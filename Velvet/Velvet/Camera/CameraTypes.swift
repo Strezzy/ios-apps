@@ -16,6 +16,8 @@ enum CameraFlash: String, CaseIterable, Identifiable {
     }
 }
 
+enum CameraFocusState: Equatable { case idle, adjusting, settled }
+
 struct CameraLens: Identifiable, Equatable {
     let id: String
     let label: String
@@ -74,6 +76,7 @@ struct CameraCapabilities {
     let resolution: String
     let minimumExposureBias: Float
     let maximumExposureBias: Float
+    let currentExposureBias: Float
     let activeVideoMode: VideoMode?
 }
 
@@ -87,11 +90,36 @@ enum CameraConfigurationPolicy {
         if supported.contains(preferred) { return preferred }
         let alternate = VideoMode(width: preferred.width, height: preferred.height, fps: preferred.fps, codec: "h264")
         if supported.contains(alternate) { return alternate }
-        return supported.sorted {
+        // High frame rates are an explicit choice, including on cameras whose
+        // supported modes do not include our preferred 4K60 combination.
+        let normalRates = supported.filter { $0.fps <= 60 }
+        return normalRates.sorted {
             if $0.height != $1.height { return $0.height > $1.height }
             if $0.fps != $1.fps { return $0.fps > $1.fps }
             return $0.codec == "hevc" && $1.codec != "hevc"
         }.first
+    }
+
+    static func captureCodecs(width: Int, height: Int, fps: Int) -> [String] {
+        // Keep high-throughput 4K in the hardware-efficient HEVC path.
+        width >= 3840 && height >= 2160 && fps > 60 ? ["hevc"] : ["h264", "hevc"]
+    }
+
+    static func isProcessedVideoSource(_ pixelFormat: OSType) -> Bool {
+        pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange || pixelFormat == kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+    }
+
+    static func clampedFocusPoint(_ point: CGPoint) -> CGPoint? {
+        guard point.x.isFinite, point.y.isFinite else { return nil }
+        return CGPoint(x: min(1, max(0, point.x)), y: min(1, max(0, point.y)))
+    }
+
+    static func nativeZoomFactors(constituentIDs: [String], switchFactors: [Double]) -> [String: Double] {
+        let factors = [1.0] + switchFactors
+        guard factors.count == constituentIDs.count, Set(constituentIDs).count == constituentIDs.count,
+              factors.allSatisfy({ $0.isFinite && $0 >= 1 }),
+              zip(factors, factors.dropFirst()).allSatisfy({ pair in pair.0 <= pair.1 }) else { return [:] }
+        return Dictionary(uniqueKeysWithValues: zip(constituentIDs, factors))
     }
 
     static func zoomLabel(nativeFactor: Double) -> String {
@@ -125,6 +153,7 @@ struct CameraPhysicalOrientation: Equatable {
 }
 
 struct CameraManualCapabilities: Equatable {
+    let exposureBias: Float
     let supportsExposure: Bool
     let minimumISO: Float
     let maximumISO: Float

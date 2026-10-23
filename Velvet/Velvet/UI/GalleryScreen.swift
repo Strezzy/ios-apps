@@ -19,6 +19,10 @@ struct GalleryScreen: View {
     @State private var importing = false
     @State private var opened: VaultItem?
     @State private var confirmDelete = false
+    @State private var showSettings = false
+    @State private var query = ""
+    @FocusState private var searchFocused: Bool
+    private var showingSearch: Bool { searchFocused || !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var visible: [VaultItem] {
         let duplicates: Set<UUID> = filter == "duplicates" ? Set(vault.duplicateGroups().flatMap { $0.map(\.id) }) : []
         return vault.items.filter {
@@ -41,17 +45,21 @@ struct GalleryScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    Picker("View", selection: $browsingAlbums) {
-                        Text("Library").tag(false)
-                        Text("Albums").tag(true)
-                    }.pickerStyle(.segmented).padding(.horizontal, 20)
-                        .onChange(of: browsingAlbums) { _, _ in selecting = false; selected.removeAll() }
-                    if browsingAlbums { albums } else { library }
+                    PhotoSearchField(query: $query, isFocused: $searchFocused)
+                        .padding(.horizontal, 20)
+                    if showingSearch {
+                        PhotoSearchContent(query: $query) { searchFocused = false }
+                    } else if browsingAlbums { albums } else { library }
                 }.padding(.top, 8).padding(.bottom, 24)
-            }.background(Color.black).navigationTitle("Photos")
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Color.black).navigationTitle("Photos")
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    if !searchFocused { bottomRail }
+                }
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        if !browsingAlbums {
+                        if !browsingAlbums && !showingSearch {
                             Menu {
                                 Picker("Sort", selection: $newestFirst) {
                                     Text("Newest First").tag(true)
@@ -68,7 +76,7 @@ struct GalleryScreen: View {
                         }
                     }
                     ToolbarItemGroup(placement: .topBarTrailing) {
-                        if !browsingAlbums {
+                        if !browsingAlbums && !showingSearch {
                             Button(selecting ? "Done" : "Select") { selecting.toggle(); selected.removeAll() }.disabled(visible.isEmpty)
                         }
                         Menu {
@@ -76,29 +84,8 @@ struct GalleryScreen: View {
                             Button("New Album", systemImage: "folder.badge.plus") { createAlbum = true }
                         } label: { Image(systemName: "plus") }
                             .disabled(importing).accessibilityLabel("Add photos or album")
-                    }
-                    if selecting && !selected.isEmpty {
-                        ToolbarItemGroup(placement: .bottomBar) {
-                            Text("\(selected.count) Selected").font(.subheadline)
-                            Spacer()
-                            if filter == "trash" {
-                                Button("Restore") { mutateSelection { try await vault.restoreFromTrash($0) } }
-                                Button(role: .destructive) { confirmDelete = true } label: { Image(systemName: "trash") }
-                                    .accessibilityLabel("Delete selected items permanently")
-                            } else {
-                                Menu {
-                                    ForEach(vault.albums) { album in Button(album.name) {
-                                        mutateSelection { id in
-                                            let current = vault.items.first(where: { $0.id == id })?.albumIDs ?? []
-                                            try await vault.setAlbums(current.union([album.id]), for: id)
-                                        }
-                                    } }
-                                } label: { Image(systemName: "folder.badge.plus") }
-                                    .disabled(vault.albums.isEmpty).accessibilityLabel("Add selected items to album")
-                                Button { mutateSelection { try await vault.moveToTrash($0) } } label: { Image(systemName: "trash") }
-                                    .accessibilityLabel("Delete selected items")
-                            }
-                        }
+                        Button { searchFocused = false; showSettings = true } label: { Image(systemName: "gearshape") }
+                            .accessibilityLabel("Settings")
                     }
                 }
                 .alert("New Album", isPresented: $createAlbum) {
@@ -115,16 +102,89 @@ struct GalleryScreen: View {
                 .photosPicker(isPresented: $picker, selection: $picks, maxSelectionCount: 20, matching: .images, preferredItemEncoding: .current)
                 .onChange(of: picks) { _, items in Task { await importPhotos(items) } }
                 .sheet(item: $opened) { MediaDetailScreen(itemID: $0.id) }
+                .sheet(isPresented: $showSettings) { SettingsScreen() }
                 .confirmationDialog("Permanently Delete Selected Items?", isPresented: $confirmDelete, titleVisibility: .visible) {
                     Button("Delete Permanently", role: .destructive) { mutateSelection { try await vault.permanentlyDelete($0) } }
                 } message: { Text("These photos and videos will be permanently removed from Velvet. This can’t be undone.") }
                 .onChange(of: vault.isUnlocked) { _, unlocked in
                     if !unlocked {
-                        opened = nil; picker = false; picks = []; selected.removeAll()
+                        opened = nil; picker = false; picks = []; selected.removeAll(); selecting = false
                         albumName = ""; createAlbum = false; confirmDelete = false; importNotice = false
+                        showSettings = false; query = ""; searchFocused = false
                     }
                 }
+                .onChange(of: searchFocused) { _, focused in
+                    if focused { selecting = false; selected.removeAll() }
+                }
         }
+    }
+    private var bottomRail: some View {
+        HStack(spacing: 12) {
+            Group {
+                if selecting { selectionActions }
+                else {
+                    Picker("Photo view", selection: Binding<Bool?>(get: { showingSearch ? nil : browsingAlbums }, set: { value in
+                        guard let value else { return }
+                        browsingAlbums = value; query = ""; searchFocused = false
+                        selecting = false; selected.removeAll()
+                    })) {
+                        Text("Library").tag(false as Bool?)
+                        Text("Albums").tag(true as Bool?)
+                    }.pickerStyle(.segmented).padding(6)
+                        .frame(minHeight: VelvetTheme.floatingControlSize)
+                        .glassEffect(.regular, in: .capsule)
+                        .accessibilityIdentifier("photos.libraryAlbums")
+                }
+            }.frame(maxWidth: 360)
+            Spacer(minLength: 0)
+            Button {
+                query = ""; searchFocused = false; selecting = false; selected.removeAll()
+                model.tab = 0
+            } label: {
+                Image(systemName: "camera.fill").font(.system(size: 22, weight: .medium))
+                    .frame(width: VelvetTheme.floatingControlSize, height: VelvetTheme.floatingControlSize)
+            }
+            .buttonStyle(.plain).foregroundStyle(.primary)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .accessibilityLabel("Open Camera").accessibilityIdentifier("photos.openCamera")
+        }
+        .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
+        .background {
+            LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .bottom)
+        }
+    }
+    private var selectionActions: some View {
+        HStack(spacing: 0) {
+            Text(selected.isEmpty ? "Select Items" : "\(selected.count) Selected")
+                .font(.subheadline).lineLimit(1).minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 14)
+            if filter == "trash" {
+                Button { mutateSelection { try await vault.restoreFromTrash($0) } } label: {
+                    Image(systemName: "arrow.uturn.backward").frame(width: 44, height: 44)
+                }.accessibilityLabel("Restore selected items").disabled(selected.isEmpty)
+                Button(role: .destructive) { confirmDelete = true } label: {
+                    Image(systemName: "trash").frame(width: 44, height: 44)
+                }.accessibilityLabel("Delete selected items permanently").disabled(selected.isEmpty)
+            } else {
+                Menu {
+                    ForEach(vault.albums) { album in Button(album.name) {
+                        mutateSelection { id in
+                            let current = vault.items.first(where: { $0.id == id })?.albumIDs ?? []
+                            try await vault.setAlbums(current.union([album.id]), for: id)
+                        }
+                    } }
+                } label: { Image(systemName: "folder.badge.plus").frame(width: 44, height: 44) }
+                    .disabled(vault.albums.isEmpty || selected.isEmpty).accessibilityLabel("Add selected items to album")
+                Button { mutateSelection { try await vault.moveToTrash($0) } } label: {
+                    Image(systemName: "trash").frame(width: 44, height: 44)
+                }.accessibilityLabel("Delete selected items").disabled(selected.isEmpty)
+            }
+        }
+        .buttonStyle(.plain).padding(.trailing, 6)
+        .frame(minHeight: VelvetTheme.floatingControlSize)
+        .glassEffect(.regular, in: .capsule)
+        .accessibilityIdentifier("photos.selectionActions")
     }
     private var library: some View {
         VStack(spacing: 14) {
@@ -159,10 +219,8 @@ struct GalleryScreen: View {
                 EmptyLibrary(title: emptyTitle, subtitle: emptyDescription, symbol: filter == "trash" ? "trash" : "photo.on.rectangle")
                     .padding(.top, 20)
                 if filter == "all" && albumID == nil {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 12) { emptyActions }
-                        VStack(spacing: 12) { emptyActions }
-                    }.padding(.horizontal, 20)
+                    Button("Import Photos") { importNotice = true }
+                        .buttonStyle(.glassProminent).padding(.horizontal, 20)
                 }
             } else {
                 LazyVGrid(columns: VelvetTheme.photoColumns, spacing: VelvetTheme.gridSpacing) {
@@ -191,10 +249,6 @@ struct GalleryScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 20)
             }
         }
-    }
-    @ViewBuilder private var emptyActions: some View {
-        Button("Open Camera") { model.tab = 0 }.buttonStyle(.glass)
-        Button("Import Photos") { importNotice = true }.buttonStyle(.glassProminent)
     }
     private var albums: some View {
         VStack(alignment: .leading, spacing: 16) {

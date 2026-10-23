@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsScreen: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var vault: VaultStore
     @EnvironmentObject private var model: AppModel
     @State private var capability = "Checking local model…"
@@ -49,11 +50,12 @@ struct SettingsScreen: View {
                     }
                 }.font(.footnote)
                 Section("Build") {
-                    LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0")
-                    LabeledContent("Build", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "3")
+                    LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.3.0")
+                    LabeledContent("Build", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "4")
                     Text("Camera, video playback and model performance still need testing on a physical iPhone.").font(.caption).foregroundStyle(.secondary)
                 }
             }.navigationTitle("Settings").task { capability = await model.search.capabilityDescription }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
                 .sheet(isPresented: $showBackup) { BackupScreen() }
         }
     }

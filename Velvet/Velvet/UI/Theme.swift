@@ -4,6 +4,7 @@ enum VelvetTheme {
     static let accent = Color(red: 0.83, green: 0.49, blue: 0.62)
     static let surface = Color(red: 0.075, green: 0.065, blue: 0.075)
     static let gridSpacing: CGFloat = 2
+    static let floatingControlSize: CGFloat = 56
     static var photoColumns: [GridItem] { [GridItem(.adaptive(minimum: 108), spacing: gridSpacing)] }
 }
 
