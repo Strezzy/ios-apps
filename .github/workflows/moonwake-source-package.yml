@@ -1,0 +1,61 @@
+name: Complete Moonwake source archive
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/moonwake-source-package.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  source-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Archive the exact tested source from the repository root
+        run: |
+          git fetch --depth=1 origin tag moonwake-1.0.0-build1
+          test "$(git rev-parse moonwake-1.0.0-build1^{commit})" = c1103318e9ff914412fba3a88462d17605ef946f
+          git archive --format=zip -o /tmp/Moonwake-Source.zip moonwake-1.0.0-build1:Moonwake
+          python3 - <<'PY'
+          import hashlib,subprocess,zipfile
+          from pathlib import Path
+          p=Path('/tmp/Moonwake-Source.zip')
+          expected=set(subprocess.check_output(['git','ls-tree','-r','--name-only','moonwake-1.0.0-build1:Moonwake'],text=True).splitlines())
+          with zipfile.ZipFile(p) as z:
+              assert len(expected)>=25 and expected.issubset(set(z.namelist()))
+              assert z.testzip() is None
+              for name in expected:
+                  assert z.read(name)==subprocess.check_output(['git','show','moonwake-1.0.0-build1:Moonwake/'+name])
+          print(f'Complete source archive: {len(expected)} files, {p.stat().st_size} bytes, SHA256 {hashlib.sha256(p.read_bytes()).hexdigest()}')
+          PY
+      - name: Replace the empty source download
+        run: gh release upload moonwake-1.0.0-build1 /tmp/Moonwake-Source.zip --clobber
+      - name: Correct the packaging command for future releases
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/moonwake.yml')
+          source=p.read_text()
+          old='          git archive -o Build/Moonwake-Source.zip HEAD:Moonwake'
+          new='          git -C .. archive -o Moonwake/Build/Moonwake-Source.zip HEAD:Moonwake'
+          check='          python3 -c "import zipfile; n=zipfile.ZipFile(\'Build/Moonwake-Source.zip\').namelist(); assert \'Sources/MoonwakeApp.swift\' in n and len(n)>=25"'
+          if old in source:
+              p.write_text(source.replace(old,new+'\n'+check))
+          else:
+              assert new in source
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/moonwake.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'Validate and package the complete Moonwake source archive'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
