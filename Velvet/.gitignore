@@ -1,0 +1,13 @@
+.DS_Store
+.build/
+Build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+Velvet.xcodeproj/
+Velvet/Resources/Models/*.litertlm
+Velvet/Resources/Models/*.download
+*.ipa
+*.xcresult
+__pycache__/
+.openai/

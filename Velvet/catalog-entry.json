@@ -1,0 +1,8 @@
+{
+  "name": "Velvet",
+  "subtitle": "Private AI camera and encrypted vault · Early access",
+  "localizedDescription": "Capture real photos and videos directly into an authenticated encrypted vault, unlock with Face ID or device-owner authentication, organize albums and favorites, and search locally with bundled EmbeddingGemma 2 Text-Vision 440M. Includes encrypted thumbnails, metadata, search features, video playback and explicit encrypted backup/restore. No accounts, analytics, automatic Photos saves or runtime model download. Requires iOS 27. Photo formats and SDR video up to supported 4K60 combinations depend on hardware. This first release passed 38 simulator tests; physical iPhone camera, privacy, performance and LiveContainer behavior still need validation. HDR, Log, ProRes, 100/120 fps, live AI coaching and Live Photos/depth are not included.",
+  "icon": "Velvet.png",
+  "category": "photo-video",
+  "tintColor": "#943954"
+}

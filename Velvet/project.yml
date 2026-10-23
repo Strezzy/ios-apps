@@ -1,0 +1,77 @@
+name: Velvet
+options:
+  bundleIdPrefix: com.billy
+  deploymentTarget:
+    iOS: '27.0'
+  xcodeVersion: '27.1'
+packages:
+  MediaPipe:
+    url: https://github.com/google-ai-edge/mediapipe.git
+    revision: 50505c8312c7eacb1bd411cecdc4cc9fd08d53cb
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: '0.1.0'
+    CURRENT_PROJECT_VERSION: '1'
+    TARGETED_DEVICE_FAMILY: '1'
+    CODE_SIGNING_ALLOWED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_APP_INTENTS_METADATA_EXTRACTION: NO
+targets:
+  Velvet:
+    type: application
+    platform: iOS
+    sources:
+      - path: Velvet
+        excludes: [Resources, App/Info.plist]
+      - path: Velvet/Resources/Assets.xcassets
+      - path: Velvet/Resources/PrivacyInfo.xcprivacy
+      - path: Velvet/Resources/Models
+        type: folder
+      - path: Velvet/Resources/Licenses
+        type: folder
+    dependencies:
+      - package: MediaPipe
+        product: MediaPipeTasksRetrieval
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.velvet
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: Velvet/App/Info.plist
+      properties:
+        CFBundleDisplayName: Velvet
+        CFBundleName: Velvet
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIRequiredDeviceCapabilities: [arm64, metal]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSCameraUsageDescription: Capture photos and videos directly into your encrypted Velvet vault.
+        NSMicrophoneUsageDescription: Record audio with videos in your encrypted Velvet vault.
+        NSFaceIDUsageDescription: Unlock your private encrypted media vault.
+        UIFileSharingEnabled: false
+        LSSupportsOpeningDocumentsInPlace: false
+        ITSAppUsesNonExemptEncryption: true
+        UIApplicationSupportsIndirectInputEvents: true
+  VelvetTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [VelvetTests]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.velvet.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Velvet
+schemes:
+  Velvet:
+    build:
+      targets:
+        Velvet: all
+    test:
+      targets:
+        - name: VelvetTests
+          parallelizable: false

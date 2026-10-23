@@ -1,0 +1,62 @@
+name: Build and test Velvet
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: New Velvet build number
+        required: true
+        default: '3'
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: velvet-release
+  cancel-in-progress: true
+defaults:
+  run:
+    working-directory: Velvet
+jobs:
+  ios:
+    runs-on: xcode-27
+    timeout-minutes: 55
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install project generator
+        run: command -v xcodegen || brew install xcodegen
+      - name: Source privacy checks
+        run: python3 scripts/audit.py
+      - name: Compile native iPhone app and package unsigned IPA
+        env:
+          VELVET_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          [[ "$VELVET_BUILD_NUMBER" =~ ^[0-9]+$ ]] || exit 1
+          GITHUB_RUN_NUMBER="$VELVET_BUILD_NUMBER" bash scripts/build.sh
+      - name: Run security and search tests on iPhone simulator
+        run: bash scripts/test.sh
+      - name: Capture native launch screen
+        run: |
+          DEVICE=$(python3 -c 'import json; d=json.load(open("Build/simulators.json")); print(next(x["udid"] for k,v in d["devices"].items() if "iOS-27" in k for x in v if "iPhone" in x["name"]))')
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" Build/Simulator/Build/Products/Debug-iphonesimulator/Velvet.app
+          xcrun simctl launch "$DEVICE" com.billy.velvet
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot Build/Velvet-Lock-Screen.png
+      - name: Preserve reproducible source and generated Xcode project
+        run: |
+          git archive -o Build/Velvet-Source.zip HEAD:Velvet
+          zip -r Build/Velvet-XcodeProject.zip Velvet.xcodeproj
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Velvet-iOS-Build
+          path: |
+            Velvet/Build/*.ipa
+            Velvet/Build/*.zip
+            Velvet/Build/*.json
+            Velvet/Build/*.txt
+            Velvet/Build/*.log
+            Velvet/Build/*.png
+            Velvet/Build/Tests.xcresult
+          retention-days: 30
