@@ -4,6 +4,7 @@ import Combine
 
 @main
 struct VelvetApp: App {
+    @UIApplicationDelegateAdaptor(VelvetAppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
     var body: some Scene {
         WindowGroup {
@@ -61,7 +62,7 @@ final class AppModel: ObservableObject {
             concealed = false
         } catch {
             guard expected == generation else { return }
-            self.error = "Velvet couldn’t unlock. Use Face ID or your device passcode, then try again. Existing vault data has been preserved."
+            self.error = "Velvet couldn’t unlock. Use Face ID or your iPhone passcode, then try again. Your photos and videos have been preserved."
         }
     }
     func lock() {
@@ -123,11 +124,12 @@ struct RootView: View {
             if vault.isUnlocked {
                 TabView(selection: $model.tab) {
                     Tab("Camera", systemImage: "camera", value: 0) { CameraScreen(controller: model.camera) }
-                    Tab("Vault", systemImage: "square.grid.2x2", value: 1) { GalleryScreen() }
-                    Tab("Search", systemImage: "sparkle.magnifyingglass", value: 2) { SearchScreen() }
+                    Tab("Photos", systemImage: "photo.on.rectangle", value: 1) { GalleryScreen() }
+                    Tab("Search", systemImage: "magnifyingglass", value: 2) { SearchScreen() }
                     Tab("Settings", systemImage: "slider.horizontal.3", value: 3) { SettingsScreen() }
                 }
                 .onChange(of: model.tab) { _, value in
+                    InterfaceOrientation.update(cameraIsVisible: value == 0)
                     if value != 0 {
                         model.camera.stop()
                         Task { await model.reindex(onlyMissing: true) }
@@ -139,9 +141,12 @@ struct RootView: View {
                 PrivacyCover().ignoresSafeArea().transition(.identity)
             }
         }
+        .onAppear { InterfaceOrientation.update(cameraIsVisible: !vault.isUnlocked || model.tab == 0) }
         .onChange(of: phase) { _, phase in
             switch phase {
-            case .active: model.concealed = UIScreen.main.isCaptured
+            case .active:
+                model.concealed = UIScreen.main.isCaptured
+                InterfaceOrientation.update(cameraIsVisible: !vault.isUnlocked || model.tab == 0)
             case .inactive: model.concealed = true
             case .background: model.lock()
             @unknown default: model.lock()
@@ -151,6 +156,7 @@ struct RootView: View {
             Button("OK", role: .cancel) { model.error = nil }
         } message: { Text(model.error ?? "") }
         .onChange(of: vault.isUnlocked) { _, unlocked in
+            InterfaceOrientation.update(cameraIsVisible: !unlocked || model.tab == 0)
             if unlocked { Task { await model.reindex(onlyMissing: true) } }
         }
     }
@@ -165,7 +171,6 @@ struct LockScreen: View {
                 .clipShape(.rect(cornerRadius: 23)).accessibilityHidden(true)
             VStack(spacing: 12) {
                 Text("Velvet").font(.system(size: 42, weight: .light, design: .serif))
-                Text("A little more private.").font(.title3).foregroundStyle(.secondary)
             }
             Spacer()
             VStack(spacing: 18) {
@@ -175,7 +180,7 @@ struct LockScreen: View {
                         Text(model.busy ? "Unlocking…" : "Unlock Velvet").fontWeight(.semibold)
                     }.frame(maxWidth: .infinity).padding(.vertical, 12)
                 }.buttonStyle(.glassProminent).disabled(model.busy)
-                Text("Your camera. Your vault. On your iPhone.\nFace ID or device passcode required.")
+                Text("Use Face ID or your iPhone passcode.")
                     .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(.bottom, 38)
         }.padding(.horizontal, 36)
@@ -188,7 +193,6 @@ struct PrivacyCover: View {
         ZStack { Color.black; VStack(spacing: 16) {
             Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(VelvetTheme.accent)
             Text("Velvet").font(.system(.title, design: .serif))
-            Text("Private content concealed").font(.footnote).foregroundStyle(.secondary)
-        } }.accessibilityLabel("Private content concealed")
+        } }.accessibilityLabel("Velvet locked")
     }
 }

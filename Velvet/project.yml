@@ -12,8 +12,8 @@ settings:
   base:
     SWIFT_VERSION: '5.0'
     SWIFT_STRICT_CONCURRENCY: minimal
-    MARKETING_VERSION: '0.1.0'
-    CURRENT_PROJECT_VERSION: '1'
+    MARKETING_VERSION: '0.2.0'
+    CURRENT_PROJECT_VERSION: '3'
     TARGETED_DEVICE_FAMILY: '1'
     CODE_SIGNING_ALLOWED: NO
     ENABLE_USER_SCRIPT_SANDBOXING: YES
@@ -49,9 +49,9 @@ targets:
         UILaunchScreen: {}
         UIRequiredDeviceCapabilities: [arm64, metal]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
-        NSCameraUsageDescription: Capture photos and videos directly into your encrypted Velvet vault.
-        NSMicrophoneUsageDescription: Record audio with videos in your encrypted Velvet vault.
-        NSFaceIDUsageDescription: Unlock your private encrypted media vault.
+        NSCameraUsageDescription: Take photos and record videos in Velvet.
+        NSMicrophoneUsageDescription: Include sound in videos you record with Velvet.
+        NSFaceIDUsageDescription: Unlock your photos and videos in Velvet.
         UIFileSharingEnabled: false
         LSSupportsOpeningDocumentsInPlace: false
         ITSAppUsesNonExemptEncryption: true

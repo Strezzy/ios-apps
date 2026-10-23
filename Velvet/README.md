@@ -4,11 +4,21 @@ A native SwiftUI camera and encrypted media vault for iPhone. Offline by design,
 
 <img src="Velvet/Resources/Assets.xcassets/AppIcon.appiconset/Velvet.png" width="144" alt="Velvet's ivory faceted aperture on a burgundy gradient">
 
-**Early access. Physical iPhone validation is required.** A compiling app and passing simulator tests are not a security certification. Release publishing is gated on the complete iPhone build and XCTest suite.
+Version **0.2.0 (3)** updates the camera controls, Photos library and Search. The burgundy aperture icon and bundle identifier remain unchanged.
 
 ## Download
 
-Use the [Velvet release in Strezzy/ios-apps](https://github.com/Strezzy/ios-apps/releases/tag/velvet-0.1.0-build2) for an unsigned IPA, source archive, generated Xcode project, build report, test report and SHA-256 checksum. Sign the IPA with your own trusted sideloading setup. Requires iOS 27.0+. This is a standalone native application, not a website or WebView.
+[Download Velvet.ipa](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.2.0-build3/Velvet.ipa) from the [0.2.0 (3) release](https://github.com/Strezzy/ios-apps/releases/tag/velvet-0.2.0-build3). The download becomes public after native CI and screenshot review; the workflow first prepares a draft. The release includes source, the generated Xcode project, build/test reports and checksums.
+
+Requires iOS 27.0+. Sign the unsigned IPA with your existing sideloading setup. The bundle identifier is still `com.billy.velvet`, and the storage format is unchanged. Update the existing installation and retain its data container to keep your photos, videos and settings.
+
+## Changes in 0.2.0
+
+- The camera keeps its viewfinder and controls in a fixed layout while control glyphs rotate with the phone. Capture orientation is tracked separately.
+- Selecting video configures the live camera before recording. The rear camera prefers 4K at 60 fps when supported; the front camera prefers 1080p at 30 fps. Other lenses or devices use an available mode, and the controls display the actual selection.
+- Camera controls have clearer spacing, lens choices, format/frame-rate selection and recording feedback.
+- **Photos** replaces the Vault tab label, with a dense thumbnail grid, photo/video filters, album covers, simple counts and selection tools. Favorites, albums, duplicates and Recently Deleted remain available.
+- Search uses a plain description field, suggestion buttons and a matching thumbnail grid. Similar-item browsing uses the same layout.
 
 ## Implemented foundation
 
@@ -24,7 +34,7 @@ Use the [Velvet release in Strezzy/ios-apps](https://github.com/Strezzy/ios-apps
 
 Toolchain: Xcode 27.1 / iOS 27.1 SDK, iOS 27.0 deployment, Swift 5 language mode with minimal strict concurrency. CI uses GitHub's `xcode-27` arm64 runner and records the actual toolchain in every release. XcodeGen generates the project from `project.yml`.
 
-Run these commands from this project's `Velvet/` directory in the `ios-apps` repository. The **Build and test Velvet** workflow supports manual builds with an explicit new build number. Build 2 passed all 38 simulator tests; its published IPA is unchanged from that tested build.
+Run these commands from this project's `Velvet/` directory in the `ios-apps` repository. The **Build, test and prepare Velvet release** workflow builds and tests the app, captures the interface and prepares a draft release. Publication follows review of the rendered screens.
 
 ```sh
 brew install xcodegen
@@ -37,10 +47,12 @@ The build fetches one pinned 387,710,976-byte model and verifies SHA-256 before 
 
 ## Security and limitations
 
-Read the [threat model](docs/THREAT_MODEL.md), [camera capability matrix](docs/CAMERA.md), [AI integration report](docs/AI.md), and [security report](docs/SECURITY_REPORT.md), and [verification procedure](docs/VERIFICATION.md). Screen captures, compromised operating systems, framework-private memory/caches and physical flash erasure cannot be fully controlled. Explicitly selected system Photos/Files assets may be cloud-backed; source Photos media remains in Photos.
+Read the [threat model](docs/THREAT_MODEL.md), [camera capability matrix](docs/CAMERA.md), [AI integration report](docs/AI.md), [security report](docs/SECURITY_REPORT.md) and [verification procedure](docs/VERIFICATION.md). Screen captures, compromised operating systems, framework-private memory/caches and physical flash erasure cannot be fully controlled. Explicitly selected system Photos/Files assets may be cloud-backed; source Photos media remains in Photos.
 
-Advanced HDR/Dolby Vision, Log/Log 2, ProRes/ProRes RAW, 100/120 fps, Live Photos/depth, external recording, live coaching, video-moment search and plaintext sharing are not enabled. Encryption takes priority over exposing unvalidated professional formats. Do not treat this build as the only copy of irreplaceable media.
+Advanced HDR/Dolby Vision, Log/Log 2, ProRes/ProRes RAW, 100/120 fps, Live Photos/depth, external recording, live coaching, video-moment search and plaintext sharing are not enabled. Video search currently compares cover frames.
 
 ## Testing evidence
 
-`Build/TEST-RESULTS.json` and `Build/BUILD-REPORT.json` are produced by the actual CI run and attached to successful releases. A local source audit does not substitute for those results. Physical-device acceptance is **Needs Device Validation** until the checklist is completed on an iPhone.
+The published release includes its verification evidence. `Build/TEST-RESULTS.json`, `Build/BUILD-REPORT.json` and interface captures are produced by the actual run and attached to the prepared release. Tests include compact, portrait, landscape and larger-text layouts without bypassing authentication.
+
+Physical camera orientation, sustained 4K/60 recording, lens transitions, audio, playback and device performance still need verification on an iPhone. The [device checklist](docs/VERIFICATION.md) records those checks separately from simulator results.

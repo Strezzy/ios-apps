@@ -33,7 +33,7 @@ final class VaultStore: ObservableObject {
             throw VaultError.authenticationUnavailable
         }
         let authenticated = try await context.evaluatePolicy(.deviceOwnerAuthentication,
-            localizedReason: "Unlock your private Velvet vault")
+            localizedReason: "Unlock your Velvet photos")
         guard authenticated, generation == expected else { throw VaultError.operationCancelled }
         let (snapshot, activeSession) = try await engine.open(context: context)
         guard generation == expected else {

@@ -3,78 +3,217 @@ import AVFoundation
 
 struct CameraScreen: View {
     @ObservedObject var controller: CameraController
+    var startsCaptureSession = true
     @EnvironmentObject private var model: AppModel
-    @State private var video = false
-    @State private var showGrid = true
+    @EnvironmentObject private var vault: VaultStore
+    @State private var showGrid = false
     @State private var controls = false
     @State private var timer = 0
     @State private var countdown = 0
     @State private var captureTask: Task<Void, Never>?
+
+    private var video: Bool { controller.isVideoMode }
+    private var controlsUnavailable: Bool {
+        controller.isRecording || controller.isCapturing || controller.isConfiguring || countdown > 0
+    }
+    private var controlAngle: Angle { .degrees(controller.controlRotationDegrees) }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ZStack {
-                    CameraPreview(controller: controller)
-                    if showGrid { CameraGrid().allowsHitTesting(false) }
-                    if !controller.isReady {
+            GeometryReader { geometry in
+                let frame = CameraViewfinderLayout.frame(in: geometry.size, video: video)
+                ZStack(alignment: .top) {
+                    Color.black
+                    ZStack {
+                        CameraPreview(controller: controller)
+                        if showGrid { CameraGrid().allowsHitTesting(false) }
+                        if !controller.isReady {
+                            VStack(spacing: 12) {
+                                Image(systemName: "camera").font(.title)
+                                Text(controller.errorMessage ?? "Starting camera…")
+                                    .font(.subheadline).multilineTextAlignment(.center)
+                                if controller.errorMessage != nil && !controller.isConfiguring {
+                                    Button("Restart camera") { Task { await controller.start() } }
+                                        .buttonStyle(.glass)
+                                }
+                            }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black)
+                        }
+                        if countdown > 0 {
+                            Text("\(countdown)").font(.system(size: 80, weight: .light))
+                                .rotationEffect(controlAngle).shadow(radius: 20)
+                        }
+                    }
+                    .frame(width: frame.width, height: frame.height)
+                    .clipped()
+                    .position(x: frame.midX, y: frame.midY)
+                    .accessibilityIdentifier("camera.viewfinder")
+
+                    VStack(spacing: 0) {
+                        topControls.frame(height: CameraViewfinderLayout.topBarHeight)
+                        Spacer(minLength: 0)
                         VStack(spacing: 12) {
-                            Image(systemName: "camera.aperture").font(.largeTitle)
-                            Text(controller.errorMessage ?? "Preparing camera…").font(.callout).multilineTextAlignment(.center)
-                        }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black)
-                    }
-                    VStack {
-                        HStack {
-                            Label("Encrypted capture", systemImage: "lock.fill").font(.caption.weight(.medium))
-                            Spacer()
-                            Text(video ? controller.selectedVideoMode.label : controller.photoResolutionLabel)
-                                .font(.caption.monospacedDigit())
-                        }.padding(14).background(.black.opacity(0.35))
-                        Spacer()
-                        if controller.isRecording {
-                            HStack(spacing: 8) {
-                                Circle().fill(.red).frame(width: 7, height: 7)
-                                Text(Duration.seconds(controller.recordingSeconds).formatted(.time(pattern: .minuteSecond)))
-                                Text(ByteCountFormatter.string(fromByteCount: controller.recordingBytes, countStyle: .file)).foregroundStyle(.secondary)
-                            }.font(.callout.monospacedDigit()).padding(12).glassEffect()
+                            zoomControls.frame(height: 44)
+                            modeControls.frame(height: 28)
+                            captureControls.frame(height: 84)
                         }
-                        HStack(spacing: 12) {
-                            ForEach(controller.availableLenses) { lens in
-                                Button(lens.label) { controller.selectLens(lens.id) }
-                                    .font(.subheadline.weight(.semibold)).buttonStyle(.glass)
-                                    .tint(controller.selectedLensID == lens.id ? VelvetTheme.accent : .white)
-                                    .disabled(controller.isRecording || controller.isCapturing)
+                        .padding(.top, 28).padding(.bottom, 12)
+                        .background {
+                            if video {
+                                LinearGradient(colors: [.clear, .black.opacity(0.72)], startPoint: .top, endPoint: .bottom)
+                                    .allowsHitTesting(false)
                             }
-                        }.padding(16)
-                    }
-                    if countdown > 0 { Text("\(countdown)").font(.system(size: 80, weight: .ultraLight)).shadow(radius: 20) }
-                }.clipShape(.rect(cornerRadius: 24)).padding(.horizontal, 8)
-                HStack(spacing: 28) {
-                    Button("Photo") { video = false }.foregroundStyle(video ? .secondary : .primary)
-                    Button("Video") { video = true }.foregroundStyle(video ? .primary : .secondary)
-                }.font(.subheadline.weight(.semibold)).padding(.top, 20).disabled(controller.isRecording)
-                HStack {
-                    Button { showGrid.toggle() } label: { Image(systemName: showGrid ? "grid" : "viewfinder").font(.title3).frame(width: 48, height: 48) }.buttonStyle(.glass).accessibilityLabel("Toggle composition grid")
-                    Spacer()
-                    Button(action: shutter) {
-                        ZStack {
-                            Circle().stroke(.white.opacity(0.8), lineWidth: 3).frame(width: 76, height: 76)
-                            if controller.isRecording { RoundedRectangle(cornerRadius: 6).fill(.red).frame(width: 30, height: 30) }
-                            else { Circle().fill(video ? Color.red : .white).frame(width: 64, height: 64) }
                         }
-                    }.buttonStyle(.plain).accessibilityLabel(controller.isRecording ? "Stop recording" : video ? "Record video" : "Take photo")
-                        .disabled(!controller.isReady || controller.isCapturing || countdown > 0 || model.aiBusy)
-                    Spacer()
-                    Button { controls = true } label: { Image(systemName: "slider.horizontal.3").font(.title3).frame(width: 48, height: 48) }.buttonStyle(.glass).accessibilityLabel("Camera controls")
-                }.padding(.horizontal, 32).padding(.vertical, 18)
-            }.background(.black).navigationTitle("Velvet").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { model.lock(); model.concealed = false } label: { Image(systemName: "lock") }.accessibilityLabel("Lock vault") } }
-                .sheet(isPresented: $controls) { cameraControls.presentationDetents([.medium, .large]) }
-                .task { await controller.start() }
-                .onDisappear { captureTask?.cancel(); countdown = 0; controller.stop() }
-                .onChange(of: controller.lastCaptureID) { _, id in if let id { Task { await model.index(id) } } }
-                .onChange(of: controller.errorMessage) { _, value in if let value { model.error = value } }
+                    }
+                }.clipped()
+            }
+            .background(.black)
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $controls) { cameraControls.presentationDetents([.medium, .large]) }
+            .task { if startsCaptureSession { await controller.start() } }
+            .onDisappear { captureTask?.cancel(); countdown = 0; controller.stop() }
+            .onChange(of: controller.lastCaptureID) { _, id in if let id { Task { await model.index(id) } } }
+            .onChange(of: controller.errorMessage) { _, value in if let value { model.error = value } }
         }
     }
+
+    private var topControls: some View {
+        HStack {
+            if video {
+                Button { controller.microphoneEnabled.toggle() } label: {
+                    Image(systemName: controller.microphoneEnabled ? "mic" : "mic.slash")
+                        .rotationEffect(controlAngle).frame(width: 44, height: 44)
+                }.accessibilityLabel(controller.microphoneEnabled ? "Mute microphone" : "Enable microphone")
+                    .disabled(controlsUnavailable)
+            } else {
+                Menu {
+                    Picker("Flash", selection: $controller.flashMode) {
+                        Text("Off").tag(CameraFlash.off)
+                        Text("Auto").tag(CameraFlash.auto)
+                        Text("On").tag(CameraFlash.on)
+                    }
+                } label: {
+                    Image(systemName: controller.flashMode == .off ? "bolt.slash" : "bolt.fill")
+                        .foregroundStyle(controller.flashMode == .off ? .white : VelvetTheme.accent)
+                        .rotationEffect(controlAngle).frame(width: 44, height: 44)
+                }.accessibilityLabel("Flash").disabled(controlsUnavailable)
+            }
+            Spacer()
+            if controller.isRecording {
+                HStack(spacing: 7) {
+                    Circle().fill(.red).frame(width: 7, height: 7)
+                    Text(Duration.seconds(controller.recordingSeconds).formatted(.time(pattern: .minuteSecond)))
+                        .monospacedDigit()
+                }.font(.subheadline.weight(.semibold))
+                    .accessibilityLabel("Recording \(Int(controller.recordingSeconds)) seconds")
+            } else if video {
+                Menu {
+                    Picker("Video format", selection: videoModeBinding) {
+                        ForEach(controller.videoModes) { mode in Text(mode.label).tag(mode) }
+                    }
+                } label: {
+                    HStack(spacing: 7) {
+                        Text(controller.selectedVideoMode.height == 2160 ? "4K" : "\(controller.selectedVideoMode.height)p")
+                        Text("\(controller.selectedVideoMode.fps)").monospacedDigit()
+                        Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
+                    }.font(.system(size: 13, weight: .semibold)).frame(minHeight: 44)
+                }.accessibilityLabel("Video format, \(controller.selectedVideoMode.label)")
+                    .disabled(controlsUnavailable)
+            } else {
+                HStack(spacing: 8) {
+                    Text(controller.photoFormat.label)
+                    if timer > 0 { Label("\(timer)s", systemImage: "timer") }
+                }.font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button { controls = true } label: {
+                Image(systemName: "slider.horizontal.3").rotationEffect(controlAngle).frame(width: 44, height: 44)
+            }.accessibilityLabel("Camera settings").disabled(controlsUnavailable)
+        }
+        .font(.system(size: 18, weight: .regular)).foregroundStyle(.white).buttonStyle(.plain)
+        .padding(.horizontal, 12).background(.black)
+        .animation(.easeInOut(duration: 0.2), value: controller.controlRotationDegrees)
+    }
+
+    private var zoomControls: some View {
+        HStack(spacing: 2) {
+            if controller.isFrontCamera {
+                Text("1×").font(.system(size: 14, weight: .semibold))
+                    .rotationEffect(controlAngle).frame(width: 40, height: 40)
+                    .accessibilityLabel("Front camera")
+            } else {
+                ForEach(controller.rearZoomLenses) { lens in
+                    Button { controller.selectLens(lens.id) } label: {
+                        Text(lens.label).font(.system(size: 14, weight: .semibold))
+                            .rotationEffect(controlAngle).frame(width: 40, height: 40)
+                            .background {
+                                if controller.selectedLensID == lens.id { Circle().fill(VelvetTheme.accent.opacity(0.9)) }
+                            }
+                    }
+                    .accessibilityLabel("\(lens.label) camera")
+                    .accessibilityAddTraits(controller.selectedLensID == lens.id ? .isSelected : [])
+                }
+            }
+        }
+        .padding(3).foregroundStyle(.white).buttonStyle(.plain)
+        .glassEffect(.regular, in: .capsule)
+        .disabled(controlsUnavailable || !controller.isReady)
+        .opacity(controller.availableLenses.isEmpty ? 0 : 1)
+        .animation(.easeInOut(duration: 0.2), value: controller.controlRotationDegrees)
+    }
+
+    private var modeControls: some View {
+        HStack(spacing: 28) {
+            Button("PHOTO") { controller.setCaptureMode(video: false) }
+                .foregroundStyle(video ? .white.opacity(0.65) : VelvetTheme.accent)
+                .accessibilityLabel("Photo mode").accessibilityAddTraits(!video ? .isSelected : [])
+            Button("VIDEO") { controller.setCaptureMode(video: true) }
+                .foregroundStyle(video ? VelvetTheme.accent : .white.opacity(0.65))
+                .accessibilityLabel("Video mode").accessibilityAddTraits(video ? .isSelected : [])
+        }.font(.system(size: 12, weight: .semibold)).tracking(1.2).buttonStyle(.plain)
+            .disabled(controlsUnavailable || !controller.isReady)
+    }
+
+    private var captureControls: some View {
+        HStack {
+            Button { model.tab = 1 } label: {
+                if let item = vault.items.first(where: { $0.trashedAt == nil }) {
+                    VaultThumbnail(item: item).frame(width: 46, height: 46)
+                        .clipShape(.rect(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(.white.opacity(0.2)))
+                } else {
+                    Image(systemName: "photo.on.rectangle").font(.system(size: 22)).frame(width: 46, height: 46)
+                }
+            }.accessibilityLabel("Open Photos").disabled(controlsUnavailable)
+            Spacer()
+            Button(action: shutter) {
+                ZStack {
+                    Circle().stroke(.white, lineWidth: 3).frame(width: 78, height: 78)
+                    if controller.isRecording {
+                        RoundedRectangle(cornerRadius: 6).fill(.red).frame(width: 30, height: 30)
+                    } else {
+                        Circle().fill(video ? Color.red : .white).frame(width: 66, height: 66)
+                    }
+                    if controller.isConfiguring || controller.isCapturing { ProgressView().tint(video ? .white : .black) }
+                }
+            }
+            .accessibilityLabel(controller.isRecording ? "Stop recording" : video ? "Record video" : "Take photo")
+            .accessibilityIdentifier("camera.shutter")
+            .disabled(!controller.isReady || controller.isCapturing || controller.isConfiguring || countdown > 0 || model.aiBusy)
+            Spacer()
+            Button { controller.flipCamera() } label: {
+                Image(systemName: "arrow.triangle.2.circlepath.camera")
+                    .font(.system(size: 23, weight: .regular)).rotationEffect(controlAngle)
+                    .frame(width: 46, height: 46)
+            }.accessibilityLabel(controller.isFrontCamera ? "Switch to rear camera" : "Switch to front camera")
+                .disabled(controlsUnavailable || !controller.canFlipCamera || !controller.isReady)
+        }.foregroundStyle(.white).buttonStyle(.plain).padding(.horizontal, 34)
+            .animation(.easeInOut(duration: 0.2), value: controller.controlRotationDegrees)
+    }
+
+    private var videoModeBinding: Binding<VideoMode> {
+        Binding(get: { controller.selectedVideoMode }, set: { controller.selectVideoMode($0) })
+    }
+
     private func shutter() {
         guard !model.aiBusy else { return }
         captureTask = Task {
@@ -91,9 +230,11 @@ struct CameraScreen: View {
             }
         }
     }
+
     private var cameraControls: some View {
         NavigationStack {
             Form {
+                Section("Composition") { Toggle("Grid", isOn: $showGrid) }
                 Section("Exposure") {
                     HStack { Text("Compensation"); Spacer(); Text(String(format: "%+.1f EV", controller.exposureBias)).monospacedDigit() }
                     Slider(value: Binding(get: { Double(controller.exposureBias) }, set: { controller.setExposureBias(Float($0)) }), in: Double(min(controller.minimumExposureBias, -0.1))...Double(max(controller.maximumExposureBias, 0.1)), step: 0.1)
@@ -101,13 +242,12 @@ struct CameraScreen: View {
                     Text("Tap the preview to set focus and exposure.").font(.caption).foregroundStyle(.secondary)
                 }
                 if video {
-                    Section("Recording") {
-                        Picker("Format", selection: $controller.selectedVideoMode) {
+                    Section("Video") {
+                        Picker("Format", selection: videoModeBinding) {
                             ForEach(controller.videoModes) { mode in Text(mode.label).tag(mode) }
                         }
                         Toggle("Microphone", isOn: $controller.microphoneEnabled)
-                        Text("Available modes are checked against the active camera. Professional HDR, Log and ProRes modes are unavailable until the encrypted path is validated.").font(.caption).foregroundStyle(.secondary)
-                    }.disabled(controller.isRecording)
+                    }.disabled(controlsUnavailable)
                 } else {
                     Section("Photo") {
                         Picker("Format", selection: $controller.photoFormat) {
@@ -120,12 +260,25 @@ struct CameraScreen: View {
                         }
                         Picker("Timer", selection: $timer) { Text("Off").tag(0); Text("3 seconds").tag(3); Text("10 seconds").tag(10) }
                     }
+                    ManualCameraControls(controller: controller)
                 }
-                if !video { ManualCameraControls(controller: controller) }
-                Section { PrivacyFootnote(text: "Originals are encrypted before Velvet writes them to storage.") }
-            }.navigationTitle("Camera controls").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("Camera settings").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { controls = false } } }
         }
+    }
+}
+
+/// Preserves the complete 4:3 photo / 16:9 video field of view in portrait UI
+/// coordinates. Controls overlay video; rotating the phone never reshapes it.
+enum CameraViewfinderLayout {
+    static let topBarHeight: CGFloat = 44
+    static let photoControlsHeight: CGFloat = 148
+    static func frame(in size: CGSize, video: Bool) -> CGRect {
+        let aspect: CGFloat = video ? 9.0 / 16.0 : 3.0 / 4.0
+        let availableHeight = max(1, size.height - topBarHeight - (video ? 0 : photoControlsHeight))
+        let width = min(max(1, size.width), availableHeight * aspect)
+        let height = width / aspect
+        return CGRect(x: (size.width - width) / 2, y: topBarHeight, width: width, height: height)
     }
 }
 

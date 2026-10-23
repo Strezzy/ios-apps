@@ -31,7 +31,7 @@ struct MediaDetailScreen: View {
                     }.defaultScrollAnchor(.center)
                 } else if let loadingError { ContentUnavailableView("Unable to open", systemImage: "exclamationmark.lock", description: Text(loadingError)) }
                 else { ProgressView().tint(.white) }
-            }.navigationTitle(item?.title ?? "Memory").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle(item?.title ?? "Photo").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) { Button("Done") { dismiss() } }
                     ToolbarItemGroup(placement: .topBarTrailing) {
@@ -39,7 +39,7 @@ struct MediaDetailScreen: View {
                         Button { title = item?.title ?? ""; note = item?.note ?? ""; info = true } label: { Image(systemName: "info.circle") }
                         if item?.trashedAt == nil {
                             Button { showingSimilar = true } label: { Image(systemName: "square.on.square") }
-                                .accessibilityLabel("Find similar memories")
+                                .accessibilityLabel("Find similar photos")
                                 .disabled(model.aiBusy || model.camera.isRecording || model.camera.isCapturing)
                             Button { let id = currentID; model.perform { try await vault.moveToTrash(id); dismiss() } } label: { Image(systemName: "trash") }
                         }
@@ -62,7 +62,7 @@ struct MediaDetailScreen: View {
     private var details: some View {
         NavigationStack {
             Form {
-                Section("Your notes") {
+                Section("Notes") {
                     TextField("Title", text: $title)
                     TextField("Description", text: $note, axis: .vertical).lineLimit(3...8)
                 }
@@ -83,7 +83,6 @@ struct MediaDetailScreen: View {
                         } }
                     }
                 }
-                Section { PrivacyFootnote(text: "The original, thumbnail, notes and search features are encrypted.") }
             }.navigationTitle("Details").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Save") {
                     let id = currentID, savedTitle = title, savedNote = note
@@ -128,27 +127,22 @@ private struct SimilarMediaSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("A different take.").font(.system(.title, design: .serif))
-                    Text("Ranked by visual similarity on this iPhone. Video matches compare their cover frames.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                    if loading { ProgressView("Finding similar memories…").frame(maxWidth: .infinity).padding(.vertical, 32) }
+                    Text("Similar photos and video covers.").font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20)
+                    if loading { ProgressView("Finding similar items…").frame(maxWidth: .infinity).padding(.vertical, 32) }
                     else if matches.isEmpty {
-                        EmptyLibrary(title: "No similar memories yet", subtitle: message ?? "Index more photos in Settings, then try again.", symbol: "square.on.square")
+                        EmptyLibrary(title: "No Similar Items", subtitle: message ?? "Update the search index in Settings, then try again.", symbol: "square.on.square")
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 16) {
+                    LazyVGrid(columns: VelvetTheme.photoColumns, spacing: VelvetTheme.gridSpacing) {
                         ForEach(matches) { match in
                             if let item = vault.items.first(where: { $0.id == match.id && !$0.isTrashed }) {
                                 Button { select(item.id) } label: {
-                                    VStack(alignment: .leading, spacing: 7) {
-                                        VaultThumbnail(item: item).aspectRatio(1, contentMode: .fit).clipShape(.rect(cornerRadius: 14))
-                                        Text(item.title).font(.caption).foregroundStyle(.primary).lineLimit(1)
-                                    }
+                                    VaultThumbnail(item: item).aspectRatio(1, contentMode: .fit)
                                 }.buttonStyle(.plain).accessibilityLabel("Open \(item.title)")
                             }
                         }
-                    }
-                }.padding(20)
-            }.background(.black).navigationTitle("Similar memories").navigationBarTitleDisplayMode(.inline)
+                    }.padding(.horizontal, VelvetTheme.gridSpacing)
+                }.padding(.vertical, 16)
+            }.background(.black).navigationTitle("Similar").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
                 .task(id: referenceID) { await findSimilar() }
                 .onChange(of: vault.isUnlocked) { _, unlocked in if !unlocked { matches = []; dismiss() } }
@@ -170,7 +164,7 @@ private struct SimilarMediaSheet: View {
             }
             guard model.sessionID == session, vault.isUnlocked, !Task.isCancelled else { return }
             guard let reference = documents.first(where: { $0.id == referenceID }) else {
-                message = "This memory has not been indexed. Reindex the library in Settings, then try again."
+                message = "This item has not been indexed. Update the search index in Settings, then try again."
                 return
             }
             let found = await model.search.similar(to: reference, in: documents)

@@ -15,10 +15,10 @@ struct BackupScreen: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Keep a private copy") {
+                Section("Create a backup") {
                     Text("Create an encrypted archive and store its recovery key separately. Anyone with both can decrypt the archive. Velvet cannot recover a lost key.")
                     Button("Prepare encrypted backup") { Task { await prepare() } }.disabled(busy)
-                    if busy { ProgressView("Working locally…") }
+                    if busy { ProgressView("Preparing backup…") }
                 }
                 if !recoveryKey.isEmpty {
                     Section("Recovery key") {
@@ -33,7 +33,7 @@ struct BackupScreen: View {
                 Section("Restore a backup") {
                     SecureField("Recovery key", text: $restoreKey).textInputAutocapitalization(.never).autocorrectionDisabled()
                     Button("Choose encrypted archive") { importing = true }.disabled(busy || restoreKey.isEmpty)
-                    Text("Verified records are merged into this vault. Existing records are preserved. Archive files stream from encrypted storage.").font(.caption).foregroundStyle(.secondary)
+                    Text("Photos and videos are added to your library. Existing items are preserved.").font(.caption).foregroundStyle(.secondary)
                     if restored { Label("Backup restored", systemImage: "checkmark.circle") }
                 }
             }.navigationTitle("Encrypted backup").navigationBarTitleDisplayMode(.inline)
@@ -64,6 +64,6 @@ struct BackupScreen: View {
         busy = true
         defer { busy = false }
         do { try await vault.restoreEncryptedBackup(from: url, recoveryKey: restoreKey); restored = true; restoreKey = "" }
-        catch { model.error = "Restore failed. Verify the recovery key and archive. Existing vault data is preserved." }
+        catch { model.error = "Restore failed. Check the recovery key and archive. Your existing library is preserved." }
     }
 }

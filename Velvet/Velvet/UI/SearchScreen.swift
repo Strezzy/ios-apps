@@ -6,50 +6,59 @@ struct SearchScreen: View {
     @State private var query = ""
     @State private var results: [SearchMatch] = []
     @State private var searching = false
-    @State private var capability = "On-device visual search"
     @State private var opened: VaultItem?
     @State private var performedSearch = false
     @State private var requestID = UUID()
+    private let suggestions = ["Portraits", "Warm light", "Outdoors", "At night", "Blue lighting", "Documents"]
+    private var hasQuery: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var displayedItems: [VaultItem] {
+        let items = Dictionary(uniqueKeysWithValues: vault.items.filter { !$0.isTrashed }.map { ($0.id, $0) })
+        return results.compactMap { items[$0.id] }
+    }
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Image(systemName: "sparkle.magnifyingglass").font(.system(size: 36, weight: .light)).foregroundStyle(VelvetTheme.accent).padding(.bottom, 8)
-                        Text("Find the feeling.").font(.system(.largeTitle, design: .serif))
-                        Text("Describe a moment. Search stays here.").font(.subheadline).foregroundStyle(.secondary)
-                    }.padding(.top, 20)
-                    if searching { ProgressView("Searching privately…") }
-                    if !performedSearch {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("TRY A DESCRIPTION").font(.caption2.weight(.semibold)).tracking(1.6).foregroundStyle(.secondary)
-                            ForEach(["Portraits next to a window", "Warm light and red clothing", "Outside at night", "A black background"], id: \.self) { text in
-                                Button { query = text } label: { HStack { Text(text); Spacer(); Image(systemName: "arrow.up.left").foregroundStyle(.secondary) }.padding(.vertical, 10) }.foregroundStyle(.primary)
-                                Divider()
-                            }
-                        }
-                    } else if results.isEmpty && !searching {
-                        EmptyLibrary(title: "No matching memories", subtitle: "Try another description, or index your library in Settings.", symbol: "magnifyingglass")
-                    }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 12) {
-                        ForEach(results, id: \.id) { result in
-                            if let item = vault.items.first(where: { $0.id == result.id && $0.trashedAt == nil }) {
-                                Button { opened = item } label: {
-                                    VStack(alignment: .leading, spacing: 7) {
-                                        VaultThumbnail(item: item).aspectRatio(1, contentMode: .fit).clipShape(.rect(cornerRadius: 14))
-                                        Text(item.title).font(.caption).lineLimit(1).foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 20) {
+                    if !hasQuery {
+                        VStack(alignment: .leading, spacing: 24) {
+                            Text("Describe a photo or video cover.").font(.subheadline).foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Suggestions").font(.headline)
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 10)], spacing: 10) {
+                                    ForEach(suggestions, id: \.self) { text in
+                                        Button { query = text } label: {
+                                            HStack(spacing: 8) {
+                                                Text(text).multilineTextAlignment(.leading)
+                                                Spacer(minLength: 0)
+                                                Image(systemName: "arrow.up.left").font(.caption).foregroundStyle(.secondary)
+                                            }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 4)
+                                        }.font(.subheadline).buttonStyle(.glass).foregroundStyle(.primary)
                                     }
-                                }.buttonStyle(.plain)
+                                }
                             }
+                        }.padding(.horizontal, 20)
+                    } else {
+                        HStack {
+                            if performedSearch { Text("\(displayedItems.count) \(displayedItems.count == 1 ? "Result" : "Results")").font(.subheadline).foregroundStyle(.secondary) }
+                            Spacer()
+                            if searching { ProgressView().accessibilityLabel("Searching") }
+                        }.padding(.horizontal, 20)
+                        if performedSearch && displayedItems.isEmpty && !searching {
+                            EmptyLibrary(title: "No Results", subtitle: "Try another description. You can update the search index in Settings.", symbol: "magnifyingglass")
+                                .padding(.top, 24)
                         }
                     }
-                    Text(capability).font(.caption).foregroundStyle(.secondary)
-                    PrivacyFootnote(text: "Encrypted search features. No query history. No cloud inference.")
-                }.padding(20)
+                    LazyVGrid(columns: VelvetTheme.photoColumns, spacing: VelvetTheme.gridSpacing) {
+                        ForEach(displayedItems) { item in
+                            Button { opened = item } label: {
+                                VaultThumbnail(item: item).aspectRatio(1, contentMode: .fit)
+                            }.buttonStyle(.plain).accessibilityLabel(item.title)
+                        }
+                    }.padding(.horizontal, VelvetTheme.gridSpacing)
+                }.padding(.top, 12).padding(.bottom, 24)
             }.background(.black).navigationTitle("Search")
                 .searchable(text: $query, prompt: "Describe a photo or video cover")
                 .task(id: query) { await search() }
-                .task { capability = await model.search.capabilityDescription }
                 .sheet(item: $opened) { MediaDetailScreen(itemID: $0.id) }
                 .onChange(of: vault.isUnlocked) { _, unlocked in
                     if !unlocked { query = ""; results = []; opened = nil; performedSearch = false; requestID = UUID() }
@@ -77,7 +86,6 @@ struct SearchScreen: View {
             let found = try await model.search.search(query: text, documents: documents)
             guard model.sessionID == session, vault.isUnlocked, requestID == request, !Task.isCancelled else { return }
             results = found; performedSearch = true
-            capability = await model.search.capabilityDescription
         } catch is CancellationError {} catch {
             guard model.sessionID == session, vault.isUnlocked, requestID == request else { return }
             model.error = "Search is unavailable. Try reindexing the library in Settings."

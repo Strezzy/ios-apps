@@ -1,20 +1,27 @@
-name: Build and test Velvet
+name: Build, test and prepare Velvet release
+
 on:
+  push:
+    branches: [main]
+    paths: ['Velvet/**', '.github/workflows/velvet.yml']
   workflow_dispatch:
     inputs:
       build_number:
-        description: New Velvet build number
-        required: true
-        default: '3'
+        description: Optional new build number (defaults to project.yml)
+        required: false
         type: string
+
 permissions:
-  contents: read
+  contents: write
+
 concurrency:
   group: velvet-release
   cancel-in-progress: true
+
 defaults:
   run:
     working-directory: Velvet
+
 jobs:
   ios:
     runs-on: xcode-27
@@ -27,23 +34,25 @@ jobs:
         run: command -v xcodegen || brew install xcodegen
       - name: Source privacy checks
         run: python3 scripts/audit.py
-      - name: Compile native iPhone app and package unsigned IPA
+      - name: Build native iPhone app
         env:
           VELVET_BUILD_NUMBER: ${{ inputs.build_number }}
-        run: |
-          [[ "$VELVET_BUILD_NUMBER" =~ ^[0-9]+$ ]] || exit 1
-          GITHUB_RUN_NUMBER="$VELVET_BUILD_NUMBER" bash scripts/build.sh
-      - name: Run security and search tests on iPhone simulator
+        run: bash scripts/build.sh
+      - name: Test storage, search, camera and interface
         run: bash scripts/test.sh
-      - name: Capture native launch screen
+      - name: Collect native interface screenshots
+        if: always()
         run: |
           DEVICE=$(python3 -c 'import json; d=json.load(open("Build/simulators.json")); print(next(x["udid"] for k,v in d["devices"].items() if "iOS-27" in k for x in v if "iPhone" in x["name"]))')
           xcrun simctl bootstatus "$DEVICE" -b
-          xcrun simctl install "$DEVICE" Build/Simulator/Build/Products/Debug-iphonesimulator/Velvet.app
+          CONTAINER=$(xcrun simctl get_app_container "$DEVICE" com.billy.velvet data)
+          if [ -d "$CONTAINER/Documents/UITestSnapshots" ]; then
+            cp -R "$CONTAINER/Documents/UITestSnapshots" Build/UITestSnapshots
+          fi
           xcrun simctl launch "$DEVICE" com.billy.velvet
           sleep 2
           xcrun simctl io "$DEVICE" screenshot Build/Velvet-Lock-Screen.png
-      - name: Preserve reproducible source and generated Xcode project
+      - name: Package source and Xcode project
         run: |
           git archive -o Build/Velvet-Source.zip HEAD:Velvet
           zip -r Build/Velvet-XcodeProject.zip Velvet.xcodeproj
@@ -58,5 +67,40 @@ jobs:
             Velvet/Build/*.txt
             Velvet/Build/*.log
             Velvet/Build/*.png
+            Velvet/Build/UITestSnapshots
             Velvet/Build/Tests.xcresult
           retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Velvet-Interface-Review
+          path: Velvet/Build/UITestSnapshots
+          retention-days: 30
+      - name: Prepare verified draft release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          report=json.load(open('Build/BUILD-REPORT.json'))
+          tests=json.load(open('Build/TEST-RESULTS.json'))
+          assert tests['failedTests']==0 and tests['passedTests']>0
+          assert report['sourceCommit']==os.environ['GITHUB_SHA']
+          version,build=report['version'],report['build']
+          assert re.fullmatch(r'\d+(?:\.\d+)*',version) and build.isdigit()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write(f'tag=velvet-{version}-build{build}\nversion={version}\nbuild={build}\n')
+          with open('Build/RELEASE-NOTES.md','w') as out:
+              out.write(open('docs/RELEASE.md').read())
+              out.write(f"\nAutomated results: {tests['passedTests']} passed, {tests['failedTests']} failed, {tests['skippedTests']} skipped.\n")
+              out.write(f"\nSource: {report['sourceCommit']}\nIPA SHA-256: {report['sha256']}\n")
+          PY
+          TAG=$(python3 -c 'import json; r=json.load(open("Build/BUILD-REPORT.json")); print("velvet-"+r["version"]+"-build"+r["build"])')
+          VERSION=$(python3 -c 'import json; r=json.load(open("Build/BUILD-REPORT.json")); print(r["version"]+" ("+r["build"]+")")')
+          cp Build/Velvet-unsigned.ipa Build/Velvet.ipa
+          python3 -c 'from pathlib import Path; p=Path("Build/SHA256SUMS.txt"); p.write_text(p.read_text().replace("Velvet-unsigned.ipa", "Velvet.ipa"))'
+          shopt -s nullglob
+          ASSETS=(Build/Velvet.ipa Build/Velvet-Source.zip Build/Velvet-XcodeProject.zip Build/BUILD-REPORT.json Build/TEST-RESULTS.json Build/SHA256SUMS.txt Build/UITestSnapshots/*.png)
+          gh release create "$TAG" "${ASSETS[@]}" --target "$GITHUB_SHA" --draft --latest=false --title "Velvet $VERSION · Camera and Photos update" --notes-file Build/RELEASE-NOTES.md
