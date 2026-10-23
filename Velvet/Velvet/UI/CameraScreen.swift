@@ -400,7 +400,7 @@ private struct ManualCameraControls: View {
                                 shutterSeconds = pow(2, $0); applyExposure()
                             }), in: log2(capabilities.minimumShutterSeconds)...log2(capabilities.maximumShutterSeconds))
                                 .accessibilityLabel("Shutter duration")
-                            Text("Limits come from the active lens and photo format. Tap-to-focus restores automatic exposure.")
+                            Text("Tap-to-focus keeps these exposure settings. Turn off the lock to return to automatic exposure.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }

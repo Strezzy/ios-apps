@@ -150,8 +150,12 @@ struct GalleryScreen: View {
         }
         .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
         .background {
-            LinearGradient(colors: [.clear, .black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
-                .ignoresSafeArea(edges: .bottom)
+            Color.black.ignoresSafeArea(edges: .bottom)
+                .overlay(alignment: .top) {
+                    LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                        .frame(height: 28).offset(y: -28)
+                }
+                .allowsHitTesting(false)
         }
     }
     private var selectionActions: some View {
