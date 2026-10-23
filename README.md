@@ -14,6 +14,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png" width="44" alt=""/> **Lucid** — Offline video enhancement · Beta | 1.1 (204) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.9.7 (142) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.7-build142/Rift.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png" width="44" alt=""/> **Velvet** — Camera, photos and local search | 0.3.0 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.3.0-build4/Velvet.ipa) | iOS 27.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonwake.png" width="44" alt=""/> **Moonwake** — A starlight pixel adventure | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -56,6 +57,10 @@ Private offline iPhone chat with downloaded uncensored community models or an im
 ### Velvet
 
 Capture photos and videos, browse albums and favorites, and search your library on iPhone. Version 0.3 improves continuous autofocus and lens transitions, moves Search into Photos, and adds a bottom glass Library/Albums selector with a floating camera button. Supported cameras have a RAW photo toggle and 100/120 fps video choices, including 4K120 HEVC where available. Rear video still prefers 4K60. Camera settings use exposure steps and a separate manual-controls page. Media and search data remain encrypted on device. No accounts, analytics or runtime model download. Requires iOS 27. RAW video is unavailable; physical camera performance and LiveContainer behavior still need device validation.
+
+### Moonwake
+
+Explore five moonlit realms as Aster, a white-haired wanderer with a glowing starlight sword. Awaken fifteen runes, free five guardians and restore the moonwells to reach the ending. Sword combos, evasive dash, Moonpulse magic, amber spirit Wisp and moss guardian companions, hidden caches, upgrades and local saves. Original animated pixel artwork and seventeen original audio assets, native SwiftUI Liquid Glass menus, touch controls, controller and keyboard support, left-handed controls, reduced effects and Story difficulty. Built in native Swift with SpriteKit. Entirely offline, with no accounts, ads, purchases, analytics or downloads. Landscape iPhone and iPad; requires iOS 26 or later. Physical-device performance and sideload-host behavior still require device playtesting.
 
 ## Add my apps to LiveContainer
 
