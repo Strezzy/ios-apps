@@ -1,0 +1,88 @@
+name: Build, test and publish Moonwake
+
+on:
+  push:
+    branches: [main, 'moonwake/**']
+    paths: ['Moonwake/**', '.github/workflows/moonwake.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: moonwake-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Moonwake
+
+jobs:
+  ios:
+    runs-on: xcode-27
+    timeout-minutes: 50
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install project generator
+        run: command -v xcodegen || brew install xcodegen
+      - name: Build actual native iPhone game
+        run: bash scripts/build.sh
+      - name: Test campaign, combat, saves, maps and native interface
+        run: bash scripts/test.sh
+      - name: Package reproducible source and generated project
+        if: success()
+        run: |
+          git archive -o Build/Moonwake-Source.zip HEAD:Moonwake
+          zip -qr Build/Moonwake-XcodeProject.zip Moonwake.xcodeproj
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Moonwake-Icon.png
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Moonwake-Build-and-Tests
+          path: |
+            Moonwake/Build/*.ipa
+            Moonwake/Build/*.zip
+            Moonwake/Build/*.json
+            Moonwake/Build/*.txt
+            Moonwake/Build/*.log
+            Moonwake/Build/*.png
+            Moonwake/Build/Screenshots
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Moonwake-Native-Screenshots
+          path: Moonwake/Build/Screenshots
+          retention-days: 30
+      - name: Publish verified game and update app catalog
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import json,os,re
+          r=json.load(open('Build/BUILD-REPORT.json'));t=json.load(open('Build/TEST-RESULTS.json'))
+          assert r['sourceCommit']==os.environ['GITHUB_SHA']
+          assert t['failedTests']==0 and t['passedTests']>=20
+          assert re.fullmatch(r'\d+(?:\.\d+)*',r['version']) and r['build'].isdigit()
+          with open('Build/RELEASE-NOTES.md','w') as f:
+              f.write(open('docs/RELEASE.md').read())
+              f.write(f"\nAutomated results: {t['passedTests']} passed, {t['failedTests']} failed, {t['skippedTests']} skipped.\n")
+              f.write(f"\nSource commit: {r['sourceCommit']}\n\nIPA SHA-256: `{r['sha256']}`\n")
+          PY
+          TAG=$(python3 -c 'import json;r=json.load(open("Build/BUILD-REPORT.json"));print("moonwake-"+r["version"]+"-build"+r["build"])')
+          gh release create "$TAG" Build/Moonwake.ipa Build/Moonwake-Source.zip Build/Moonwake-XcodeProject.zip Build/BUILD-REPORT.json Build/TEST-RESULTS.json Build/SHA256SUMS.txt Build/Moonwake-Icon.png --target "$GITHUB_SHA" --title 'Moonwake 1.0 · The first journey' --notes-file Build/RELEASE-NOTES.md
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png ../assets/Moonwake.png
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/Moonwake.png
+          git commit -m 'Add Moonwake app icon' || true
+          git pull --rebase origin main
+          python3 scripts/update_catalog.py --tag "$TAG"
+          git add apps.json README.md
+          git commit -m 'Publish Moonwake in the iPhone app catalog' || true
+          git push origin HEAD:main

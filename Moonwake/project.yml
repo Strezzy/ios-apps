@@ -1,0 +1,82 @@
+name: Moonwake
+options:
+  bundleIdPrefix: com.billy
+  deploymentTarget:
+    iOS: '26.0'
+  xcodeVersion: '27.1'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGNING_ALLOWED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ENABLE_APP_INTENTS_METADATA_EXTRACTION: NO
+    GENERATE_INFOPLIST_FILE: NO
+targets:
+  Moonwake:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Resources/Assets.xcassets
+      - path: Resources/PrivacyInfo.xcprivacy
+      - path: Resources/Audio
+        type: folder
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.moonwake
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Moonwake
+        CFBundleName: Moonwake
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIRequiredDeviceCapabilities: [arm64, metal]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: true
+        UIRequiresFullScreen: true
+        ITSAppUsesNonExemptEncryption: false
+        UIApplicationSupportsIndirectInputEvents: true
+        CADisableMinimumFrameDurationOnPhone: true
+  MoonwakeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.moonwake.tests
+    dependencies:
+      - target: Moonwake
+  MoonwakeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.moonwake.uitests
+        TEST_TARGET_NAME: Moonwake
+    dependencies:
+      - target: Moonwake
+schemes:
+  Moonwake:
+    build:
+      targets:
+        Moonwake: all
+    test:
+      gatherCoverageData: true
+      targets:
+        - name: MoonwakeTests
+          parallelizable: false
+        - name: MoonwakeUITests
+          parallelizable: false

@@ -1,0 +1,6 @@
+Build/
+*.xcodeproj/
+Resources/Audio/
+Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+Resources/Info.plist
+__pycache__/
