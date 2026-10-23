@@ -45,7 +45,8 @@ jobs:
       - name: Package reproducible source and generated project
         if: success() && steps.verified.outputs.reused != 'true'
         run: |
-          git archive -o Build/Moonwake-Source.zip HEAD:Moonwake
+          git -C .. archive -o Moonwake/Build/Moonwake-Source.zip HEAD:Moonwake
+          python3 -c "import zipfile; n=zipfile.ZipFile('Build/Moonwake-Source.zip').namelist(); assert 'Sources/MoonwakeApp.swift' in n and len(n)>=25"
           zip -qr Build/Moonwake-XcodeProject.zip Moonwake.xcodeproj
           cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Moonwake-Icon.png
       - uses: actions/upload-artifact@v7
