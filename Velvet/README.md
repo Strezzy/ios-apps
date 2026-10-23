@@ -8,7 +8,7 @@ A native SwiftUI camera and encrypted media vault for iPhone. Offline by design,
 
 ## Download
 
-Use the [GitHub Releases](../../releases) page for an unsigned IPA, source archive, generated Xcode project, build report, test report and SHA-256 checksum. Sign the IPA with your own trusted sideloading setup. Requires iOS 27.0+. This is a standalone native application, not a website or WebView.
+Use the [Velvet release in Strezzy/ios-apps](https://github.com/Strezzy/ios-apps/releases/tag/velvet-0.1.0-build2) for an unsigned IPA, source archive, generated Xcode project, build report, test report and SHA-256 checksum. Sign the IPA with your own trusted sideloading setup. Requires iOS 27.0+. This is a standalone native application, not a website or WebView.
 
 ## Implemented foundation
 
@@ -23,6 +23,8 @@ Use the [GitHub Releases](../../releases) page for an unsigned IPA, source archi
 ## Build
 
 Toolchain: Xcode 27.1 / iOS 27.1 SDK, iOS 27.0 deployment, Swift 5 language mode with minimal strict concurrency. CI uses GitHub's `xcode-27` arm64 runner and records the actual toolchain in every release. XcodeGen generates the project from `project.yml`.
+
+Run these commands from this project's `Velvet/` directory in the `ios-apps` repository. The **Build and test Velvet** workflow supports manual builds with an explicit new build number. Build 2 passed all 38 simulator tests; its published IPA is unchanged from that tested build.
 
 ```sh
 brew install xcodegen
