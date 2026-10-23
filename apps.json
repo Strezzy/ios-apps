@@ -535,6 +535,42 @@
       "versionDescription": "Rift 1.9.7 (142) · Voice in the void\n\n- Shortens the end-of-speech silence wait from 1.3 to 1.0 seconds and the first streaming speech chunk target from 96 to 56 characters, keeping complete-word boundaries and longer later chunks.\n- Fades voice mode into a darker maroon background and restores the text-mode colors on exit.\n- Adds more particles behind the glass orb and occasional neural-style connections, capped at 224 particles and eight visible links on one animation clock.\n- Folds the glass inward while listening; speaking retains the outward pulse and glow.\n- Smooths the exit by preserving message view identity and reducing the scatter shader neighborhood from 25 to nine cells, without filtering the chat container.\n- Keeps streaming speech, personal voices, Apple fallback, model settings and normal text mode intact.\n\nNo tests were run, as requested. This release was compiled for arm64 iPhone and packaged with signature/integrity checks. Device performance, thermals and runtime behavior have not been measured in this release.\n\nUpdate the existing Rift entry and keep its data container. Bundle ID remains com.billy.rift, iOS 26.0+.\nBuild source: c03e43e15e731d530d50e17d619705ebcef29d08\nIPA SHA-256: 5f8197c3f09f5cf9d84a1da760936cd6a2f79aa34ada4446f0f1ae467ca3b55f\n",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.7-build142/Rift.ipa",
       "size": 17998508
+    },
+    {
+      "name": "Velvet",
+      "subtitle": "Private AI camera and encrypted vault · Early access",
+      "localizedDescription": "Capture real photos and videos directly into an authenticated encrypted vault, unlock with Face ID or device-owner authentication, organize albums and favorites, and search locally with bundled EmbeddingGemma 2 Text-Vision 440M. Includes encrypted thumbnails, metadata, search features, video playback and explicit encrypted backup/restore. No accounts, analytics, automatic Photos saves or runtime model download. Requires iOS 27. Photo formats and SDR video up to supported 4K60 combinations depend on hardware. This first release passed 38 simulator tests; physical iPhone camera, privacy, performance and LiveContainer behavior still need validation. HDR, Log, ProRes, 100/120 fps, live AI coaching and Live Photos/depth are not included.",
+      "category": "photo-video",
+      "tintColor": "#943954",
+      "bundleIdentifier": "com.billy.velvet",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "buildVersion": "2",
+          "buildNumber": "2",
+          "date": "2026-10-23T07:11:51Z",
+          "localizedDescription": "Velvet is a native, offline iPhone camera and encrypted media vault with bundled EmbeddingGemma 2 Text-Vision 440M and native Vision analysis.\r\n\r\nThis is an early-access build. GitHub Actions compiles the complete arm64 app and passes its simulator security/search/video tests before publishing. The attached build report identifies the exact source, SDK, Xcode and IPA hash.\r\n\r\nDownload `Velvet.ipa` and sign/install it with your own trusted sideloading workflow. It is unsigned; opening the file alone does not install it. Requires iOS 27.0 or newer. No signing credentials are collected. The local AI model is included; no runtime download is needed.\r\n\r\nImplemented: real AVCapture photo/video, AES-GCM item encryption, device-owner authentication, encrypted thumbnails/catalogue/search, authenticated segmented playback, albums/favorites/trash/duplicate detection, still-photo import, encrypted backup/restore, native Liquid Glass controls and a suite-matched icon.\r\n\r\nNeeds Device Validation: actual camera quality/modes, long recording/seek/orientation/audio, model relevance/memory/thermal behavior, lifecycle snapshots, device filesystem and network audits. Use disposable media until the device checklist passes. See `docs/VERIFICATION.md`, `docs/THREAT_MODEL.md`, `docs/CAMERA.md`, and `docs/AI.md`.\r\n\r\nUnvalidated HDR, Log, ProRes and 100/120 fps controls are not enabled. Video search covers the preview frame, not individual moments. Plaintext export, live composition coaching, Live Photos/depth are not included.\r\n\r\nAutomated verification: 38 tests passed, 0 failed, 0 skipped on the iOS 27 simulator. The attached IPA is byte-for-byte identical to verified Build 2 (SHA-256 5bde6243dad1f42cb54c683aac03924f71785e13e88852cb07e11f7757386ee1). Built with Xcode 27.1 (27A9275), iPhoneOS 27.1 SDK.\r\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/velvet-0.1.0-build2/Velvet.ipa",
+          "size": 325175701,
+          "minOSVersion": "27.0",
+          "sha256": "5bde6243dad1f42cb54c683aac03924f71785e13e88852cb07e11f7757386ee1"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSCameraUsageDescription": "Capture photos and videos directly into your encrypted Velvet vault.",
+          "NSFaceIDUsageDescription": "Unlock your private encrypted media vault.",
+          "NSMicrophoneUsageDescription": "Record audio with videos in your encrypted Velvet vault."
+        }
+      },
+      "version": "0.1.0",
+      "versionDate": "2026-10-23T07:11:51Z",
+      "versionDescription": "Velvet is a native, offline iPhone camera and encrypted media vault with bundled EmbeddingGemma 2 Text-Vision 440M and native Vision analysis.\r\n\r\nThis is an early-access build. GitHub Actions compiles the complete arm64 app and passes its simulator security/search/video tests before publishing. The attached build report identifies the exact source, SDK, Xcode and IPA hash.\r\n\r\nDownload `Velvet.ipa` and sign/install it with your own trusted sideloading workflow. It is unsigned; opening the file alone does not install it. Requires iOS 27.0 or newer. No signing credentials are collected. The local AI model is included; no runtime download is needed.\r\n\r\nImplemented: real AVCapture photo/video, AES-GCM item encryption, device-owner authentication, encrypted thumbnails/catalogue/search, authenticated segmented playback, albums/favorites/trash/duplicate detection, still-photo import, encrypted backup/restore, native Liquid Glass controls and a suite-matched icon.\r\n\r\nNeeds Device Validation: actual camera quality/modes, long recording/seek/orientation/audio, model relevance/memory/thermal behavior, lifecycle snapshots, device filesystem and network audits. Use disposable media until the device checklist passes. See `docs/VERIFICATION.md`, `docs/THREAT_MODEL.md`, `docs/CAMERA.md`, and `docs/AI.md`.\r\n\r\nUnvalidated HDR, Log, ProRes and 100/120 fps controls are not enabled. Video search covers the preview frame, not individual moments. Plaintext export, live composition coaching, Live Photos/depth are not included.\r\n\r\nAutomated verification: 38 tests passed, 0 failed, 0 skipped on the iOS 27 simulator. The attached IPA is byte-for-byte identical to verified Build 2 (SHA-256 5bde6243dad1f42cb54c683aac03924f71785e13e88852cb07e11f7757386ee1). Built with Xcode 27.1 (27A9275), iPhoneOS 27.1 SDK.\r\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/velvet-0.1.0-build2/Velvet.ipa",
+      "size": 325175701
     }
   ],
   "news": []
