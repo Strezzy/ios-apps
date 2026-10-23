@@ -37,25 +37,3 @@ jobs:
           PY
       - name: Replace the empty source download
         run: gh release upload moonwake-1.0.0-build1 /tmp/Moonwake-Source.zip --clobber
-      - name: Correct the packaging command for future releases
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('.github/workflows/moonwake.yml')
-          source=p.read_text()
-          old='          git archive -o Build/Moonwake-Source.zip HEAD:Moonwake'
-          new='          git -C .. archive -o Moonwake/Build/Moonwake-Source.zip HEAD:Moonwake'
-          check='          python3 -c "import zipfile; n=zipfile.ZipFile(\'Build/Moonwake-Source.zip\').namelist(); assert \'Sources/MoonwakeApp.swift\' in n and len(n)>=25"'
-          if old in source:
-              p.write_text(source.replace(old,new+'\n'+check))
-          else:
-              assert new in source
-          PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/moonwake.yml
-          if ! git diff --cached --quiet; then
-            git commit -m 'Validate and package the complete Moonwake source archive'
-            git pull --rebase origin main
-            git push origin HEAD:main
-          fi
