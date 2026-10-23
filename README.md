@@ -13,7 +13,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Veil.png" width="44" alt=""/> **Veil** — Remove metadata from photos and videos | 1.1 (201) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/veil-1.1-build201/Veil.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Lucid.png" width="44" alt=""/> **Lucid** — Offline video enhancement · Beta | 1.1 (204) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/lucid-1.1-build204/Lucid.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.9.7 (142) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.7-build142/Rift.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png" width="44" alt=""/> **Velvet** — Camera, photos and local search | 0.2.0 (3) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.2.0-build3/Velvet.ipa) | iOS 27.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png" width="44" alt=""/> **Velvet** — Camera, photos and local search | 0.3.0 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.3.0-build4/Velvet.ipa) | iOS 27.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -55,7 +55,7 @@ Private offline iPhone chat with downloaded uncensored community models or an im
 
 ### Velvet
 
-Capture photos and videos, browse albums and favorites, and search your library on iPhone. Version 0.2 keeps camera controls in place as you turn the phone, simplifies rear lens selection and front-camera switching, and applies the selected video format to the preview, preferring 4K60 where supported. Photos and Search have cleaner layouts with the same burgundy accents. Media and search data remain encrypted on device. No accounts, analytics or runtime model download. Requires iOS 27. Physical camera performance and LiveContainer behavior still need device validation.
+Capture photos and videos, browse albums and favorites, and search your library on iPhone. Version 0.3 improves continuous autofocus and lens transitions, moves Search into Photos, and adds a bottom glass Library/Albums selector with a floating camera button. Supported cameras have a RAW photo toggle and 100/120 fps video choices, including 4K120 HEVC where available. Rear video still prefers 4K60. Camera settings use exposure steps and a separate manual-controls page. Media and search data remain encrypted on device. No accounts, analytics or runtime model download. Requires iOS 27. RAW video is unavailable; physical camera performance and LiveContainer behavior still need device validation.
 
 ## Add my apps to LiveContainer
 
