@@ -43,6 +43,7 @@ jobs:
       - name: Collect native interface screenshots
         if: always()
         run: |
+          if [ ! -f Build/simulators.json ]; then exit 0; fi
           DEVICE=$(python3 -c 'import json; d=json.load(open("Build/simulators.json")); print(next(x["udid"] for k,v in d["devices"].items() if "iOS-27" in k for x in v if "iPhone" in x["name"]))')
           xcrun simctl bootstatus "$DEVICE" -b
           CONTAINER=$(xcrun simctl get_app_container "$DEVICE" com.billy.velvet data)

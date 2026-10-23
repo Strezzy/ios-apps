@@ -30,25 +30,28 @@ struct SettingsScreen: View {
                     Button {
                         reindexing = true
                         Task { await model.reindex(); reindexing = false; capability = await model.search.capabilityDescription }
-                    } label: { HStack { Text(reindexing ? "Indexing on this iPhone…" : "Reindex library"); Spacer(); if reindexing || model.indexing { ProgressView() } } }
+                    } label: { HStack { Text(reindexing ? "Updating Search…" : "Update Search"); Spacer(); if reindexing || model.indexing { ProgressView() } } }
                         .disabled(reindexing || model.indexing)
-                    Text("Indexing runs while Velvet is open and unlocked. Video matches use cover images.").font(.caption).foregroundStyle(.secondary)
+                    Text("Search updates while Velvet is open and unlocked. Video matches use cover images.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Backup") {
                     Button("Encrypted backup and restore", systemImage: "externaldrive.badge.checkmark") { showBackup = true }
                     Text("Your library is excluded from automatic backups. Save an encrypted backup and its recovery key separately.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Privacy") {
-                    Label("No accounts, analytics or cloud inference", systemImage: "network.slash")
+                    Label("No accounts, tracking or cloud processing", systemImage: "network.slash")
                     Label("Never saves captures to Apple Photos", systemImage: "photo.badge.checkmark")
-                    Text("Screen recording and mirroring conceal and lock Velvet. iOS screenshots cannot be universally prevented. Device compromise and operating-system internals are outside Velvet's control.")
-                    Text("Deleting removes Velvet-managed files and records. Flash-storage wear leveling means physical secure erasure cannot be guaranteed.")
-                    Text("There is no plaintext export in this release. Photos imports leave the originals in Photos; Apple's picker may retrieve an iCloud asset.")
+                    DisclosureGroup("Privacy details") {
+                        Text("Screen recording and mirroring lock Velvet. Screenshots can still be taken.")
+                        Text("Velvet cannot protect against a compromised iPhone or control how iOS handles data.")
+                        Text("Deleted files are removed from Velvet. Physical erasure from flash storage can’t be guaranteed.")
+                        Text("Photo and video export isn’t available yet. Imports leave originals in Apple Photos. iCloud photos may need a download.")
+                    }
                 }.font(.footnote)
                 Section("Build") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0")
                     LabeledContent("Build", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "3")
-                    Text("Early access · Camera, secure video playback and model performance need physical iPhone validation. See the repository's verification report before trusting this release with irreplaceable media.").font(.caption).foregroundStyle(.secondary)
+                    Text("Camera, video playback and model performance still need testing on a physical iPhone.").font(.caption).foregroundStyle(.secondary)
                 }
             }.navigationTitle("Settings").task { capability = await model.search.capabilityDescription }
                 .sheet(isPresented: $showBackup) { BackupScreen() }

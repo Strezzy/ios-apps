@@ -110,14 +110,14 @@ struct GalleryScreen: View {
                 .confirmationDialog("Import Photos", isPresented: $importNotice, titleVisibility: .visible) {
                     Button("Choose Photos") { picker = true }
                 } message: {
-                    Text("Originals remain in Apple Photos. Apple's picker may download an iCloud photo that isn't stored on this iPhone. For an offline import, enable Airplane Mode and choose a local photo. Video import is not available yet.")
+                    Text("Originals stay in Apple Photos. iCloud photos may need a download.")
                 }
                 .photosPicker(isPresented: $picker, selection: $picks, maxSelectionCount: 20, matching: .images, preferredItemEncoding: .current)
                 .onChange(of: picks) { _, items in Task { await importPhotos(items) } }
                 .sheet(item: $opened) { MediaDetailScreen(itemID: $0.id) }
                 .confirmationDialog("Permanently Delete Selected Items?", isPresented: $confirmDelete, titleVisibility: .visible) {
                     Button("Delete Permanently", role: .destructive) { mutateSelection { try await vault.permanentlyDelete($0) } }
-                } message: { Text("These items and their Velvet records will be removed. This cannot be undone. Storage-level erasure on flash storage cannot be guaranteed.") }
+                } message: { Text("These photos and videos will be permanently removed from Velvet. This can’t be undone.") }
                 .onChange(of: vault.isUnlocked) { _, unlocked in
                     if !unlocked {
                         opened = nil; picker = false; picks = []; selected.removeAll()

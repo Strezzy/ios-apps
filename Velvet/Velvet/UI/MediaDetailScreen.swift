@@ -107,7 +107,7 @@ struct MediaDetailScreen: View {
             }
         } catch {
             guard model.sessionID == session, currentID == requestedID, vault.isUnlocked, !Task.isCancelled else { return }
-            loadingError = "Authentication or media validation failed. No unverified content was displayed."
+            loadingError = "This photo or video couldn’t be opened. Try unlocking Velvet again."
         }
     }
 }
@@ -130,7 +130,7 @@ private struct SimilarMediaSheet: View {
                     Text("Similar photos and video covers.").font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 20)
                     if loading { ProgressView("Finding similar items…").frame(maxWidth: .infinity).padding(.vertical, 32) }
                     else if matches.isEmpty {
-                        EmptyLibrary(title: "No Similar Items", subtitle: message ?? "Update the search index in Settings, then try again.", symbol: "square.on.square")
+                        EmptyLibrary(title: "No Similar Items", subtitle: message ?? "Use Update Search in Settings, then try again.", symbol: "square.on.square")
                     }
                     LazyVGrid(columns: VelvetTheme.photoColumns, spacing: VelvetTheme.gridSpacing) {
                         ForEach(matches) { match in
@@ -164,7 +164,7 @@ private struct SimilarMediaSheet: View {
             }
             guard model.sessionID == session, vault.isUnlocked, !Task.isCancelled else { return }
             guard let reference = documents.first(where: { $0.id == referenceID }) else {
-                message = "This item has not been indexed. Update the search index in Settings, then try again."
+                message = "Use Update Search in Settings to include this item."
                 return
             }
             let found = await model.search.similar(to: reference, in: documents)
@@ -172,7 +172,7 @@ private struct SimilarMediaSheet: View {
             matches = Array(found.prefix(60))
         } catch {
             guard model.sessionID == session, vault.isUnlocked, !Task.isCancelled else { return }
-            message = "Visual search is temporarily unavailable. Try again after reindexing your library."
+            message = "Search is temporarily unavailable. Use Update Search in Settings, then try again."
         }
     }
 }

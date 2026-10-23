@@ -44,7 +44,7 @@ struct SearchScreen: View {
                             if searching { ProgressView().accessibilityLabel("Searching") }
                         }.padding(.horizontal, 20)
                         if performedSearch && displayedItems.isEmpty && !searching {
-                            EmptyLibrary(title: "No Results", subtitle: "Try another description. You can update the search index in Settings.", symbol: "magnifyingglass")
+                            EmptyLibrary(title: "No Results", subtitle: "Try a different description.", symbol: "magnifyingglass")
                                 .padding(.top, 24)
                         }
                     }
@@ -88,7 +88,7 @@ struct SearchScreen: View {
             results = found; performedSearch = true
         } catch is CancellationError {} catch {
             guard model.sessionID == session, vault.isUnlocked, requestID == request else { return }
-            model.error = "Search is unavailable. Try reindexing the library in Settings."
+            model.error = "Search is unavailable. Use Update Search in Settings, then try again."
         }
     }
 }

@@ -160,19 +160,18 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
                 }
             }
         }
-        let lenses = discovery.devices.map { camera in
-            let native: Double
-            if camera.position == .front || camera.deviceType == .builtInWideAngleCamera { native = 1 }
-            else if camera.deviceType == .builtInUltraWideCamera { native = 0.5 }
-            else if let factor = nativeFactors[camera.uniqueID] { native = factor }
-            else if let wide {
-                let wideFOV = Double(wide.formats.map { $0.videoFieldOfView }.max() ?? wide.activeFormat.videoFieldOfView)
-                let lensFOV = Double(camera.formats.map { $0.videoFieldOfView }.max() ?? camera.activeFormat.videoFieldOfView)
-                native = tan(wideFOV * .pi / 360) / tan(lensFOV * .pi / 360)
-            } else { native = .nan }
-            return CameraLens(id: camera.uniqueID, label: camera.position == .front ? "Front" : CameraConfigurationPolicy.zoomLabel(nativeFactor: native),
-                              isFront: camera.position == .front, nativeZoomFactor: native)
-        }.sorted { $0.isFront == $1.isFront ? $0.nativeZoomFactor < $1.nativeZoomFactor : !$0.isFront }
+        var lenses: [CameraLens] = []
+        for camera in discovery.devices {
+            let native = lensNativeFactor(camera, wide: wide, knownFactors: nativeFactors)
+            let isFront = camera.position == .front
+            let label = isFront ? "Front" : CameraConfigurationPolicy.zoomLabel(nativeFactor: native)
+            let lens = CameraLens(id: camera.uniqueID, label: label, isFront: isFront, nativeZoomFactor: native)
+            lenses.append(lens)
+        }
+        lenses.sort { left, right in
+            if left.isFront == right.isFront { return left.nativeZoomFactor < right.nativeZoomFactor }
+            return !left.isFront
+        }
         let dimensions = photoOutput.maxPhotoDimensions
         let megapixels = Double(dimensions.width) * Double(dimensions.height) / 1_000_000
         publishManualCapabilities()
@@ -182,6 +181,20 @@ final class CaptureEngine: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
             resolution: String(format: "Up to %.0f MP", megapixels),
             minimumExposureBias: device.minExposureTargetBias, maximumExposureBias: device.maxExposureTargetBias,
             activeVideoMode: activeVideoMode)
+    }
+
+    private func lensNativeFactor(_ camera: AVCaptureDevice, wide: AVCaptureDevice?, knownFactors: [String: Double]) -> Double {
+        if camera.position == .front || camera.deviceType == .builtInWideAngleCamera { return 1 }
+        if camera.deviceType == .builtInUltraWideCamera { return 0.5 }
+        if let factor = knownFactors[camera.uniqueID] { return factor }
+        guard let wide else { return .nan }
+        let wideFields: [Float] = wide.formats.map { $0.videoFieldOfView }
+        let lensFields: [Float] = camera.formats.map { $0.videoFieldOfView }
+        let wideFOV = Double(wideFields.max() ?? wide.activeFormat.videoFieldOfView)
+        let lensFOV = Double(lensFields.max() ?? camera.activeFormat.videoFieldOfView)
+        let wideHalfAngle = wideFOV * Double.pi / 360.0
+        let lensHalfAngle = lensFOV * Double.pi / 360.0
+        return tan(wideHalfAngle) / tan(lensHalfAngle)
     }
 
     func refreshManualCapabilities() { queue.async { [weak self] in self?.publishManualCapabilities() } }
