@@ -62,5 +62,13 @@
     "icon": "Velvet.png",
     "category": "photo-video",
     "tintColor": "#943954"
+  },
+  "com.billy.moonwake": {
+    "name": "Moonwake",
+    "subtitle": "A starlight pixel adventure",
+    "localizedDescription": "Explore five moonlit realms as Aster, a white-haired wanderer with a glowing starlight sword. Awaken fifteen runes, free five guardians and restore the moonwells to reach the ending. Sword combos, evasive dash, Moonpulse magic, amber spirit Wisp and moss guardian companions, hidden caches, upgrades and local saves. Original animated pixel artwork and seventeen original audio assets, native SwiftUI Liquid Glass menus, touch controls, controller and keyboard support, left-handed controls, reduced effects and Story difficulty. Built in native Swift with SpriteKit. Entirely offline, with no accounts, ads, purchases, analytics or downloads. Landscape iPhone and iPad; requires iOS 26 or later. Physical-device performance and sideload-host behavior still require device playtesting.",
+    "icon": "Moonwake.png",
+    "category": "games",
+    "tintColor": "#82F5E0"
   }
 }

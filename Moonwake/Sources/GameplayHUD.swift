@@ -72,7 +72,7 @@ struct MoonHUD: View {
                             MoonProgress(fraction: store.bossFraction, color: MoonTheme.lavender, height: 5)
                         }
                         .padding(.horizontal, 14).padding(.vertical, 10)
-                        .frame(width: min(240, geometry.size.width * 0.29))
+                        .frame(width: min(220, geometry.size.width * 0.25))
                         .moonGlass(radius: 16)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel("\(store.bossName), \(Int(store.bossFraction * 100)) percent health")
@@ -85,6 +85,8 @@ struct MoonHUD: View {
                             Label("\(store.progress.essence)", systemImage: "sparkles")
                                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(MoonTheme.gold)
+                                .lineLimit(1).minimumScaleFactor(0.75)
+                                .frame(maxWidth: 58)
                                 .padding(.horizontal, 13).frame(height: 48)
                                 .moonGlass(radius: 22)
                                 .accessibilityLabel("\(store.progress.essence) starlight essence")

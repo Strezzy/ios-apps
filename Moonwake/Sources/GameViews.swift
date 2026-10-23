@@ -103,7 +103,15 @@ struct GameRootView: View {
             .frame(width: geometry.size.width, height: geometry.size.height)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: store.mode)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: store.toast)
-            .onChange(of: store.mode) { _, _ in store.input.clear() }
+            .onChange(of: store.mode) { previous, next in
+                store.input.clear()
+                // A moonwell can open upgrades directly from the SpriteKit world.
+                // Remember that route as well as panels opened by SwiftUI buttons.
+                if [.journal, .settings, .upgrades].contains(next),
+                   [.title, .playing, .paused].contains(previous) {
+                    menuOrigin = previous
+                }
+            }
         }
         .preferredColorScheme(.dark)
         .tint(MoonTheme.cyan)
@@ -125,6 +133,7 @@ struct GameRootView: View {
     }
     private func closePanel() {
         if menuOrigin == .title { store.returnToTitle() }
+        else if menuOrigin == .playing { store.resume() }
         else { store.open(.paused) }
     }
 }

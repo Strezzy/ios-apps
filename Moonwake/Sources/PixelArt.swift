@@ -318,6 +318,29 @@ import SpriteKit
         p.rect(14, 16, 9, 3, purple ? 0x6E668A : 0x528E70)
         p.rect(39, 25, 9, 3, purple ? 0x83729B : 0x689675)
         p.rect(8, 33, 6, 3, purple ? 0x777193 : 0x6A9978)
+        // Leaf clusters break the large canopy into overlapping lit planes. These
+        // are designed shapes, rather than per-frame noise or stretched circles.
+        let highlights: [(Int,Int,Int)] = [(23,5,8),(33,10,7),(17,13,8),(25,18,6),
+            (9,26,7),(16,30,8),(5,35,5),(37,22,8),(44,28,7),(29,34,7),
+            (34,43,7),(16,42,6),(47,36,6),(23,25,5)]
+        for (index, leaf) in highlights.enumerated() {
+            let color: UInt32 = index < 5 ? (purple ? 0x8F81A3 : 0x79A480) : (purple ? 0x756B91 : 0x5C9274)
+            p.rect(leaf.0,leaf.1,leaf.2,2,color)
+            p.rect(leaf.0+1,leaf.1-1,max(2,leaf.2-3),1,color)
+            p.rect(leaf.0-1,leaf.1+2,max(2,leaf.2-2),2,purple ? 0x625A80 : 0x438467)
+        }
+        for leaf in [(11,22),(29,28),(38,37),(24,45),(49,31),(9,43),(34,16)] {
+            p.rect(leaf.0,leaf.1,6,2,dark)
+            p.rect(leaf.0+4,leaf.1+2,3,2,dark)
+        }
+        p.rect(3,29,3,4,mid); p.rect(0,34,3,5,mid)
+        p.rect(57,28,3,5,mid); p.rect(53,37,5,3,mid)
+        p.rect(18,2,6,3,mid); p.rect(37,1,4,3,mid)
+        // Fine bark, twigs and hanging moss connect the crown to the ground.
+        p.rect(29,55,2,14,0x8A7060); p.rect(32,63,2,10,0x3E3B42)
+        p.rect(24,67,4,2,0x6E6254); p.rect(37,67,4,2,0x6E6254)
+        p.rect(24,57,2,7,purple ? 0x62627C : 0x456F56)
+        p.rect(40,52,2,8,purple ? 0x73718A : 0x5C855F)
         if f % 2 == 1 {
             p.rect(19, 34, 3, 3, 0xD6A3C2); p.rect(44, 29, 3, 3, 0xC88EB4)
             p.rect(30, 17, 3, 3, 0xE5B7C7)
@@ -352,6 +375,9 @@ import SpriteKit
         p.polygon([(6,23),(9,14),(16,10),(25,12),(29,20),(22,22),(18,28),(8,27)], 0x60717A)
         p.polygon([(10,14),(16,10),(24,12),(21,17),(14,19)], 0x7D8A8B)
         p.rect(9, 25, 8, 2, 0x637E70); p.rect(6, 22, 4, 2, 0x77916F)
+        p.rect(20,16,2,5,0x485F6C); p.rect(22,20,4,1,0x485F6C)
+        p.rect(11,20,3,1,0xA0A798); p.rect(25,25,2,1,0x83948F)
+        p.rect(8,27,3,2,0x82976E); p.rect(13,28,4,1,0x4A7058)
         if f % 2 == 1 { p.rect(22, 14, 3, 6, 0x405768) }
     }
 
@@ -444,8 +470,19 @@ import SpriteKit
         p.rect(14, 7, 16, 9, 0x566E84); p.rect(30, 2, 21, 9, 0x668493)
         p.rect(17, 8, 7, 3, 0xA5AAA5); p.rect(32, 3, 15, 2, 0xA6B6B1)
         p.rect(8, 31, 11, 2, 0x294658); p.rect(44, 28, 12, 2, 0x2A4657)
+        p.rect(15,22,2,5,0x354C60); p.rect(13,26,3,2,0x354C60)
+        p.rect(13,28,1,3,0x354C60); p.rect(51,18,2,6,0x354C60)
+        p.rect(49,22,3,2,0x354C60); p.rect(47,35,3,1,0xA0ACAA)
+        p.rect(10,37,3,1,0xA0ACAA); p.rect(11,40,2,3,0x557181)
+        p.rect(43,42,5,2,0x485E71); p.rect(52,32,3,2,0x485E71)
+        p.rect(19,9,1,4,0x314B61); p.rect(36,5,2,4,0x405D73)
+        p.rect(8,17,5,1,0xB8C0B4); p.rect(46,12,7,1,0xB8C0B4)
         p.rect(7, 45, 4, 7, 0x436C56); p.rect(10, 42, 4, 5, 0x5A8061)
         p.rect(50, 41, 6, 9, f > 3 ? 0x6A607B : 0x50705A)
+        p.rect(8,36,2,8,f > 3 ? 0x77738E : 0x6B8C69)
+        p.rect(6,38,3,2,f > 3 ? 0x858095 : 0x7B996E)
+        p.rect(10,33,2,4,f > 3 ? 0x77738E : 0x6B8C69)
+        p.rect(49,46,3,2,f > 3 ? 0x94849F : 0x7A9369)
     }
 }
 

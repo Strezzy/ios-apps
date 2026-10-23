@@ -70,6 +70,9 @@ struct SaveRepository {
     private var toastTask: Task<Void, Never>?
     private var bannerTask: Task<Void, Never>?
     private var autosaveTask: Task<Void, Never>?
+    // The simulation reports elapsed time without invalidating every SwiftUI view.
+    // Progress receives the accumulated value only at a real persistence boundary.
+    private var pendingPlaySeconds = 0.0
 
     init(repository: SaveRepository = SaveRepository(), audioEnabled: Bool = true) {
         self.repository = repository
@@ -108,6 +111,7 @@ struct SaveRepository {
     }
 
     func newGame() {
+        pendingPlaySeconds = 0
         input.clear(); progress = GameProgress(); hasSave = true
         bossName = ""; bossFraction = 0; hint = ""; dialogue = nil
         restoreVitals(); save(); scene?.begin(realm: .moonshore)
@@ -158,8 +162,16 @@ struct SaveRepository {
     }
     func save() {
         guard hasSave else { return }
-        do { try repository.write(progress); saveWarning = nil }
+        if pendingPlaySeconds > 0 {
+            progress.playSeconds += pendingPlaySeconds
+            pendingPlaySeconds = 0
+        }
+        do { try repository.write(progress); if saveWarning != nil { saveWarning = nil } }
         catch { saveWarning = "Your journey could not be saved. Free some storage and try again from Pause." }
+    }
+    func recordPlayTime(_ delta: Double) {
+        guard delta.isFinite, delta > 0 else { return }
+        pendingPlaySeconds += delta
     }
     func notify(_ message: String) {
         toastTask?.cancel(); toast = message

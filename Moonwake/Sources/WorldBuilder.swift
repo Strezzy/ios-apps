@@ -15,6 +15,7 @@ import SpriteKit
 
     static func build(realm: Realm, completed: Bool) -> WorldMap {
         let palette = RealmPalette(realm)
+        let layout = RealmLayout(realm)
         let root = SKNode(); root.name = "world.\(realm.rawValue)"
         let background = SKSpriteNode(texture: groundTexture(realm: realm, completed: completed))
         background.size = worldSize
@@ -25,8 +26,9 @@ import SpriteKit
 
         let bounds = CGRect(x: 96, y: 96, width: 1856, height: 1164)
         let enemies = enemySpawns(realm)
-        let landmarks = [spawn, beacon, boss, npc, portal] + runes + chests + enemies.map(\.position)
-        let paths = trailSegments()
+        let landmarks = [layout.spawn, layout.beacon, layout.boss, layout.npc, layout.portal]
+            + layout.runes + layout.chests + enemies.map(\.position)
+        let paths = trailSegments(layout)
         var random = SeededRandom(seed: UInt64(4913 + realm.rawValue * 733))
         var obstacles: [CGRect] = []
 
@@ -73,9 +75,9 @@ import SpriteKit
 
         addAmbient(to: root, realm: realm, palette: palette, completed: completed)
 
-        return WorldMap(root: root, size: worldSize, walkBounds: bounds, spawn: spawn,
-                        runes: runes, beacon: beacon, boss: boss, chests: chests, npc: npc,
-                        portal: portal, enemies: enemies, obstacles: obstacles)
+        return WorldMap(root: root, size: worldSize, walkBounds: bounds, spawn: layout.spawn,
+                        runes: layout.runes, beacon: layout.beacon, boss: layout.boss, chests: layout.chests, npc: layout.npc,
+                        portal: layout.portal, enemies: enemies, obstacles: obstacles)
     }
 
     static func glowNode(color: UInt32, size: CGFloat) -> SKSpriteNode {
@@ -88,6 +90,8 @@ import SpriteKit
 
     private static func groundTexture(realm: Realm, completed: Bool) -> SKTexture {
         let palette = RealmPalette(realm)
+        let layout = RealmLayout(realm)
+        let paths = trailSegments(layout)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1; format.opaque = true; format.preferredRange = .standard
         let image = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 768), format: format).image { renderer in
@@ -102,29 +106,29 @@ import SpriteKit
                 let alpha = CGFloat(row) / 110
                 p.rect(0, row*5, 1024, 5, palette.waterLight, alpha: alpha)
             }
-            p.rect(0, 0, 1024, 43, palette.sky)
+            p.rect(0, 0, 1024, 80, palette.sky)
             for _ in 0..<52 {
-                let x = random.int(1024), y = random.int(40)
+                let x = random.int(1024), y = random.int(76)
                 p.rect(x, y, random.int(3) == 0 ? 2 : 1, 1, 0xC1D9D9, alpha: 0.25 + CGFloat(random.unit())*0.35)
             }
-            mountain(p, x: -20, y: 43, width: 290, height: 37, color: palette.farMountain)
-            mountain(p, x: 480, y: 48, width: 310, height: 27, color: palette.farMountain)
-            mountain(p, x: 790, y: 45, width: 290, height: 42, color: palette.farMountain)
-            p.ellipse(752, 8, 30, 30, 0xCBDED3)
-            p.ellipse(744, 5, 30, 29, palette.sky)
-            p.rect(767, 36, 7, 1, 0x6B9DAB, alpha: 0.5)
+            p.ellipse(585, 52, 30, 30, 0xCBDED3)
+            p.ellipse(577, 49, 30, 29, palette.sky)
+            mountain(p, x: -20, y: 80, width: 290, height: 37, color: palette.farMountain)
+            mountain(p, x: 330, y: 83, width: 200, height: 27, color: palette.farMountain)
+            mountain(p, x: 790, y: 80, width: 290, height: 42, color: palette.farMountain)
+            p.rect(600, 84, 7, 1, 0x6B9DAB, alpha: 0.5)
             for _ in 0..<250 {
-                let x = random.int(1024), y = 50 + random.int(95)
+                let x = random.int(1024), y = 83 + random.int(62)
                 p.rect(x, y, 3 + random.int(29), 1+random.int(2), palette.waterLight, alpha: 0.12 + CGFloat(random.unit())*0.16)
             }
-            for y in stride(from: 50, to: 122, by: 8) {
-                let spread = (y-40)/3
-                p.rect(765-spread + random.int(7), y, 11+spread, 1, 0x92C8CB, alpha: 0.23)
+            for y in stride(from: 87, to: 122, by: 6) {
+                let spread = (y-80)/3
+                p.rect(599-spread + random.int(7), y, 11+spread, 1, 0x92C8CB, alpha: 0.23)
             }
             if realm == .moonshore {
                 island(p, x: 130, y: 88, width: 94, palette: palette)
                 island(p, x: 850, y: 98, width: 107, palette: palette)
-                boat(p, x: 625, y: 81)
+                boat(p, x: 625, y: 104)
             }
 
             // Stepped coastline. Walkable bounds are safely inset from every ledge.
@@ -160,7 +164,7 @@ import SpriteKit
             }
 
             // Softly broken stone trails guide exploration without an intrusive arrow.
-            for segment in trailSegments() {
+            for segment in paths {
                 c.setStrokeColor(PixelPainter.color(palette.pathDark).cgColor)
                 c.setLineWidth(24); c.setLineCap(.round); c.setLineJoin(.round)
                 c.beginPath(); c.move(to: pixelPoint(segment.0)); c.addLine(to: pixelPoint(segment.1)); c.strokePath()
@@ -170,21 +174,21 @@ import SpriteKit
             }
             for _ in 0..<340 {
                 let point = CGPoint(x: 140+CGFloat(random.unit())*1760, y: 135+CGFloat(random.unit())*1085)
-                if trailSegments().contains(where: { distance(point, toSegment: $0.0, $0.1) < 28 }) {
+                if paths.contains(where: { distance(point, toSegment: $0.0, $0.1) < 28 }) {
                     let pos = pixelPoint(point)
                     p.rect(Int(pos.x), Int(pos.y), 2+random.int(5), 1+random.int(3), palette.pathLight, alpha: 0.3)
                 }
             }
 
-            platform(p, center: pixelPoint(beacon), radius: 47, palette: palette, runeMarks: true)
-            platform(p, center: pixelPoint(boss), radius: 90, palette: palette, runeMarks: false)
-            for point in runes { platform(p, center: pixelPoint(point), radius: 28, palette: palette, runeMarks: true) }
-            platform(p, center: pixelPoint(portal), radius: 32, palette: palette, runeMarks: false)
+            platform(p, center: pixelPoint(layout.beacon), radius: 47, palette: palette, runeMarks: true)
+            platform(p, center: pixelPoint(layout.boss), radius: 90, palette: palette, runeMarks: false)
+            for point in layout.runes { platform(p, center: pixelPoint(point), radius: 28, palette: palette, runeMarks: true) }
+            platform(p, center: pixelPoint(layout.portal), radius: 32, palette: palette, runeMarks: false)
             // Small pixel grass clusters, wildflowers and fallen petals, drawn once.
             for _ in 0..<2800 {
                 let point = CGPoint(x: 105+CGFloat(random.unit())*1838, y: 110+CGFloat(random.unit())*1130)
-                if point.distance(to: boss) < 172 || point.distance(to: beacon) < 100 { continue }
-                let nearPath = trailSegments().contains(where: { distance(point, toSegment: $0.0, $0.1) < 30 })
+                if point.distance(to: layout.boss) < 172 || point.distance(to: layout.beacon) < 100 { continue }
+                let nearPath = paths.contains(where: { distance(point, toSegment: $0.0, $0.1) < 30 })
                 if nearPath && random.int(8) != 0 { continue }
                 let pos = pixelPoint(point), x = Int(pos.x), y = Int(pos.y)
                 let light = random.int(3) == 0
@@ -202,23 +206,40 @@ import SpriteKit
             // Larger grass/flower assets add designed silhouette variation.
             for _ in 0..<185 {
                 let point = CGPoint(x: 120+CGFloat(random.unit())*1810, y: 130+CGFloat(random.unit())*1090)
-                if point.distance(to: boss) < 190 || point.distance(to: beacon) < 110 { continue }
-                if trailSegments().contains(where: { distance(point, toSegment: $0.0, $0.1) < 47 }) { continue }
+                if point.distance(to: layout.boss) < 190 || point.distance(to: layout.beacon) < 110 { continue }
+                if paths.contains(where: { distance(point, toSegment: $0.0, $0.1) < 47 }) { continue }
                 let pos = pixelPoint(point)
                 let name = random.int(4) == 0 ? "flower" : "grass"
                 let image = PixelArt.image(name, frame: random.int(8))
                 image.draw(in: CGRect(x: pos.x-5, y: pos.y-10, width: image.size.width*0.7, height: image.size.height*0.7))
             }
+            // Designed meadow clusters lend the reference's lush foreground rhythm;
+            // all flowers are baked into this same terrain texture, never live nodes.
+            for cluster in 0..<54 {
+                let point = CGPoint(x: 145+CGFloat(random.unit())*1740,
+                                    y: 170+CGFloat(random.unit())*1000)
+                if point.distance(to:layout.boss) < 215 || point.distance(to:layout.beacon) < 125 { continue }
+                if paths.contains(where: { distance(point,toSegment:$0.0,$0.1) < 58 }) { continue }
+                let center = pixelPoint(point)
+                let petalFrame = (cluster + realm.rawValue*2) % 8
+                for stem in 0..<(4+random.int(5)) {
+                    let x = center.x + CGFloat(random.int(33)-16)
+                    let y = center.y + CGFloat(random.int(19)-9)
+                    let image = PixelArt.image(stem%3 == 0 ? "grass" : "flower", frame: (petalFrame+stem%2)%8)
+                    let scale: CGFloat = stem%3 == 0 ? 0.95 : 0.85
+                    image.draw(in:CGRect(x:x-6,y:y-14,width:image.size.width*scale,height:image.size.height*scale))
+                }
+            }
             // Four repeating architectural details are placed around the arena.
             for angle in [Double.pi*0.25,Double.pi*0.75,Double.pi*1.25,Double.pi*1.75] {
-                let x = Int(boss.x/2 + cos(angle)*87)
-                let y = Int((worldSize.height-boss.y)/2 + sin(angle)*87)
+                let x = Int(layout.boss.x/2 + cos(angle)*87)
+                let y = Int((worldSize.height-layout.boss.y)/2 + sin(angle)*87)
                 p.rect(x-4,y-8,8,13,palette.stoneDark)
                 p.rect(x-5,y-10,10,4,palette.stoneLight)
                 p.rect(x-2,y-8,2,10,palette.stone)
             }
             if completed {
-                let pos = pixelPoint(beacon)
+                let pos = pixelPoint(layout.beacon)
                 p.ellipse(Int(pos.x)-56, Int(pos.y)-30, 112, 60, 0xA9EBD5, alpha: 0.10)
             }
         }
@@ -255,7 +276,7 @@ import SpriteKit
             root.addChild(ripple)
         }
         let moonGlow = glowNode(color: 0x86BDBB, size: 235)
-        moonGlow.position = CGPoint(x: 1532, y: 1492); moonGlow.alpha = 0.12; moonGlow.zPosition = -899
+        moonGlow.position = CGPoint(x: 1200, y: 1402); moonGlow.alpha = 0.12; moonGlow.zPosition = -899
         root.addChild(moonGlow)
         if realm == .glassmarsh || realm == .eclipseCrown {
             for point in [CGPoint(x: 410,y:730),CGPoint(x:1420,y:1050),CGPoint(x:1550,y:570)] {
@@ -333,14 +354,20 @@ import SpriteKit
         return zip(positions, groups[realm.rawValue]).map { EnemySpawn(kind: $0.1, position: $0.0) }
     }
 
-    static func trailSegments() -> [(CGPoint,CGPoint)] {
-        let fork = CGPoint(x:1024,y:1010), west = CGPoint(x:610,y:850), east = CGPoint(x:1440,y:840)
-        return [(spawn,fork),(fork,npc),(fork,beacon),(fork,CGPoint(x:650,y:1060)),
-                (CGPoint(x:650,y:1060),runes[0]),(runes[0],west),(west,beacon),
-                (fork,east),(east,runes[1]),(east,beacon),(beacon,CGPoint(x:1010,y:570)),
-                (CGPoint(x:1010,y:570),boss),(west,chests[1]),(chests[1],CGPoint(x:440,y:470)),
-                (CGPoint(x:440,y:470),runes[2]),(runes[2],boss),(east,chests[0]),
-                (chests[0],portal),(boss,portal),(chests[0],CGPoint(x:1010,y:570))]
+    static func trailSegments() -> [(CGPoint,CGPoint)] { trailSegments(RealmLayout(.moonshore)) }
+
+    private static func trailSegments(_ layout: RealmLayout) -> [(CGPoint,CGPoint)] {
+        let fork = CGPoint(x: layout.spawn.x, y: 1010)
+        let west = layout.westJunction, east = layout.eastJunction
+        let south = CGPoint(x: (layout.beacon.x+layout.boss.x)/2, y: 540)
+        return [(layout.spawn,fork),(fork,layout.npc),(fork,layout.beacon),
+                (fork,layout.runes[0]),(layout.runes[0],west),(west,layout.beacon),
+                (fork,east),(east,layout.runes[1]),(east,layout.beacon),
+                (layout.beacon,south),(south,layout.boss),
+                (west,layout.chests[1]),(layout.chests[1],layout.runes[2]),
+                (layout.runes[2],layout.boss),(east,layout.chests[0]),
+                (layout.chests[0],layout.portal),(layout.boss,layout.portal),
+                (layout.chests[0],south)]
     }
 
     private static func pixelPoint(_ point: CGPoint) -> CGPoint { CGPoint(x: point.x/2, y: (worldSize.height-point.y)/2) }
@@ -349,6 +376,55 @@ import SpriteKit
         guard length > 0 else { return p.distance(to:a) }
         let t = min(1,max(0,((p.x-a.x)*dx+(p.y-a.y)*dy)/length))
         return hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))
+    }
+}
+
+/// A compact shared topology with distinct positions produces clear, connected
+/// routes for every realm. All values stay well inside the playable coast.
+private struct RealmLayout {
+    let spawn = CGPoint(x: 1024, y: 1120)
+    let npc = CGPoint(x: 880, y: 1080)
+    let runes: [CGPoint]
+    let beacon: CGPoint
+    let boss: CGPoint
+    let chests: [CGPoint]
+    let portal: CGPoint
+    let westJunction: CGPoint
+    let eastJunction: CGPoint
+
+    init(_ realm: Realm) {
+        switch realm {
+        case .moonshore:
+            runes = [CGPoint(x:360,y:970),CGPoint(x:1680,y:910),CGPoint(x:530,y:340)]
+            beacon = CGPoint(x:1024,y:780); boss = CGPoint(x:1024,y:290)
+            chests = [CGPoint(x:1650,y:430),CGPoint(x:280,y:610)]
+            portal = CGPoint(x:1730,y:220)
+            westJunction = CGPoint(x:610,y:850); eastJunction = CGPoint(x:1440,y:840)
+        case .briarwild:
+            runes = [CGPoint(x:400,y:900),CGPoint(x:1580,y:1080),CGPoint(x:1600,y:440)]
+            beacon = CGPoint(x:820,y:740); boss = CGPoint(x:1060,y:300)
+            chests = [CGPoint(x:1250,y:580),CGPoint(x:360,y:370)]
+            portal = CGPoint(x:1750,y:220)
+            westJunction = CGPoint(x:550,y:600); eastJunction = CGPoint(x:1430,y:800)
+        case .glassmarsh:
+            runes = [CGPoint(x:420,y:1050),CGPoint(x:530,y:480),CGPoint(x:1670,y:680)]
+            beacon = CGPoint(x:1260,y:770); boss = CGPoint(x:1050,y:280)
+            chests = [CGPoint(x:1630,y:1080),CGPoint(x:300,y:720)]
+            portal = CGPoint(x:1770,y:220)
+            westJunction = CGPoint(x:700,y:820); eastJunction = CGPoint(x:1540,y:880)
+        case .emberRuins:
+            runes = [CGPoint(x:340,y:870),CGPoint(x:1610,y:950),CGPoint(x:1710,y:390)]
+            beacon = CGPoint(x:1010,y:850); boss = CGPoint(x:930,y:300)
+            chests = [CGPoint(x:1390,y:600),CGPoint(x:400,y:310)]
+            portal = CGPoint(x:1780,y:210)
+            westJunction = CGPoint(x:570,y:640); eastJunction = CGPoint(x:1400,y:810)
+        case .eclipseCrown:
+            runes = [CGPoint(x:480,y:1000),CGPoint(x:1600,y:1030),CGPoint(x:500,y:380)]
+            beacon = CGPoint(x:1050,y:730); boss = CGPoint(x:1050,y:270)
+            chests = [CGPoint(x:1580,y:480),CGPoint(x:270,y:650)]
+            portal = CGPoint(x:1750,y:220)
+            westJunction = CGPoint(x:610,y:780); eastJunction = CGPoint(x:1440,y:780)
+        }
     }
 }
 

@@ -2,6 +2,11 @@ import XCTest
 
 final class MoonwakeUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false; XCUIDevice.shared.orientation = .landscapeLeft }
+    override func tearDownWithError() throws {
+        // Stop the renderer before XCTest finishes its recording and attachments.
+        let running = XCUIApplication()
+        if running.state != .notRunning { running.terminate() }
+    }
     private func app(realm: Int? = nil, reset: Bool = true) -> XCUIApplication {
         let app=XCUIApplication(); app.launchArguments=["--ui-testing","--skip-intro"]
         if reset { app.launchArguments.append("--reset-save") }
@@ -9,9 +14,14 @@ final class MoonwakeUITests: XCTestCase {
         app.launch(); return app
     }
     private func snapshot(_ name: String, app: XCUIApplication) {
-        let attachment=XCTAttachment(screenshot: app.screenshot()); attachment.name=name; attachment.lifetime = .keepAlways; add(attachment)
+        // Capture the oriented display; the app-window crop can use portrait
+        // coordinates for a landscape-only app on newer simulator runtimes.
+        let attachment=XCTAttachment(screenshot: XCUIScreen.main.screenshot()); attachment.name=name; attachment.lifetime = .keepAlways; add(attachment)
     }
     func testTitleBeginCombatPauseAndResume() {
+        // This flow includes three captures and simulator crash-log collection
+        // at teardown. Keep a bounded allowance for that infrastructure work.
+        executionTimeAllowance = 240
         let app=app()
         XCTAssertTrue(app.buttons["title.begin"].waitForExistence(timeout:15))
         snapshot("01-Moonwake-Title",app:app)

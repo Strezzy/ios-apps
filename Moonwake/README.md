@@ -2,6 +2,12 @@
 
 A complete, offline pixel-art action adventure for iPhone and iPad. Written in native Swift with SpriteKit and SwiftUI. Aster carries a sword filled with starlight through five realms to awaken the sleeping moon.
 
+[Download the iPhone release](https://github.com/Strezzy/ios-apps/releases/tag/moonwake-1.0.0-build1) · [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa)
+
+![Moonwake running natively on the iPhone simulator](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake-Gameplay.png)
+
+![Moonwake title screen](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake-Title.png)
+
 ## The journey
 
 Explore Moonshore, Briarwild, Glassmarsh, Ember Ruins and Eclipse Crown. Awaken three runes in each realm, free its guardian, then restore the moonwell to open the next path. Meet Moss, follow Wisp, find keeper caches and spend stardust on sword, heart and spirit upgrades. The fifth restored moonwell concludes the story; your completed save remains available to revisit the world.

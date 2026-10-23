@@ -117,6 +117,26 @@ final class SaveTests: XCTestCase {
 
 @MainActor final class StoreTests: XCTestCase {
     private func makeStore() -> GameStore { GameStore(repository: SaveRepository(directory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)), audioEnabled: false) }
+    func testPlayTimeSurvivesSaveAndPauseWithoutDoubleCountingOrLeakingIntoNewJourney() throws {
+        let store = makeStore()
+        defer { try? FileManager.default.removeItem(at: store.repository.directory) }
+        store.hasSave = true; store.mode = .playing
+        store.recordPlayTime(1.25); store.recordPlayTime(2.75)
+        store.save()
+        XCTAssertEqual(try XCTUnwrap(store.repository.load()).playSeconds, 4, accuracy: 0.000001)
+
+        store.recordPlayTime(2.5)
+        store.open(.paused)
+        XCTAssertEqual(try XCTUnwrap(store.repository.load()).playSeconds, 6.5, accuracy: 0.000001)
+        store.save()
+        XCTAssertEqual(try XCTUnwrap(store.repository.load()).playSeconds, 6.5, accuracy: 0.000001)
+
+        store.resume(); store.recordPlayTime(99)
+        store.newGame()
+        XCTAssertEqual(try XCTUnwrap(store.repository.load()).playSeconds, 0, accuracy: 0.000001)
+        store.recordPlayTime(0.75); store.save()
+        XCTAssertEqual(try XCTUnwrap(store.repository.load()).playSeconds, 0.75, accuracy: 0.000001)
+    }
     func testPauseRejectsCombatInputAndPotionUse() {
         let store=makeStore(); store.hasSave=true; store.mode = .paused; store.health=20
         store.attack(); store.dash(); store.pulse(); store.interact(); store.heal(); store.usePotion()

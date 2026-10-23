@@ -67,7 +67,7 @@ final class GameScene: SKScene {
     override func didMove(to view: SKView) {
         view.ignoresSiblingOrder = true
         view.shouldCullNonVisibleNodes = true
-        view.preferredFramesPerSecond = 60
+        view.preferredFramesPerSecond = store?.preferredFPS ?? 60
         previousTime = 0
     }
 
@@ -94,6 +94,7 @@ final class GameScene: SKScene {
         localEnergy = min(store.progress.maxEnergy, max(0, store.energy))
         localStamina = min(100, max(0, store.stamina))
         cameraShake = 0
+        world?.root.childNode(withName: "ambientEffects")?.isHidden = store.settings.reducedEffects
     }
 
     private func build(realm: Realm) {
@@ -176,6 +177,7 @@ final class GameScene: SKScene {
         }
         buildArrow()
         refreshLandmarks()
+        world?.root.childNode(withName: "ambientEffects")?.isHidden = store.settings.reducedEffects
     }
 
     private var cyan: UIColor { UIColor(red: 0.50, green: 1, blue: 0.90, alpha: 1) }
@@ -206,10 +208,24 @@ final class GameScene: SKScene {
         ring.fillColor = cyan.withAlphaComponent(0.05); ring.lineWidth = 1.5; ring.zPosition = -2
         node.addChild(ring)
         let art = makeSprite(artName, scale: scale)
-        art.name = "art"; art.position.y = 22
+        art.name = "art"
+        switch kind {
+        case .beacon, .portal:
+            // These 60-pixel-tall textures have their ground shadow in the bottom
+            // tenth. Anchor that shadow to the interaction ring, not the center.
+            art.anchorPoint = CGPoint(x: 0.5, y: 0.1)
+            art.position.y = 0
+        default:
+            art.position.y = 22
+        }
         node.addChild(art)
         let light = glow(color: kind.isKeeper ? amber : cyan, size: kind.isBeacon ? 190 : 110, alpha: 0.32)
-        light.name = "light"; light.zPosition = -1; light.position.y = 20
+        light.name = "light"; light.zPosition = -1
+        switch kind {
+        case .beacon: light.position.y = 112
+        case .portal: light.position.y = 65
+        default: light.position.y = 20
+        }
         node.addChild(light)
         if kind.isKeeper {
             let label = label("KEEPER", size: 10, color: amber.withAlphaComponent(0.9))
@@ -229,21 +245,25 @@ final class GameScene: SKScene {
             switch landmark.kind {
             case .rune(let index):
                 let active = store.progress.activatedRunes.contains("\(realm.rawValue)-\(index)")
+                art?.texture = PixelArt.texture("rune", frame: active ? 1 : 0)
                 art?.color = active ? cyan : UIColor(red: 0.32, green: 0.39, blue: 0.48, alpha: 1)
                 art?.colorBlendFactor = active ? 0.13 : 0.65
                 light?.alpha = active ? 0.9 : 0.18
                 ring?.strokeColor = active ? cyan.withAlphaComponent(0.8) : cyan.withAlphaComponent(0.2)
             case .beacon:
                 let active = store.progress.clearedRealms.contains(realm.rawValue)
+                art?.texture = PixelArt.texture("beacon", frame: active ? 1 : 0)
                 light?.alpha = active ? 1 : 0.12
                 art?.color = active ? cyan : .darkGray; art?.colorBlendFactor = active ? 0 : 0.4
                 ring?.strokeColor = active ? cyan : cyan.withAlphaComponent(0.25)
             case .chest(let index):
                 let claimed = store.progress.claimedChests.contains("\(realm.rawValue)-\(index)")
+                art?.texture = PixelArt.texture("chest", frame: claimed ? 1 : 0)
                 art?.alpha = claimed ? 0.45 : 1; light?.alpha = claimed ? 0 : 0.6
                 ring?.alpha = claimed ? 0 : 0.45
             case .portal:
                 let active = store.progress.clearedRealms.contains(realm.rawValue)
+                art?.texture = PixelArt.texture("portal", frame: active ? 1 : 0)
                 art?.alpha = active ? 1 : 0.35
                 light?.alpha = active ? 1 : 0.1
                 ring?.strokeColor = active ? cyan : cyan.withAlphaComponent(0.2)
@@ -298,11 +318,12 @@ final class GameScene: SKScene {
         uiTimer += dt
         saveTimer += dt
         if uiTimer >= 0.1 {
-            store.energy = localEnergy; store.stamina = localStamina
+            if store.energy != localEnergy { store.energy = localEnergy }
+            if store.stamina != localStamina { store.stamina = localStamina }
             refreshHint()
             updateBossHUD()
             updateArrow()
-            store.progress.playSeconds += uiTimer
+            store.recordPlayTime(uiTimer)
             uiTimer = 0
         }
         if saveTimer >= 20 { store.save(); saveTimer = 0 }
@@ -904,9 +925,13 @@ final class GameScene: SKScene {
     private func updateBossHUD() {
         guard let store else { return }
         if let boss = creatures.first(where: { $0.kind == .boss && $0.health > 0 && $0.node.position.distance(to: hero.position) < 600 }) {
-            store.bossName = realm.bossName
-            store.bossFraction = boss.health / boss.maxHealth
-        } else if store.bossFraction != 0 { store.bossFraction = 0; store.bossName = "" }
+            if store.bossName != realm.bossName { store.bossName = realm.bossName }
+            let fraction = boss.health / boss.maxHealth
+            if store.bossFraction != fraction { store.bossFraction = fraction }
+        } else {
+            if store.bossFraction != 0 { store.bossFraction = 0 }
+            if !store.bossName.isEmpty { store.bossName = "" }
+        }
     }
 
     private func buildArrow() {
@@ -941,7 +966,7 @@ final class GameScene: SKScene {
 
     private func updateCamera(dt: Double, snap: Bool = false) {
         guard let world else { return }
-        var target = hero.position + CGVector(dx: titleScene ? -size.width * 0.22 : facing.dx * 35, dy: titleScene ? 36 : 26)
+        var target = hero.position + CGVector(dx: titleScene ? -size.width * 0.22 : facing.dx * 35, dy: titleScene ? 110 : 26)
         let halfWidth = size.width * cameraRig.xScale * 0.5
         let halfHeight = size.height * cameraRig.yScale * 0.5
         target.x = max(halfWidth, min(world.size.width - halfWidth, target.x))
