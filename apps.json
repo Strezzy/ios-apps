@@ -625,6 +625,40 @@
       "versionDescription": "# Moonwake 1.0 — The first journey\n\nA native Swift pixel-art adventure beneath a broken moon. Play as Aster, with his glowing starlight sword, amber spirit Wisp and moss-covered guardian companion.\n\nExplore five connected realms, awaken fifteen runes, face five guardians, restore the moonwells and reach the ending. Find hidden caches, earn stardust, upgrade your sword and abilities, and save your journey locally. Includes animated pixel environments, original ambient music and combat sounds, touch controls, controller/keyboard input and native Liquid Glass menus.\n\n**Install:** download `Moonwake.ipa` and import it into your existing sideloading setup. Requires iOS 26 or later; landscape iPhone and iPad. The IPA must be re-signed by your installer.\n\n**Play:** left thumbstick to move, sword to strike, Dash to evade, Moonpulse for area magic. Use the nearby interaction prompt for runes, caches, Moss and moonwells. Your journal explains the current objective. Pause to upgrade, adjust controls or switch to Story difficulty.\n\n**Validation:** the attached build and test reports record the exact source commit and automated results. Physical iPhone performance, heat, battery use, haptics, hardware controllers and sideload-host behavior remain to be validated on device.\n\nThe game runs offline and has no accounts, advertisements, purchases or analytics.\n\nAutomated results: 30 passed, 0 failed, 0 skipped.\n\nSource commit: c1103318e9ff914412fba3a88462d17605ef946f\n\nIPA SHA-256: `2a1ac7606fd6a2db1dfde90866d50b7e84efaddae6e20bddb18880f9181a8610`\n",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa",
       "size": 6896792
+    },
+    {
+      "name": "Loop",
+      "subtitle": "Offline GIF and animated PNG creator",
+      "localizedDescription": "Turn local videos into GIFs and full-color APNG animations. Adjust portrait, landscape or square crops; trim; choose frame rate and resolution; reverse or ping-pong playback; and add timed blur, pixelation, solid covers, emoji and captions with on-device tracking and manual keyframes. Native Liquid Glass, local saved projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.",
+      "category": "photo-video",
+      "tintColor": "#28B9A6",
+      "bundleIdentifier": "com.billy.loop",
+      "developerName": "Strezzy",
+      "versions": [
+        {
+          "version": "1.0.0",
+          "buildVersion": "1",
+          "buildNumber": "1",
+          "date": "2026-10-25T07:14:44Z",
+          "localizedDescription": "# Loop 1.0 — Moments, on repeat\n\nCreate GIFs and full-color APNG animations locally on iPhone and iPad. Native SwiftUI and Liquid Glass, with a teal-and-lime identity alongside the other Strezzy apps.\n\nImport from Photos or Files, trim, adjust portrait/landscape/square crops, choose resolution and frame rate, and export. Includes reverse and ping-pong playback, speed, loop count, adaptive GIF palettes and dithering, local projects and an export library.\n\nAdd circular or rectangular blur, pixelation, solid covers, emoji and text. Overlays can be timed, tracked on device with Vision and adjusted with manual keyframes. Review tracked content before sharing; tracking is not infallible.\n\n**Format limits:** GIF delays use 10 ms steps. The 60 FPS option samples 60 frames per second and approximates their timing; some viewers play fast GIFs more slowly. APNG offers finer timing and full color, subject to the receiving app's support. Both formats are silent. Native/custom resolution is capped at a 4096-pixel longest edge, with a 30,000-frame export guard. Supported input depends on the iPhone's video decoders. Cloud-only source items must first be downloaded through their provider.\n\n**Install:** `Loop.ipa` is an arm64 iPhone package for the existing sideloading/signing workflow. Requires iOS 26 or later. No account, subscription, ads, watermark, analytics, model downloads or app-initiated network requests.\n\n**Validation:** Native arm64 compilation and automated simulator tests are attached as reports. Physical iPhone thermals, long high-resolution exports and SideStore/LiveContainer behavior have not been tested on a physical device in this build session.\n\nThe complete source archive and generated Xcode project are attached. Existing apps and historical releases are preserved.\n\nAutomated tests: 60 passed, 0 failed, 0 skipped.\n\nSource commit: 2063b233f26d6b237511f8dcf204f9e2859b3496\n\nIPA SHA-256: `4912022b6f7d4ddb3c625be82fbadba962ad1fb502aed37c723ef946b94e4c26`\n",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/loop-1.0.0-build1/Loop.ipa",
+          "size": 1658272,
+          "minOSVersion": "26.0",
+          "sha256": "4912022b6f7d4ddb3c625be82fbadba962ad1fb502aed37c723ef946b94e4c26"
+        }
+      ],
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Save animations you choose to your photo library."
+        }
+      },
+      "version": "1.0.0",
+      "versionDate": "2026-10-25T07:14:44Z",
+      "versionDescription": "# Loop 1.0 — Moments, on repeat\n\nCreate GIFs and full-color APNG animations locally on iPhone and iPad. Native SwiftUI and Liquid Glass, with a teal-and-lime identity alongside the other Strezzy apps.\n\nImport from Photos or Files, trim, adjust portrait/landscape/square crops, choose resolution and frame rate, and export. Includes reverse and ping-pong playback, speed, loop count, adaptive GIF palettes and dithering, local projects and an export library.\n\nAdd circular or rectangular blur, pixelation, solid covers, emoji and text. Overlays can be timed, tracked on device with Vision and adjusted with manual keyframes. Review tracked content before sharing; tracking is not infallible.\n\n**Format limits:** GIF delays use 10 ms steps. The 60 FPS option samples 60 frames per second and approximates their timing; some viewers play fast GIFs more slowly. APNG offers finer timing and full color, subject to the receiving app's support. Both formats are silent. Native/custom resolution is capped at a 4096-pixel longest edge, with a 30,000-frame export guard. Supported input depends on the iPhone's video decoders. Cloud-only source items must first be downloaded through their provider.\n\n**Install:** `Loop.ipa` is an arm64 iPhone package for the existing sideloading/signing workflow. Requires iOS 26 or later. No account, subscription, ads, watermark, analytics, model downloads or app-initiated network requests.\n\n**Validation:** Native arm64 compilation and automated simulator tests are attached as reports. Physical iPhone thermals, long high-resolution exports and SideStore/LiveContainer behavior have not been tested on a physical device in this build session.\n\nThe complete source archive and generated Xcode project are attached. Existing apps and historical releases are preserved.\n\nAutomated tests: 60 passed, 0 failed, 0 skipped.\n\nSource commit: 2063b233f26d6b237511f8dcf204f9e2859b3496\n\nIPA SHA-256: `4912022b6f7d4ddb3c625be82fbadba962ad1fb502aed37c723ef946b94e4c26`\n",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/loop-1.0.0-build1/Loop.ipa",
+      "size": 1658272
     }
   ],
   "news": []

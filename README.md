@@ -15,6 +15,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.9.7 (142) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.7-build142/Rift.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png" width="44" alt=""/> **Velvet** — Camera, photos and local search | 0.3.0 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.3.0-build4/Velvet.ipa) | iOS 27.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonwake.png" width="44" alt=""/> **Moonwake** — A starlight pixel adventure | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png" width="44" alt=""/> **Loop** — Offline GIF and animated PNG creator | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/loop-1.0.0-build1/Loop.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -61,6 +62,10 @@ Capture photos and videos, browse albums and favorites, and search your library 
 ### Moonwake
 
 Explore five moonlit realms as Aster, a white-haired wanderer with a glowing starlight sword. Awaken fifteen runes, free five guardians and restore the moonwells to reach the ending. Sword combos, evasive dash, Moonpulse magic, amber spirit Wisp and moss guardian companions, hidden caches, upgrades and local saves. Original animated pixel artwork and seventeen original audio assets, native SwiftUI Liquid Glass menus, touch controls, controller and keyboard support, left-handed controls, reduced effects and Story difficulty. Built in native Swift with SpriteKit. Entirely offline, with no accounts, ads, purchases, analytics or downloads. Landscape iPhone and iPad; requires iOS 26 or later. Physical-device performance and sideload-host behavior still require device playtesting.
+
+### Loop
+
+Turn local videos into GIFs and full-color APNG animations. Adjust portrait, landscape or square crops; trim; choose frame rate and resolution; reverse or ping-pong playback; and add timed blur, pixelation, solid covers, emoji and captions with on-device tracking and manual keyframes. Native Liquid Glass, local saved projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.
 
 ## Add my apps to LiveContainer
 
