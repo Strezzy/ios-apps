@@ -35,6 +35,7 @@ import UniformTypeIdentifiers
             var directory = root
             var values = URLResourceValues(); values.isExcludedFromBackup = true
             try directory.setResourceValues(values)
+            removeInterruptedExports()
             loadLibrary()
         } catch { self.error = "Loop could not open its local library: \(error.localizedDescription)" }
     }
@@ -65,6 +66,21 @@ import UniformTypeIdentifiers
         if let data = try? Data(contentsOf: root.appendingPathComponent("exports.json")),
            let items = try? decoder.decode([SavedExport].self, from: data) {
             exports = items.filter { FileManager.default.fileExists(atPath: exportURL($0).path) }
+        }
+    }
+
+    /// Only this encoder's exact temporary-file naming scheme is eligible for cleanup.
+    /// Completed exports and unknown files are never removed during startup.
+    private func removeInterruptedExports() {
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .isSymbolicLinkKey]
+        guard let files = try? FileManager.default.contentsOfDirectory(at: exportsDirectory, includingPropertiesForKeys: Array(keys)) else { return }
+        for file in files {
+            let name = file.lastPathComponent
+            guard name.hasPrefix(".loop-"), name.hasSuffix(".partial"), name.count == 50,
+                  UUID(uuidString: String(name.dropFirst(6).dropLast(8))) != nil,
+                  let values = try? file.resourceValues(forKeys: keys),
+                  values.isRegularFile == true, values.isSymbolicLink != true else { continue }
+            try? FileManager.default.removeItem(at: file)
         }
     }
 
@@ -169,8 +185,13 @@ import UniformTypeIdentifiers
     func renameExport(_ item: SavedExport, name: String) {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty, let index = exports.firstIndex(where: { $0.id == item.id }) else { return }
-        exports[index].name = String(clean.prefix(120))
-        do { try persistExports() } catch { self.error = error.localizedDescription }
+        do {
+            let filename = exportFilename(name: clean, format: item.format)
+            try FileManager.default.moveItem(at: exportURL(exports[index]), to: exportsDirectory.appendingPathComponent(filename))
+            exports[index].name = String(clean.prefix(120))
+            exports[index].filename = filename
+            try persistExports()
+        } catch { self.error = error.localizedDescription }
     }
 
     private func persistExports() throws {
@@ -189,7 +210,7 @@ import UniformTypeIdentifiers
             isExporting = false; isPaused = false; exportControl = nil
             UIApplication.shared.isIdleTimerDisabled = false
         }
-        let filename = UUID().uuidString + "." + project.export.format.fileExtension
+        let filename = exportFilename(name: project.name, format: project.export.format)
         let destination = exportsDirectory.appendingPathComponent(filename)
         do {
             let result = try await engine.export(sourceURL: sourceURL(project), project: project, destination: destination, control: control) { [weak self] progress in
@@ -262,6 +283,12 @@ import UniformTypeIdentifiers
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else { return }
         CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
         _ = CGImageDestinationFinalize(destination)
+    }
+
+    private func exportFilename(name: String, format: AnimationFormat) -> String {
+        let base = String(name.filter { $0.isLetter || $0.isNumber || $0 == " " || $0 == "-" || $0 == "_" }.prefix(60))
+            .trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: " ", with: "-")
+        return (base.isEmpty ? "Loop" : base) + "-" + String(UUID().uuidString.prefix(8)) + "." + format.fileExtension
     }
 
     func prepareUITestFixtureIfNeeded() async {

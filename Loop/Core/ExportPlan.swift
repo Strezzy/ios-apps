@@ -32,7 +32,7 @@ struct ExportPlan: Sendable {
             guard overlay.startTime.isFinite, overlay.endTime.isFinite,
                   overlay.startTime <= overlay.endTime,
                   overlay.keyframes.allSatisfy({ $0.time.isFinite && $0.confidence.isFinite }),
-                  zip(overlay.keyframes, overlay.keyframes.dropFirst()).allSatisfy({ $0.time < $1.time }) else {
+                  zip(overlay.keyframes, overlay.keyframes.dropFirst()).allSatisfy({ pair in pair.0.time < pair.1.time }) else {
                 throw LoopError.invalidSettings("An overlay has an invalid time range.")
             }
             if overlay.trackingEnabled && overlay.trackingNeedsReview {
@@ -91,7 +91,7 @@ struct ExportPlan: Sendable {
             let next = max(encodedBoundary + 1, Int(idealBoundary.rounded()))
             let centiseconds = next - encodedBoundary
             encodedBoundary = next
-            return Frame(sourceTime: min(project.trimEnd - 0.000001, time),
+            return Frame(sourceTime: min(project.trimEnd - 1.0 / 60_000, time),
                          delay: e.format == .gif ? Double(centiseconds) / 100 : delay,
                          gifDelayCentiseconds: centiseconds)
         }

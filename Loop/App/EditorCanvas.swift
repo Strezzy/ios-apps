@@ -63,6 +63,7 @@ struct EditorCanvas: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(.rect(cornerRadius: 20))
         }.frame(height: 270)
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("editorCanvas")
     }
 

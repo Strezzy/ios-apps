@@ -47,7 +47,8 @@ enum MediaEngine {
         }
         var hdr = false
         for description in descriptions {
-            let extensions = CMFormatDescriptionGetExtensions(description) as NSDictionary
+            guard let rawExtensions = CMFormatDescriptionGetExtensions(description) else { continue }
+            let extensions = rawExtensions as NSDictionary
             if let transfer = extensions[kCMFormatDescriptionExtension_TransferFunction] as? String {
                 hdr = hdr || transfer == (kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ as String)
                           || transfer == (kCVImageBufferTransferFunction_ITU_R_2100_HLG as String)

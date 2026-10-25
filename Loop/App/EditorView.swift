@@ -170,7 +170,7 @@ struct EditorView: View {
                     preview.time = project.trimStart
                 }), range: 0...max(0.001, project.metadata.duration - 0.02), step: 0.01, display: LoopFormat.time(project.trimStart), accessibilityID: "trimStart")
                 ValueSlider(title: "End", value: Binding(get: { project.trimEnd }, set: { newValue in
-                    project.trimEnd = max(project.trimStart + 0.02, newValue)
+                    project.trimEnd = min(project.metadata.duration, max(project.trimStart + 0.02, newValue))
                     preview.time = min(preview.time, project.trimEnd - 0.001)
                 }), range: 0.02...max(0.021, project.metadata.duration), step: 0.01, display: LoopFormat.time(project.trimEnd), accessibilityID: "trimEnd")
                 HStack {

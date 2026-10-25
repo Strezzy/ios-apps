@@ -145,14 +145,28 @@ struct ExportDetailView: View {
 @MainActor final class AnimationPlayer: ObservableObject {
     @Published var frame: CGImage?
     @Published var failed = false
+    @Published var playing = false
     private var task: Task<Void, Never>?
+    private var generation = UUID()
 
     func start(url: URL, play: Bool = true) {
         stop()
+        let token = UUID(); generation = token; playing = play; failed = false
         task = Task { [weak self] in
+            defer { if self?.generation == token { self?.playing = false } }
             guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary) else { self?.failed = true; return }
             let count = CGImageSourceGetCount(source)
             guard count > 0 else { self?.failed = true; return }
+            let properties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
+            let gif = properties?[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+            let png = properties?[kCGImagePropertyPNGDictionary] as? [CFString: Any]
+            let totalPlays: Int
+            if let repeats = (gif?[kCGImagePropertyGIFLoopCount] as? NSNumber)?.intValue {
+                totalPlays = repeats == 0 ? 0 : repeats + 1
+            } else if let plays = (png?[kCGImagePropertyAPNGLoopCount] as? NSNumber)?.intValue {
+                totalPlays = plays
+            } else { totalPlays = 1 }
+            var completedPlays = 0
             var index = 0
             while !Task.isCancelled {
                 let started = Date()
@@ -175,12 +189,14 @@ struct ExportDetailView: View {
                 if decoded.0 == nil { self?.failed = true; break }
                 if !play { break }
                 index = (index + 1) % count
+                if index == 0 { completedPlays += 1 }
                 let remaining = max(0.001, decoded.1 - Date().timeIntervalSince(started))
                 do { try await Task.sleep(for: .seconds(remaining)) } catch { break }
+                if totalPlays > 0 && completedPlays >= totalPlays { break }
             }
         }
     }
-    func stop() { task?.cancel(); task = nil }
+    func stop() { generation = UUID(); task?.cancel(); task = nil; playing = false }
     func clear() { stop(); frame = nil }
 }
 
@@ -197,11 +213,11 @@ struct AnimatedExportPreview: View {
             else if player.failed { Text("Preview unavailable. You can still share the saved file.").font(.caption).foregroundStyle(.white).padding() }
             else { ProgressView().tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity) }
             Button {
-                paused.toggle()
+                paused = player.playing
                 if paused { player.stop() } else { player.start(url: url) }
-            } label: { Image(systemName: paused ? "play.fill" : "pause.fill").padding(11) }
+            } label: { Image(systemName: player.playing ? "pause.fill" : "play.fill").padding(11) }
                 .buttonStyle(.glass).tint(.white).padding(12)
-                .accessibilityLabel(paused ? "Play animation" : "Pause animation")
+                .accessibilityLabel(player.playing ? "Pause animation" : "Play animation")
         }.onAppear { paused = reduceMotion; player.start(url: url, play: !reduceMotion) }
             .onDisappear { player.clear() }
             .onChange(of: phase) { _, value in if value == .active && !paused { player.start(url: url) } else { player.stop() } }

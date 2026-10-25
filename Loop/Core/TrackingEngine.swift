@@ -39,7 +39,7 @@ enum TrackingEngine {
             let anchorFrame = try await generator.image(at: CMTime(seconds:
                 min(project.metadata.duration - 1.0 / 60_000, anchor), preferredTimescale: 60_000)).image
             try handler.perform([request], on: anchorFrame, orientation: .up)
-            if let initial = request.results?.first { request.inputObservation = initial }
+            if let initial = request.results?.first as? VNDetectedObjectObservation { request.inputObservation = initial }
             let steps = direction > 0 ? forwardCount : backwardCount
             for step in 1...steps {
                 try await control.checkpoint()
@@ -49,7 +49,7 @@ enum TrackingEngine {
                     min(project.metadata.duration - 1.0 / 60_000, time), preferredTimescale: 60_000)).image
                 let keyframe: TrackingKeyframe = try autoreleasepool {
                     try handler.perform([request], on: source, orientation: .up)
-                    guard let observation = request.results?.first,
+                    guard let observation = request.results?.first as? VNDetectedObjectObservation,
                           observation.confidence >= 0.3,
                           observation.boundingBox.width > 0.005,
                           observation.boundingBox.height > 0.005 else {
