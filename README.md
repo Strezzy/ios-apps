@@ -15,7 +15,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Rift.png" width="44" alt=""/> **Rift** — Private offline AI chat | 1.9.7 (142) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/rift-1.9.7-build142/Rift.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png" width="44" alt=""/> **Velvet** — Camera, photos and local search | 0.3.0 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.3.0-build4/Velvet.ipa) | iOS 27.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonwake.png" width="44" alt=""/> **Moonwake** — A starlight pixel adventure | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png" width="44" alt=""/> **Loop** — Offline GIF and animated PNG creator | 1.0.1 (2) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/loop-1.0.1-build2/Loop.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png" width="44" alt=""/> **Loop** — Offline GIF and animated PNG creator | 1.1.0 (3) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/loop-1.1.0-build3/Loop.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -65,7 +65,7 @@ Explore five moonlit realms as Aster, a white-haired wanderer with a glowing sta
 
 ### Loop
 
-Turn videos from Photos or Files into GIFs and full-color APNG animations. Scrub continuously with native video preview, see blur and pixelation live, and pinch zoom up to 12x for precise layer placement. Select a layer for immediate controls, tap its X to delete, or use the full system emoji keyboard. Adjust portrait, landscape or square crops; trim; choose frame rate and resolution; reverse or ping-pong playback; and track timed overlays locally with manual keyframes. Native Liquid Glass, local projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.
+Turn videos from Photos or Files into GIFs and full-color APNG animations. Follow a selected subject with a moving portrait, landscape or square crop, including optional size-follow as it approaches or recedes. Stack independent tracked blur, pixelation, covers, emoji and captions on top. Trim beside the pinned player controls, scrub continuously, preview effects live, and pinch zoom up to 12x for precise placement. Choose frame rate and resolution, reverse or ping-pong playback, and use the full system emoji keyboard. Native Liquid Glass, local projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.
 
 ## Add my apps to LiveContainer
 
