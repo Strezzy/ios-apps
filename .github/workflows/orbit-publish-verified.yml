@@ -1,0 +1,35 @@
+name: Publish verified Orbit package
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/orbit-publish-verified.yml', '.github/orbit-release/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: orbit-verified-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate publication helper
+        run: python3 -m py_compile .github/orbit-release/publish_verified.py
+      - name: Verify existing native package and publish Orbit
+        run: python3 .github/orbit-release/publish_verified.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Orbit-Verified-Release-Evidence
+          path: OrbitVerifiedRelease
+          retention-days: 30
