@@ -26,13 +26,20 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
+      - name: Validate every release script
+        run: |
+          for script in scripts/*.sh; do bash -n "$script"; done
+          python3 -m py_compile scripts/*.py
       - name: Install project generator
         run: command -v xcodegen || brew install xcodegen
       - name: Build the native arm64 iPhone app
         run: bash scripts/build.sh
       - name: Check geometry and portrait/landscape interface
         timeout-minutes: 8
-        run: bash scripts/validate.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/check.sh
       - name: Package source, project and icon
         run: |
           git -C .. archive -o Orbit/Build/Orbit-Source.zip HEAD:Orbit

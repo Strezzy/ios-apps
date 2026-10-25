@@ -50,14 +50,22 @@ PY
 xcrun simctl status_bar "$ORBIT_DEVICE" override --time '9:41' --dataNetwork wifi \
   --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
 ORBIT_TEST_STATUS=0
+ORBIT_TEST_ARGS=()
+ORBIT_SUMMARY=Build/TEST-RESULTS.json
+if [ "${ORBIT_UI_ONLY:-0}" = 1 ]; then
+  test -f Build/CHECK-REUSE.json
+  test -f Build/UNIT-TEST-RESULTS.json
+  ORBIT_TEST_ARGS+=(-only-testing:OrbitUITests)
+  ORBIT_SUMMARY=Build/UI-TEST-RESULTS.json
+fi
 xcodebuild -project Orbit.xcodeproj -scheme Orbit -configuration Debug \
   -destination "platform=iOS Simulator,id=$ORBIT_DEVICE" -derivedDataPath Build/Simulator \
   -resultBundlePath Build/Tests.xcresult -parallel-testing-enabled NO \
   -test-timeouts-enabled YES -default-test-execution-time-allowance 45 \
-  -maximum-test-execution-time-allowance 90 CODE_SIGNING_ALLOWED=NO test \
+  -maximum-test-execution-time-allowance 90 "${ORBIT_TEST_ARGS[@]}" CODE_SIGNING_ALLOWED=NO test \
   2>&1 | tee Build/test.log || ORBIT_TEST_STATUS=$?
 if [ -d Build/Tests.xcresult ]; then
-  xcrun xcresulttool get test-results summary --path Build/Tests.xcresult --format json > Build/TEST-RESULTS.json || true
+  xcrun xcresulttool get test-results summary --path Build/Tests.xcresult --format json > "$ORBIT_SUMMARY" || true
   xcrun xcresulttool export attachments --path Build/Tests.xcresult --output-path Build/Screenshots || true
 fi
 if [ "$ORBIT_TEST_STATUS" -ne 0 ]; then
@@ -77,4 +85,5 @@ for name in ['Orbit-Home-Portrait', 'Orbit-Home-Landscape']:
     item = max(matches, key=lambda value: value['timestamp'])
     shutil.copyfile(root / item['exportedFileName'], Path('Build') / (name + '.png'))
 PY
+if [ "${ORBIT_UI_ONLY:-0}" = 1 ]; then python3 scripts/combine_checks.py; fi
 python3 scripts/verify_release.py --record

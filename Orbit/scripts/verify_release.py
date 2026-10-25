@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +42,22 @@ def verify():
     assert '** TEST SUCCEEDED **' in (BUILD / 'test.log').read_text()
     for name in ['Orbit-Home-Portrait.png', 'Orbit-Home-Landscape.png']:
         assert (BUILD / name).stat().st_size > 10000, name
+    if (BUILD / 'CHECK-REUSE.json').is_file():
+        reuse = json.loads((BUILD / 'CHECK-REUSE.json').read_text())
+        assert reuse['currentSourceCommit'] == build['sourceCommit']
+        assert reuse['unitTestSourceCommit'] == '8abeda5be908b06b3a49c715d06d6d142f6d34fe'
+        for name, digest in reuse['files'].items():
+            assert sha256(BUILD / name) == digest
+        subprocess.run(['git', 'diff', '--quiet', reuse['unitTestSourceCommit'], build['sourceCommit'], '--',
+                        'Orbit/App', 'Orbit/Core', 'Orbit/Rendering', 'Orbit/Tests/Unit',
+                        'Orbit/project.yml', 'Orbit/Resources/Assets.xcassets'], cwd=ROOT.parent, check=True)
+        units = json.loads((BUILD / 'UNIT-TEST-RESULTS.json').read_text())
+        ui = json.loads((BUILD / 'UI-TEST-RESULTS.json').read_text())
+        assert (units['passedTests'], units['failedTests'], units['skippedTests']) == (6, 0, 1)
+        assert (ui['passedTests'], ui['failedTests'], ui.get('skippedTests', 0)) == (1, 0, 0)
+        assert (tests['passedTests'], tests['failedTests'], tests['skippedTests']) == (7, 0, 1)
+        assert tests['unitResults']['sourceCommit'] == reuse['unitTestSourceCommit']
+        assert tests['uiResults']['sourceCommit'] == build['sourceCommit']
     return build, tests
 
 
@@ -49,9 +66,13 @@ def main():
     parser.add_argument('--record', action='store_true')
     arguments = parser.parse_args()
     build, tests = verify()
+    reuse = json.loads((BUILD / 'CHECK-REUSE.json').read_text()) if (BUILD / 'CHECK-REUSE.json').is_file() else None
     report = {
         'profile': 'native-build-and-focused-simulator-checks',
         'sourceCommit': build['sourceCommit'],
+        'unitTestSourceCommit': reuse['unitTestSourceCommit'] if reuse else build['sourceCommit'],
+        'uiTestSourceCommit': build['sourceCommit'],
+        'testEvidence': 'Reused only unit checks for identical runtime sources; UI check and screenshots executed on this commit. See CHECK-REUSE.json and separate unit/UI reports.' if reuse else 'All checks executed on this source commit.',
         'version': build['version'],
         'build': build['build'],
         'ipaSHA256': build['sha256'],
