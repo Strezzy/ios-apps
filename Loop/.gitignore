@@ -1,0 +1,5 @@
+Build/
+*.xcodeproj/
+Resources/Info.plist
+__pycache__/
+.DS_Store

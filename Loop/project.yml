@@ -1,0 +1,89 @@
+name: Loop
+options:
+  bundleIdPrefix: com.billy
+  deploymentTarget:
+    iOS: '26.0'
+  xcodeVersion: '27.1'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ENABLE_APP_INTENTS_METADATA_EXTRACTION: NO
+targets:
+  Loop:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Core
+      - Resources
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Loop
+        CFBundleName: Loop
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        NSPhotoLibraryAddUsageDescription: Save animations you choose to your photo library.
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIFileSharingEnabled: false
+        LSSupportsOpeningDocumentsInPlace: true
+        UIApplicationSupportsIndirectInputEvents: true
+        CADisableMinimumFrameDurationOnPhone: true
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.loop
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_TESTABILITY: YES
+  LoopTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.loop.tests
+    dependencies:
+      - target: Loop
+  LoopUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.billy.loop.uitests
+        TEST_TARGET_NAME: Loop
+    dependencies:
+      - target: Loop
+schemes:
+  Loop:
+    build:
+      targets:
+        Loop: all
+    test:
+      gatherCoverageData: true
+      targets:
+        - name: LoopTests
+          parallelizable: false
+        - name: LoopUITests
+          parallelizable: false

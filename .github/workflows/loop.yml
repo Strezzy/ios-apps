@@ -1,0 +1,76 @@
+name: Build, test and publish Loop
+
+on:
+  push:
+    branches: [main, 'loop/**']
+    paths: ['Loop/**', '.github/workflows/loop.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: loop-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Loop
+
+jobs:
+  ios:
+    runs-on: xcode-27
+    timeout-minutes: 50
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Reuse the exact tested candidate when publishing
+        id: verified
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/reuse_verified.sh
+      - name: Install project generator
+        if: steps.verified.outputs.reused != 'true'
+        run: command -v xcodegen || brew install xcodegen
+      - name: Build the native arm64 iPhone app
+        if: steps.verified.outputs.reused != 'true'
+        run: bash scripts/build.sh
+      - name: Verify encoding, timing, cropping, tracking and native interface
+        if: steps.verified.outputs.reused != 'true'
+        run: bash scripts/test.sh
+      - name: Package complete source and generated project
+        if: success() && steps.verified.outputs.reused != 'true'
+        run: |
+          git -C .. archive -o Loop/Build/Loop-Source.zip HEAD:Loop
+          python3 -c "import zipfile; n=zipfile.ZipFile('Build/Loop-Source.zip').namelist(); assert 'Core/Models.swift' in n and 'App/LoopApp.swift' in n and len(n)>20"
+          zip -qr Build/Loop-XcodeProject.zip Loop.xcodeproj
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Loop-Icon.png
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.verified.outputs.reused != 'true'
+        with:
+          name: Loop-Build-and-Tests
+          path: |
+            Loop/Build/*.ipa
+            Loop/Build/*.zip
+            Loop/Build/*.json
+            Loop/Build/*.txt
+            Loop/Build/*.log
+            Loop/Build/*.png
+            Loop/Build/Screenshots
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.verified.outputs.reused != 'true'
+        with:
+          name: Loop-Native-Screenshots
+          path: Loop/Build/Screenshots
+          retention-days: 30
+      - name: Publish the tested app and update the download catalog
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/publish.sh
