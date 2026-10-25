@@ -26,7 +26,11 @@ struct OverlayEditorView: View {
                     DisclosureGroup(isExpanded: $timingExpanded) {
                         timing(overlay).padding(.top, 12)
                     } label: {
-                        Label("Timing", systemImage: "clock").font(.subheadline.weight(.semibold))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label("Timing", systemImage: "clock").font(.subheadline.weight(.semibold))
+                            Text("\(LoopFormat.time(overlay.startTime)) – \(LoopFormat.time(overlay.endTime))")
+                                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        }
                     }.accessibilityIdentifier("overlayTiming")
                     Divider()
                     DisclosureGroup(isExpanded: $trackingExpanded) {
@@ -177,18 +181,27 @@ struct OverlayEditorView: View {
     private func timing(_ overlay: OverlayItem) -> some View {
         VStack(alignment: .leading, spacing: 13) {
             ValueSlider(title: "Appears", value: Binding(get: { current?.startTime ?? project.trimStart }, set: { value in
-                set(\.startTime, min(value, (current?.endTime ?? project.trimEnd) - 0.01))
-            }), range: project.trimStart...max(project.trimStart + 0.001, project.trimEnd - 0.01), step: 0.01,
+                editTiming { $0.setVisibleStart(value, within: project.trimStart...project.trimEnd) }
+            }), range: project.trimStart...max(project.trimStart + 0.001, project.trimEnd - 0.001), step: 0.001,
                         display: LoopFormat.time(overlay.startTime), accessibilityID: "overlayStart")
             ValueSlider(title: "Disappears", value: Binding(get: { current?.endTime ?? project.trimEnd }, set: { value in
-                set(\.endTime, max(value, (current?.startTime ?? project.trimStart) + 0.01))
-            }), range: min(project.trimStart + 0.01, project.trimEnd)...max(project.trimStart + 0.011, project.trimEnd), step: 0.01,
+                editTiming { $0.setVisibleEnd(value, within: project.trimStart...project.trimEnd) }
+            }), range: min(project.trimStart + 0.001, project.trimEnd)...max(project.trimStart + 0.002, project.trimEnd), step: 0.001,
                         display: LoopFormat.time(overlay.endTime), accessibilityID: "overlayEnd")
             Button("Use the whole clip") {
-                set(\.startTime, project.trimStart)
-                set(\.endTime, project.trimEnd)
+                editTiming { $0.useWholeClip(project.trimStart...project.trimEnd) }
             }.font(.caption).buttonStyle(.glass)
+            Text("Start here and End here beneath the video set this overlay’s timing at the visible frame.")
+                .font(.caption).foregroundStyle(.secondary)
         }
+    }
+
+    private func editTiming(_ edit: (inout OverlayItem) -> Void) {
+        guard let index = project.overlays.firstIndex(where: { $0.id == selected }) else { return }
+        preview.beginCanvasInteraction()
+        var overlay = project.overlays[index]
+        edit(&overlay)
+        project.overlays[index] = overlay
     }
 
     private func tracking(_ overlay: OverlayItem) -> some View {

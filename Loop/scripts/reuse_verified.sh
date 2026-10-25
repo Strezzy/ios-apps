@@ -14,24 +14,30 @@ print(matches[0]['id'] if matches else '')
 PY
 )
 if [ -z "$LOOP_VERIFIED_RUN" ]; then
-  echo 'No previously tested candidate for this commit; building normally.'
+  echo 'No previously verified candidate for this commit; building normally.'
   exit 0
 fi
 gh run download "$LOOP_VERIFIED_RUN" --name Loop-Build-and-Tests --dir Build
-python3 scripts/verify_tests.py Build/TEST-RESULTS.json
+python3 scripts/verify_release.py
 python3 - <<'PY'
-import hashlib, json, os
+import hashlib, json, os, sys
 from pathlib import Path
+sys.path.insert(0, 'scripts')
+from verify_release import build_only_profile
 r = json.load(open('Build/BUILD-REPORT.json'))
-t = json.load(open('Build/TEST-RESULTS.json'))
 assert r['sourceCommit'] == os.environ['GITHUB_SHA']
 assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha256']
-for name in ['Loop-Source.zip', 'Loop-XcodeProject.zip', 'Loop-Home.png', 'Loop-Icon.png',
+required = ['Loop-Source.zip', 'Loop-XcodeProject.zip', 'Loop-Icon.png']
+if build_only_profile():
+    required.append('VALIDATION-REPORT.json')
+else:
+    required += ['Loop-Home.png',
              'Loop-Editor.png', 'Loop-Live-Effects.png', 'Loop-Live-Pixelation.png',
              'Loop-Precision-Zoom.png', 'Loop-Emoji-Keyboard.png', 'Loop-Trim-Playback.png',
              'Loop-Subject-Selection.png', 'Loop-Subject-Result.png', 'Loop-Subject-Follow.png',
-             'Loop-4K60-Selection.png', 'Loop-4K60-Tracked.png', 'Loop-4K60-Restored.png']:
+             'Loop-4K60-Selection.png', 'Loop-4K60-Tracked.png', 'Loop-4K60-Restored.png']
+for name in required:
     assert (Path('Build') / name).is_file(), name
 PY
 echo 'reused=true' >> "$GITHUB_OUTPUT"
-echo "Publishing the tested candidate from run $LOOP_VERIFIED_RUN."
+echo "Publishing the verified candidate from run $LOOP_VERIFIED_RUN."

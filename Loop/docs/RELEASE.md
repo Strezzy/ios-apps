@@ -1,18 +1,23 @@
-# Loop 1.1.1 — 4K tracking stability
+# Loop 1.1.2 — Overlay timing and stronger subject tracking
 
-This maintenance update addresses reports of the editor returning home and losing crop tracking after processing a 4K60 video.
+## Selected-overlay timing
 
-- **Lower preview memory use:** native preview buffers are requested at a maximum 960-pixel longest edge, while source frame-rate behavior and full-resolution export are preserved.
-- **One active decoding task during analysis:** starting crop or overlay tracking releases the preview player, output buffers, fallback generator and pending render work. The visible frame remains on screen, and the preview is recreated after analysis.
-- **Save before showing the result:** completed crop tracking is written atomically before the result preview resumes. Older pending autosaves are cancelled, and the open editor receives the committed crop before its busy state ends. A failed write is shown as an error instead of an apparent success.
-- **Release tracking resources promptly:** Vision's terminal-frame signal is now sent with the final request, and analysis images and temporary objects are scoped to each sample.
-- **Keep errors in the editor:** tracking and save errors use the active editor's alert, avoiding competing presentations from the home screen.
-- **Safe cancellation:** cancellation during preview suspension leaves the saved project intact; a late task cannot reopen a cleared preview.
+- On **Overlays**, **Start here** sets when the selected layer appears and **End here** sets its last visible moment, using the video frame currently displayed.
+- The selected layer's time range appears beneath the playhead and in its Timing controls. Select a layer to enable the buttons. Other tabs keep the existing clip-trim behavior.
+- Changing visibility preserves the layer's position keyframes. If the new interval extends beyond an automatic track, the layer is marked for review or re-tracking.
 
-Portrait subject-follow cropping, optional size-follow and independently tracked blur/pixelation/emoji remain available. The original imported video and selected high-resolution GIF/APNG export settings are preserved. Processing remains entirely local.
+## Tracking improvements
 
-**Validation:** The native regression suite includes actual 3840 × 2160 H.264 video at 60 FPS. Tests verify native preview-buffer bounds, decoder release/resume, bidirectional subject tracking, final portrait rendering, editor continuity and persistence after process termination/relaunch. Additional checks cover an older pending autosave, a deterministic write failure, cancellation during setup and a 3,601-position tracking path. Reports and native 4K tracking screenshots are attached.
+- The tracker checks the selected region's appearance and motion before accepting a new Vision box, reducing the risk of switching to someone behind or beside the subject.
+- Analysis samples the source cadence up to 60 FPS, compared with the previous 30 FPS cap.
+- Brief obstructions trigger a bounded recovery search. Uncertain observations do not update the trusted appearance reference, and ambiguous or unresolved tracking leaves the previous saved path intact.
+- Crop following and tracked blur, pixelation, emoji, covers and text share the improved tracker while keeping independent source-coordinate paths.
+- The 4K memory protections and immediate crop-result saving from 1.1.1 remain in place. Analysis remains bounded to 960 pixels on the longest edge; source quality and high-resolution export options remain available. Processing is entirely offline.
 
-**Device scope:** Validation uses native builds and iPhone simulators. The reported source video and physical-device crash/memory logs were not available; the exact cause of that device's termination was not independently reproduced. Physical iPhone memory pressure, long 4K exports and sideload-host behavior still require device validation.
+**For existing projects:** Re-run **Track subject** or an overlay's **Track** to generate a path with the improved tracker. Saved paths are preserved until replaced. Similar-looking subjects, long obstructions or leaving the frame can still require a clearer selection or manual correction; this update does not promise perfect identity recognition.
 
-**Install:** Update the existing `com.billy.loop` installation using your normal signing/sideloading workflow. The attached arm64 IPA requires iOS 26 or later and preserves the app's local projects and exports. Complete source, generated Xcode project and checksums are included. Previous releases and the other apps in the repository are preserved.
+## Validation and installation
+
+At the app owner's request, this release uses **native arm64 Release compilation and package/checksum verification only**. The simulator unit/interface suite and physical-device testing were not run for this update. `VALIDATION-REPORT.json` records the scope; no previous release's test counts or screenshots are presented as current results. The owner will test the new timing behavior and real-world subject crossings on their iPhone.
+
+Update the existing `com.billy.loop` installation through the usual signing/sideloading workflow. The IPA requires iOS 26 or later. Complete source, the generated Xcode project and checksums are attached. Existing projects and prior releases are retained.

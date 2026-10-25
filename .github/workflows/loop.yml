@@ -26,7 +26,7 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
-      - name: Reuse the exact tested candidate when publishing
+      - name: Reuse the exact verified candidate when publishing
         id: verified
         if: github.ref == 'refs/heads/main'
         env:
@@ -39,9 +39,9 @@ jobs:
       - name: Build the native arm64 iPhone app
         if: steps.verified.outputs.reused != 'true'
         run: bash scripts/build.sh
-      - name: Verify encoding, timing, cropping, tracking and native interface
+      - name: Validate the native release with its declared verification scope
         if: steps.verified.outputs.reused != 'true'
-        run: bash scripts/test.sh
+        run: bash scripts/validate.sh
       - name: Package complete source and generated project
         if: success() && steps.verified.outputs.reused != 'true'
         run: |
@@ -63,12 +63,12 @@ jobs:
             Loop/Build/Screenshots
           retention-days: 30
       - uses: actions/upload-artifact@v7
-        if: always() && steps.verified.outputs.reused != 'true'
+        if: always() && steps.verified.outputs.reused != 'true' && hashFiles('Loop/Build/Screenshots/**') != ''
         with:
           name: Loop-Native-Screenshots
           path: Loop/Build/Screenshots
           retention-days: 30
-      - name: Publish the tested app and update the download catalog
+      - name: Publish the verified app and update the download catalog
         if: success() && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}

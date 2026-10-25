@@ -2,6 +2,14 @@
 
 **Moments, on repeat.** A native, offline video-to-GIF and APNG creator for iPhone and iPad, built in SwiftUI with native Liquid Glass controls.
 
+## What's new in 1.1.2
+
+On **Overlays**, **Start here** and **End here** now control the selected overlay's appearance and disappearance at the displayed video frame. Its active time range is shown beneath the playhead and in the Timing section. With no layer selected, the buttons ask you to select one. Other tabs keep using these buttons to trim the clip. Existing position keyframes are retained; extending a tracked layer beyond its analyzed interval requires another track or review.
+
+Subject and overlay tracking now check the selected region's appearance and movement before accepting Vision's next box. Analysis follows the source cadence up to 60 samples per second. A bounded search tries to recover the original subject after brief obstruction, and uncertain frames do not replace its appearance reference. Ambiguous or unresolved tracking still leaves the previous saved path intact. Crop and overlay paths remain independent and can be combined. Re-run **Track subject** or an overlay's **Track** to apply the new tracker to an existing project.
+
+This release uses a native arm64 Release build and package verification only, as requested by the app owner. The lengthy simulator unit/interface suite was not run; the attached validation report states that explicitly. Subject crossings and timing behavior will be tested on the owner's iPhone. The full test command remains available for a later run.
+
 ## What's new in 1.1.1
 
 This maintenance release addresses crop-tracking completion and saving on high-resolution sources, including 4K60 video.
@@ -59,17 +67,17 @@ GIF and APNG are written frame by frame. No complete animation is held as an arr
 4. Leave **Follow subject size** enabled to adapt to approach/recession, or turn it off to pan at a fixed crop zoom. Adjust the framing controls to refine the composition. Follow subject can be disabled without discarding its path.
 5. Add any tracked overlays in the Overlays tab as usual. Crop and overlay tracks are independent and compose at each output timestamp, including reverse and ping-pong playback.
 
-The crop stays inside the available image and preserves its aspect ratio. At image edges, or when a subject becomes larger than the available crop, it cannot invent missing surroundings. Size-follow can magnify source detail as a subject becomes smaller; it does not create new detail. Occluded or fully out-of-frame subjects can break tracking; select a clearer anchor or shorten the clip and track again. A cancelled or incomplete new track is not applied. Extending the trim requires coverage of the new interval before export.
+The crop stays inside the available image and preserves its aspect ratio. At image edges, or when a subject becomes larger than the available crop, it cannot invent missing surroundings. Size-follow can magnify source detail as a subject becomes smaller; it does not create new detail. Tracking uses the appearance of the selected region, motion continuity and a local recovery search to resist switches to nearby people or objects. Brief gaps are resolved only after a sufficiently strong match is recovered. Long obstructions, fully out-of-frame subjects or visually indistinguishable people can still break tracking; select a clearer anchor or shorten the clip and track again. A cancelled or incomplete new track is not applied. Extending the trim requires coverage of the new interval before export.
 
 ### Track an overlay
 
-Place an overlay over the subject, start tracking from the displayed source frame and scrub through the result. Coordinates are stored relative to the upright, uncropped source so changing the crop preserves the subject's path. Tracking runs entirely on device using Vision. Occlusion, fast motion and similar subjects can make it drift or fail. Interrupted or incomplete tracking requires correction before export; it never silently drops a blur mask. Manual keyframes can correct the path.
+Place an overlay over the subject, start tracking from the displayed source frame and scrub through the result. While the layer is selected on **Overlays**, use **Start here** and **End here** beneath the video to set when it appears and disappears. These commands change only that layer's visibility, and preserve its position keyframes. Coordinates are stored relative to the upright, uncropped source so changing the crop preserves the subject's path. Tracking runs entirely on device using Vision and appearance checks. Occlusion, fast motion and similar subjects can still make it drift or fail. Interrupted or incomplete tracking requires correction before export; it never silently drops a blur mask. Manual keyframes can correct the path.
 
 Always review the entire exported animation before sharing redacted content. Blur is a visual effect and is not an assurance that information cannot be recognized; solid cover is available when complete concealment is needed.
 
 ## Build and install
 
-The GitHub Actions workflow `.github/workflows/loop.yml` builds an actual arm64 iPhone application, runs simulator unit and interface tests, packages `Loop.ipa`, and publishes the verified artifact from `main`. Feature branches build without creating a public release. The exact tested candidate can be promoted without rebuilding its IPA.
+The GitHub Actions workflow `.github/workflows/loop.yml` builds an actual arm64 iPhone application, validates the release according to its declared scope, packages `Loop.ipa`, and publishes the verified artifact from `main`. Feature branches build without creating a public release. The exact verified candidate can be promoted without rebuilding its IPA. Normally validation requires the complete simulator unit and interface suite. The owner's requested build-only scope for **1.1.2 (5)** is recorded in `release-validation.json` and applies only to that exact version/build; future versions default to the full suite. Build-only releases attach `VALIDATION-REPORT.json` and do not attach historical test results or screenshots as new evidence.
 
 On a Mac with Xcode 26 or newer and XcodeGen:
 

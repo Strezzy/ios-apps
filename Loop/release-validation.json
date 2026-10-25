@@ -1,0 +1,6 @@
+{
+  "version": "1.1.2",
+  "build": "5",
+  "profile": "build-only",
+  "reason": "The app owner requested this update without the lengthy simulator test suite and will test tracking and overlay timing on their iPhone. Compile and package the native Release app; do not report unrun tests as passed."
+}

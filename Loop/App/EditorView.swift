@@ -190,12 +190,18 @@ struct EditorView: View {
                     }.buttonStyle(.glass).accessibilityLabel("Next frame")
                 }.controlSize(.small)
                 Spacer(minLength: 2)
-                Button("Start here") { setTrimStartHere() }
-                    .accessibilityIdentifier("trimStartHere")
-                    .accessibilityHint("Set the beginning of the clip to the visible video frame.")
-                Button("End here") { setTrimEndHere() }
-                    .accessibilityIdentifier("trimEndHere")
-                    .accessibilityHint("Set the end of the clip to the visible video frame.")
+                Button("Start here") { setStartHere() }
+                    .disabled(tool == .overlays && selectedOverlayItem == nil)
+                    .accessibilityIdentifier(tool == .overlays ? "overlayStartHere" : "trimStartHere")
+                    .accessibilityHint(tool == .overlays
+                        ? "Make the selected overlay appear at the visible video frame."
+                        : "Set the beginning of the clip to the visible video frame.")
+                Button("End here") { setEndHere() }
+                    .disabled(tool == .overlays && selectedOverlayItem == nil)
+                    .accessibilityIdentifier(tool == .overlays ? "overlayEndHere" : "trimEndHere")
+                    .accessibilityHint(tool == .overlays
+                        ? "Make the selected overlay disappear after the visible video frame."
+                        : "Set the end of the clip to the visible video frame.")
             }.font(.caption.weight(.semibold)).buttonStyle(.glass).controlSize(.small)
                 .lineLimit(1).minimumScaleFactor(0.85)
             Slider(value: Binding(get: { min(project.trimEnd, max(project.trimStart, preview.time)) }, set: {
@@ -207,8 +213,9 @@ struct EditorView: View {
                 .accessibilityLabel("Playhead").accessibilityIdentifier("playhead")
                 .accessibilityValue(LoopFormat.time(preview.time))
             HStack(spacing: 8) {
-                Text("\(LoopFormat.time(project.trimStart)) – \(LoopFormat.time(project.trimEnd))")
+                Text(timingSummary)
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .accessibilityIdentifier("editorTimingRange")
                 Spacer(minLength: 0)
                 if tool == .crop || tool == .overlays {
                     Button { preview.stop(); selectingCropSubject = false; showingResult.toggle() } label: {
@@ -299,12 +306,40 @@ struct EditorView: View {
         }
     }
 
-    private func setTrimStartHere() {
+    private var selectedOverlayItem: OverlayItem? {
+        project.overlays.first { $0.id == selectedOverlay }
+    }
+
+    private var timingSummary: String {
+        if tool == .overlays {
+            guard let overlay = selectedOverlayItem else { return "Select an overlay to set its timing" }
+            return "Selected overlay · \(LoopFormat.time(overlay.startTime)) – \(LoopFormat.time(overlay.endTime))"
+        }
+        return "\(LoopFormat.time(project.trimStart)) – \(LoopFormat.time(project.trimEnd))"
+    }
+
+    private func setStartHere() {
+        if tool == .overlays {
+            guard let index = project.overlays.firstIndex(where: { $0.id == selectedOverlay }) else { return }
+            preview.beginCanvasInteraction()
+            var overlay = project.overlays[index]
+            overlay.setVisibleStart(preview.displayedTime, within: project.trimStart...project.trimEnd)
+            project.overlays[index] = overlay
+            return
+        }
         preview.beginCanvasInteraction()
         project.trimStart = max(0, min(preview.displayedTime, project.trimEnd - 0.02))
     }
 
-    private func setTrimEndHere() {
+    private func setEndHere() {
+        if tool == .overlays {
+            guard let index = project.overlays.firstIndex(where: { $0.id == selectedOverlay }) else { return }
+            preview.beginCanvasInteraction()
+            var overlay = project.overlays[index]
+            overlay.setVisibleEnd(preview.displayedTime, within: project.trimStart...project.trimEnd)
+            project.overlays[index] = overlay
+            return
+        }
         preview.beginCanvasInteraction()
         project.trimEnd = min(project.metadata.duration, max(preview.displayedTime, project.trimStart + 0.02))
     }

@@ -1,29 +1,41 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-python3 scripts/verify_tests.py Build/TEST-RESULTS.json
+python3 scripts/verify_release.py
 python3 - <<'PY'
-import json, os, re, hashlib
+import json, os, re, hashlib, sys
 from pathlib import Path
+sys.path.insert(0, 'scripts')
+from verify_release import build_only_profile
 r = json.load(open('Build/BUILD-REPORT.json'))
-t = json.load(open('Build/TEST-RESULTS.json'))
 assert r['sourceCommit'] == os.environ['GITHUB_SHA']
 assert re.fullmatch(r'\d+(?:\.\d+)*', r['version']) and r['build'].isdigit()
 assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha256']
 with open('Build/RELEASE-NOTES.md', 'w') as f:
     f.write(open('docs/RELEASE.md').read())
-    f.write(f"\nAutomated tests: {t['passedTests']} passed, {t['failedTests']} failed, {t['skippedTests']} skipped.\n")
+    if build_only_profile():
+        f.write('\nValidation scope: native arm64 Release build and package/checksum verification. '
+                'Simulator unit and interface tests were not run for this release, at the app owner\'s request. '
+                'Physical-device and subject-crossing validation will be performed by the app owner.\n')
+    else:
+        t = json.load(open('Build/TEST-RESULTS.json'))
+        f.write(f"\nAutomated tests: {t['passedTests']} passed, {t['failedTests']} failed, {t['skippedTests']} skipped.\n")
     f.write(f"\nSource commit: {r['sourceCommit']}\n\nIPA SHA-256: `{r['sha256']}`\n")
 PY
 LOOP_TAG=$(python3 -c 'import json;r=json.load(open("Build/BUILD-REPORT.json"));print("loop-"+r["version"]+"-build"+r["build"])')
 LOOP_VERSION=$(python3 -c 'import json;r=json.load(open("Build/BUILD-REPORT.json"));print(r["version"]+" ("+r["build"]+")")')
-gh release create "$LOOP_TAG" Build/Loop.ipa Build/Loop-Source.zip Build/Loop-XcodeProject.zip \
-  Build/BUILD-REPORT.json Build/TEST-RESULTS.json Build/SHA256SUMS.txt Build/Loop-Icon.png Build/Loop-Home.png \
-  Build/Loop-Editor.png Build/Loop-Live-Effects.png Build/Loop-Live-Pixelation.png \
-  Build/Loop-Precision-Zoom.png Build/Loop-Emoji-Keyboard.png \
-  Build/Loop-Trim-Playback.png Build/Loop-Subject-Selection.png \
-  Build/Loop-Subject-Result.png Build/Loop-Subject-Follow.png \
-  Build/Loop-4K60-Selection.png Build/Loop-4K60-Tracked.png Build/Loop-4K60-Restored.png \
+LOOP_ASSETS=(Build/Loop.ipa Build/Loop-Source.zip Build/Loop-XcodeProject.zip
+  Build/BUILD-REPORT.json Build/SHA256SUMS.txt Build/Loop-Icon.png)
+if [ "$(python3 scripts/verify_release.py --mode)" = 'build-only' ]; then
+  LOOP_ASSETS+=(Build/VALIDATION-REPORT.json)
+else
+  LOOP_ASSETS+=(Build/TEST-RESULTS.json Build/Loop-Home.png Build/Loop-Editor.png
+    Build/Loop-Live-Effects.png Build/Loop-Live-Pixelation.png Build/Loop-Precision-Zoom.png
+    Build/Loop-Emoji-Keyboard.png Build/Loop-Trim-Playback.png Build/Loop-Subject-Selection.png
+    Build/Loop-Subject-Result.png Build/Loop-Subject-Follow.png
+    Build/Loop-4K60-Selection.png Build/Loop-4K60-Tracked.png Build/Loop-4K60-Restored.png)
+fi
+gh release create "$LOOP_TAG" "${LOOP_ASSETS[@]}" \
   --target "$GITHUB_SHA" --title "Loop $LOOP_VERSION · Moments, on repeat" --notes-file Build/RELEASE-NOTES.md
 cd ..
 git config user.name 'github-actions[bot]'
