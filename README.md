@@ -16,6 +16,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Velvet.png" width="44" alt=""/> **Velvet** — Camera, photos and local search | 0.3.0 (4) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/velvet-0.3.0-build4/Velvet.ipa) | iOS 27.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonwake.png" width="44" alt=""/> **Moonwake** — A starlight pixel adventure | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png" width="44" alt=""/> **Loop** — Offline GIF and animated PNG creator | 1.1.2 (5) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/loop-1.1.2-build5/Loop.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Orbit.png" width="44" alt=""/> **Orbit** — Spatial videos, with a little more depth | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/orbit-1.0-build1/Orbit.ipa) | iOS 26.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -66,6 +67,10 @@ Explore five moonlit realms as Aster, a white-haired wanderer with a glowing sta
 ### Loop
 
 Turn videos from Photos or Files into GIFs and full-color APNG animations. Follow a selected subject with a moving portrait, landscape or square crop, including optional size-follow as it approaches or recedes. Stack independent tracked blur, pixelation, covers, emoji and captions on top. Trim beside the pinned player controls, scrub continuously, preview effects live, and pinch zoom up to 12x for precise placement. Choose frame rate and resolution, reverse or ping-pong playback, and use the full system emoji keyboard. Native Liquid Glass, local projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.
+
+### Orbit
+
+Open original spatial videos from Photos or Files and watch them full screen with depth that responds to left/right and up/down phone tilt. Native stereo decoding and on-device Metal rendering, portrait and landscape playback, depth strength, recenter, touch look-around, fit/fill, scrubbing, mute, looping and a local video library. Ice-blue and violet Liquid Glass interface. No accounts, ads, analytics, media uploads or model downloads. Regular movies play in 2D. The effect is a limited motion-parallax reconstruction; stereo artifacts can occur and hidden surfaces cannot be recovered. Requires iOS 26 or later. Physical iPhone quality, thermals and sideload-host behavior still need device validation.
 
 ## Add my apps to LiveContainer
 
