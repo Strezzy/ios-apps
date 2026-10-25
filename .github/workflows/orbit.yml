@@ -1,0 +1,64 @@
+name: Build, check and publish Orbit
+
+on:
+  push:
+    branches: [main, 'orbit/**']
+    paths: ['Orbit/**', '.github/workflows/orbit.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: orbit-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: Orbit
+
+jobs:
+  ios:
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install project generator
+        run: command -v xcodegen || brew install xcodegen
+      - name: Build the native arm64 iPhone app
+        run: bash scripts/build.sh
+      - name: Check geometry and portrait/landscape interface
+        run: bash scripts/validate.sh
+      - name: Package source, project and icon
+        run: |
+          git -C .. archive -o Orbit/Build/Orbit-Source.zip HEAD:Orbit
+          python3 -c "import zipfile; n=zipfile.ZipFile('Build/Orbit-Source.zip').namelist(); assert 'project.yml' in n and any(p.endswith('.metal') for p in n) and any(p.startswith('App/') and p.endswith('.swift') for p in n)"
+          zip -qr Build/Orbit-XcodeProject.zip Orbit.xcodeproj
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Orbit-Icon.png
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Orbit-Build-and-Checks
+          path: |
+            Orbit/Build/*.ipa
+            Orbit/Build/*.zip
+            Orbit/Build/*.json
+            Orbit/Build/*.txt
+            Orbit/Build/*.log
+            Orbit/Build/*.png
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: always() && hashFiles('Orbit/Build/Screenshots/**') != ''
+        with:
+          name: Orbit-Native-Screenshots
+          path: Orbit/Build/Screenshots
+          retention-days: 30
+      - name: Publish Orbit and refresh the app source
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/publish.sh

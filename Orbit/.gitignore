@@ -1,0 +1,6 @@
+Build/
+Orbit.xcodeproj/
+Resources/Info.plist
+Tests/Fixtures/Spatial.mov
+__pycache__/
+.DS_Store

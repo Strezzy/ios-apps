@@ -78,5 +78,13 @@
     "icon": "Loop.png",
     "category": "photo-video",
     "tintColor": "#28B9A6"
+  },
+  "com.billy.orbit": {
+    "name": "Orbit",
+    "subtitle": "Spatial videos, with a little more depth",
+    "localizedDescription": "Open original spatial videos from Photos or Files and watch them full screen with depth that responds to left/right and up/down phone tilt. Native stereo decoding and on-device Metal rendering, portrait and landscape playback, depth strength, recenter, touch look-around, fit/fill, scrubbing, mute, looping and a local video library. Ice-blue and violet Liquid Glass interface. No accounts, ads, analytics, media uploads or model downloads. Regular movies play in 2D. The effect is a limited motion-parallax reconstruction; stereo artifacts can occur and hidden surfaces cannot be recovered. Requires iOS 26 or later. Physical iPhone quality, thermals and sideload-host behavior still need device validation.",
+    "icon": "Orbit.png",
+    "category": "photo-video",
+    "tintColor": "#7C9EEB"
   }
 }
