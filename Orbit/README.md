@@ -36,7 +36,7 @@ bash scripts/validate.sh
 
 The native arm64 package is written to `Build/Orbit.ipa`. The package is not distribution signed and is intended for the repository's existing sideloading workflow. Use SideStore or your usual compatible sideload host to sign/install it. Full-screen playback quality and motion behavior should be checked on a physical iPhone.
 
-`.github/workflows/orbit.yml` builds the app, runs focused geometry and interface checks, publishes a new immutable release on `main`, and refreshes the existing app catalog. Each release contains the IPA, complete source, generated Xcode project, checksum, build/validation reports, and native simulator captures.
+`.github/workflows/orbit.yml` builds the app, runs focused geometry and interface checks, publishes a new immutable release on `main`, and refreshes the existing app catalog. Releases include the IPA, source, checksums, and build/validation evidence. The source includes `project.yml`, which XcodeGen uses to generate the Xcode project. Only verified native captures are attached. The first release is published from an existing successful native build with the original passing functional-test evidence; its validation report identifies both source commits and the checks that were reused.
 
 ## Validation scope
 
