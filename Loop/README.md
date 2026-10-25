@@ -2,17 +2,27 @@
 
 **Moments, on repeat.** A native, offline video-to-GIF and APNG creator for iPhone and iPad, built in SwiftUI with native Liquid Glass controls.
 
+## What's new in 1.0.1
+
+The editor now keeps the video visible while its controls scroll underneath. Scrubbing presents frames continuously while the slider is held, using a persistent native video player and coalesced seeks. Playback follows the source frame rate and speed, subject to the display's refresh rate and available decoding/rendering capacity; there is no fixed 25 FPS preview delay.
+
+Blur, pixelation, covers, emoji and captions render directly in the Overlays editor. Radius and block-size changes remain live during playback. Select a layer to show its controls immediately; tap empty video or Done to return to the Add menu. Timing and tracking expand when needed.
+
+Pinch to zoom the video view up to 12×, pan over empty video (or use two fingers), and place small overlays precisely. View zoom does not change the export crop or the layer's source coordinates. Drag a layer to move it, use its corner handle to resize it, and tap its visible X to remove it. A toolbar Undo restores deleted layers. Width and height support a 0.5% source dimension for small details.
+
+Emoji entry opens the real iOS keyboard and accepts all Unicode emoji, including skin-tone modifiers, flags and joined sequences. A keyboard Done button returns to editing without leaving the video.
+
 ## Create
 
 Import a local video from Photos or Files, choose the section to keep, and turn it into an animation. Photos and Files use Apple's system pickers; an item stored only in iCloud needs to be downloaded by its provider before offline editing. Loop itself has no network client, account, advertising, analytics, model download or watermark.
 
 - Original, portrait 9:16, portrait 4:5, square, landscape 16:9 and landscape 4:3 crops.
-- A shaded crop window on the original frame, repositioning, zoom and horizontal mirror.
+- A shaded crop window on the original frame, repositioning, crop zoom and horizontal mirror; separate pinch zoom for precise viewing and placement.
 - Precise trim, frame stepping, speed, reverse and ping-pong loops.
 - GIF output at 1–100 sampled frames per second; APNG up to 120 FPS.
 - Resolution presets through 3840 pixels, custom sizes and original resolution, bounded to 4096 pixels on the longest edge. Optional upscaling is labeled; it does not recover missing detail.
 - Real 64/128/256-color GIF palette selection and dithering.
-- Circular/oval and rectangular blur, pixelation and solid cover, plus emoji and text.
+- Circular/oval and rectangular blur, pixelation and solid cover, plus emoji and text, all visible live while editing.
 - Multiple timed overlays, local Vision object tracking and manual position keyframes.
 - Local saved projects and exports, progress, pause/cancel, sharing and Photos export.
 
@@ -51,6 +61,8 @@ bash scripts/test.sh
 
 The generated reports record the source commit, SDK, architecture, bundle identity, checksum and automated test results. Simulator tests do not establish physical iPhone thermals, long 4K exports, every codec, or behavior inside a sideload host. Those remain device-validation tasks.
 
+The preview regressions exercise a real 60 FPS video, including repeated seeks that must produce visible frames before scrubbing ends, paused effect changes without another decode, live effects during native playback, and portrait orientation. Interface tests verify contextual controls, stable source coordinates through zoom and placement, quick deletion/undo, the native emoji keyboard, and Files import. Published test results describe the exact release build's verification; they are not a physical-device FPS benchmark.
+
 ## Source layout
 
 | Path | Purpose |
@@ -72,4 +84,6 @@ The generated reports record the source commit, SDK, architecture, bundle identi
 - [Apple: tracking objects in video](https://developer.apple.com/documentation/vision/tracking-multiple-objects-or-rectangles-in-video)
 - [Apple: ImageIO destinations](https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/ImageIOGuide/ikpg_dest/ikpg_dest.html)
 - [Apple: applying Liquid Glass](https://developer.apple.com/documentation/swiftui/applying-liquid-glass-to-custom-views)
+- [Apple: smooth AVPlayer scrubbing](https://developer.apple.com/library/archive/qa/qa1820/_index.html)
+- [Apple: adapting to ProMotion refresh rates](https://developer.apple.com/documentation/quartzcore/optimizing-iphone-and-ipad-apps-to-support-promotion-displays)
 - [ImgPlay official feature reference](https://imgplay.net/)

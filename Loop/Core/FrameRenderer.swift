@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import CoreImage
+import CoreVideo
 @preconcurrency import UIKit
 
 /// The same compositor renders scrub previews and exported frames.
@@ -27,21 +28,73 @@ enum FrameRenderer {
                          height: max(1, Int((height * scale).rounded())))
     }
 
+    /// Radius/block size is defined in actual export pixels; previews scale this
+    /// value, including its minimum, rather than imposing another preview-pixel floor.
+    static func overlayPixelMeasure(kind: OverlayKind, strength: Double, project: LoopProject) -> Double {
+        let output = outputSize(project: project)
+        let edge = Double(min(output.width, output.height))
+        let value = max(0, min(1, strength))
+        return kind == .pixelate ? max(3, edge * (0.005 + value * 0.05))
+                                 : max(2, edge * (0.005 + value * 0.055))
+    }
+
     static func render(_ image: CGImage, project: LoopProject, time: Double,
                        maximumDimension: Int? = nil) throws -> CGImage {
+        try renderFrame(image, project: project, time: time, maximumDimension: maximumDimension, editing: false)
+    }
+
+    /// Full upright source with real effects, for direct manipulation. Crop/mirror stay
+    /// in the final-result view; positions here remain in original source coordinates.
+    static func renderEditing(_ image: CGImage, project: LoopProject, time: Double,
+                              maximumDimension: Int = 960) throws -> CGImage {
+        try renderFrame(image, project: project, time: time, maximumDimension: maximumDimension, editing: true)
+    }
+
+    /// Normalize native player buffers once, then retain only this bounded preview raster.
+    static func previewSource(_ buffer: CVPixelBuffer, preferredTransform: CGAffineTransform,
+                              maximumDimension: Int = 960) throws -> CGImage {
+        try autoreleasepool {
+            let toDisplay = CGAffineTransform(a: 1, b: 0, c: 0, d: -1,
+                                               tx: 0, ty: CGFloat(CVPixelBufferGetHeight(buffer)))
+            let transform = toDisplay.concatenating(preferredTransform)
+                .concatenating(CGAffineTransform(scaleX: 1, y: -1))
+            var source = CIImage(cvPixelBuffer: buffer).transformed(by: transform)
+            source = source.transformed(by: CGAffineTransform(translationX: -source.extent.minX,
+                                                             y: -source.extent.minY))
+            let scale = min(1, CGFloat(maximumDimension) / max(source.extent.width, source.extent.height))
+            source = source.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            let bounds = CGRect(x: 0, y: 0, width: max(1, Int(source.extent.width.rounded())),
+                                height: max(1, Int(source.extent.height.rounded())))
+            guard let image = context.createCGImage(source, from: bounds, format: .RGBA8, colorSpace: colorSpace) else {
+                throw LoopError.encoding("The video preview could not be rendered.")
+            }
+            return image
+        }
+    }
+
+    private static func renderFrame(_ image: CGImage, project: LoopProject, time: Double,
+                                    maximumDimension: Int?, editing: Bool) throws -> CGImage {
         try autoreleasepool {
             var frame = CIImage(cgImage: image).applyingFilter("CIColorControls", parameters: [
                 kCIInputBrightnessKey: max(-1, min(1, project.adjustments.brightness)),
                 kCIInputContrastKey: max(0, min(4, project.adjustments.contrast)),
                 kCIInputSaturationKey: max(0, min(4, project.adjustments.saturation))
             ])
-            let crop = project.crop.rect(source: project.metadata.size)
+            let selectedCrop = project.crop.rect(source: project.metadata.size)
+            let crop = editing ? NormalizedRect(x: 0, y: 0, width: 1, height: 1) : selectedCrop
             let sourceWidth = Double(image.width), sourceHeight = Double(image.height)
             let cropRect = CGRect(x: crop.x * sourceWidth, y: (1 - crop.y - crop.height) * sourceHeight,
                                   width: crop.width * sourceWidth, height: crop.height * sourceHeight)
             frame = frame.cropped(to: cropRect).transformed(by:
                 CGAffineTransform(translationX: -cropRect.minX, y: -cropRect.minY))
-            let output = outputSize(project: project, maximumDimension: maximumDimension)
+            let output: PixelSize
+            if editing {
+                let scale = min(1, Double(maximumDimension ?? 960) / Double(max(image.width, image.height)))
+                output = PixelSize(width: max(1, Int((Double(image.width) * scale).rounded())),
+                                   height: max(1, Int((Double(image.height) * scale).rounded())))
+            } else {
+                output = outputSize(project: project, maximumDimension: maximumDimension)
+            }
             let scaleX = Double(output.width) / cropRect.width
             let scaleY = Double(output.height) / cropRect.height
             frame = frame.applyingFilter("CILanczosScaleTransform", parameters: [
@@ -50,6 +103,11 @@ enum FrameRenderer {
             let extent = CGRect(x: 0, y: 0, width: output.width, height: output.height)
             frame = frame.cropped(to: extent)
             let width = Double(output.width), height = Double(output.height)
+            let exportSize = outputSize(project: project)
+            let effectScale = editing
+                ? min(width * selectedCrop.width / Double(exportSize.width),
+                      height * selectedCrop.height / Double(exportSize.height))
+                : min(width / Double(exportSize.width), height / Double(exportSize.height))
             // Map source positions into the final crop before compositing. Captions and emoji
             // are rasterized at the actual export resolution, even when video is upscaled.
             for overlay in project.overlays where overlay.isActive(at: time) {
@@ -63,16 +121,15 @@ enum FrameRenderer {
                 case .blur, .pixelate, .cover:
                     let mask = try makeMask(size: output, rectangle: rectangle,
                                             shape: overlay.shape, opacity: overlay.opacity)
-                    let strength = max(0, min(1, overlay.strength))
                     let effect: CIImage
                     if overlay.kind == .blur {
-                        let radius = max(2, min(width, height) * (0.005 + strength * 0.055))
+                        let radius = overlayPixelMeasure(kind: .blur, strength: overlay.strength, project: project) * effectScale
                         effect = frame.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [
                             kCIInputRadiusKey: radius
                         ]).cropped(to: extent)
                     } else if overlay.kind == .pixelate {
                         effect = frame.clampedToExtent().applyingFilter("CIPixellate", parameters: [
-                            kCIInputScaleKey: max(3, min(width, height) * (0.005 + strength * 0.05)),
+                            kCIInputScaleKey: overlayPixelMeasure(kind: .pixelate, strength: overlay.strength, project: project) * effectScale,
                             kCIInputCenterKey: CIVector(x: rectangle.midX, y: rectangle.midY)
                         ]).cropped(to: extent)
                     } else {
@@ -90,7 +147,7 @@ enum FrameRenderer {
                     frame = texture.composited(over: frame)
                 }
             }
-            if project.crop.mirror {
+            if project.crop.mirror && !editing {
                 frame = frame.transformed(by: CGAffineTransform(a: -1, b: 0, c: 0, d: 1,
                                                                tx: CGFloat(output.width), ty: 0))
             }
@@ -148,7 +205,7 @@ enum FrameRenderer {
         var attributes: [NSAttributedString.Key: Any] = [:]
         var measured = CGRect.zero
         for _ in 0..<15 {
-            attributes = [.font: UIFont.systemFont(ofSize: max(5, fontSize), weight: .bold),
+            attributes = [.font: UIFont.systemFont(ofSize: max(0.1, fontSize), weight: .bold),
                           .foregroundColor: UIColor.white,
                           .paragraphStyle: paragraph]
             if overlay.kind == .text {

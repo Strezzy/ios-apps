@@ -18,15 +18,17 @@ if [ -z "$LOOP_VERIFIED_RUN" ]; then
   exit 0
 fi
 gh run download "$LOOP_VERIFIED_RUN" --name Loop-Build-and-Tests --dir Build
+python3 scripts/verify_tests.py Build/TEST-RESULTS.json
 python3 - <<'PY'
 import hashlib, json, os
 from pathlib import Path
 r = json.load(open('Build/BUILD-REPORT.json'))
 t = json.load(open('Build/TEST-RESULTS.json'))
 assert r['sourceCommit'] == os.environ['GITHUB_SHA']
-assert t['failedTests'] == 0 and t['passedTests'] >= 60 and t['skippedTests'] == 0
 assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha256']
-for name in ['Loop-Source.zip', 'Loop-XcodeProject.zip', 'Loop-Home.png', 'Loop-Icon.png']:
+for name in ['Loop-Source.zip', 'Loop-XcodeProject.zip', 'Loop-Home.png', 'Loop-Icon.png',
+             'Loop-Editor.png', 'Loop-Live-Effects.png', 'Loop-Live-Pixelation.png',
+             'Loop-Precision-Zoom.png', 'Loop-Emoji-Keyboard.png']:
     assert (Path('Build') / name).is_file(), name
 PY
 echo 'reused=true' >> "$GITHUB_OUTPUT"

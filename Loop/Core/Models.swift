@@ -29,8 +29,8 @@ struct NormalizedRect: Codable, Equatable, Sendable {
     var centerX: Double { x + width / 2 }
     var centerY: Double { y + height / 2 }
     func clamped() -> NormalizedRect {
-        let w = min(1, max(0.01, width.isFinite ? width : 0.3))
-        let h = min(1, max(0.01, height.isFinite ? height : 0.3))
+        let w = min(1, max(0.005, width.isFinite ? width : 0.3))
+        let h = min(1, max(0.005, height.isFinite ? height : 0.3))
         return NormalizedRect(x: min(1 - w, max(0, x.isFinite ? x : 0)),
                               y: min(1 - h, max(0, y.isFinite ? y : 0)), width: w, height: h)
     }

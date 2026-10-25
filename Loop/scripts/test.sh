@@ -31,11 +31,18 @@ if [ "$LOOP_TEST_STATUS" -ne 0 ]; then
   python3 scripts/show_errors.py Build/test.log
   exit "$LOOP_TEST_STATUS"
 fi
+python3 scripts/verify_tests.py Build/TEST-RESULTS.json
 python3 - <<'PY'
-import json
-r = json.load(open('Build/TEST-RESULTS.json'))
-assert r['failedTests'] == 0 and r['passedTests'] >= 60 and r['skippedTests'] == 0, r
-print(json.dumps(r, indent=2))
+import json, shutil
+from pathlib import Path
+root = Path('Build/Screenshots')
+manifest = json.loads((root / 'manifest.json').read_text())
+attachments = [a for test in manifest for a in test['attachments']]
+for name in ['Loop-Editor', 'Loop-Live-Effects', 'Loop-Live-Pixelation', 'Loop-Precision-Zoom', 'Loop-Emoji-Keyboard']:
+    matches = [a for a in attachments if a['suggestedHumanReadableName'].startswith(name + '_')]
+    assert matches, f'Missing native interface capture: {name}'
+    chosen = max(matches, key=lambda a: a['timestamp'])
+    shutil.copyfile(root / chosen['exportedFileName'], Path('Build') / (name + '.png'))
 PY
 xcrun simctl launch --terminate-running-process "$LOOP_DEVICE" com.billy.loop --uitesting
 sleep 3

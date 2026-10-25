@@ -23,7 +23,7 @@ final class LoopUITests: XCTestCase {
         app.buttons["tool-overlays"].tap()
         reveal(app.buttons["add-blur"], in: app)
         app.buttons["add-blur"].tap()
-        XCTAssertTrue(app.buttons["trackOverlay"].exists)
+        XCTAssertTrue(app.sliders["overlayStrength"].waitForExistence(timeout: 5))
         reveal(app.otherElements["editorCanvas"], in: app)
         capture("Loop-Overlays", app: app)
         reveal(app.buttons["tool-export"], in: app)
@@ -75,10 +75,105 @@ final class LoopUITests: XCTestCase {
         XCTAssertTrue(files.isEnabled)
     }
 
+    @MainActor func testLiveOverlayControlsPrecisionZoomAndQuickDelete() throws {
+        let app = openEditor()
+        app.buttons["tool-overlays"].tap()
+        XCTAssertTrue(app.buttons["add-blur"].waitForExistence(timeout: 5))
+        app.buttons["add-blur"].tap()
+        let strength = app.sliders["overlayStrength"]
+        XCTAssertTrue(strength.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["add-blur"].exists)
+        XCTAssertTrue(strength.isHittable, "Effect controls should appear immediately below the pinned video.")
+        strength.adjust(toNormalizedSliderPosition: 0.9)
+        capture("Loop-Live-Effects", app: app)
+
+        let overlay = app.buttons["overlay-blur"]
+        XCTAssertTrue(overlay.waitForExistence(timeout: 5))
+        let original = overlayValues(overlay)
+        app.buttons["canvasZoomIn"].tap()
+        app.buttons["canvasZoomIn"].tap()
+        let zoomed = overlayValues(overlay)
+        for key in ["x", "y", "width", "height"] {
+            XCTAssertEqual(zoomed[key] ?? -1, original[key] ?? -2, accuracy: 0.00001, "View zoom must not edit the saved overlay.")
+        }
+        XCTAssertGreaterThan(zoomed["zoom"] ?? 0, original["zoom"] ?? 1)
+        let center = overlay.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        center.press(forDuration: 0.05, thenDragTo: center.withOffset(CGVector(dx: 28, dy: 12)))
+        let placed = overlayValues(overlay)
+        XCTAssertGreaterThan(abs((placed["x"] ?? 0) - (original["x"] ?? 0)), 0.001)
+        capture("Loop-Precision-Zoom", app: app)
+        app.buttons["canvasZoomReset"].tap()
+        let unzoomed = overlayValues(overlay)
+        for key in ["x", "y", "width", "height"] {
+            XCTAssertEqual(unzoomed[key] ?? -1, placed[key] ?? -2, accuracy: 0.00001, "Zooming out must keep the exact placed source position.")
+        }
+
+        app.buttons["overlayDelete"].tap()
+        XCTAssertTrue(overlay.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["add-blur"].waitForExistence(timeout: 5))
+        app.buttons["undoEdit"].tap()
+        XCTAssertTrue(overlay.waitForExistence(timeout: 5), "Quick deletion must be undoable.")
+        overlay.tap()
+        XCTAssertTrue(strength.waitForExistence(timeout: 5))
+        let canvas = app.otherElements["canvasViewport"]
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.72)).tap()
+        XCTAssertTrue(app.buttons["add-pixelate"].waitForExistence(timeout: 5), "Tapping empty video should restore the Add menu.")
+        app.buttons["add-pixelate"].tap()
+        XCTAssertTrue(app.sliders["overlayStrength"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Block size"].exists)
+        capture("Loop-Live-Pixelation", app: app)
+    }
+
+    @MainActor func testEmojiUsesSystemKeyboardAndReturnsToAddMenu() throws {
+        let app = openEditor()
+        app.buttons["tool-overlays"].tap()
+        app.buttons["add-emoji"].tap()
+        let input = app.textFields["overlayContent"]
+        XCTAssertTrue(input.waitForExistence(timeout: 10))
+        if !app.keyboards.firstMatch.waitForExistence(timeout: 5) {
+            reveal(app.buttons["chooseEmoji"], in: app)
+            app.buttons["chooseEmoji"].tap()
+        }
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10), "Emoji entry must open the real system keyboard.")
+        XCTAssertTrue(input.isEnabled)
+        XCTAssertTrue(app.otherElements["canvasViewport"].isHittable, "The preview stays visible while entering emoji.")
+        capture("Loop-Emoji-Keyboard", app: app)
+        XCTAssertTrue(app.buttons["emojiKeyboardDone"].waitForExistence(timeout: 5))
+        app.buttons["emojiKeyboardDone"].tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        reveal(app.buttons["overlayDone"], in: app)
+        app.buttons["overlayDone"].tap()
+        XCTAssertTrue(app.buttons["add-emoji"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["overlay-emoji"].exists)
+    }
+
+    @MainActor private func openEditor() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        let project = app.buttons["project-Coastal motion"]
+        XCTAssertTrue(project.waitForExistence(timeout: 40))
+        reveal(project, in: app)
+        project.tap()
+        XCTAssertTrue(app.otherElements["editorCanvas"].waitForExistence(timeout: 20))
+        return app
+    }
+
+    @MainActor private func overlayValues(_ element: XCUIElement) -> [String: Double] {
+        guard let value = element.value as? String else { XCTFail("Overlay source geometry is unavailable."); return [:] }
+        return Dictionary(uniqueKeysWithValues: value.split(separator: ";").compactMap { pair in
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2, let number = Double(parts[1]) else { return nil }
+            return (String(parts[0]), number)
+        })
+    }
+
     @MainActor private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         XCTAssertTrue(element.waitForExistence(timeout: 10))
-        let editorScroll = app.scrollViews.containing(.other, identifier: "editorCanvas").firstMatch
+        let editorScroll = app.scrollViews["editorControlsScroll"]
         let scroll = editorScroll.exists ? editorScroll : app.scrollViews.firstMatch
+        // The preview and tool strip stay outside the scrolling controls.
+        if element.isHittable && (!scroll.exists || element.frame.maxY <= scroll.frame.minY) { return }
         XCTAssertTrue(scroll.exists)
         var previousY: CGFloat?
         var stationaryAttempts = 0

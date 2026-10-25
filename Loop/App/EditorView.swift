@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct EditorView: View {
     @EnvironmentObject private var store: LoopStore
@@ -15,6 +16,7 @@ struct EditorView: View {
     @State private var redoHistory: [LoopProject] = []
     @State private var applyingHistory = false
     @State private var lastEdit = Date.distantPast
+    @State private var keyboardVisible = false
 
     init(project: LoopProject) { _project = State(initialValue: project) }
 
@@ -22,17 +24,24 @@ struct EditorView: View {
         NavigationStack {
             ZStack {
                 LoopAtmosphere()
-                ScrollView {
-                    VStack(spacing: 18) {
-                        canvasCard
-                        tools
-                        activeControls
-                        if tool != .export {
-                            Button { preview.stop(); tool = .export } label: {
-                                Label("Export settings", systemImage: "arrow.right").frame(maxWidth: .infinity).padding(.vertical, 9)
-                            }.buttonStyle(.glass).accessibilityIdentifier("showExportSettings")
-                        }
-                    }.padding(18).padding(.bottom, 24).frame(maxWidth: 760).frame(maxWidth: .infinity)
+                GeometryReader { geometry in
+                    if geometry.size.width > 600 && geometry.size.width > geometry.size.height * 1.2 {
+                        HStack(alignment: .top, spacing: 18) {
+                            canvasCard(height: max(120, geometry.size.height - (keyboardVisible ? 28 : 146)))
+                                .frame(width: geometry.size.width * 0.53)
+                            VStack(spacing: 12) {
+                                if !keyboardVisible { tools }
+                                controlsScroll
+                            }
+                        }.padding(.horizontal, 18).padding(.top, 10)
+                    } else {
+                        VStack(spacing: 12) {
+                            canvasCard(height: keyboardVisible ? 100 : min(250, max(160, geometry.size.height * 0.31)))
+                            if !keyboardVisible { tools }
+                            controlsScroll
+                        }.padding(.horizontal, 18).padding(.top, 10)
+                            .frame(maxWidth: 760).frame(maxWidth: .infinity)
+                    }
                 }.disabled(store.isExporting || store.trackingProgress != nil)
                 if store.isExporting { ExportProgressView() }
                 if let progress = store.trackingProgress { trackingOverlay(progress) }
@@ -42,6 +51,12 @@ struct EditorView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") { store.flush(project); dismiss() }
                         .disabled(store.isExporting || store.trackingProgress != nil).accessibilityIdentifier("editorDone")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Undo", systemImage: "arrow.uturn.backward") { undo() }
+                        .labelStyle(.iconOnly)
+                        .disabled(undoHistory.isEmpty || store.isExporting || store.trackingProgress != nil)
+                        .accessibilityIdentifier("undoEdit")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -69,14 +84,19 @@ struct EditorView: View {
             .sheet(item: $exported) { item in ExportDetailView(item: item).environmentObject(store) }
         }
         .interactiveDismissDisabled(store.isExporting || store.trackingProgress != nil)
-        .task { preview.time = project.trimStart; preview.refresh(project: project, url: store.sourceURL(project)) }
+        .task {
+            updatePresentationMode()
+            preview.time = project.trimStart
+            preview.refresh(project: project, url: store.sourceURL(project))
+        }
         .onChange(of: project) { old, value in
             if applyingHistory {
                 applyingHistory = false
                 lastEdit = .distantPast
             } else {
                 let now = Date()
-                if now.timeIntervalSince(lastEdit) > 0.5 {
+                let changedLayers = old.overlays.map(\.id) != value.overlays.map(\.id)
+                if changedLayers || now.timeIntervalSince(lastEdit) > 0.5 {
                     undoHistory.append(old)
                     if undoHistory.count > 40 { undoHistory.removeFirst() }
                 }
@@ -84,22 +104,48 @@ struct EditorView: View {
                 redoHistory.removeAll()
             }
             store.saveEdited(value)
-            if preview.playing { preview.stop() }
+            if let id = selectedOverlay, !value.overlays.contains(where: { $0.id == id }) { selectedOverlay = nil }
             preview.refresh(project: value, url: store.sourceURL(value))
         }
         .onChange(of: preview.time) { _, _ in preview.refresh(project: project, url: store.sourceURL(project)) }
-        .onChange(of: tool) { _, _ in preview.stop(); showingResult = false }
+        .onChange(of: tool) { _, _ in preview.stop(); showingResult = false; updatePresentationMode(); dismissKeyboard() }
+        .onChange(of: showingResult) { _, _ in updatePresentationMode() }
+        .onChange(of: selectedOverlay) { _, value in if value == nil { dismissKeyboard() } }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .onDisappear { store.flush(project); preview.clear() }
     }
 
-    private var canvasCard: some View {
-        VStack(spacing: 13) {
-            EditorCanvas(project: $project, selectedOverlay: $selectedOverlay, preview: preview, tool: tool, showingResult: showingResult)
+    private var controlsScroll: some View {
+        ScrollViewReader { reader in
+            ScrollView {
+                VStack(spacing: 16) {
+                    Color.clear.frame(height: 1).id("editorControlsTop")
+                    activeControls
+                    if tool != .export {
+                        Button { preview.stop(); tool = .export } label: {
+                            Label("Export settings", systemImage: "arrow.right").frame(maxWidth: .infinity).padding(.vertical, 9)
+                        }.buttonStyle(.glass).accessibilityIdentifier("showExportSettings")
+                    }
+                }.padding(.bottom, 24)
+            }
+            .accessibilityIdentifier("editorControlsScroll")
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: tool) { _, _ in reader.scrollTo("editorControlsTop", anchor: .top) }
+            .onChange(of: selectedOverlay) { _, _ in
+                if tool == .overlays { reader.scrollTo("editorControlsTop", anchor: .top) }
+            }
+        }
+    }
+
+    private func canvasCard(height: CGFloat) -> some View {
+        VStack(spacing: 9) {
+            EditorCanvas(project: $project, selectedOverlay: $selectedOverlay, preview: preview, tool: tool, showingResult: showingResult, height: height)
+            if !keyboardVisible {
             HStack(spacing: 14) {
                 Button { step(-1) } label: { Image(systemName: "backward.end.fill") }
                     .buttonStyle(.glass).accessibilityLabel("Previous frame")
                 Button {
-                    showingResult = true
                     preview.toggle(project: project, url: store.sourceURL(project))
                 } label: {
                     Image(systemName: preview.playing ? "pause.fill" : "play.fill").frame(width: 26)
@@ -114,16 +160,23 @@ struct EditorView: View {
                     }.buttonStyle(.glass).accessibilityIdentifier("toggleResultPreview")
                 }
             }
-            Slider(value: Binding(get: { min(project.trimEnd, max(project.trimStart, preview.time)) }, set: { preview.stop(); preview.time = $0 }),
-                   in: project.trimStart...max(project.trimStart + 0.001, project.trimEnd))
+            Slider(value: Binding(get: { min(project.trimEnd, max(project.trimStart, preview.time)) }, set: {
+                preview.seek(to: $0, project: project, url: store.sourceURL(project))
+            }), in: project.trimStart...max(project.trimStart + 0.001, project.trimEnd), onEditingChanged: { editing in
+                if editing { preview.beginScrubbing() }
+                else { preview.endScrubbing(project: project, url: store.sourceURL(project)) }
+            })
                 .accessibilityLabel("Playhead").accessibilityIdentifier("playhead")
+                .accessibilityValue(LoopFormat.time(preview.time))
             HStack {
                 Text(LoopFormat.time(project.trimStart))
                 Spacer()
-                Text("Editing preview · export uses chosen FPS")
+                Text("Live preview · \(LoopFormat.rate(project.metadata.nominalFrameRate)) FPS source")
                 Spacer()
                 Text(LoopFormat.time(project.trimEnd))
-            }.font(.system(size: 9, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
+            }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            }
         }
     }
 
@@ -225,7 +278,18 @@ struct EditorView: View {
     private func step(_ direction: Double) {
         preview.stop()
         let frame = 1 / max(1, project.metadata.nominalFrameRate)
-        preview.time = min(project.trimEnd - 0.001, max(project.trimStart, preview.time + direction * frame))
+        let time = min(project.trimEnd - 0.001, max(project.trimStart, preview.time + direction * frame))
+        preview.seek(to: time, project: project, url: store.sourceURL(project))
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    private func updatePresentationMode() {
+        if !showingResult && tool == .crop { preview.setPresentationMode(.source) }
+        else if !showingResult && tool == .overlays { preview.setPresentationMode(.editing) }
+        else { preview.setPresentationMode(.result) }
     }
 
     private func undo() {

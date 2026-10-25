@@ -12,7 +12,7 @@ enum DebugFixture {
             writer.add(input)
             guard writer.startWriting() else { throw writer.error ?? LoopError.encoding("Could not create the test video.") }
             writer.startSession(atSourceTime: .zero)
-            for index in 0..<60 {
+            for index in 0..<120 {
                 while !input.isReadyForMoreMediaData {
                     try Task.checkCancellation()
                     try await Task.sleep(for: .milliseconds(5))
@@ -40,7 +40,7 @@ enum DebugFixture {
                     context.beginPath(); context.move(to: CGPoint(x: boatX + 20, y: 134)); context.addLine(to: CGPoint(x: boatX + 20, y: 188)); context.addLine(to: CGPoint(x: boatX + 48, y: 136)); context.closePath(); context.fillPath()
                 }
                 CVPixelBufferUnlockBaseAddress(buffer, [])
-                guard adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(index), timescale: 30)) else { throw writer.error ?? LoopError.encoding("Could not append a test frame.") }
+                guard adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(index), timescale: 60)) else { throw writer.error ?? LoopError.encoding("Could not append a test frame.") }
             }
             input.markAsFinished()
             await writer.finishWriting()

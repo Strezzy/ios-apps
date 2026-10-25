@@ -74,7 +74,7 @@
   "com.billy.loop": {
     "name": "Loop",
     "subtitle": "Offline GIF and animated PNG creator",
-    "localizedDescription": "Turn local videos into GIFs and full-color APNG animations. Adjust portrait, landscape or square crops; trim; choose frame rate and resolution; reverse or ping-pong playback; and add timed blur, pixelation, solid covers, emoji and captions with on-device tracking and manual keyframes. Native Liquid Glass, local saved projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.",
+    "localizedDescription": "Turn videos from Photos or Files into GIFs and full-color APNG animations. Scrub continuously with native video preview, see blur and pixelation live, and pinch zoom up to 12x for precise layer placement. Select a layer for immediate controls, tap its X to delete, or use the full system emoji keyboard. Adjust portrait, landscape or square crops; trim; choose frame rate and resolution; reverse or ping-pong playback; and track timed overlays locally with manual keyframes. Native Liquid Glass, local projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.",
     "icon": "Loop.png",
     "category": "photo-video",
     "tintColor": "#28B9A6"
