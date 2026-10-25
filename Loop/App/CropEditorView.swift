@@ -8,6 +8,7 @@ struct CropEditorView: View {
     @Binding var selectingSubject: Bool
     @Binding var subjectDraft: CropSettings?
     @State private var geometryGestureActive = false
+    @State private var trackingTask: Task<Void, Never>?
 
     private var tracking: CropTrackingSettings? { (subjectDraft ?? project.crop).tracking }
     private var hasPath: Bool { !(tracking?.keyframes.isEmpty ?? true) }
@@ -37,6 +38,8 @@ struct CropEditorView: View {
             if !selecting { clearSelectionDraft() }
         }
         .onDisappear {
+            if trackingTask != nil { trackingTask?.cancel(); store.cancelTracking() }
+            trackingTask = nil
             clearSelectionDraft()
             selectingSubject = false
         }
@@ -216,16 +219,22 @@ struct CropEditorView: View {
         var snapshot = project
         snapshot.crop = draft
         let anchor = editTime
-        Task {
+        trackingTask = Task {
+            defer {
+                preview.resumeAfterAnalysis(project: project, url: store.sourceURL(project))
+                trackingTask = nil
+            }
             do {
-                let result = try await store.trackCrop(project: snapshot, anchorTime: anchor)
-                guard project.id == snapshot.id else { return }
-                var committedCrop = snapshot.crop
-                committedCrop.tracking = result
-                project.crop = committedCrop
-                subjectDraft = nil
-                selectingSubject = false
-                showingResult = true
+                _ = try await store.trackCrop(project: snapshot, anchorTime: anchor,
+                    beforeAnalysis: { await preview.suspendForAnalysis() },
+                    didCommit: { completed in
+                        guard project.id == completed.id else { return }
+                        // The result is already on disk, and the store is still busy.
+                        project.crop = completed.crop
+                        subjectDraft = nil
+                        selectingSubject = false
+                        showingResult = true
+                    })
             } catch is CancellationError { }
             catch LoopError.cancelled { }
             catch {

@@ -122,7 +122,13 @@ struct EditorView: View {
         .onChange(of: selectedOverlay) { _, value in if value == nil { dismissKeyboard() } }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
-        .onDisappear { store.flush(project); preview.clear() }
+        .onDisappear {
+            // Tracking owns the commit while busy; an older disappearing view must
+            // not flush its pre-analysis snapshot over a completed result.
+            if store.trackingProgress == nil { store.flush(project) }
+            else { store.cancelTracking() }
+            preview.clear()
+        }
     }
 
     private var controlsScroll: some View {

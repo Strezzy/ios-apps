@@ -43,6 +43,13 @@ import CoreVideo
     }
 
     func invalidate() { epoch += 1; pending = nil }
+
+    /// Call after invalidating and stopping producers to release any input buffer
+    /// retained by the running render before starting another decoder-heavy task.
+    func waitUntilIdle() async {
+        let running = worker
+        await running?.value
+    }
 }
 
 enum PreviewCadence {

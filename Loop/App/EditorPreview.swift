@@ -16,6 +16,12 @@ import CoreVideo
     private(set) var presentationCount = 0
     private(set) var nativeBufferCount = 0
     private(set) var fallbackFrameCount = 0
+    private(set) var maximumNativeBufferSize = PixelSize(width: 0, height: 0)
+    private(set) var isSuspendedForAnalysis = false
+    var hasDecoderResources: Bool {
+        player != nil || item != nil || output != nil || generator != nil || preparation != nil
+    }
+    var hasPendingRenderWork: Bool { renderer.isWorking || renderer.queuedCount > 0 }
     private var currentProject: LoopProject?
     private var currentURL: URL?
     private var session = UUID()
@@ -66,7 +72,7 @@ import CoreVideo
         let previous = currentProject
         let changed = previous != project
         configure(project: project, url: url)
-        guard currentURL == url else { return }
+        guard currentURL == url, !isSuspendedForAnalysis else { return }
         if playing {
             // Playhead notifications must not trigger duplicate renders or seeks.
             guard changed else { return }
@@ -91,6 +97,7 @@ import CoreVideo
     }
 
     func beginScrubbing() {
+        guard !isSuspendedForAnalysis else { return }
         stop()
         scrubbing = true
         updateCadence()
@@ -135,6 +142,7 @@ import CoreVideo
     }
 
     func toggle(project: LoopProject, url: URL) {
+        guard !isSuspendedForAnalysis else { return }
         if playing { stop(); refresh(project: project, url: url); return }
         configure(project: project, url: url)
         scrubbing = false
@@ -153,40 +161,89 @@ import CoreVideo
         updateDisplayLinkState()
     }
 
+    /// Keep the bounded visible raster while releasing the paused player's decoder,
+    /// pixel-buffer output and fallback generator. A paused 4K player still owns those
+    /// resources, so stopping playback alone is insufficient before Vision analysis.
+    func suspendForAnalysis() async {
+        if isSuspendedForAnalysis {
+            await renderer.waitUntilIdle()
+            return
+        }
+        isSuspendedForAnalysis = true
+        playing = false
+        scrubbing = false
+        if retainedSource != nil { time = retainedTime }
+        let preparing = preparation
+        let generatingFallback = fallbackTask
+        releaseDecoder()
+        // Cancellation is asynchronous. Wait for captured tasks to relinquish their
+        // own strong generator/asset references before starting the analysis decoder.
+        await preparing?.value
+        await generatingFallback?.value
+        await renderer.waitUntilIdle()
+        if isSuspendedForAnalysis { FrameRenderer.clearCaches() }
+    }
+
+    /// A cleared/disappeared editor must not be resurrected by an old tracking task.
+    /// Resuming stays paused and renders the saved result before native seeking resumes.
+    func resumeAfterAnalysis(project: LoopProject, url: URL) {
+        guard isSuspendedForAnalysis else { return }
+        isSuspendedForAnalysis = false
+        configure(project: project, url: url)
+        if let source = retainedSource { enqueue(.image(source), at: retainedTime) }
+        requestSeek(clamp(time), exact: true, resume: false)
+    }
+
     func clear() {
         playing = false
         scrubbing = false
-        session = UUID()
-        seekEpoch += 1
-        preparation?.cancel(); preparation = nil
-        fallbackTask?.cancel(); fallbackTask = nil
-        generator?.cancelAllCGImageGeneration(); generator = nil
-        player?.pause(); player?.replaceCurrentItem(with: nil)
-        statusObservation?.invalidate(); statusObservation = nil
-        if let observation = playbackEndObservation { NotificationCenter.default.removeObserver(observation) }
-        playbackEndObservation = nil
-        displayLink?.invalidate(); displayLink = nil; displayTarget = nil
-        player = nil; item = nil; output = nil
-        currentURL = nil; currentProject = nil; ready = false
-        activeSeek = nil; latestSeek = nil; awaitingSeekFrame = false
-        renderer.invalidate()
+        isSuspendedForAnalysis = false
+        releaseDecoder()
+        currentURL = nil; currentProject = nil
         retainedSource = nil; retainedTime = -.infinity
         sourceFrame = nil; editingFrame = nil; renderedFrame = nil
         error = nil
     }
 
+    private func releaseDecoder() {
+        session = UUID()
+        seekEpoch += 1
+        preparation?.cancel(); preparation = nil
+        fallbackTask?.cancel(); fallbackTask = nil
+        generator?.cancelAllCGImageGeneration(); generator = nil
+        item?.cancelPendingSeeks()
+        player?.pause()
+        if let output { item?.remove(output) }
+        player?.replaceCurrentItem(with: nil)
+        statusObservation?.invalidate(); statusObservation = nil
+        if let observation = playbackEndObservation { NotificationCenter.default.removeObserver(observation) }
+        playbackEndObservation = nil
+        displayLink?.invalidate(); displayLink = nil; displayTarget = nil
+        player = nil; item = nil; output = nil
+        ready = false
+        reverseFallback = false
+        activeSeek = nil; latestSeek = nil; awaitingSeekFrame = false
+        renderer.invalidate()
+    }
+
     private func configure(project: LoopProject, url: URL) {
-        guard currentURL != url else {
+        if currentURL == url {
             let changedRange = currentProject?.trimStart != project.trimStart || currentProject?.trimEnd != project.trimEnd
             currentProject = project
             // Trim edits normally happen while paused. Keeping the old native bounds
             // can strand playback at the original out point even after the UI moves on.
             if changedRange { updatePlaybackBounds() }
-            return
+        } else {
+            // Never open a second decoder while analysis owns the media resources.
+            if isSuspendedForAnalysis {
+                currentURL = url; currentProject = project
+                return
+            }
+            clear()
+            currentURL = url
+            currentProject = project
         }
-        clear()
-        currentURL = url
-        currentProject = project
+        guard !isSuspendedForAnalysis, player == nil, preparation == nil else { return }
         let token = session
         let target = PreviewDisplayTarget(owner: self)
         displayTarget = target
@@ -196,12 +253,17 @@ import CoreVideo
         displayLink = link
         updateCadence()
         preparation = Task { [weak self] in
+            defer { if self?.session == token { self?.preparation = nil } }
             do {
                 let asset = AVURLAsset(url: url)
                 guard let track = try await asset.loadTracks(withMediaType: .video).first else {
                     throw LoopError.invalidVideo("This video has no readable picture track.")
                 }
-                let transform = try await track.load(.preferredTransform)
+                let (transform, naturalSize) = try await track.load(.preferredTransform, .naturalSize)
+                guard naturalSize.width.isFinite, naturalSize.height.isFinite,
+                      naturalSize.width > 0, naturalSize.height > 0 else {
+                    throw LoopError.invalidVideo("This video has invalid preview dimensions.")
+                }
                 try Task.checkCancellation()
                 guard let self, self.session == token else { return }
                 self.preferredTransform = transform
@@ -211,9 +273,17 @@ import CoreVideo
                     AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
                     AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
                 ]
+                // Request bounded native output buffers. Scaling only after copyPixelBuffer
+                // would still retain full 4K BGRA buffers in the running/pending render queue.
+                let rawEdge = max(1, max(abs(naturalSize.width), abs(naturalSize.height)))
+                let previewScale = min(1, 960 / rawEdge)
+                let outputWidth = max(1, Int((abs(naturalSize.width) * previewScale).rounded()))
+                let outputHeight = max(1, Int((abs(naturalSize.height) * previewScale).rounded()))
                 // Native pixel transfer tone-maps HDR into the same SDR preview space.
                 let output = AVPlayerItemVideoOutput(outputSettings: [
                     kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                    kCVPixelBufferWidthKey as String: outputWidth,
+                    kCVPixelBufferHeightKey as String: outputHeight,
                     kCVPixelBufferMetalCompatibilityKey as String: true,
                     AVVideoAllowWideColorKey: false,
                     AVVideoColorPropertiesKey: colorProperties
@@ -263,6 +333,7 @@ import CoreVideo
     }
 
     private func requestSeek(_ target: Double, exact: Bool, resume: Bool) {
+        guard !isSuspendedForAnalysis else { return }
         let clamped = clamp(target)
         if let active = activeSeek, abs(active.time - clamped) < 1.0 / 60_000,
            (!exact || active.exact), !resume { return }
@@ -313,7 +384,7 @@ import CoreVideo
         // A paused seek may provide a buffer even when hasNewPixelBuffer is false.
         if let buffer = output.copyPixelBuffer(forItemTime: CMTime(seconds: active.time, preferredTimescale: 60_000),
                                                 itemTimeForDisplay: &actual) {
-            nativeBufferCount += 1
+            recordNativeBuffer(buffer)
             finishSeekFrame(.buffer(buffer, preferredTransform), request: active)
         } else if CACurrentMediaTime() - seekFinishedAt > 0.25, fallbackTask == nil, let generator {
             // Some codecs cannot vend a paused player frame. This persistent exact
@@ -382,7 +453,7 @@ import CoreVideo
         guard output.hasNewPixelBuffer(forItemTime: itemTime) else { return }
         var actual = CMTime.invalid
         guard let buffer = output.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: &actual) else { return }
-        nativeBufferCount += 1
+        recordNativeBuffer(buffer)
         let sourceTime = actual.seconds.isFinite ? actual.seconds : seconds
         enqueue(.buffer(buffer, preferredTransform), at: clamp(sourceTime))
     }
@@ -421,14 +492,20 @@ import CoreVideo
         return clamp(requestedTime)
     }
 
+    private func recordNativeBuffer(_ buffer: CVPixelBuffer) {
+        nativeBufferCount += 1
+        let size = PixelSize(width: CVPixelBufferGetWidth(buffer), height: CVPixelBufferGetHeight(buffer))
+        if size.longEdge > maximumNativeBufferSize.longEdge { maximumNativeBufferSize = size }
+    }
+
     private func enqueue(_ source: PreviewSource, at sourceTime: Double) {
-        guard let project = currentProject else { return }
+        guard !isSuspendedForAnalysis, let project = currentProject else { return }
         renderer.submit(PreviewRenderRequest(source: source, project: project, sourceTime: sourceTime,
                                              session: session, presentation: presentationMode))
     }
 
     private func present(_ frames: PreviewRenderedFrames) {
-        guard frames.session == session else { return }
+        guard frames.session == session, !isSuspendedForAnalysis else { return }
         retainedSource = frames.source
         retainedTime = frames.sourceTime
         sourceFrame = frames.source

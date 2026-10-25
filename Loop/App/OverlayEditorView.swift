@@ -341,8 +341,10 @@ struct OverlayEditorView: View {
         project.overlays[index].trackingNeedsReview = true
         let snapshot = project
         Task {
+            defer { preview.resumeAfterAnalysis(project: project, url: store.sourceURL(project)) }
             do {
-                let keys = try await store.track(project: snapshot, overlay: target, anchorTime: anchor)
+                let keys = try await store.track(project: snapshot, overlay: target, anchorTime: anchor,
+                    beforeAnalysis: { await preview.suspendForAnalysis() })
                 guard let i = project.overlays.firstIndex(where: { $0.id == overlay.id }) else { return }
                 project.overlays[i].keyframes = keys
                 project.overlays[i].trackingEnabled = true

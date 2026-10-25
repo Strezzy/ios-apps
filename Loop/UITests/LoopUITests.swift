@@ -279,6 +279,83 @@ final class LoopUITests: XCTestCase {
         capture("Loop-Tracked-Crop-Export", app: app)
     }
 
+    @MainActor func test4K60CropTrackingStaysOpenAndSurvivesRelaunch() throws {
+        executionTimeAllowance = 300
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--uitesting-4k"]
+        app.launch()
+        let savedProject = app.buttons["project-4K60 tracking"]
+        XCTAssertTrue(savedProject.waitForExistence(timeout: 90))
+        reveal(savedProject, in: app)
+        savedProject.tap()
+        let editor = app.otherElements["editorCanvas"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 20))
+        let sourceDetails = app.staticTexts.matching(NSPredicate(format:
+            "label CONTAINS %@ AND label CONTAINS %@", "3840 × 2160", "60 FPS")).firstMatch
+        XCTAssertTrue(sourceDetails.waitForExistence(timeout: 10), "This regression must use an actual 4K60 source.")
+        app.buttons["tool-crop"].tap()
+        app.buttons["aspect-portrait"].tap()
+        reveal(app.buttons["chooseCropSubject"], in: app)
+        app.buttons["chooseCropSubject"].tap()
+        XCTAssertTrue(app.images["cropSubject"].waitForExistence(timeout: 10))
+        // The textured subject begins inside the normal portrait selection. No
+        // tracking result is preseeded; this runs the same Vision analysis as a user.
+        capture("Loop-4K60-Selection", app: app)
+        app.buttons["trackCropSubject"].tap()
+        let follow = app.switches["cropTrackingEnabled"]
+        XCTAssertTrue(follow.waitForExistence(timeout: 120), "4K60 crop tracking must complete in the editor.")
+        XCTAssertTrue(editor.exists, "Completing tracking must not dismiss the editor to Home.")
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        XCTAssertEqual(follow.value as? String, "1")
+        app.buttons["toggleResultPreview"].tap()
+        let crop = app.images["cropSelection"]
+        XCTAssertTrue(crop.waitForExistence(timeout: 10))
+        let initialX = try XCTUnwrap(overlayValues(crop)["x"])
+        app.sliders["playhead"].adjust(toNormalizedSliderPosition: 0.95)
+        waitForCropToMove(crop, from: initialX)
+        capture("Loop-4K60-Tracked", app: app)
+
+        // Terminate without pressing editor Done: completed analysis must already
+        // have been saved, rather than depending on a later dismissal to flush it.
+        app.terminate()
+        app.launchArguments = ["--uitesting", "--uitesting-4k", "--uitesting-preserve-library"]
+        app.launch()
+        XCTAssertTrue(savedProject.waitForExistence(timeout: 30))
+        reveal(savedProject, in: app)
+        savedProject.tap()
+        XCTAssertTrue(editor.waitForExistence(timeout: 20))
+        app.buttons["tool-crop"].tap()
+        XCTAssertTrue(follow.waitForExistence(timeout: 10))
+        XCTAssertEqual(follow.value as? String, "1", "The completed track must survive process termination and reload.")
+        XCTAssertTrue(crop.waitForExistence(timeout: 10))
+        let restoredX = try XCTUnwrap(overlayValues(crop)["x"])
+        XCTAssertEqual(restoredX, initialX, accuracy: 0.005)
+        app.sliders["playhead"].adjust(toNormalizedSliderPosition: 0.95)
+        waitForCropToMove(crop, from: restoredX)
+        capture("Loop-4K60-Restored", app: app)
+
+        app.buttons["editorDone"].tap()
+        XCTAssertTrue(savedProject.waitForExistence(timeout: 10))
+        reveal(savedProject, in: app)
+        savedProject.tap()
+        XCTAssertTrue(editor.waitForExistence(timeout: 20))
+        app.buttons["tool-crop"].tap()
+        XCTAssertTrue(follow.waitForExistence(timeout: 10))
+        XCTAssertEqual(follow.value as? String, "1")
+    }
+
+    @MainActor private func waitForCropToMove(_ element: XCUIElement, from initialX: Double) {
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let raw = element.value as? String,
+                  let field = raw.split(separator: ";").first(where: { $0.hasPrefix("x=") }),
+                  let x = Double(field.dropFirst(2)) else { return false }
+            return x > initialX + 0.06
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 20), .completed,
+                       "The restored portrait crop must follow the source subject's motion.")
+    }
+
     @MainActor private func waitForDisplayedTimeChange(_ element: XCUIElement, from previous: String,
                                                        timeout: TimeInterval = 10) {
         let predicate = NSPredicate { _, _ in element.exists && element.label != previous }

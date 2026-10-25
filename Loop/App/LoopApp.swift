@@ -25,7 +25,11 @@ struct LoopRootView: View {
         .sheet(item: $store.editingProject) { project in
             EditorView(project: project).environmentObject(store)
         }
-        .alert("Loop", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+        // A modal editor presents its own errors. Asking the root and its sheet to
+        // present the same alert can interrupt the editor during a tracking failure.
+        .alert("Loop", isPresented: Binding(get: { store.error != nil && store.editingProject == nil }, set: {
+            if !$0 && store.editingProject == nil { store.error = nil }
+        })) {
             Button("OK", role: .cancel) { store.error = nil }
         } message: { Text(store.error ?? "") }
         .task { await store.prepareUITestFixtureIfNeeded() }

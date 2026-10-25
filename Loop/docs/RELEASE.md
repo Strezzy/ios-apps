@@ -1,20 +1,18 @@
-# Loop 1.1.0 — Follow the moment
+# Loop 1.1.1 — 4K tracking stability
 
-This update adds subject-follow cropping, fixes trimmed preview playback and moves the trim shortcuts into the pinned player controls. Existing projects, exports and the app's bundle identity are preserved.
+This maintenance update addresses reports of the editor returning home and losing crop tracking after processing a 4K60 video.
 
-- **Trim shortcuts at the top:** Start here and End here sit beneath the video, to the right of the player controls, on every editor tab. Both use the visible frame. Trim-slider adjustments pause and preview the boundary being changed.
-- **Playback after cropping and trimming:** native player limits update with the selected range. Play at the final source frame restarts the clip. Forward, reverse and ping-pong previews continue across their loop boundaries instead of freezing at an old out point.
-- **Subject-follow crop:** choose an aspect, select a person or object with a movable/resizable box, then tap Track subject. Analysis runs on the iPhone across the selected clip, starting from the displayed anchor frame. The crop follows the subject through the original video.
-- **Follow subject size:** optional size-follow adjusts framing as a subject approaches or recedes. The crop stays within the available video and keeps a fixed aspect ratio. A slight offline smoothing pass reduces jitter; the exported animation keeps constant pixel dimensions.
-- **Stacked tracking:** subject-follow cropping works with independently tracked blur, pixelation, covers, emoji and text. Each overlay retains its source-relative path and is mapped into the moving crop in both preview and export. Existing overlay tracking behavior is retained.
-- **Control and review:** disable Follow subject to return to manual framing without deleting its path. Choose another subject or re-track after extending the trim. Cancelled or incomplete new analysis is not applied. Review the full loop; occlusion or a subject leaving the picture can require a clearer anchor or a shorter clip.
+- **Lower preview memory use:** native preview buffers are requested at a maximum 960-pixel longest edge, while source frame-rate behavior and full-resolution export are preserved.
+- **One active decoding task during analysis:** starting crop or overlay tracking releases the preview player, output buffers, fallback generator and pending render work. The visible frame remains on screen, and the preview is recreated after analysis.
+- **Save before showing the result:** completed crop tracking is written atomically before the result preview resumes. Older pending autosaves are cancelled, and the open editor receives the committed crop before its busy state ends. A failed write is shown as an error instead of an apparent success.
+- **Release tracking resources promptly:** Vision's terminal-frame signal is now sent with the final request, and analysis images and temporary objects are scoped to each sample.
+- **Keep errors in the editor:** tracking and save errors use the active editor's alert, avoiding competing presentations from the home screen.
+- **Safe cancellation:** cancellation during preview suspension leaves the saved project intact; a late task cannot reopen a cleared preview.
 
-Continuous scrubbing, live effects, 12× view zoom, contextual overlay controls, on-canvas X/Undo, the native emoji keyboard, Photos and **Files** import, GIF/APNG output and high-resolution export remain available. Processing stays on device, with no account, ads, watermark or upload.
+Portrait subject-follow cropping, optional size-follow and independently tracked blur/pixelation/emoji remain available. The original imported video and selected high-resolution GIF/APNG export settings are preserved. Processing remains entirely local.
 
-**Install:** `Loop.ipa` is an arm64 iPhone/iPad package for the existing signing/sideloading workflow. Requires iOS 26 or later. Update the existing `com.billy.loop` installation to keep local projects and exports; no uninstall is needed.
+**Validation:** The native regression suite includes actual 3840 × 2160 H.264 video at 60 FPS. Tests verify native preview-buffer bounds, decoder release/resume, bidirectional subject tracking, final portrait rendering, editor continuity and persistence after process termination/relaunch. Additional checks cover an older pending autosave, a deterministic write failure, cancellation during setup and a 3,601-position tracking path. Reports and native 4K tracking screenshots are attached.
 
-**Format and framing limits:** GIF stores delays in 10 ms steps and some viewers clamp short delays. APNG supports finer timing and full color. Both formats are silent. Output remains capped at a 4096-pixel longest edge and 30,000 frames. Tracking cannot reveal pixels outside the source, and zooming does not create new detail. Supported source codecs depend on the device. Cloud-only inputs need to download through their provider before offline use.
+**Device scope:** Validation uses native builds and iPhone simulators. The reported source video and physical-device crash/memory logs were not available; the exact cause of that device's termination was not independently reproduced. Physical iPhone memory pressure, long 4K exports and sideload-host behavior still require device validation.
 
-**Validation:** Native arm64 build, real AVPlayer preview regressions, on-device Vision tracking tests, moving-crop/overlay composition, decoded export checks, project compatibility and simulator interface tests. Native screenshots and the exact test report are attached. Physical-device frame rate, thermals, long high-resolution exports and sideload-host behavior were not measured in this build session.
-
-Complete source, generated Xcode project and checksums are attached. Other apps and historical releases are preserved.
+**Install:** Update the existing `com.billy.loop` installation using your normal signing/sideloading workflow. The attached arm64 IPA requires iOS 26 or later and preserves the app's local projects and exports. Complete source, generated Xcode project and checksums are included. Previous releases and the other apps in the repository are preserved.

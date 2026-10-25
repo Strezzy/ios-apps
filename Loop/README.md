@@ -2,6 +2,18 @@
 
 **Moments, on repeat.** A native, offline video-to-GIF and APNG creator for iPhone and iPad, built in SwiftUI with native Liquid Glass controls.
 
+## What's new in 1.1.1
+
+This maintenance release addresses crop-tracking completion and saving on high-resolution sources, including 4K60 video.
+
+- The preview now requests native buffers no larger than 960 pixels on the longest edge. It still follows the source cadence; the original video and export resolution are preserved.
+- Starting crop or overlay tracking suspends and releases the preview decoder, fallback generator and pending render work before the analysis decoder starts. The visible frame stays on screen. After analysis, the preview is rebuilt in a paused state.
+- Completed crop tracks are saved atomically before the editor receives the result or resumes decoding. Older pending autosaves cannot overwrite them. The saved crop and visible editor update within the same completion transaction.
+- Vision receives its last-frame signal during the final tracking request. Analysis images and temporary objects are scoped to each sample, reducing retained resources between passes.
+- Tracking errors are presented by the active editor, avoiding simultaneous alerts from the editor and the home screen. A cancelled or failed save does not report a successful track.
+
+New regressions use actual 3840 × 2160, 60 FPS H.264 video to verify bounded native preview buffers, decoder suspension/resumption, bidirectional tracking and completion inside the editor. The interface test terminates the process without pressing Done, reopens the app and verifies that the saved crop still follows its subject. Persistence tests cover stale autosaves, write failures, cancellation during suspension and a 3,601-position track. These simulator checks do not establish the cause of any specific physical-device termination without its diagnostic report.
+
 ## What's new in 1.1.0
 
 **Start here** and **End here** now sit immediately below the video, to the right of the player controls, and stay visible on every editor tab. They use the frame actually displayed on screen. The trim sliders pause and show the boundary being adjusted.

@@ -24,12 +24,14 @@ import UniformTypeIdentifiers
     var projectsDirectory: URL { root.appendingPathComponent("Projects", isDirectory: true) }
     var exportsDirectory: URL { root.appendingPathComponent("Exports", isDirectory: true) }
 
-    init() {
-        let testing = ProcessInfo.processInfo.arguments.contains("--uitesting")
-        root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    init(rootURL: URL? = nil) {
+        let arguments = ProcessInfo.processInfo.arguments
+        let testing = arguments.contains("--uitesting")
+        root = rootURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(testing ? "LoopUITests" : "Loop", isDirectory: true)
         do {
-            if testing, FileManager.default.fileExists(atPath: root.path) { try FileManager.default.removeItem(at: root) }
+            if testing, rootURL == nil, !arguments.contains("--uitesting-preserve-library"),
+               FileManager.default.fileExists(atPath: root.path) { try FileManager.default.removeItem(at: root) }
             try FileManager.default.createDirectory(at: projectsDirectory, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(at: exportsDirectory, withIntermediateDirectories: true)
             var directory = root
@@ -154,6 +156,30 @@ import UniformTypeIdentifiers
         do { try persist(updated) } catch { self.error = "The project could not be saved: \(error.localizedDescription)" }
     }
 
+    /// A successful track is a durable transaction, not a debounced editing change.
+    /// Persist before publishing success or allocating the result preview. Cancelling
+    /// the older save prevents its pre-tracking snapshot from overwriting this path.
+    @discardableResult
+    func commitCropTracking(_ tracking: CropTrackingSettings, for project: LoopProject) throws -> LoopProject {
+        guard tracking.enabled, !tracking.needsReview,
+              tracking.covers(start: project.trimStart, end: project.trimEnd) else {
+            throw LoopError.invalidSettings("The crop track is incomplete. Track the full selected clip again.")
+        }
+        saveTasks[project.id]?.cancel(); saveTasks[project.id] = nil
+        var completed = project
+        completed.crop.tracking = tracking
+        completed.modifiedAt = Date()
+        do { try persist(completed) }
+        catch {
+            throw LoopError.encoding("Tracking finished, but the project could not be saved: \(error.localizedDescription)")
+        }
+        if let index = projects.firstIndex(where: { $0.id == completed.id }) { projects[index] = completed }
+        else { projects.insert(completed, at: 0) }
+        // editingProject is the presentation session's initial snapshot. Updating its
+        // payload here is unnecessary; the open editor receives the committed result.
+        return completed
+    }
+
     private func persist(_ project: LoopProject) throws {
         let data = try JSONEncoder().encode(project)
         try data.write(to: projectDirectory(project.id).appendingPathComponent("project.json"), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -255,15 +281,31 @@ import UniformTypeIdentifiers
         }
     }
 
-    func track(project: LoopProject, overlay: OverlayItem, anchorTime: Double) async throws -> [TrackingKeyframe] {
-        let control = ExportControl(); trackingControl = control; trackingProgress = 0
-        defer { trackingControl = nil; trackingProgress = nil }
-        return try await TrackingEngine.track(sourceURL: sourceURL(project), project: project, overlay: overlay, anchorTime: anchorTime, control: control) { [weak self] progress in
-            Task { @MainActor in self?.trackingProgress = progress }
+    func track(project: LoopProject, overlay: OverlayItem, anchorTime: Double,
+               beforeAnalysis: @MainActor () async -> Void = {}) async throws -> [TrackingKeyframe] {
+        guard !isExporting, trackingControl == nil else {
+            throw LoopError.invalidSettings("Wait for the current operation to finish before tracking.")
         }
+        let control = ExportControl(); trackingControl = control; trackingProgress = 0
+        UIApplication.shared.isIdleTimerDisabled = true
+        defer {
+            trackingControl = nil; trackingProgress = nil
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+        await beforeAnalysis()
+        try await control.checkpoint()
+        return try await TrackingEngine.track(sourceURL: sourceURL(project), project: project,
+            overlay: overlay, anchorTime: anchorTime, control: control) { [weak self] progress in
+                Task { @MainActor in
+                    guard let self, self.trackingControl === control else { return }
+                    self.trackingProgress = progress
+                }
+            }
     }
 
-    func trackCrop(project: LoopProject, anchorTime: Double) async throws -> CropTrackingSettings {
+    func trackCrop(project: LoopProject, anchorTime: Double,
+                   beforeAnalysis: @MainActor () async -> Void = {},
+                   didCommit: @MainActor (LoopProject) -> Void = { _ in }) async throws -> CropTrackingSettings {
         guard !isExporting, trackingControl == nil else {
             throw LoopError.invalidSettings("Wait for the current operation to finish before tracking the crop.")
         }
@@ -273,13 +315,21 @@ import UniformTypeIdentifiers
             trackingControl = nil; trackingProgress = nil
             UIApplication.shared.isIdleTimerDisabled = false
         }
-        return try await TrackingEngine.trackCrop(sourceURL: sourceURL(project), project: project,
+        await beforeAnalysis()
+        try await control.checkpoint()
+        let result = try await TrackingEngine.trackCrop(sourceURL: sourceURL(project), project: project,
             anchorTime: anchorTime, control: control) { [weak self] progress in
                 Task { @MainActor in
                     guard let self, self.trackingControl === control else { return }
                     self.trackingProgress = progress
                 }
             }
+        try await control.checkpoint()
+        let completed = try commitCropTracking(result, for: project)
+        // Update the open editor in this same main-actor transaction, while the busy
+        // guard still prevents an older view from dismissing/flushing its snapshot.
+        didCommit(completed)
+        return result
     }
 
     func saveToPhotos(_ item: SavedExport) async {
@@ -316,12 +366,16 @@ import UniformTypeIdentifiers
         #if DEBUG
         guard ProcessInfo.processInfo.arguments.contains("--uitesting"), projects.isEmpty else { return }
         do {
-            let url = try await DebugFixture.makeVideo()
-            try await importLocalURL(url, displayName: "Coastal motion")
+            let highResolution = ProcessInfo.processInfo.arguments.contains("--uitesting-4k")
+            let url: URL
+            if highResolution { url = try await DebugFixture.make4K60TrackingVideo() }
+            else { url = try await DebugFixture.makeVideo() }
+            try await importLocalURL(url, displayName: highResolution ? "4K60 tracking" : "Coastal motion")
             try? FileManager.default.removeItem(at: url)
             if let first = projects.first {
                 var small = first; small.export.maximumDimension = 480; small.export.frameRate = 12
-                small.trimEnd = min(1.0, small.metadata.duration); flush(small)
+                small.trimEnd = highResolution ? small.metadata.duration : min(1.0, small.metadata.duration)
+                flush(small)
             }
             editingProject = nil
         } catch { self.error = error.localizedDescription }

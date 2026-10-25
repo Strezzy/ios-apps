@@ -427,6 +427,100 @@ final class PreviewTests: XCTestCase {
         XCTAssertEqual(Double(original[outside]), Double(pixelated[outside]), accuracy: 3)
     }
 
+    @MainActor func test4K60PreviewReleasesDecoderBeforeAnalysisAndResumesAtVisibleFrame() async throws {
+        let url = try await DebugFixture.make4K60TrackingVideo(frameCount: 60)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        XCTAssertEqual(metadata.size, PixelSize(width: 3840, height: 2160))
+        XCTAssertEqual(metadata.nominalFrameRate, 60, accuracy: 0.1)
+        var project = LoopProject(name: "4K preview resources", sourceFilename: url.lastPathComponent, metadata: metadata)
+        project.crop.aspect = .portrait
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.time = 0.25
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 20) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertGreaterThan(preview.nativeBufferCount, 0)
+        XCTAssertLessThanOrEqual(preview.maximumNativeBufferSize.longEdge, 960,
+                                 "A 4K source must not leave full-resolution BGRA buffers in the preview render queue")
+        let visible = try XCTUnwrap(preview.sourceFrame)
+        let anchor = preview.displayedTime
+        preview.beginScrubbing()
+        preview.seek(to: 0.8, project: project, url: url)
+        await preview.suspendForAnalysis()
+        XCTAssertTrue(preview.isSuspendedForAnalysis)
+        XCTAssertFalse(preview.hasDecoderResources)
+        XCTAssertFalse(preview.hasPendingRenderWork)
+        XCTAssertTrue(preview.sourceFrame === visible)
+        XCTAssertEqual(preview.time, anchor, accuracy: 0.00001)
+        XCTAssertEqual(preview.displayedTime, anchor, accuracy: 0.00001)
+
+        // UI progress/project/mode notifications must not silently recreate the
+        // paused player while Vision has exclusive use of the source decoder.
+        project.crop.centerX = 0.7
+        preview.refresh(project: project, url: url)
+        preview.setPresentationMode(.result)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertFalse(preview.hasDecoderResources)
+        XCTAssertFalse(preview.hasPendingRenderWork)
+        let count = preview.presentationCount
+        preview.resumeAfterAnalysis(project: project, url: url)
+        try await waitUntil(timeout: 20) { preview.presentationCount > count && preview.hasDecoderResources || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertFalse(preview.isSuspendedForAnalysis)
+        XCTAssertFalse(preview.playing)
+        XCTAssertEqual(preview.displayedTime, anchor, accuracy: 0.025)
+        let result = try XCTUnwrap(preview.renderedFrame)
+        XCTAssertLessThan(result.width, result.height)
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.displayedTime > anchor + 0.12 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+        XCTAssertLessThanOrEqual(preview.maximumNativeBufferSize.longEdge, 960)
+    }
+
+    @MainActor func testClearWhileSuspendedPreventsLateTrackingResumeFromReopeningEditor() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        let project = LoopProject(name: "Closed editor", sourceFilename: url.lastPathComponent, metadata: metadata)
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        await preview.suspendForAnalysis()
+        preview.clear()
+        preview.resumeAfterAnalysis(project: project, url: url)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertFalse(preview.hasDecoderResources)
+        XCTAssertFalse(preview.isSuspendedForAnalysis)
+        XCTAssertNil(preview.sourceFrame)
+        XCTAssertNil(preview.renderedFrame)
+    }
+
+    @MainActor func testAnalysisSuspendsInitialPreparationAndLaterRestoresPreview() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        let project = LoopProject(name: "Suspend initial load", sourceFilename: url.lastPathComponent, metadata: metadata)
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.refresh(project: project, url: url)
+        await preview.suspendForAnalysis()
+        preview.refresh(project: project, url: url)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertFalse(preview.hasDecoderResources)
+        XCTAssertFalse(preview.hasPendingRenderWork)
+        XCTAssertTrue(preview.isSuspendedForAnalysis)
+        preview.resumeAfterAnalysis(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.hasDecoderResources)
+        XCTAssertNotNil(preview.sourceFrame)
+    }
+
     @MainActor private func waitUntil(timeout: Double = 4, _ condition: @escaping @MainActor () -> Bool) async throws {
         let start = Date()
         while !condition() {
