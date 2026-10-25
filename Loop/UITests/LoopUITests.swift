@@ -186,7 +186,10 @@ final class LoopUITests: XCTestCase {
     }
 
     @MainActor func testSubjectFollowCropAndOverlayExport() throws {
-        executionTimeAllowance = 180
+        // This end-to-end flow also cancels a replacement selection, reopens the
+        // project, adds an independent effect and exports. Simulator UI gestures
+        // alone can put the complete flow beyond three minutes on a slower runner.
+        executionTimeAllowance = 300
         let app = openEditor()
         app.buttons["tool-crop"].tap()
         app.buttons["aspect-portrait"].tap()
