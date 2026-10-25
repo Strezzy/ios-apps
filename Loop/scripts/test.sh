@@ -38,7 +38,7 @@ from pathlib import Path
 root = Path('Build/Screenshots')
 manifest = json.loads((root / 'manifest.json').read_text())
 attachments = [a for test in manifest for a in test['attachments']]
-for name in ['Loop-Editor', 'Loop-Live-Effects', 'Loop-Live-Pixelation', 'Loop-Precision-Zoom', 'Loop-Emoji-Keyboard']:
+for name in ['Loop-Editor', 'Loop-Live-Effects', 'Loop-Live-Pixelation', 'Loop-Precision-Zoom', 'Loop-Emoji-Keyboard', 'Loop-Trim-Playback', 'Loop-Subject-Selection', 'Loop-Subject-Result', 'Loop-Subject-Follow']:
     matches = [a for a in attachments if a['suggestedHumanReadableName'].startswith(name + '_')]
     assert matches, f'Missing native interface capture: {name}'
     chosen = max(matches, key=lambda a: a['timestamp'])

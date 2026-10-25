@@ -146,6 +146,188 @@ final class PreviewTests: XCTestCase {
         XCTAssertNil(preview.error)
     }
 
+    @MainActor func testPlayAfterPausedTrimAndCropUpdatesNativePlaybackBounds() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        var project = LoopProject(name: "Move the trimmed range", sourceFilename: url.lastPathComponent, metadata: metadata)
+        project.trimEnd = 0.5
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+
+        // Both handles move beyond the AVPlayerItem's original out point while paused.
+        // Previously the item retained its 0.5-second bound and could not play here.
+        project.trimStart = 1
+        project.trimEnd = 1.8
+        project.crop.aspect = .portrait
+        project.crop.zoom = 1.3
+        preview.time = 1
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { abs(preview.displayedTime - 1) < 0.025 || preview.error != nil }
+        let buffers = preview.nativeBufferCount
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 5) { preview.displayedTime > 1.2 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+        XCTAssertGreaterThan(preview.nativeBufferCount, buffers + 2)
+        let result = try XCTUnwrap(preview.renderedFrame)
+        XCTAssertLessThan(result.width, result.height)
+        XCTAssertLessThan(preview.displayedTime, project.trimEnd)
+    }
+
+    @MainActor func testPlayFromSelectedEndRestartsTheTrimmedLoop() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        var project = LoopProject(name: "Play from end", sourceFilename: url.lastPathComponent, metadata: metadata)
+        project.trimStart = 0.4
+        project.trimEnd = 1.2
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.time = project.trimEnd
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertGreaterThan(preview.displayedTime, 1.15)
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 5) { (preview.displayedTime > 0.45 && preview.displayedTime < 0.8) || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+        XCTAssertGreaterThan(preview.displayedTime, project.trimStart)
+        XCTAssertLessThan(preview.displayedTime, 0.8)
+    }
+
+    @MainActor func testEditedTrimLoopsRepeatedlyWithoutFreezingAtTheOutPoint() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        var project = LoopProject(name: "Repeat cropped loop", sourceFilename: url.lastPathComponent, metadata: metadata)
+        project.trimEnd = 0.4
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        project.trimStart = 0.8
+        project.trimEnd = 1.2
+        project.crop.aspect = .square
+        preview.seek(to: project.trimStart, project: project, url: url)
+        try await waitUntil(timeout: 10) { abs(preview.displayedTime - 0.8) < 0.025 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        var lastTime = preview.displayedTime
+        var loops = 0
+        var escapedRange = false
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 6) {
+            let current = preview.displayedTime
+            if current < lastTime - 0.15 { loops += 1 }
+            if current < project.trimStart - 0.001 || current > project.trimEnd + 0.001 { escapedRange = true }
+            lastTime = current
+            return loops >= 2 || preview.error != nil
+        }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+        XCTAssertEqual(loops, 2)
+        XCTAssertFalse(escapedRange)
+    }
+
+    @MainActor func testReversePlaybackUsesEditedInPointInsteadOfOriginalBound() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        var project = LoopProject(name: "Reverse edited trim", sourceFilename: url.lastPathComponent, metadata: metadata)
+        project.trimStart = 0.9
+        project.trimEnd = 1.3
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.time = project.trimStart
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        project.trimStart = 0.4
+        project.trimEnd = 1.7
+        project.export.playback = .reverse
+        preview.seek(to: 1.4, project: project, url: url)
+        try await waitUntil(timeout: 10) { abs(preview.displayedTime - 1.4) < 0.025 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 5) { preview.displayedTime < 0.7 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+        XCTAssertLessThan(preview.displayedTime, 0.7)
+        XCTAssertGreaterThanOrEqual(preview.displayedTime, project.trimStart)
+    }
+
+    @MainActor func testPingPongPlaybackReversesAndReturnsAfterBothTrimBoundaries() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        var project = LoopProject(name: "Ping-pong cropped trim", sourceFilename: url.lastPathComponent, metadata: metadata)
+        project.trimStart = 0.6
+        project.trimEnd = 1
+        project.export.playback = .bounce
+        project.crop.aspect = .portrait
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.time = project.trimStart
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 5) { preview.displayedTime > 0.88 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        try await waitUntil(timeout: 5) { preview.displayedTime < 0.72 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        try await waitUntil(timeout: 5) { preview.displayedTime > 0.88 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+    }
+
+    @MainActor func testPlayAfterCanvasPinsAPendingScrubContinuesFromVisibleFrame() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        var project = LoopProject(name: "Resume after positioning", sourceFilename: url.lastPathComponent, metadata: metadata)
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.time = 0.4
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        let visible = preview.displayedTime
+        preview.beginScrubbing()
+        preview.seek(to: 1.6, project: project, url: url)
+        preview.beginCanvasInteraction()
+        project.crop.aspect = .portrait
+        project.crop.centerX = 0.7
+        preview.refresh(project: project, url: url)
+        preview.toggle(project: project, url: url)
+        try await waitUntil(timeout: 5) { preview.displayedTime > visible + 0.15 || preview.error != nil }
+        XCTAssertNil(preview.error)
+        XCTAssertTrue(preview.playing)
+        XCTAssertLessThan(preview.displayedTime, 1.2, "The cancelled scrub target must not replace the pinned frame")
+    }
+
+    @MainActor func testPauseDuringPlaySeekDoesNotResumeFromItsCompletion() async throws {
+        let url = try await makeVideo()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let metadata = try await MediaEngine.inspect(url: url)
+        let project = LoopProject(name: "Pause pending play", sourceFilename: url.lastPathComponent, metadata: metadata)
+        let preview = EditorPreview()
+        defer { preview.clear() }
+        preview.refresh(project: project, url: url)
+        try await waitUntil(timeout: 10) { preview.presentationCount > 0 || preview.error != nil }
+        preview.toggle(project: project, url: url)
+        preview.stop()
+        try await Task.sleep(nanoseconds: 350_000_000)
+        let paused = preview.displayedTime
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertFalse(preview.playing)
+        XCTAssertEqual(preview.displayedTime, paused, accuracy: 0.001)
+        XCTAssertNil(preview.error)
+    }
+
     @MainActor func testNativePortraitPreviewMatchesImageGeneratorOrientation() async throws {
         let url = try await makeVideo(portrait: true)
         defer { try? FileManager.default.removeItem(at: url) }

@@ -8,6 +8,8 @@ struct EditorView: View {
     @StateObject private var preview = EditorPreview()
     @State private var tool: EditorTool = .clip
     @State private var selectedOverlay: UUID?
+    @State private var selectingCropSubject = false
+    @State private var cropSubjectDraft: CropSettings?
     @State private var showingResult = false
     @State private var exported: SavedExport?
     @State private var rename = false
@@ -64,7 +66,10 @@ struct EditorView: View {
                         Button("Redo", systemImage: "arrow.uturn.forward") { redo() }.disabled(redoHistory.isEmpty)
                         Divider()
                         Button("Rename project", systemImage: "pencil") { title = project.name; rename = true }
-                        Button("Reset crop", systemImage: "crop.rotate") { project.crop = CropSettings() }
+                        Button("Reset crop", systemImage: "crop.rotate") {
+                            cropSubjectDraft = nil; selectingCropSubject = false
+                            project.crop = CropSettings()
+                        }
                         Button("Reset color", systemImage: "slider.horizontal.3") { project.adjustments = ColorAdjustments() }
                     } label: { Image(systemName: "ellipsis.circle") }
                     .disabled(store.isExporting || store.trackingProgress != nil)
@@ -96,7 +101,8 @@ struct EditorView: View {
             } else {
                 let now = Date()
                 let changedLayers = old.overlays.map(\.id) != value.overlays.map(\.id)
-                if changedLayers || now.timeIntervalSince(lastEdit) > 0.5 {
+                let changedCropTrack = old.crop.tracking?.keyframes != value.crop.tracking?.keyframes
+                if changedLayers || changedCropTrack || now.timeIntervalSince(lastEdit) > 0.5 {
                     undoHistory.append(old)
                     if undoHistory.count > 40 { undoHistory.removeFirst() }
                 }
@@ -108,7 +114,10 @@ struct EditorView: View {
             preview.refresh(project: value, url: store.sourceURL(value))
         }
         .onChange(of: preview.time) { _, _ in preview.refresh(project: project, url: store.sourceURL(project)) }
-        .onChange(of: tool) { _, _ in preview.stop(); showingResult = false; updatePresentationMode(); dismissKeyboard() }
+        .onChange(of: tool) { _, _ in
+            preview.stop(); showingResult = false; selectingCropSubject = false; cropSubjectDraft = nil
+            updatePresentationMode(); dismissKeyboard()
+        }
         .onChange(of: showingResult) { _, _ in updatePresentationMode() }
         .onChange(of: selectedOverlay) { _, value in if value == nil { dismissKeyboard() } }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
@@ -135,31 +144,54 @@ struct EditorView: View {
             .onChange(of: selectedOverlay) { _, _ in
                 if tool == .overlays { reader.scrollTo("editorControlsTop", anchor: .top) }
             }
+            .onChange(of: selectingCropSubject) { _, _ in
+                if tool == .crop { reader.scrollTo("editorControlsTop", anchor: .top) }
+            }
         }
+    }
+
+    /// Subject selection is a temporary canvas draft. Only a completed track enters
+    /// project history or autosave, so interrupted selection cannot erase a good path.
+    private var canvasProject: Binding<LoopProject> {
+        Binding(get: {
+            var canvas = project
+            if selectingCropSubject, let cropSubjectDraft { canvas.crop = cropSubjectDraft }
+            return canvas
+        }, set: { value in
+            if selectingCropSubject { cropSubjectDraft = value.crop }
+            else { project = value }
+        })
     }
 
     private func canvasCard(height: CGFloat) -> some View {
         VStack(spacing: 9) {
-            EditorCanvas(project: $project, selectedOverlay: $selectedOverlay, preview: preview, tool: tool, showingResult: showingResult, height: height)
+            EditorCanvas(project: canvasProject, selectedOverlay: $selectedOverlay, preview: preview, tool: tool, showingResult: showingResult, height: height, selectingCropSubject: selectingCropSubject)
             if !keyboardVisible {
-            HStack(spacing: 14) {
-                Button { step(-1) } label: { Image(systemName: "backward.end.fill") }
-                    .buttonStyle(.glass).accessibilityLabel("Previous frame")
-                Button {
-                    preview.toggle(project: project, url: store.sourceURL(project))
-                } label: {
-                    Image(systemName: preview.playing ? "pause.fill" : "play.fill").frame(width: 26)
-                }.buttonStyle(.glassProminent).accessibilityLabel(preview.playing ? "Pause preview" : "Play preview")
-                Button { step(1) } label: { Image(systemName: "forward.end.fill") }
-                    .buttonStyle(.glass).accessibilityLabel("Next frame")
-                Spacer(minLength: 0)
-                if tool == .crop || tool == .overlays {
-                    Button { preview.stop(); showingResult.toggle() } label: {
-                        Label(showingResult ? "Edit" : "Preview", systemImage: showingResult ? "slider.horizontal.3" : "eye")
-                            .font(.caption.weight(.medium))
-                    }.buttonStyle(.glass).accessibilityIdentifier("toggleResultPreview")
-                }
-            }
+            HStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    Button { step(-1) } label: {
+                        Image(systemName: "backward.end.fill").frame(width: 24, height: 28)
+                    }.buttonStyle(.glass).accessibilityLabel("Previous frame")
+                    Button {
+                        preview.toggle(project: project, url: store.sourceURL(project))
+                    } label: {
+                        Image(systemName: preview.playing ? "pause.fill" : "play.fill").frame(width: 24, height: 28)
+                    }.buttonStyle(.glassProminent)
+                        .accessibilityLabel(preview.playing ? "Pause preview" : "Play preview")
+                        .accessibilityIdentifier("previewPlayPause")
+                    Button { step(1) } label: {
+                        Image(systemName: "forward.end.fill").frame(width: 24, height: 28)
+                    }.buttonStyle(.glass).accessibilityLabel("Next frame")
+                }.controlSize(.small)
+                Spacer(minLength: 2)
+                Button("Start here") { setTrimStartHere() }
+                    .accessibilityIdentifier("trimStartHere")
+                    .accessibilityHint("Set the beginning of the clip to the visible video frame.")
+                Button("End here") { setTrimEndHere() }
+                    .accessibilityIdentifier("trimEndHere")
+                    .accessibilityHint("Set the end of the clip to the visible video frame.")
+            }.font(.caption.weight(.semibold)).buttonStyle(.glass).controlSize(.small)
+                .lineLimit(1).minimumScaleFactor(0.85)
             Slider(value: Binding(get: { min(project.trimEnd, max(project.trimStart, preview.time)) }, set: {
                 preview.seek(to: $0, project: project, url: store.sourceURL(project))
             }), in: project.trimStart...max(project.trimStart + 0.001, project.trimEnd), onEditingChanged: { editing in
@@ -168,14 +200,22 @@ struct EditorView: View {
             })
                 .accessibilityLabel("Playhead").accessibilityIdentifier("playhead")
                 .accessibilityValue(LoopFormat.time(preview.time))
-            HStack {
-                Text(LoopFormat.time(project.trimStart))
-                Spacer()
-                Text("Live preview · \(LoopFormat.rate(project.metadata.nominalFrameRate)) FPS source")
-                Spacer()
-                Text(LoopFormat.time(project.trimEnd))
-            }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
-                .lineLimit(1).minimumScaleFactor(0.7)
+            HStack(spacing: 8) {
+                Text("\(LoopFormat.time(project.trimStart)) – \(LoopFormat.time(project.trimEnd))")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                Spacer(minLength: 0)
+                if tool == .crop || tool == .overlays {
+                    Button { preview.stop(); selectingCropSubject = false; showingResult.toggle() } label: {
+                        Label(showingResult ? "Edit" : "Preview", systemImage: showingResult ? "slider.horizontal.3" : "eye")
+                            .font(.caption.weight(.medium))
+                    }.buttonStyle(.glass).controlSize(.mini)
+                        .accessibilityIdentifier("toggleResultPreview")
+                        .disabled(selectingCropSubject)
+                } else {
+                    Text("Live · \(LoopFormat.rate(project.metadata.nominalFrameRate)) FPS source")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                }
+            }.foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7)
             }
         }
     }
@@ -199,7 +239,8 @@ struct EditorView: View {
     @ViewBuilder private var activeControls: some View {
         switch tool {
         case .clip: clipControls
-        case .crop: cropControls
+        case .crop:
+            CropEditorView(project: $project, preview: preview, showingResult: $showingResult, selectingSubject: $selectingCropSubject, subjectDraft: $cropSubjectDraft)
         case .overlays: OverlayEditorView(project: $project, selected: $selectedOverlay, preview: preview)
         case .export:
             ExportOptionsView(project: $project)
@@ -219,20 +260,19 @@ struct EditorView: View {
             LoopCard {
                 EditorSectionTitle(title: "Find your moment", subtitle: "\(project.metadata.size.label) · \(LoopFormat.rate(project.metadata.nominalFrameRate)) FPS source · \(LoopFormat.time(project.metadata.duration))")
                 ValueSlider(title: "Start", value: Binding(get: { project.trimStart }, set: { newValue in
+                    preview.stop()
                     project.trimStart = min(project.trimEnd - 0.02, newValue)
-                    preview.time = project.trimStart
+                    preview.seek(to: project.trimStart, project: project, url: store.sourceURL(project))
                 }), range: 0...max(0.001, project.metadata.duration - 0.02), step: 0.01, display: LoopFormat.time(project.trimStart), accessibilityID: "trimStart")
                 ValueSlider(title: "End", value: Binding(get: { project.trimEnd }, set: { newValue in
+                    preview.stop()
                     project.trimEnd = min(project.metadata.duration, max(project.trimStart + 0.02, newValue))
-                    preview.time = min(preview.time, project.trimEnd - 0.001)
+                    preview.seek(to: project.trimEnd, project: project, url: store.sourceURL(project))
                 }), range: 0.02...max(0.021, project.metadata.duration), step: 0.01, display: LoopFormat.time(project.trimEnd), accessibilityID: "trimEnd")
-                HStack {
-                    Button("Start here") { project.trimStart = min(preview.time, project.trimEnd - 0.02) }
-                    Spacer()
-                    Button("End here") { project.trimEnd = max(preview.time, project.trimStart + 0.02) }
-                    Spacer()
-                    Button("Full video") { project.trimStart = 0; project.trimEnd = project.metadata.duration }
-                }.font(.caption).buttonStyle(.glass)
+                Button("Use full video", systemImage: "arrow.left.and.right") {
+                    preview.beginCanvasInteraction()
+                    project.trimStart = 0; project.trimEnd = project.metadata.duration
+                }.font(.caption).buttonStyle(.glass).accessibilityIdentifier("trimFullVideo")
             }
             LoopCard {
                 EditorSectionTitle(title: "Motion")
@@ -253,26 +293,14 @@ struct EditorView: View {
         }
     }
 
-    private var cropControls: some View {
-        LoopCard {
-            EditorSectionTitle(title: "Give it a frame", subtitle: "Drag the bright crop area over the part you want to keep. The shaded area is removed.")
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(CropAspect.allCases) { aspect in
-                    Button { project.crop.aspect = aspect; showingResult = false } label: {
-                        Label(aspect.title, systemImage: aspect.symbol).font(.caption.weight(.medium))
-                            .frame(maxWidth: .infinity, minHeight: 32).padding(5)
-                    }.buttonStyle(.glass).tint(project.crop.aspect == aspect ? LoopTheme.teal : .secondary)
-                        .accessibilityIdentifier("aspect-\(aspect.rawValue)")
-                        .accessibilityAddTraits(project.crop.aspect == aspect ? .isSelected : [])
-                }
-            }
-            ValueSlider(title: "Zoom", value: $project.crop.zoom, range: 1...5, step: 0.01, display: String(format: "%.2f×", project.crop.zoom))
-            ValueSlider(title: "Horizontal position", value: $project.crop.centerX, range: 0...1, display: String(format: "%.0f%%", project.crop.centerX * 100))
-            ValueSlider(title: "Vertical position", value: $project.crop.centerY, range: 0...1, display: String(format: "%.0f%%", project.crop.centerY * 100))
-            Toggle("Mirror horizontally", isOn: $project.crop.mirror)
-            Button("Reset framing", systemImage: "arrow.counterclockwise") { project.crop = CropSettings() }
-                .font(.subheadline)
-        }
+    private func setTrimStartHere() {
+        preview.beginCanvasInteraction()
+        project.trimStart = max(0, min(preview.displayedTime, project.trimEnd - 0.02))
+    }
+
+    private func setTrimEndHere() {
+        preview.beginCanvasInteraction()
+        project.trimEnd = min(project.metadata.duration, max(preview.displayedTime, project.trimStart + 0.02))
     }
 
     private func step(_ direction: Double) {
@@ -293,11 +321,13 @@ struct EditorView: View {
     }
 
     private func undo() {
+        cropSubjectDraft = nil; selectingCropSubject = false
         guard let previous = undoHistory.popLast() else { return }
         preview.stop(); redoHistory.append(project); applyingHistory = true; project = previous
     }
 
     private func redo() {
+        cropSubjectDraft = nil; selectingCropSubject = false
         guard let next = redoHistory.popLast() else { return }
         preview.stop(); undoHistory.append(project); applyingHistory = true; project = next
     }

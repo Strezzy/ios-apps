@@ -117,7 +117,8 @@ actor ExportEngine {
             writer = try APNGEncoder(destination: partial, size: plan.size,
                                      frameCount: plan.frames.count, settings: project.export)
         }
-        let crop = project.crop.rect(source: project.metadata.size)
+        let crop = project.crop.minimumRect(source: project.metadata.size,
+            from: project.trimStart, through: project.trimEnd)
         // Decode only the source resolution needed by the selected crop/output.
         // A single source frame and a single processed frame are retained, including reverse playback.
         let requiredSourceEdge = Int(ceil(max(Double(plan.size.width) / crop.width,

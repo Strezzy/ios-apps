@@ -80,7 +80,7 @@ enum FrameRenderer {
                 kCIInputContrastKey: max(0, min(4, project.adjustments.contrast)),
                 kCIInputSaturationKey: max(0, min(4, project.adjustments.saturation))
             ])
-            let selectedCrop = project.crop.rect(source: project.metadata.size)
+            let selectedCrop = project.crop.rect(source: project.metadata.size, at: time)
             let crop = editing ? NormalizedRect(x: 0, y: 0, width: 1, height: 1) : selectedCrop
             let sourceWidth = Double(image.width), sourceHeight = Double(image.height)
             let cropRect = CGRect(x: crop.x * sourceWidth, y: (1 - crop.y - crop.height) * sourceHeight,

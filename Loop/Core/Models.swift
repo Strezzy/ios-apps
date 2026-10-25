@@ -80,6 +80,8 @@ struct CropSettings: Codable, Equatable, Sendable {
     var centerY: Double = 0.5
     var zoom: Double = 1
     var mirror: Bool = false
+    /// Optional so projects saved before subject-follow framing still decode unchanged.
+    var tracking: CropTrackingSettings?
     func rect(source: PixelSize) -> NormalizedRect {
         let target = aspect.ratio(source: source)
         let z = min(8, max(1, zoom.isFinite ? zoom : 1))

@@ -21,6 +21,8 @@ gh release create "$LOOP_TAG" Build/Loop.ipa Build/Loop-Source.zip Build/Loop-Xc
   Build/BUILD-REPORT.json Build/TEST-RESULTS.json Build/SHA256SUMS.txt Build/Loop-Icon.png Build/Loop-Home.png \
   Build/Loop-Editor.png Build/Loop-Live-Effects.png Build/Loop-Live-Pixelation.png \
   Build/Loop-Precision-Zoom.png Build/Loop-Emoji-Keyboard.png \
+  Build/Loop-Trim-Playback.png Build/Loop-Subject-Selection.png \
+  Build/Loop-Subject-Result.png Build/Loop-Subject-Follow.png \
   --target "$GITHUB_SHA" --title "Loop $LOOP_VERSION · Moments, on repeat" --notes-file Build/RELEASE-NOTES.md
 cd ..
 git config user.name 'github-actions[bot]'

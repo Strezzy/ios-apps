@@ -1,20 +1,20 @@
-# Loop 1.0.1 — A live, precise editor
+# Loop 1.1.0 — Follow the moment
 
-This update improves the editing experience while preserving existing local projects, exports and the app's bundle identity.
+This update adds subject-follow cropping, fixes trimmed preview playback and moves the trim shortcuts into the pinned player controls. Existing projects, exports and the app's bundle identity are preserved.
 
-- **Continuous scrubbing:** the video updates while the playhead is being dragged. A persistent native player finishes the current seek and follows the latest finger position, instead of repeatedly cancelling frame requests. Playback cadence follows the source frame rate and speed within display and decoding capacity.
-- **Live effects:** blur and pixelation render directly in the Overlays tab. Radius, block size and shape changes are visible immediately, including during playback. Preview effect sizes scale from the same export-pixel measurements as the finished animation.
-- **Precision placement:** pinch zoom up to 12×, pan and reset the view without changing the export crop. Overlays remain at their exact source positions after zooming out. Small layers support dimensions down to 0.5% of the source.
-- **Direct layer controls:** selecting a layer replaces the Add menu with its controls. Tap empty video or Done to return to adding layers. The video stays visible above the controls. A clear X on the selected overlay removes it; toolbar Undo can restore it.
-- **Every emoji:** a persistent native text field opens the system Emoji keyboard when enabled, with the system keyboard as fallback. Skin tones, flags and joined emoji sequences are preserved. Keyboard Done returns to the editor.
-- **Less hunting:** all overlay types appear in a visible grid, with timing and tracking in expandable sections. Center and Reset size actions help recover a layer's position and dimensions. The editor adapts to landscape and keyboard entry.
+- **Trim shortcuts at the top:** Start here and End here sit beneath the video, to the right of the player controls, on every editor tab. Both use the visible frame. Trim-slider adjustments pause and preview the boundary being changed.
+- **Playback after cropping and trimming:** native player limits update with the selected range. Play at the final source frame restarts the clip. Forward, reverse and ping-pong previews continue across their loop boundaries instead of freezing at an old out point.
+- **Subject-follow crop:** choose an aspect, select a person or object with a movable/resizable box, then tap Track subject. Analysis runs on the iPhone across the selected clip, starting from the displayed anchor frame. The crop follows the subject through the original video.
+- **Follow subject size:** optional size-follow adjusts framing as a subject approaches or recedes. The crop stays within the available video and keeps a fixed aspect ratio. A slight offline smoothing pass reduces jitter; the exported animation keeps constant pixel dimensions.
+- **Stacked tracking:** subject-follow cropping works with independently tracked blur, pixelation, covers, emoji and text. Each overlay retains its source-relative path and is mapped into the moving crop in both preview and export. Existing overlay tracking behavior is retained.
+- **Control and review:** disable Follow subject to return to manual framing without deleting its path. Choose another subject or re-track after extending the trim. Cancelled or incomplete new analysis is not applied. Review the full loop; occlusion or a subject leaving the picture can require a clearer anchor or a shorter clip.
 
-Photos and **Files** import, GIF/APNG conversion, portrait/landscape crops, resolution/FPS controls, tracking, manual keyframes, local projects and sharing remain available. Everything is processed on device, with no accounts, ads, watermark or uploads.
+Continuous scrubbing, live effects, 12× view zoom, contextual overlay controls, on-canvas X/Undo, the native emoji keyboard, Photos and **Files** import, GIF/APNG output and high-resolution export remain available. Processing stays on device, with no account, ads, watermark or upload.
 
-**Install:** `Loop.ipa` is an arm64 iPhone/iPad package for the existing signing/sideloading workflow. Requires iOS 26 or later. Update the existing `com.billy.loop` installation to retain its local data; no uninstall is needed.
+**Install:** `Loop.ipa` is an arm64 iPhone/iPad package for the existing signing/sideloading workflow. Requires iOS 26 or later. Update the existing `com.billy.loop` installation to keep local projects and exports; no uninstall is needed.
 
-**Format limits:** GIF uses 10 ms delay steps and some viewers clamp short delays. APNG supports finer timing and full color. Both formats are silent. Output remains capped at a 4096-pixel longest edge and 30,000 frames. Supported source codecs depend on the device. Cloud-only input needs to download through its provider before offline use.
+**Format and framing limits:** GIF stores delays in 10 ms steps and some viewers clamp short delays. APNG supports finer timing and full color. Both formats are silent. Output remains capped at a 4096-pixel longest edge and 30,000 frames. Tracking cannot reveal pixels outside the source, and zooming does not create new detail. Supported source codecs depend on the device. Cloud-only inputs need to download through their provider before offline use.
 
-**Validation:** The attached reports identify the native arm64 build and its simulator test results. New regression checks cover live scrubbing on a real 60 FPS source, live effects, preview orientation, zoom-coordinate stability, tiny layers, deletion/undo and the native emoji keyboard. Native editor screenshots are attached. Physical-device FPS, thermals, long high-resolution exports and sideload-host behavior have not been measured in this build session.
+**Validation:** Native arm64 build, real AVPlayer preview regressions, on-device Vision tracking tests, moving-crop/overlay composition, decoded export checks, project compatibility and simulator interface tests. Native screenshots and the exact test report are attached. Physical-device frame rate, thermals, long high-resolution exports and sideload-host behavior were not measured in this build session.
 
-Complete source, the generated Xcode project and checksums are attached. Other apps and historical releases are preserved.
+Complete source, generated Xcode project and checksums are attached. Other apps and historical releases are preserved.

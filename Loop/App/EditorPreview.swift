@@ -26,6 +26,7 @@ import CoreVideo
     private var output: AVPlayerItemVideoOutput?
     private var generator: AVAssetImageGenerator?
     private var statusObservation: NSKeyValueObservation?
+    private var playbackEndObservation: NSObjectProtocol?
     private var preferredTransform = CGAffineTransform.identity
     private var displayLink: CADisplayLink?
     private var displayTarget: PreviewDisplayTarget?
@@ -69,14 +70,13 @@ import CoreVideo
         if playing {
             // Playhead notifications must not trigger duplicate renders or seeks.
             guard changed else { return }
-            updatePlaybackBounds()
             updateCadence()
             if previous?.export.playback != project.export.playback || previous?.export.speed != project.export.speed {
                 direction = project.export.playback == .reverse ? -1 : 1
                 reverseFallback = false
-                requestSeek(clamp(time), exact: true, resume: true)
+                requestSeek(playbackStart(at: time), exact: true, resume: true)
             } else if time < project.trimStart || time >= project.trimEnd {
-                requestSeek(clamp(time), exact: true, resume: true)
+                requestSeek(playbackStart(at: time), exact: true, resume: true)
             } else if let source = retainedSource {
                 enqueue(.image(source), at: retainedTime)
             }
@@ -142,9 +142,7 @@ import CoreVideo
         reverseFallback = false
         playing = true
         updateCadence()
-        var start = clamp(time)
-        if direction < 0 && start <= project.trimStart + 1.0 / 60_000 { start = clamp(project.trimEnd) }
-        requestSeek(start, exact: true, resume: true)
+        requestSeek(playbackStart(at: time), exact: true, resume: true)
         updateDisplayLinkState()
     }
 
@@ -165,6 +163,8 @@ import CoreVideo
         generator?.cancelAllCGImageGeneration(); generator = nil
         player?.pause(); player?.replaceCurrentItem(with: nil)
         statusObservation?.invalidate(); statusObservation = nil
+        if let observation = playbackEndObservation { NotificationCenter.default.removeObserver(observation) }
+        playbackEndObservation = nil
         displayLink?.invalidate(); displayLink = nil; displayTarget = nil
         player = nil; item = nil; output = nil
         currentURL = nil; currentProject = nil; ready = false
@@ -176,7 +176,14 @@ import CoreVideo
     }
 
     private func configure(project: LoopProject, url: URL) {
-        guard currentURL != url else { currentProject = project; return }
+        guard currentURL != url else {
+            let changedRange = currentProject?.trimStart != project.trimStart || currentProject?.trimEnd != project.trimEnd
+            currentProject = project
+            // Trim edits normally happen while paused. Keeping the old native bounds
+            // can strand playback at the original out point even after the UI moves on.
+            if changedRange { updatePlaybackBounds() }
+            return
+        }
         clear()
         currentURL = url
         currentProject = project
@@ -223,6 +230,11 @@ import CoreVideo
                 self.updatePlaybackBounds()
                 self.statusObservation = item.observe(\.status, options: [.initial, .new]) { [weak self] _, _ in
                     Task { @MainActor in self?.itemStatusChanged(session: token) }
+                }
+                self.playbackEndObservation = NotificationCenter.default.addObserver(
+                    forName: AVPlayerItem.didPlayToEndTimeNotification, object: item, queue: .main
+                ) { [weak self] _ in
+                    Task { @MainActor in self?.itemReachedEnd(session: token) }
                 }
             } catch is CancellationError { }
             catch {
@@ -277,6 +289,12 @@ import CoreVideo
                       self.activeSeek?.id == next.id else { return }
                 if !finished {
                     self.activeSeek = nil
+                    // Changing a playback boundary may interrupt AVFoundation's seek.
+                    // Preserve the latest play intent instead of leaving a paused player
+                    // behind a Pause button with no remaining work scheduled.
+                    if self.latestSeek == nil, self.playing, self.item?.status != .failed {
+                        self.latestSeek = SeekRequest(time: self.playbackStart(at: self.time), exact: true, resume: true)
+                    }
                     self.performNextSeek()
                     self.updateDisplayLinkState()
                     return
@@ -356,8 +374,8 @@ import CoreVideo
         let itemTime = output.itemTime(forHostTime: hostTime)
         let seconds = itemTime.seconds.isFinite ? itemTime.seconds : player.currentTime().seconds
         guard seconds.isFinite else { return }
-        if direction > 0 && seconds >= project.trimEnd - 1.0 / 60_000 ||
-            direction < 0 && seconds <= project.trimStart + 1.0 / 60_000 {
+        let current = player.currentTime().seconds
+        if hasReachedBoundary(at: seconds) || (current.isFinite && hasReachedBoundary(at: current)) {
             reachedBoundary()
             return
         }
@@ -370,9 +388,37 @@ import CoreVideo
     }
 
     private func reachedBoundary() {
-        guard let project = currentProject else { return }
+        guard playing, activeSeek == nil, let project = currentProject else { return }
         if project.export.playback == .bounce { direction *= -1 }
         requestSeek(direction < 0 ? clamp(project.trimEnd) : project.trimStart, exact: true, resume: true)
+    }
+
+    private func itemReachedEnd(session token: UUID) {
+        guard session == token, playing, activeSeek == nil, latestSeek == nil,
+              let player, let project = currentProject else { return }
+        // Some decoders stop producing buffers on the final sample before a display
+        // tick sees the exact out point. Use the native end notification as well.
+        // Checking the current side of the range rejects a delayed notification from
+        // the preceding loop or direction after its seek has already completed.
+        let current = player.currentTime().seconds
+        let tolerance = min(project.duration / 2, 1 / max(1, project.metadata.nominalFrameRate))
+        if current.isFinite && hasReachedBoundary(at: current, tolerance: tolerance) { reachedBoundary() }
+    }
+
+    private func hasReachedBoundary(at value: Double, tolerance: Double = 1.0 / 60_000) -> Bool {
+        guard let project = currentProject else { return false }
+        return direction > 0 ? value >= project.trimEnd - tolerance : value <= project.trimStart + tolerance
+    }
+
+    private func playbackStart(at requestedTime: Double) -> Double {
+        guard let project = currentProject else { return clamp(requestedTime) }
+        // The end thumb can select a time inside the final video sample. Replaying
+        // that sample has no visible motion; Play there starts the selected loop.
+        let finalSample = project.trimEnd - min(project.duration / 2,
+            1 / max(1, project.metadata.nominalFrameRate))
+        if direction > 0 && requestedTime >= finalSample { return project.trimStart }
+        if direction < 0 && requestedTime <= project.trimStart + 1.0 / 60_000 { return clamp(project.trimEnd) }
+        return clamp(requestedTime)
     }
 
     private func enqueue(_ source: PreviewSource, at sourceTime: Double) {

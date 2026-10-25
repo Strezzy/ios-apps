@@ -61,6 +61,7 @@ import UniformTypeIdentifiers
                 for index in project.overlays.indices {
                     project.overlays[index].keyframes.sort { $0.time < $1.time }
                 }
+                project.crop.tracking?.keyframes.sort { $0.time < $1.time }
                 return project
             }.sorted { $0.modifiedAt > $1.modifiedAt }
         if let data = try? Data(contentsOf: root.appendingPathComponent("exports.json")),
@@ -260,6 +261,25 @@ import UniformTypeIdentifiers
         return try await TrackingEngine.track(sourceURL: sourceURL(project), project: project, overlay: overlay, anchorTime: anchorTime, control: control) { [weak self] progress in
             Task { @MainActor in self?.trackingProgress = progress }
         }
+    }
+
+    func trackCrop(project: LoopProject, anchorTime: Double) async throws -> CropTrackingSettings {
+        guard !isExporting, trackingControl == nil else {
+            throw LoopError.invalidSettings("Wait for the current operation to finish before tracking the crop.")
+        }
+        let control = ExportControl(); trackingControl = control; trackingProgress = 0
+        UIApplication.shared.isIdleTimerDisabled = true
+        defer {
+            trackingControl = nil; trackingProgress = nil
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+        return try await TrackingEngine.trackCrop(sourceURL: sourceURL(project), project: project,
+            anchorTime: anchorTime, control: control) { [weak self] progress in
+                Task { @MainActor in
+                    guard let self, self.trackingControl === control else { return }
+                    self.trackingProgress = progress
+                }
+            }
     }
 
     func saveToPhotos(_ item: SavedExport) async {

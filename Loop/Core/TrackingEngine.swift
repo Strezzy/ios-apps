@@ -5,6 +5,29 @@ import CoreMedia
 @preconcurrency import Vision
 
 enum TrackingEngine {
+    static func trackCrop(sourceURL: URL, project: LoopProject, anchorTime: Double,
+                          control: ExportControl,
+                          progress: @escaping @Sendable (Double) -> Void) async throws -> CropTrackingSettings {
+        guard var tracking = project.crop.tracking else {
+            throw LoopError.invalidSettings("Select the subject you want the crop to follow.")
+        }
+        let anchor = min(project.trimEnd, max(project.trimStart, anchorTime))
+        guard anchor.isFinite else { throw LoopError.invalidSettings("Choose a frame before tracking the subject.") }
+        // Reuse the proven independent object tracker. This temporary item never
+        // enters the project's overlay list and cannot replace any overlay path.
+        var subject = OverlayItem(kind: .cover, startTime: project.trimStart, endTime: project.trimEnd)
+        subject.rect = tracking.subjectRect.clamped()
+        let observations = try await track(sourceURL: sourceURL, project: project, overlay: subject,
+            anchorTime: anchor, control: control, progress: progress)
+        try await control.checkpoint()
+        tracking.subjectRect = subject.rect
+        tracking.anchorTime = anchor
+        tracking.keyframes = CropTrackingPath.smoothed(observations, anchorTime: anchor)
+        tracking.enabled = true
+        tracking.needsReview = false
+        return tracking
+    }
+
     static func track(sourceURL: URL, project: LoopProject, overlay: OverlayItem,
                       anchorTime: Double, control: ExportControl,
                       progress: @escaping @Sendable (Double) -> Void) async throws -> [TrackingKeyframe] {

@@ -246,10 +246,10 @@ struct OverlayEditorView: View {
     }
 
     private func add(_ kind: OverlayKind) {
-        preview.stop()
+        preview.beginCanvasInteraction()
         dismissKeyboard()
         var overlay = OverlayItem(kind: kind, startTime: project.trimStart, endTime: project.trimEnd)
-        let crop = project.crop.rect(source: project.metadata.size)
+        let crop = project.crop.rect(source: project.metadata.size, at: editTime)
         let width = min(0.28, crop.width * 0.65)
         let height = min(0.28, crop.height * 0.65)
         overlay.rect = NormalizedRect(x: crop.centerX - width / 2, y: crop.centerY - height / 2, width: width, height: height).clamped()
@@ -289,7 +289,7 @@ struct OverlayEditorView: View {
         guard let current else { return }
         preview.beginCanvasInteraction()
         var rect = current.rect(at: editTime)
-        let crop = project.crop.rect(source: project.metadata.size)
+        let crop = project.crop.rect(source: project.metadata.size, at: editTime)
         rect.x = crop.centerX - rect.width / 2
         rect.y = crop.centerY - rect.height / 2
         applyRect(rect)
@@ -300,7 +300,7 @@ struct OverlayEditorView: View {
         preview.beginCanvasInteraction()
         var rect = current.rect(at: editTime)
         let x = rect.centerX, y = rect.centerY
-        let crop = project.crop.rect(source: project.metadata.size)
+        let crop = project.crop.rect(source: project.metadata.size, at: editTime)
         rect.width = min(0.28, crop.width * 0.65)
         rect.height = min(0.28, crop.height * 0.65)
         rect.x = x - rect.width / 2

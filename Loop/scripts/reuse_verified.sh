@@ -28,7 +28,8 @@ assert r['sourceCommit'] == os.environ['GITHUB_SHA']
 assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha256']
 for name in ['Loop-Source.zip', 'Loop-XcodeProject.zip', 'Loop-Home.png', 'Loop-Icon.png',
              'Loop-Editor.png', 'Loop-Live-Effects.png', 'Loop-Live-Pixelation.png',
-             'Loop-Precision-Zoom.png', 'Loop-Emoji-Keyboard.png']:
+             'Loop-Precision-Zoom.png', 'Loop-Emoji-Keyboard.png', 'Loop-Trim-Playback.png',
+             'Loop-Subject-Selection.png', 'Loop-Subject-Result.png', 'Loop-Subject-Follow.png']:
     assert (Path('Build') / name).is_file(), name
 PY
 echo 'reused=true' >> "$GITHUB_OUTPUT"

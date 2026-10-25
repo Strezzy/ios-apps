@@ -2,15 +2,17 @@
 
 **Moments, on repeat.** A native, offline video-to-GIF and APNG creator for iPhone and iPad, built in SwiftUI with native Liquid Glass controls.
 
-## What's new in 1.0.1
+## What's new in 1.1.0
 
-The editor now keeps the video visible while its controls scroll underneath. Scrubbing presents frames continuously while the slider is held, using a persistent native video player and coalesced seeks. Playback follows the source frame rate and speed, subject to the display's refresh rate and available decoding/rendering capacity; there is no fixed 25 FPS preview delay.
+**Start here** and **End here** now sit immediately below the video, to the right of the player controls, and stay visible on every editor tab. They use the frame actually displayed on screen. The trim sliders pause and show the boundary being adjusted.
 
-Blur, pixelation, covers, emoji and captions render directly in the Overlays editor. Radius and block-size changes remain live during playback. Select a layer to show its controls immediately; tap empty video or Done to return to the Add menu. Timing and tracking expand when needed.
+Playback updates its native start/end limits whenever the trim changes. Play at the final source frame restarts the selected clip, and the preview continues across forward, reverse and ping-pong boundaries. Continuous scrubbing and live overlay adjustment remain available.
 
-Pinch to zoom the video view up to 12×, pan over empty video (or use two fingers), and place small overlays precisely. View zoom does not change the export crop or the layer's source coordinates. Drag a layer to move it, use its corner handle to resize it, and tap its visible X to remove it. A toolbar Undo restores deleted layers. Width and height support a 0.5% source dimension for small details.
+The Crop tab can now **follow a selected subject**. Choose portrait, landscape or another crop, tap Choose subject, move and resize the subject box, then tap Track subject. Analysis runs locally over the selected clip in both directions from the visible anchor frame. The crop follows the subject's position, and **Follow subject size** can zoom out as the subject approaches or zoom in as it recedes, within the source image and framing limits. A small temporal smoothing pass reduces crop jitter without changing the existing overlay tracker.
 
-Emoji entry opens the real iOS keyboard and accepts all Unicode emoji, including skin-tone modifiers, flags and joined sequences. A keyboard Done button returns to editing without leaving the video.
+Crop tracking is separate from every overlay's motion path. A moving crop can be combined with independently tracked blur, pixelation, covers, emoji and text. Source coordinates are mapped into the moving crop for both preview and export. Export dimensions stay fixed while the crop moves. Turn Follow subject off to return to manual framing; the stored path remains available to turn back on. If the selected time range extends beyond the tracked range, track it again before exporting.
+
+The live editor from 1.0.1 is preserved: pinch to zoom the view up to 12× for precise placement, select a layer for immediate controls, tap its X to delete, use Undo to restore it, and enter any emoji through the native keyboard. View zoom does not alter source coordinates or the export crop.
 
 ## Create
 
@@ -18,6 +20,7 @@ Import a local video from Photos or Files, choose the section to keep, and turn 
 
 - Original, portrait 9:16, portrait 4:5, square, landscape 16:9 and landscape 4:3 crops.
 - A shaded crop window on the original frame, repositioning, crop zoom and horizontal mirror; separate pinch zoom for precise viewing and placement.
+- Subject-follow cropping with optional size-follow, independent of simultaneous tracked overlays.
 - Precise trim, frame stepping, speed, reverse and ping-pong loops.
 - GIF output at 1–100 sampled frames per second; APNG up to 120 FPS.
 - Resolution presets through 3840 pixels, custom sizes and original resolution, bounded to 4096 pixels on the longest edge. Optional upscaling is labeled; it does not recover missing detail.
@@ -35,6 +38,18 @@ Source import accepts video formats and codecs the device can decode through AVF
 GIF and APNG are written frame by frame. No complete animation is held as an array of full-resolution frames. Reverse playback retrieves frames in reverse time order, so it may take longer than forward export. Frames, tracking metadata, output buffers, the video decoder and GPU resources still need memory. A 30,000-output-frame guard prevents accidentally unbounded exports. Large, long animations can produce very large files; the preflight figures are working-memory/raw-data estimates, not predicted compressed file sizes.
 
 ## Tracking and review
+
+### Follow a subject with the crop
+
+1. Choose the clip's start/end and a crop aspect, such as Portrait 9:16.
+2. On Crop, tap **Choose subject**. Drag the subject box onto the person or object and resize it tightly enough to distinguish it from the background. Scrubbing lets you choose a clearer anchor frame.
+3. Tap **Track subject**. Loop analyzes the selected clip and opens the result preview. Play or scrub the whole clip to review it.
+4. Leave **Follow subject size** enabled to adapt to approach/recession, or turn it off to pan at a fixed crop zoom. Adjust the framing controls to refine the composition. Follow subject can be disabled without discarding its path.
+5. Add any tracked overlays in the Overlays tab as usual. Crop and overlay tracks are independent and compose at each output timestamp, including reverse and ping-pong playback.
+
+The crop stays inside the available image and preserves its aspect ratio. At image edges, or when a subject becomes larger than the available crop, it cannot invent missing surroundings. Size-follow can magnify source detail as a subject becomes smaller; it does not create new detail. Occluded or fully out-of-frame subjects can break tracking; select a clearer anchor or shorten the clip and track again. A cancelled or incomplete new track is not applied. Extending the trim requires coverage of the new interval before export.
+
+### Track an overlay
 
 Place an overlay over the subject, start tracking from the displayed source frame and scrub through the result. Coordinates are stored relative to the upright, uncropped source so changing the crop preserves the subject's path. Tracking runs entirely on device using Vision. Occlusion, fast motion and similar subjects can make it drift or fail. Interrupted or incomplete tracking requires correction before export; it never silently drops a blur mask. Manual keyframes can correct the path.
 
@@ -61,7 +76,7 @@ bash scripts/test.sh
 
 The generated reports record the source commit, SDK, architecture, bundle identity, checksum and automated test results. Simulator tests do not establish physical iPhone thermals, long 4K exports, every codec, or behavior inside a sideload host. Those remain device-validation tasks.
 
-The preview regressions exercise a real 60 FPS video, including repeated seeks that must produce visible frames before scrubbing ends, paused effect changes without another decode, live effects during native playback, and portrait orientation. Interface tests verify contextual controls, stable source coordinates through zoom and placement, quick deletion/undo, the native emoji keyboard, and Files import. Published test results describe the exact release build's verification; they are not a physical-device FPS benchmark.
+Preview regressions exercise a real 60 FPS video, including continuous seeks, paused effect edits, live effects during playback, portrait orientation, trimmed ranges moved beyond the previous player limits, playback from the end frame and repeated forward/reverse/ping-pong boundaries. Crop tests cover old-project decoding, tracking geometry, scale changes, source bounds, independent overlay composition, local Vision tracking and decoded animation output. Interface tests verify the pinned trim actions, actual rendered-frame playback, subject selection and tracking, contextual layer controls, precise placement, deletion/undo, the native emoji keyboard and Files import. Published test results describe the exact release build's verification; they are not a physical-device FPS benchmark.
 
 ## Source layout
 
@@ -72,7 +87,8 @@ The preview regressions exercise a real 60 FPS video, including repeated seeks t
 | `Core/ExportPlan.swift` | Crop geometry, timestamp scheduling and GIF timing |
 | `Core/VideoEngine.swift` | Video inspection, frame retrieval and export orchestration |
 | `Core/FrameRenderer.swift` | Core Image adjustments, masks, overlays and cropping |
-| `Core/TrackingEngine.swift` | Local Vision tracking |
+| `Core/TrackingEngine.swift` | Independent local Vision tracking for subjects and overlays |
+| `Core/CropTracking.swift` | Smoothed subject path, time-varying crop geometry and size-follow |
 | `Core/GIFEncoder.swift` | Streaming palette quantization and GIF encoding |
 | `Core/APNGEncoder.swift` | Streaming full-color animation output |
 | `Tests/`, `UITests/` | Decoded-output, scheduling, geometry and real UI verification |

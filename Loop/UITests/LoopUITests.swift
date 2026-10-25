@@ -147,6 +147,146 @@ final class LoopUITests: XCTestCase {
         XCTAssertTrue(app.buttons["overlay-emoji"].exists)
     }
 
+    @MainActor func testTopTrimActionsAndPlaybackAfterCropping() throws {
+        let app = openEditor()
+        let play = app.buttons["previewPlayPause"]
+        let start = app.buttons["trimStartHere"]
+        let end = app.buttons["trimEndHere"]
+        let playhead = app.sliders["playhead"]
+        let displayed = app.staticTexts["previewDisplayedTime"]
+        XCTAssertTrue(displayed.waitForExistence(timeout: 10))
+        XCTAssertTrue(start.isHittable && end.isHittable)
+        XCTAssertGreaterThan(start.frame.minX, play.frame.maxX)
+        XCTAssertGreaterThan(end.frame.minX, start.frame.maxX)
+        XCTAssertEqual(start.frame.midY, play.frame.midY, accuracy: 3)
+        XCTAssertLessThan(start.frame.maxY, playhead.frame.minY + 2)
+
+        let first = displayed.label
+        playhead.adjust(toNormalizedSliderPosition: 0.2)
+        waitForDisplayedTimeChange(displayed, from: first)
+        start.tap()
+        let inPoint = displayed.label
+        playhead.adjust(toNormalizedSliderPosition: 1)
+        waitForDisplayedTimeChange(displayed, from: inPoint)
+        end.tap()
+        app.buttons["tool-crop"].tap()
+        reveal(app.buttons["aspect-portrait"], in: app)
+        app.buttons["aspect-portrait"].tap()
+        XCTAssertTrue(start.isHittable && end.isHittable, "Trim shortcuts remain pinned on the Crop tab.")
+        app.buttons["toggleResultPreview"].tap()
+        let beforePlay = displayed.label
+        play.tap()
+        waitForDisplayedTimeChange(displayed, from: beforePlay)
+        let restarted = displayed.label
+        waitForDisplayedTimeChange(displayed, from: restarted)
+        XCTAssertEqual(play.label, "Pause preview", "Playback must remain active after its initial seek.")
+        capture("Loop-Trim-Playback", app: app)
+        play.tap()
+        XCTAssertEqual(play.label, "Play preview")
+    }
+
+    @MainActor func testSubjectFollowCropAndOverlayExport() throws {
+        executionTimeAllowance = 180
+        let app = openEditor()
+        app.buttons["tool-crop"].tap()
+        app.buttons["aspect-portrait"].tap()
+        reveal(app.buttons["chooseCropSubject"], in: app)
+        app.buttons["chooseCropSubject"].tap()
+        let subject = app.images["cropSubject"]
+        XCTAssertTrue(subject.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["cropSubjectResize"].exists)
+        XCTAssertFalse(app.buttons["toggleResultPreview"].isEnabled,
+                       "Subject selection must stay on the original video.")
+        let width = app.sliders["cropSubjectWidth"]
+        let height = app.sliders["cropSubjectHeight"]
+        reveal(width, in: app)
+        width.adjust(toNormalizedSliderPosition: (0.12 - 0.02) / 0.98)
+        reveal(height, in: app)
+        height.adjust(toNormalizedSliderPosition: (0.28 - 0.02) / 0.98)
+        let canvas = app.otherElements["canvasViewport"]
+        // This native 60 FPS fixture has a sailboat near source (0.26, 0.43).
+        // Select it through the same visible controls and gestures as a user.
+        let imageWidth = min(canvas.frame.width, canvas.frame.height * 16 / 9)
+        let imageHeight = imageWidth * 9 / 16
+        let x = (canvas.frame.width - imageWidth) / 2 + imageWidth * 0.26
+        let y = (canvas.frame.height - imageHeight) / 2 + imageHeight * 0.43
+        canvas.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y)).tap()
+        let selected = overlayValues(subject)
+        XCTAssertEqual((selected["x"] ?? 0) + (selected["width"] ?? 0) / 2, 0.26, accuracy: 0.015)
+        reveal(app.buttons["trackCropSubject"], in: app)
+        capture("Loop-Subject-Selection", app: app)
+        app.buttons["trackCropSubject"].tap()
+        let follow = app.switches["cropTrackingEnabled"]
+        XCTAssertTrue(follow.waitForExistence(timeout: 90), "The actual Vision subject track must finish successfully.")
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        reveal(follow, in: app)
+        XCTAssertEqual(follow.value as? String, "1")
+        XCTAssertTrue(app.switches["cropFollowScale"].exists)
+        capture("Loop-Subject-Result", app: app)
+
+        // Source mode exposes the live crop rectangle for an exact motion assertion.
+        app.buttons["toggleResultPreview"].tap()
+        let crop = app.images["cropSelection"]
+        XCTAssertTrue(crop.waitForExistence(timeout: 5))
+        let initial = overlayValues(crop)
+        app.sliders["playhead"].adjust(toNormalizedSliderPosition: 0.9)
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let raw = crop.value as? String else { return false }
+            let values = Dictionary(uniqueKeysWithValues: raw.split(separator: ";").compactMap { pair -> (String, Double)? in
+                let parts = pair.split(separator: "=", maxSplits: 1)
+                guard parts.count == 2, let number = Double(parts[1]) else { return nil }
+                return (String(parts[0]), number)
+            })
+            return abs((values["x"] ?? 0) - (initial["x"] ?? 0)) > 0.08
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [moved], timeout: 15), .completed,
+                       "The portrait crop must follow the sailboat across the source.")
+        capture("Loop-Subject-Follow", app: app)
+
+        // A replacement selection is a draft: canceling or leaving must preserve
+        // the already successful track, including what is saved to the project.
+        let completedCrop = overlayValues(crop)
+        reveal(app.buttons["chooseCropSubject"], in: app)
+        app.buttons["chooseCropSubject"].tap()
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        app.buttons["cancelCropSubject"].tap()
+        let restoredCrop = overlayValues(crop)
+        XCTAssertEqual(restoredCrop["x"] ?? -1, completedCrop["x"] ?? -2, accuracy: 0.00001)
+        reveal(app.buttons["chooseCropSubject"], in: app)
+        app.buttons["chooseCropSubject"].tap()
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        app.buttons["editorDone"].tap()
+        let savedProject = app.buttons["project-Coastal motion"]
+        XCTAssertTrue(savedProject.waitForExistence(timeout: 10))
+        reveal(savedProject, in: app)
+        savedProject.tap()
+        XCTAssertTrue(app.buttons["tool-crop"].waitForExistence(timeout: 10))
+        app.buttons["tool-crop"].tap()
+        XCTAssertTrue(follow.waitForExistence(timeout: 10))
+        XCTAssertEqual(follow.value as? String, "1", "Leaving an unfinished selection must not replace the saved track.")
+
+        // Adding an independent effect must retain the crop's stored motion path.
+        app.buttons["tool-overlays"].tap()
+        app.buttons["add-pixelate"].tap()
+        XCTAssertTrue(app.sliders["overlayStrength"].waitForExistence(timeout: 5))
+        app.buttons["tool-crop"].tap()
+        XCTAssertTrue(follow.waitForExistence(timeout: 5))
+        XCTAssertEqual(follow.value as? String, "1")
+        app.buttons["tool-export"].tap()
+        reveal(app.buttons["createAnimation"], in: app)
+        app.buttons["createAnimation"].tap()
+        XCTAssertTrue(app.buttons["shareAnimation"].waitForExistence(timeout: 90))
+        capture("Loop-Tracked-Crop-Export", app: app)
+    }
+
+    @MainActor private func waitForDisplayedTimeChange(_ element: XCUIElement, from previous: String,
+                                                       timeout: TimeInterval = 10) {
+        let predicate = NSPredicate { _, _ in element.exists && element.label != previous }
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed,
+                       "The rendered video frame did not advance from \(previous).")
+    }
+
     @MainActor private func openEditor() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]

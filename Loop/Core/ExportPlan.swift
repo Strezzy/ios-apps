@@ -51,6 +51,12 @@ struct ExportPlan: Sendable {
                 }
             }
         }
+        if let tracking = project.crop.tracking, tracking.enabled {
+            guard !tracking.needsReview,
+                  tracking.covers(start: project.trimStart, end: project.trimEnd) else {
+                throw LoopError.invalidSettings("Track the crop subject across the full selected clip, or turn off Follow subject before exporting.")
+            }
+        }
         let crop = project.crop.rect(source: project.metadata.size)
         let nativeWidth = max(1, Double(project.metadata.size.width) * crop.width)
         let nativeHeight = max(1, Double(project.metadata.size.height) * crop.height)
@@ -59,8 +65,10 @@ struct ExportPlan: Sendable {
         let scale = e.allowUpscaling ? requested / nativeLongEdge : min(1, requested / nativeLongEdge)
         size = PixelSize(width: max(1, Int((nativeWidth * scale).rounded())),
                          height: max(1, Int((nativeHeight * scale).rounded())))
+        let tightestCrop = project.crop.minimumRect(source: project.metadata.size,
+            from: project.trimStart, through: project.trimEnd)
         let decodedLongEdge = min(Double(project.metadata.size.longEdge),
-                                  max(Double(size.width) / crop.width, Double(size.height) / crop.height))
+                                  max(Double(size.width) / tightestCrop.width, Double(size.height) / tightestCrop.height))
         let decodedScale = decodedLongEdge / Double(project.metadata.size.longEdge)
         let decodedPixels = Double(project.metadata.size.width) * Double(project.metadata.size.height) * decodedScale * decodedScale
         estimatedWorkingBytes = Int64(decodedPixels * 16) + Int64(size.width) * Int64(size.height) * 12
