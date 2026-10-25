@@ -7,7 +7,7 @@ from pathlib import Path
 r = json.load(open('Build/BUILD-REPORT.json'))
 t = json.load(open('Build/TEST-RESULTS.json'))
 assert r['sourceCommit'] == os.environ['GITHUB_SHA']
-assert t['failedTests'] == 0 and t['passedTests'] >= 25 and t['skippedTests'] == 0
+assert t['failedTests'] == 0 and t['passedTests'] >= 60 and t['skippedTests'] == 0
 assert re.fullmatch(r'\d+(?:\.\d+)*', r['version']) and r['build'].isdigit()
 assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha256']
 with open('Build/RELEASE-NOTES.md', 'w') as f:

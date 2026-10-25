@@ -34,7 +34,7 @@ fi
 python3 - <<'PY'
 import json
 r = json.load(open('Build/TEST-RESULTS.json'))
-assert r['failedTests'] == 0 and r['passedTests'] >= 25 and r['skippedTests'] == 0, r
+assert r['failedTests'] == 0 and r['passedTests'] >= 60 and r['skippedTests'] == 0, r
 print(json.dumps(r, indent=2))
 PY
 xcrun simctl launch --terminate-running-process "$LOOP_DEVICE" com.billy.loop --uitesting

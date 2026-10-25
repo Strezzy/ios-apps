@@ -17,14 +17,14 @@ final class LoopUITests: XCTestCase {
         app.buttons["tool-crop"].tap()
         reveal(app.buttons["aspect-portrait"], in: app)
         app.buttons["aspect-portrait"].tap()
-        app.swipeDown()
+        reveal(app.otherElements["editorCanvas"], in: app)
         capture("Loop-Crop", app: app)
         reveal(app.buttons["tool-overlays"], in: app)
         app.buttons["tool-overlays"].tap()
         reveal(app.buttons["add-blur"], in: app)
         app.buttons["add-blur"].tap()
         XCTAssertTrue(app.buttons["trackOverlay"].exists)
-        app.swipeDown()
+        reveal(app.otherElements["editorCanvas"], in: app)
         capture("Loop-Overlays", app: app)
         reveal(app.buttons["tool-export"], in: app)
         app.buttons["tool-export"].tap()
@@ -58,14 +58,56 @@ final class LoopUITests: XCTestCase {
         capture("Loop-Settings-Light", app: app)
     }
 
+    @MainActor func testFilesPickerCanOpenAndCancel() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+        XCTAssertTrue(app.buttons["project-Coastal motion"].waitForExistence(timeout: 40))
+        let files = app.buttons["importFiles"]
+        reveal(files, in: app)
+        XCTAssertTrue(files.isEnabled)
+        files.tap()
+        let cancel = app.buttons["Cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 20))
+        capture("Loop-Files-Picker", app: app)
+        cancel.tap()
+        XCTAssertTrue(files.waitForExistence(timeout: 10))
+        XCTAssertTrue(files.isEnabled)
+    }
+
     @MainActor private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
-        for _ in 0..<5 {
-            if element.isHittable { return }
-            app.swipeDown()
-        }
-        for _ in 0..<12 {
-            if element.isHittable { return }
-            app.swipeUp()
+        XCTAssertTrue(element.waitForExistence(timeout: 10))
+        let editorScroll = app.scrollViews.containing(.other, identifier: "editorCanvas").firstMatch
+        let scroll = editorScroll.exists ? editorScroll : app.scrollViews.firstMatch
+        XCTAssertTrue(scroll.exists)
+        var previousY: CGFloat?
+        var stationaryAttempts = 0
+        var fallbackUp = true
+        for _ in 0..<14 {
+            guard element.exists else { XCTFail("The target disappeared while scrolling."); return }
+            let viewport = scroll.frame.insetBy(dx: 0, dy: 12)
+            let frame = element.frame
+            let fits = frame.minY >= viewport.minY && frame.maxY <= viewport.maxY
+            if element.isHittable && (fits || frame.height > viewport.height) { return }
+            if let previousY, abs(frame.minY - previousY) < 2 { stationaryAttempts += 1 }
+            else { stationaryAttempts = 0 }
+            previousY = frame.minY
+            if stationaryAttempts >= 2 && (frame.maxY > viewport.maxY || frame.minY < viewport.minY) {
+                XCTFail("The scroll view stopped moving before revealing the target.")
+                return
+            }
+            let up: Bool
+            if frame.maxY > viewport.maxY { up = true }
+            else if frame.minY < viewport.minY { up = false }
+            else {
+                // No visible offscreen geometry: try a small upward scroll first.
+                // Change direction only after two gestures made no progress.
+                if stationaryAttempts >= 2 { fallbackUp.toggle(); stationaryAttempts = 0 }
+                up = fallbackUp
+            }
+            let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: up ? 0.72 : 0.28))
+            let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: up ? 0.40 : 0.60))
+            start.press(forDuration: 0.01, thenDragTo: end)
         }
         XCTAssertTrue(element.isHittable)
     }

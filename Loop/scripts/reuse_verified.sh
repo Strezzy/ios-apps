@@ -24,7 +24,7 @@ from pathlib import Path
 r = json.load(open('Build/BUILD-REPORT.json'))
 t = json.load(open('Build/TEST-RESULTS.json'))
 assert r['sourceCommit'] == os.environ['GITHUB_SHA']
-assert t['failedTests'] == 0 and t['passedTests'] >= 25 and t['skippedTests'] == 0
+assert t['failedTests'] == 0 and t['passedTests'] >= 60 and t['skippedTests'] == 0
 assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha256']
 for name in ['Loop-Source.zip', 'Loop-XcodeProject.zip', 'Loop-Home.png', 'Loop-Icon.png']:
     assert (Path('Build') / name).is_file(), name

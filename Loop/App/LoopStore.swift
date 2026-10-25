@@ -245,7 +245,8 @@ import UniformTypeIdentifiers
 
     func setActive(_ active: Bool) {
         if !active {
-            for project in projects { flush(project) }
+            let pending = Set(saveTasks.keys)
+            for project in projects where pending.contains(project.id) { flush(project) }
             if isExporting, !isPaused { automaticallyPaused = true; isPaused = true; exportControl?.pause() }
             trackingControl?.cancel()
         } else if automaticallyPaused {

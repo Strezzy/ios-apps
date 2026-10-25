@@ -231,6 +231,65 @@ final class EncoderTests: XCTestCase {
         }
     }
 
+    func test4KRoundTripPreservesDimensionsAndCornerPixels() throws {
+        let size = PixelSize(width: 3840, height: 2160)
+        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let context = try XCTUnwrap(CGContext(data: nil, width: size.width, height: size.height,
+                                            bitsPerComponent: 8, bytesPerRow: size.width * 4, space: space,
+                                            bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue |
+                                                CGImageAlphaInfo.premultipliedLast.rawValue))
+        let halfWidth = CGFloat(size.width / 2), halfHeight = CGFloat(size.height / 2)
+        let colors: [[CGFloat]] = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0]]
+        for index in colors.indices {
+            let color = colors[index]
+            context.setFillColor(red: color[0], green: color[1], blue: color[2], alpha: 1)
+            context.fill(CGRect(x: index.isMultiple(of: 2) ? 0 : halfWidth,
+                                y: index < 2 ? 0 : halfHeight, width: halfWidth, height: halfHeight))
+        }
+        let original = try XCTUnwrap(context.makeImage())
+        let corners = [(8, 8), (size.width - 9, 8), (8, size.height - 9), (size.width - 9, size.height - 9)]
+        func pixel(_ image: CGImage, at point: (Int, Int)) throws -> [UInt8] {
+            let crop = try XCTUnwrap(image.cropping(to: CGRect(x: CGFloat(point.0), y: CGFloat(point.1), width: 1, height: 1)))
+            var bytes = [UInt8](repeating: 0, count: 4)
+            try bytes.withUnsafeMutableBytes { buffer in
+                let pixelContext = try XCTUnwrap(CGContext(data: buffer.baseAddress, width: 1, height: 1,
+                                                         bitsPerComponent: 8, bytesPerRow: 4, space: space,
+                                                         bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue |
+                                                             CGImageAlphaInfo.premultipliedLast.rawValue))
+                pixelContext.setBlendMode(.copy)
+                pixelContext.draw(crop, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+            }
+            return bytes
+        }
+        let expected = try corners.map { try pixel(original, at: $0) }
+        for format in AnimationFormat.allCases {
+            try autoreleasepool {
+                try withFile(format.fileExtension) { url in
+                    var settings = ExportSettings()
+                    settings.paletteSize = 64
+                    settings.dither = false
+                    let writer: any AnimationWriter
+                    if format == .gif {
+                        writer = try GIFEncoder(destination: url, size: size, frameCount: 1, settings: settings)
+                    } else {
+                        writer = try APNGEncoder(destination: url, size: size, frameCount: 1, settings: settings)
+                    }
+                    try writer.add(original, delay: 0.04, gifDelayCentiseconds: 4)
+                    try writer.finish()
+                    let source = try imageSource(url)
+                    XCTAssertEqual(CGImageSourceGetCount(source), 1)
+                    let decoded = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+                    XCTAssertEqual(decoded.width, size.width)
+                    XCTAssertEqual(decoded.height, size.height)
+                    for index in corners.indices {
+                        XCTAssertEqual(try pixel(decoded, at: corners[index]), expected[index],
+                                       "\(format.title) changed 4K corner \(index).")
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: Test helpers
 
     private func checkGIFPaletteRoundTrip(_ colorCount: Int) throws {
