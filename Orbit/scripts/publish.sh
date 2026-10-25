@@ -34,7 +34,7 @@ else
     Build/BUILD-REPORT.json Build/VALIDATION-REPORT.json Build/TEST-RESULTS.json \
     Build/SHA256SUMS.txt Build/Orbit-Icon.png \
     Build/Orbit-Home-Portrait.png Build/Orbit-Home-Landscape.png \
-    "${ORBIT_REUSE_ASSETS[@]}" \
+    ${ORBIT_REUSE_ASSETS[@]+"${ORBIT_REUSE_ASSETS[@]}"} \
     --target "$GITHUB_SHA" --title "Orbit $ORBIT_VERSION · A little more depth" \
     --notes-file Build/RELEASE-NOTES.md --draft
   gh release edit "$ORBIT_TAG" --draft=false --latest=false

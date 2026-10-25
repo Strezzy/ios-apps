@@ -62,7 +62,7 @@ xcodebuild -project Orbit.xcodeproj -scheme Orbit -configuration Debug \
   -destination "platform=iOS Simulator,id=$ORBIT_DEVICE" -derivedDataPath Build/Simulator \
   -resultBundlePath Build/Tests.xcresult -parallel-testing-enabled NO \
   -test-timeouts-enabled YES -default-test-execution-time-allowance 45 \
-  -maximum-test-execution-time-allowance 90 "${ORBIT_TEST_ARGS[@]}" CODE_SIGNING_ALLOWED=NO test \
+  -maximum-test-execution-time-allowance 90 ${ORBIT_TEST_ARGS[@]+"${ORBIT_TEST_ARGS[@]}"} CODE_SIGNING_ALLOWED=NO test \
   2>&1 | tee Build/test.log || ORBIT_TEST_STATUS=$?
 if [ -d Build/Tests.xcresult ]; then
   xcrun xcresulttool get test-results summary --path Build/Tests.xcresult --format json > "$ORBIT_SUMMARY" || true
