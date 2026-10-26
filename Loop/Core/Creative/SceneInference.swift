@@ -65,6 +65,7 @@ enum SceneModels {
         for y in 0..<h {for x in 0..<w {
             indices[shape.count-2]=NSNumber(value:y);indices[shape.count-1]=columns[x]
             let f=array[indices].floatValue
+            if logits && !f.isFinite {throw LoopError.encoding("The selection model returned invalid numerical values.")}
             let v=f.isFinite ? f:0
             values[y*w+x]=v;low=min(low,v);high=max(high,v)
         }}

@@ -49,7 +49,7 @@ struct SubjectPickerView:View {
                                 if mode=="select" {draft.points.append(SelectionPoint(x:point.x,y:point.y,include:include));draft.points=Array(draft.points.suffix(24));segment()}
                                 else {paint()}
                             })
-                    }.frame(height:360).accessibilityIdentifier("subjectPickerCanvas")
+                    }.frame(height:360).accessibilityElement(children:.contain).accessibilityLabel("Subject selection canvas").accessibilityIdentifier("subjectPickerCanvas")
                     Picker("Selection tool",selection:$mode) {Text("Choose").tag("select");Text("Keep").tag("keep");Text("Remove").tag("remove")}.pickerStyle(.segmented)
                     if mode=="select" {
                         Toggle("Add to selection",isOn:$include)

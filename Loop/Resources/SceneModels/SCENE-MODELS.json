@@ -44,8 +44,15 @@
         },
         {
           "path": "SAM2TinyMaskDecoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel",
-          "bytes": 75239,
-          "sha256": "24bd23b9267c8ccc172a5370bc3507d4e11f7a33ba14d529dfd904e7ebf50847"
+          "bytes": 75109,
+          "sha256": "7faf54618f5855efc9cf2d3c09d199eef64d14fe84aa59916bbbe03dc98bead9",
+          "upstreamSHA256": "24bd23b9267c8ccc172a5370bc3507d4e11f7a33ba14d529dfd904e7ebf50847",
+          "localGraphChanges": [
+            "conv_transpose output_shape removed",
+            "pow(x,2) -> mul(x,x)",
+            "conv_transpose output_shape removed"
+          ],
+          "unchangedWeightsSHA256": "75d30eb00ad294872463b07efbfa17b536ae9ec4168f9b78f12a4fb57245ee94"
         },
         {
           "path": "SAM2TinyMaskDecoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin",

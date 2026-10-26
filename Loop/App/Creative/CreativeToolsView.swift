@@ -36,7 +36,7 @@ struct CreativeToolsView:View {
                 Button("Save this look",systemImage:"heart.badge.plus"){lookName="My look";naming=true}.font(.subheadline).buttonStyle(.glass)
             }
             LoopCard {
-                HStack {Label("Who are we editing?",systemImage:"person.crop.rectangle").font(.headline);Spacer();Button{editID=nil;choosing=true}label:{Image(systemName:"plus.circle")}.accessibilityLabel("Choose a subject").disabled((settings.scene?.subjects.count ?? 0)>=3)}
+                HStack {Label("Who are we editing?",systemImage:"person.crop.rectangle").font(.headline);Spacer();Button{editID=nil;choosing=true}label:{Label("Choose",systemImage:"plus.circle").font(.subheadline)}.buttonStyle(.glass).accessibilityLabel("Choose a subject").accessibilityIdentifier("chooseSubject").disabled((settings.scene?.subjects.count ?? 0)>=3)}
                 Picker("Apply new effects to",selection:scene(\.selectedID)) {
                     Text("Everyone / whole clip").tag(nil as UUID?)
                     ForEach(settings.scene?.subjects ?? []){subject in Text(subject.name).tag(Optional(subject.id))}
