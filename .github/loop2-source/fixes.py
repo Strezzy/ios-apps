@@ -7,3 +7,57 @@ new='''        let low = CIVector(x: CGFloat(lut.domainMin[0]), y: CGFloat(lut.d
         let prepared = try RealismKernels.color("loopLUTDomain", extent: image.extent, arguments: [image, low, high])'''
 assert s.count(old)==1
 p.write_text(s.replace(old,new))
+p=Path('Loop/Core/Creative/CreativeModels.swift');s=p.read_text()
+s=s.replace('var value=old;value.layers=[];value.tracks=[];value.bypass=false','var value=old;value.layers=[];value.tracks=[];value.bypass=false;value.faceTuning=nil;value.bodyTuning=nil;value.lut=nil;value.backdropTuning=nil')
+s=s.replace('scene.depthEnabled=true;scene.depthFog=0;scene.relight=0.15;scene.matchLighting=0.3','scene.depthEnabled=true;scene.depthFog=0;scene.depthBlur=0;scene.focus=0.65;scene.lightDirection = -0.5;scene.relight=0.15;scene.matchLighting=0.3')
+p.write_text(s)
+p=Path('Loop/App/Creative/CreativeToolsView.swift');s=p.read_text().replace('DisclosureGroup("Depth & lighting") {','DisclosureGroup("Depth & lighting") {')
+s=s.replace('}.font(.subheadline)\n            }\n            DisclosureGroup("My effect mix', '}.font(.subheadline).accessibilityIdentifier("sceneAdvanced")\n            }\n            DisclosureGroup("My effect mix')
+s=s.replace('}.font(.subheadline.weight(.medium)).padding(.horizontal,4)','}.font(.subheadline.weight(.medium)).padding(.horizontal,4).accessibilityIdentifier("effectMixDisclosure")')
+p.write_text(s)
+p=Path('Loop/App/ExportOptionsView.swift');s=p.read_text()
+s=s.replace('}.font(.subheadline.weight(.semibold))','}.font(.subheadline.weight(.semibold)).accessibilityIdentifier("exportAdvanced")')
+p.write_text(s)
+Path('Loop/UITests/CreativeUITests.swift').write_text(r'''import XCTest
+
+final class CreativeUITests: XCTestCase {
+    override func setUpWithError() throws {continueAfterFailure=false}
+    @MainActor private func reveal(_ element:XCUIElement,in app:XCUIApplication) {
+        for _ in 0..<8 {
+            if element.isHittable{return}
+            let scroll=app.scrollViews.firstMatch
+            let start=scroll.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.88))
+            let end=scroll.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.28))
+            start.press(forDuration:0.04,thenDragTo:end)
+        }
+    }
+    @MainActor private func capture(_ name:String,_ app:XCUIApplication) {
+        let file=XCTAttachment(screenshot:app.screenshot());file.name=name;file.lifetime = .keepAlways;add(file)
+    }
+    @MainActor func testSimpleLooksSubjectAndSaveControls() throws {
+        let app=XCUIApplication();app.launchArguments=["--uitesting"];app.launch()
+        let project=app.buttons["project-Coastal motion"]
+        XCTAssertTrue(project.waitForExistence(timeout:40));reveal(project,in:app);project.tap()
+        XCTAssertTrue(app.otherElements["editorCanvas"].waitForExistence(timeout:20))
+        app.buttons["tool-effects"].tap()
+        let look=app.buttons["world-winter"];XCTAssertTrue(look.waitForExistence(timeout:10));reveal(look,in:app)
+        XCTAssertTrue(look.isHittable);capture("Loop2-Simple-Looks",app)
+        XCTAssertFalse(app.switches["Use scene depth"].isHittable,"Advanced depth controls must start collapsed.")
+        let choose=app.buttons["Choose a subject"];reveal(choose,in:app);choose.tap()
+        XCTAssertTrue(app.otherElements["subjectPickerCanvas"].waitForExistence(timeout:10))
+        XCTAssertTrue(app.segmentedControls.buttons["Keep"].exists)
+        XCTAssertTrue(app.segmentedControls.buttons["Remove"].exists)
+        capture("Loop2-Choose-Subject",app);app.navigationBars.buttons["Cancel"].tap()
+        let save=app.buttons["tool-export"];reveal(save,in:app);save.tap()
+        XCTAssertTrue(app.staticTexts["Ready to save"].waitForExistence(timeout:10))
+        XCTAssertFalse(app.buttons["fps-24"].isHittable,"Advanced export controls must start collapsed.")
+        capture("Loop2-Simple-Save",app)
+        let advanced=app.buttons["exportAdvanced"]
+        if advanced.exists {reveal(advanced,in:app);advanced.tap()} else {
+            let label=app.staticTexts["Size, smoothness & advanced options"];reveal(label,in:app);label.tap()
+        }
+        let rate=app.buttons["fps-24"];reveal(rate,in:app);XCTAssertTrue(rate.isHittable)
+        capture("Loop2-Optional-Details",app)
+    }
+}
+''')
