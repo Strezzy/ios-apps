@@ -1,0 +1,53 @@
+name: Diagnose Loop iOS model runtime
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-ios-model-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 9
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build minimal iOS inference diagnostic
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,textwrap
+          from pathlib import Path
+          raw=Path('.github/workflows/loop2-model-probe.yml').read_text()
+          s=textwrap.dedent(raw.split('<<\'SWIFT\'\n',1)[1].split('\n          SWIFT',1)[0])
+          root=Path.cwd()
+          s=s.replace('FileManager.default.currentDirectoryPath',repr(str(root)).replace("'",'"'))
+          s=s.replace('URL(fileURLWithPath:"Loop/Tests/Fixtures/portrait-fixture.png")','URL(fileURLWithPath:"'+str(root/'Loop/Tests/Fixtures/portrait-fixture.png')+'")')
+          s=s.replace('[MLComputeUnits.cpuAndGPU,MLComputeUnits.all]','[MLComputeUnits.cpuOnly,MLComputeUnits.cpuAndGPU,MLComputeUnits.all]')
+          s=s.replace('for count in [1,2,4,14]','for count in [1,4,14]')
+          s=s.replace('for compact in [false,true]','for compact in [true]')
+          Path(os.environ['RUNNER_TEMP']+'/iosprobe.swift').write_text(s)
+          PY
+          xcrun swiftc -O -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -target arm64-apple-ios26.0-simulator "$RUNNER_TEMP/iosprobe.swift" -o "$RUNNER_TEMP/iosprobe"
+      - name: Boot and run the minimal diagnostic
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          chosen=next(x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable'))
+          udid=chosen['udid'];print(chosen,flush=True)
+          subprocess.run(['xcrun','simctl','boot',udid])
+          subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          with open(os.environ['RUNNER_TEMP']+'/ios-model-probe.log','w') as f:
+              p=subprocess.run(['xcrun','simctl','spawn',udid,os.environ['RUNNER_TEMP']+'/iosprobe'],stdout=f,stderr=subprocess.STDOUT,timeout=240)
+          print(open(os.environ['RUNNER_TEMP']+'/ios-model-probe.log').read())
+          p.check_returncode()
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-iOS-Model-Diagnostic
+          path: ${{ runner.temp }}/ios-model-probe.log
