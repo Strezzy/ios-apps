@@ -58,6 +58,9 @@ struct EffectSettings: Codable, Equatable, Sendable {
     var matteTuning: MatteTuning?
     var atmosphereTuning: AtmosphereTuning?
     var backdropTuning: BackdropTuning?
+    var tracks: [EffectTrack]?
+    var scene: SceneSettings?
+    var lut: CubeLUT?
     var activeLayers: [EffectLayer] {
         guard !bypass else { return [] }
         // One bounded layer per category, even for hand-edited project JSON.
@@ -66,15 +69,29 @@ struct EffectSettings: Codable, Equatable, Sendable {
         }
     }
     func layer(_ category: EffectCategory) -> EffectLayer? {
-        layers.last { EffectLibrary.preset($0.preset)?.category == category }
+        if let track = tracks?.last(where: { EffectLibrary.preset($0.preset)?.category == category && $0.subjectID == scene?.selectedID }) {
+            return EffectLayer(preset:track.preset,amount:track.amount,enabled:track.enabled)
+        }
+        return layers.last { EffectLibrary.preset($0.preset)?.category == category }
     }
     mutating func select(_ id: String?, category: EffectCategory) {
+        if tracks != nil {
+            let selected = scene?.selectedID
+            tracks?.removeAll { EffectLibrary.preset($0.preset)?.category == category && $0.subjectID == selected }
+            layers.removeAll { EffectLibrary.preset($0.preset)?.category == category }
+            if let id { add(id, target: selected == nil ? "all" : "subject", subjectID:selected) }
+            if category == .face { faceTuning=nil };if category == .body { bodyTuning=nil }
+            return
+        }
         if category == .face { faceTuning = nil }
         if category == .body { bodyTuning = nil }
         layers.removeAll { EffectLibrary.preset($0.preset)?.category == category }
         if let id, EffectLibrary.preset(id)?.category == category { layers.append(EffectLayer(preset: id)) }
     }
     mutating func setAmount(_ value: Double, category: EffectCategory) {
+        if let i = tracks?.lastIndex(where: { EffectLibrary.preset($0.preset)?.category == category && $0.subjectID == scene?.selectedID }) {
+            tracks?[i].amount=min(1,max(0,value.isFinite ? value:1));return
+        }
         guard let index = layers.lastIndex(where: { EffectLibrary.preset($0.preset)?.category == category }) else { return }
         layers[index].amount = min(1, max(0, value.isFinite ? value : 1))
     }
@@ -110,7 +127,10 @@ enum EffectLibrary {
             ("warmPortrait", "Warm Portrait"), ("coolPortrait", "Cool Portrait"),
             ("portraitEditorial", "Editorial Portrait"), ("youthRetouch", "Youthful Retouch"),
             ("ageMature", "Mature · Neural"), ("ageOlder", "Older · Neural"),
-            ("faceBlur", "Face Blur"), ("facePixel", "Face Pixelation")
+            ("faceBlur", "Face Blur"), ("facePixel", "Face Pixelation"),
+            ("hairCopper", "Copper Hair"), ("hairRose", "Rose Hair"), ("hairSilver", "Silver Hair"), ("hairMidnight", "Midnight Hair"),
+            ("lipRose", "Rose Lip Tint"), ("lipBerry", "Berry Lip Tint"), ("cheekWarm", "Soft Blush"),
+            ("eyeBlue", "Blue Iris"), ("eyeHazel", "Hazel Iris"), ("smileGlow", "Smile Glow")
         ]) + group(.body, [
             ("bodySculpt", "Body Sculpt"), ("waistDefine", "Defined Waist"), ("waistFull", "Fuller Waist"),
             ("shouldersBroad", "Broader Shoulders"), ("shouldersFine", "Narrower Shoulders"),
