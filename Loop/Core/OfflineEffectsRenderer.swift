@@ -22,8 +22,8 @@ enum OfflineEffectsRenderer {
                                     time: 0, tuning: MatteTuning(), session: nil)
     }
     static func apply(_ input: CIImage, settings: EffectSettings, time: Double,
-                      preview: Bool, analysis: EffectsAnalysis? = nil, session: RealismSession? = nil) throws -> CIImage {
-        try RealismCompositor.apply(input, settings: settings, time: time, preview: preview, analysis: analysis, session: session)
+                      preview: Bool, analysis: EffectsAnalysis? = nil, session: RealismSession? = nil, transparent: Bool = false) throws -> CIImage {
+        try RealismCompositor.apply(input, settings: settings, time: time, preview: preview, analysis: analysis, session: session, transparent: transparent)
     }
 
     static func thumbnail(_ source: CGImage, preset: EffectPreset, time: Double,

@@ -1,35 +1,29 @@
-# Loop 1.3.1 (build 8): rebuilt portrait and atmosphere effects
+# Loop 2.0.0 (build 9): more power, simpler controls
 
-## Finishing fixes
+## Easy first, detailed when needed
+One-tap cinematic looks, saved looks, clear subject selection and editable effect cards replace the need for a crowded studio timeline. Advanced timing, mask repair, lighting and output controls stay in expandable sections. Existing projects, full-length imports, crop tracking, privacy overlays and exports remain available.
 
-Edge expansion and contraction now operate locally on the matte boundary, without raising empty background or making an opaque subject translucent. Weather uses a spatial particle neighborhood instead of evaluating the entire particle set for every output pixel. Face edits are composed before body deformation, so the transformed face follows the body. Foreground stabilization responds immediately to a changed stability setting. These refinements retain the new model-based effects described below.
+## Select, track and refine
+Tap an object with bundled SAM2 selection, add/remove selection points, name up to three subjects and track them across the clip. The existing appearance-checked tracker supplies each subject's path; SAM2 refines its edges at render time. Paint keep/remove corrections that follow the tracked box. Incomplete tracks block scoped export instead of silently following an unrelated subject. This is not SAM2's recurrent video predictor or guaranteed re-identification through complete occlusion.
 
-## Replaced, not repainted
+## Depth, portraits and environments
+Bundled Depth Anything V2 estimates relative depth for layered weather, distant fog, focus blur and approximate directional lighting. Optional optical-flow-assisted stabilization reduces mask/depth discontinuities. Analyze camera movement once to anchor weather to a 2D translation path. Six editable cinematic presets combine existing photographic backgrounds, weather, color and portrait treatments.
 
-The illustrated face masks and flat body silhouettes from 1.2 are removed. The existing cinematic grades, lens looks, crop and overlay tools, video exports and full-video import default remain.
+A bundled 478-point MediaPipe face model improves facial placement and supplies expression scores. Hair segmentation, hair recolors, lip and iris colors and a smile-reactive treatment join source-pixel face/body reshaping. Background protection estimates pixels exposed by body reshaping. These are local compositing/reshaping tools, not full scene reconstruction, cloth replacement or realistic synthesis of hidden content.
 
-Face presets now deform the source image: face width, jaw, chin, eyes, nose and lips, plus edge-preserving skin smoothing, detail and tone. Each has adjustable controls. Mature and Older use a bundled, converted Fast-AgingGAN Core ML model. Youthful Retouch is explicitly a retouch preset, not trained age regression. Automatic face blur and pixelation are available; review detections before relying on privacy protection.
+## Make it move
+Find suggested loop endpoints, add an overlap crossfade, freeze a subject or freeze its surroundings, and add up to three motion echoes. The overlap loop is shorter and silent; reverse/ping-pong keep their existing behavior. A still frame must be selected for cinemagraphs. Fast motion, disocclusion and moving cameras can reveal seams or frozen-background holes.
 
-Body presets use pose-guided source-pixel reshaping for waist, shoulders, hips, torso, arms and legs. They do not paint a body-shaped texture over the subject, invent clothing, or reconstruct hidden limbs. Strong shape edits can distort nearby scenery.
+## Mix and save
+Stack up to twelve editable effects, including several from the same category. Scope supported effects to people, backgrounds or tracked subjects. Set start/end times, fades and strength points. Save reusable looks locally and import 3D .cube LUTs. Shape preparation precedes backgrounds and grading; this is not an arbitrary node compositor.
 
-## Cleaner foreground separation
+## Export
+GIF, APNG, H.264 and HEVC remain. Optional stable GIF palettes reduce color flicker and enable changed-region encoding. Transparent APNG and HEVC-with-alpha MOV remove the detected background. HEVC offers a floating-point-to-10-bit HLG export path for HDR source video, subject to encoder support. This does not preserve Dolby Vision metadata. Display-range LUTs and some stylistic effects can compress HDR highlights. Previews remain SDR; assess HDR exports in an HDR-capable viewer. Transparent video support varies by viewer.
 
-Studio quality uses bundled MODNet portrait alpha matting, source-guided edge refinement and motion-gated temporal stabilization. Accurate native matting remains available. Foreground-object mode can protect salient non-person objects. Edge, feather and stability controls plus preview-only mask inspection help with difficult clips. Seeking and changing direction reset temporal state rather than reusing an unrelated silhouette.
+All models and resources ship with the app, with no runtime downloads, account or cloud processing. The larger offline model bundle increases installation size. Complex masks, depth and neural effects may substantially slow preview/export. Physical-iPhone speed, thermals and long 4K exports remain to be measured; no real-time 4K guarantee is made.
 
-## Layered atmosphere and photographic backgrounds
+Validation reports identify the exact compiled source and actual focused test results. Update the existing com.billy.loop installation and retain its data container.
 
-All ten atmosphere effects use the new GPU renderer, including soft rain streaks, depth-scaled snow, embers, fireflies, confetti, refractive bubbles, volumetric-style fog and light leaks. Choose layered, behind-subject or foreground placement and adjust density, size, speed and wind. Rear particles are occluded by the foreground mask. This is layered compositing, not full 3D scene reconstruction.
 
-Six CC0 photographic backgrounds from Poly Haven join the retained background collection. Photographic backgrounds support framing and zoom; background blur, exposure and warmth can be adjusted. The six embedded photographs are 2560 x 1440 perspective projections of original 4K HDRI assets. Imported photos retain the existing up-to-4096-pixel support.
-
-## Offline, exports and compatibility
-
-All shaders, models and photographic assets are bundled. No account, runtime downloads or server rendering. Existing GIF/APNG/MP4/HEVC output, audio rules, trimming, crop tracking and overlay timing remain. New video imports still select the complete clip. Old projects continue to open; retired illustrated-effect identifiers are ignored, while other edits are preserved.
-
-Neural aging processes a 512-pixel face crop, then composites it into the source-resolution frame. It does not generate native-4K facial detail or guarantee an exact age, identity preservation, flicker-free motion or real-time playback. Heavy effects can reduce preview rate and slow export. HDR sources still export as SDR.
-
-## Verification
-
-The release requires native arm64 compilation and package verification, plus a separate focused XCTest run covering shaders, source-pixel warps, foreground occlusion, deterministic animation, bundled models, migration and photographic assets. A real portrait fixture also exercises detection, matting and rendering. Reports record actual results. The long full-editor UI suite and physical-iPhone validation are not claimed. Model conversion parity checks ran with native Core ML on macOS. Full provenance and limitations are in `docs/REALISM-RESEARCH.md`.
-
-Update the existing `com.billy.loop` installation and retain its data container to keep projects and exports.
+### Coordinate and runtime safeguards
+Tensor masks, hair/feature masks and bitmap readbacks follow Core Image top-first memory rows without duplicate vertical flips. Native regression checks cover known mask positions, half-precision tensor channels, real hair placement and translated images. Flat selection outputs are rejected rather than treated as the entire frame. An invalid accelerated SAM execution retries the complete pipeline using the CPU and retains that safer backend; no replacement mask is fabricated. When Vision dense-flow model assets are unavailable, bounded global translation alignment is used; this is not dense non-rigid flow or recovered 3D motion.
