@@ -171,7 +171,7 @@ enum RealismAnalysis {
         let session = supplied ?? RealismSession()
         session.lock.lock(); defer { session.lock.unlock() }
         let extent = input.extent
-        let signature = "\(faces)-\(person)-\(body)-\(tuning.subject)-\(tuning.quality)"
+        let signature = "\(faces)-\(person)-\(body)-\(tuning.subject)-\(tuning.quality)-\(tuning.stability)"
         let dt = time-session.lastTime
         if extent.size != session.size || session.signature != signature || !dt.isFinite || abs(dt) > 0.22 || (dt != 0 && session.direction != 0 && dt * session.direction < 0) {
             session.reset()

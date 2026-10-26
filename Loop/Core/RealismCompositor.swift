@@ -15,13 +15,13 @@ enum RealismCompositor {
         let analysis=try supplied ?? RealismAnalysis.analyze(input,faces:face != nil,person:background != nil || body != nil || weather != nil,
             body:body != nil,preview:preview,time:time,tuning:matte,session:session)
         var surface=PortraitSurface(image:input,mask:analysis.personMask)
-        if let body {
-            surface=try PortraitTransforms.body(surface,bodies:analysis.bodies,
-                tuning:settings.bodyTuning ?? BodyTuning.recipe(body.preset),amount:clamp(body.amount))
-        }
         if let face {
             surface=try PortraitTransforms.face(surface,id:face.preset,geometry:analysis.geometry,
                 tuning:settings.faceTuning ?? FaceTuning.recipe(face.preset),amount:clamp(face.amount))
+        }
+        if let body {
+            surface=try PortraitTransforms.body(surface,bodies:analysis.bodies,
+                tuning:settings.bodyTuning ?? BodyTuning.recipe(body.preset),amount:clamp(body.amount))
         }
         if let mask=surface.mask {surface.mask=try RealismAnalysis.refined(mask,image:surface.image,tuning:matte)}
         if preview,matte.showMask,let mask=surface.mask{return mask}

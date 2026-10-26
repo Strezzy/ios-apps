@@ -57,14 +57,16 @@ float4 loopTemporalMatte(sample_t current,sample_t previous,sample_t nowImage,sa
 }
 float4 loopRefineMatte(sampler mask,sampler guide,float2 step,float edge,float feather,destination dest) {
     float2 p=dest.coord();float3 c=guide.sample(guide.transform(p)).rgb;
-    float total=0,weight=0;
+    float total=0,weight=0,lo=1,hi=0;
     for(int y=-2;y<=2;y++)for(int x=-2;x<=2;x++) {
         float2 d=float2(x,y)*step;
         float3 s=guide.sample(guide.transform(p+d)).rgb;
         float w=exp(-float(x*x+y*y)*.35-dot(s-c,s-c)/.008);
-        total+=mask.sample(mask.transform(p+d)).r*w;weight+=w;
+        float value=mask.sample(mask.transform(p+d)).r;
+        total+=value*w;weight+=w;lo=min(lo,value);hi=max(hi,value);
     }
-    float a=clamp(total/max(weight,.0001)+edge*.14,0.0,1.0);
+    float a=clamp(total/max(weight,.0001),0.0,1.0);
+    a=mix(a,edge>=0?hi:lo,clamp(abs(edge),0.0,1.0));
     float tightened=smoothstep(.025,.975,a);
     a=mix(tightened,a,clamp(feather,0.0,1.0));
     return float4(a,a,a,1);
@@ -90,19 +92,22 @@ float4 loopWeather(sampler scene,float2 dimensions,float time,float mode,float l
         rgb=mode==8?float3(1.0,.58,.26):float3(.72,.78,.82);
         return float4(rgb*alpha,alpha);
     }
-    const int count=112;
-    float2 texel=float2(1.0)/dimensions;
-    for(int i=0;i<count;i++) {
-        float fi=float(i)+layer*127.0;
-        float seed=hash21(float2(fi,3.1));
+    // A spatial neighborhood has bounded cost independent of the total field size.
+    // Particle coordinates follow the same flow, avoiding jumps at tile boundaries.
+    bool rise=(mode==2||mode==5||mode==9);
+    float cellSize=mode==5?.18*depth*(.5+size):(mode==1?.075:.09);
+    float velocity=(mode==1?.58:(mode==5?.055:.12))*depth;
+    float2 flow=float2(wind*.035*depth,(rise?1.0:-1.0)*velocity);
+    float2 tile=floor((p-flow*t)/cellSize);
+    for(int cy=-1;cy<=1;cy++)for(int cx=-1;cx<=1;cx++) {
+        float2 cell=tile+float2(cx,cy);
+        float fi=hash21(cell+layer*127.0)*1024.0;
+        float seed=hash21(cell+float2(layer*31.0,3.1));
         if(seed>density*.85+.06) continue;
-        float hx=hash21(float2(fi,17.0)),hy=hash21(float2(fi,53.0));
-        float rad=(.002+.004*hash21(float2(fi,29.0)))*depth*(.5+size);
-        float vel=(.10+.2*hy)*depth;
-        bool rise=(mode==2||mode==5||mode==9);
-        float y=fract(hy+(rise?1.0:-1.0)*t*vel);
-        float x=fract(hx+t*wind*.025*depth+sin(t*.35+fi)*.012)*ratio;
-        float2 d=p-float2(x,y);
+        float hx=hash21(cell+float2(17.0,layer*53.0)),hy=hash21(cell+float2(layer*13.0,53.0));
+        float rad=(.002+.004*hash21(cell+29.0))*depth*(.5+size);
+        float2 center=(cell+float2(.15+.7*hx+sin(t*.35+fi)*.10,.15+.7*hy))*cellSize+flow*t;
+        float2 d=p-center;
         float a=0;float3 col=float3(.9,.94,1);
         if(mode==1) {
             float2 dir=normalize(float2(wind*.3,-1.0));

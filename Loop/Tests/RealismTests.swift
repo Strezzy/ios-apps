@@ -102,6 +102,9 @@ final class RealismTests: XCTestCase {
         let source=try XCTUnwrap(CIImage(contentsOf:url))
         let analysis=try RealismAnalysis.analyze(source,faces:true,person:true,body:false,preview:false,time:0,tuning:MatteTuning(),session:nil)
         XCTAssertFalse(analysis.geometry.isEmpty,"The real portrait must produce usable landmarks.")
+        let alpha=try XCTUnwrap(analysis.personMask)
+        XCTAssertLessThan(color(alpha,x:500,y:500)[0],100,"Background must not become opaque foreground.")
+        XCTAssertGreaterThan(color(alpha,x:256,y:256)[0],150,"The visible torso must remain foreground.")
         let folder=FileManager.default.urls(for:.documentDirectory,in:.userDomainMask)[0].appendingPathComponent("LoopRealismChecks")
         try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
         func write(_ image:CIImage,_ name:String) throws {
@@ -122,6 +125,50 @@ final class RealismTests: XCTestCase {
         var settings=EffectSettings();settings.select("rain",category:.atmosphere)
         settings.select("ph_forest_slope",category:.background)
         try write(try RealismCompositor.apply(source,settings:settings,time:1.2,preview:false,analysis:analysis,session:nil),"layered-rain")
+    }
+
+    func testEdgeExpansionDoesNotLiftEmptyBackground() throws {
+        let image=CIImage(color:.black).cropped(to:extent)
+        var tuning=MatteTuning();tuning.edge=1
+        let result=try RealismAnalysis.refined(image,image:image,tuning:tuning)
+        XCTAssertEqual(color(result)[0],0)
+    }
+    func testEdgeContractionPreservesOpaqueInterior() throws {
+        let image=CIImage(color:.white).cropped(to:extent)
+        var tuning=MatteTuning();tuning.edge = -1
+        let result=try RealismAnalysis.refined(image,image:image,tuning:tuning)
+        XCTAssertEqual(color(result)[0],255)
+    }
+    func testParticleFieldsAreResolutionIndependent() throws {
+        let small=CIImage(color:.black).cropped(to:extent)
+        let large=CIImage(color:.black).cropped(to:CGRect(x:0,y:0,width:1024,height:1024))
+        var tuning=AtmosphereTuning();tuning.placement="front";tuning.density=1
+        for id in ["rain","snow","bubbles","embers"] {
+            let a=try RealismAtmosphere.apply(small,id:id,time:1.2,mask:nil,amount:1,tuning:tuning)
+            let b=try RealismAtmosphere.apply(large,id:id,time:1.2,mask:nil,amount:1,tuning:tuning)
+            XCTAssertEqual(a.extent,extent);XCTAssertEqual(b.extent,large.extent)
+            XCTAssertGreaterThan(color(b,x:512,y:512)[3],250)
+        }
+    }
+
+    func testAllWeatherModesRenderPortraitFrames() throws {
+        let bounds=CGRect(x:0,y:0,width:128,height:224)
+        let image=CIImage(color:CIColor(red:0.12,green:0.2,blue:0.25)).cropped(to:bounds)
+        var tuning=AtmosphereTuning();tuning.placement="front";tuning.density=0.8
+        for id in RealismAtmosphere.modes {
+            let result=try RealismAtmosphere.apply(image,id:id,time:3.7,mask:nil,amount:0.7,tuning:tuning)
+            XCTAssertEqual(result.extent,bounds,id)
+            XCTAssertGreaterThan(color(result,x:64,y:112)[3],250,id)
+            XCTAssertGreaterThan(color(result,x:2,y:2)[3],250,id)
+        }
+    }
+    func testZeroStrengthDoesNotAlterSourceOrRequireDetection() throws {
+        let image=CIImage(color:CIColor(red:0.3,green:0.5,blue:0.7)).cropped(to:extent)
+        var settings=EffectSettings();settings.select("ageOlder",category:.face)
+        settings.setAmount(0,category:.face)
+        let result=try RealismCompositor.apply(image,settings:settings,time:0,preview:false,analysis:EffectsAnalysis(),session:nil)
+        XCTAssertEqual(color(result),color(image))
+        XCTAssertEqual(result.extent,extent)
     }
 
 }

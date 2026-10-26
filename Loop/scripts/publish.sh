@@ -14,9 +14,13 @@ assert hashlib.sha256(Path('Build/Loop.ipa').read_bytes()).hexdigest() == r['sha
 with open('Build/RELEASE-NOTES.md', 'w') as f:
     f.write(open('docs/RELEASE.md').read())
     if build_only_profile():
-        f.write('\nValidation scope: native arm64 Release build and package/checksum verification. '
-                'Simulator unit and interface tests were not run for this release, at the app owner\'s request. '
-                'Physical-device and subject-crossing validation will be performed by the app owner.\n')
+        focused = json.load(open('Build/FOCUSED-REALISM-TESTS.json'))
+        assert focused['sourceCommit'] == r['sourceCommit']
+        assert focused['passedTests'] >= 24 and focused['failedTests'] == 0 and focused.get('skippedTests', 0) == 0
+        f.write(f"\nValidation: native arm64 Release build and package/checksum verification passed. "
+                f"Focused simulator renderer/model/migration checks: {focused['passedTests']} passed, "
+                f"{focused['failedTests']} failed, {focused.get('skippedTests', 0)} skipped. "
+                "The complete editor interface suite and physical-device tests were not run.\n")
     else:
         t = json.load(open('Build/TEST-RESULTS.json'))
         f.write(f"\nAutomated tests: {t['passedTests']} passed, {t['failedTests']} failed, {t['skippedTests']} skipped.\n")
@@ -27,7 +31,7 @@ LOOP_VERSION=$(python3 -c 'import json;r=json.load(open("Build/BUILD-REPORT.json
 LOOP_ASSETS=(Build/Loop.ipa Build/Loop-Source.zip Build/Loop-XcodeProject.zip
   Build/BUILD-REPORT.json Build/SHA256SUMS.txt Build/Loop-Icon.png)
 if [ "$(python3 scripts/verify_release.py --mode)" = 'build-only' ]; then
-  LOOP_ASSETS+=(Build/VALIDATION-REPORT.json)
+  LOOP_ASSETS+=(Build/VALIDATION-REPORT.json Build/FOCUSED-REALISM-TESTS.json Build/REALISM-ASSET-REPORT.json Build/REALISM-RESEARCH.md Build/Loop-Realism-Samples.zip)
 else
   LOOP_ASSETS+=(Build/TEST-RESULTS.json Build/Loop-Home.png Build/Loop-Editor.png
     Build/Loop-Live-Effects.png Build/Loop-Live-Pixelation.png Build/Loop-Precision-Zoom.png

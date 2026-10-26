@@ -1,6 +1,6 @@
 {
   "profile": "build-only",
-  "version": "1.3.0",
-  "build": "7",
-  "reason": "Owner requested scoped validation rather than the lengthy full simulator/UI suite. Native release build and package checks are mandatory. Additional focused realism and model conversion checks are recorded separately; physical iPhone testing is not claimed."
+  "version": "1.3.1",
+  "build": "8",
+  "reason": "Native device compilation and package verification plus separately required focused renderer/model/migration XCTest checks. The lengthy full editor interface suite and physical-device validation are not run."
 }

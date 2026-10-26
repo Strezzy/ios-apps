@@ -1,4 +1,8 @@
-# Loop 1.3.0 (build 7): rebuilt portrait and atmosphere effects
+# Loop 1.3.1 (build 8): rebuilt portrait and atmosphere effects
+
+## Finishing fixes
+
+Edge expansion and contraction now operate locally on the matte boundary, without raising empty background or making an opaque subject translucent. Weather uses a spatial particle neighborhood instead of evaluating the entire particle set for every output pixel. Face edits are composed before body deformation, so the transformed face follows the body. Foreground stabilization responds immediately to a changed stability setting. These refinements retain the new model-based effects described below.
 
 ## Replaced, not repainted
 
