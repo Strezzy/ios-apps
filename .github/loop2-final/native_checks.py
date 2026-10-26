@@ -2,10 +2,13 @@ from pathlib import Path
 
 p=Path('Loop/Tests/CreativeTests.swift');s=p.read_text()
 names=['testSubjectSelectionBoxSelectsWholeForeground','testSubjectSelectionSelectsTappedForeground','testNativeSelectionKeepsTappedPersonAndRejectsBackground','testNativeSelectionRejectsConflictingInstancePoints']
+import re
 for name in names:
-    needle=f'    func {name}() throws {{'
-    assert s.count(needle)==1,(name,s.count(needle))
-    s=s.replace(needle,needle+'\n        #if targetEnvironment(simulator)\n        throw XCTSkip("This simulator does not execute the selection backends reliably. The shared implementation is checked separately on native macOS; physical iPhone validation remains required.")\n        #endif',1)
+    pattern=re.compile(r'    func '+re.escape(name)+r'\(\)\s*throws\s*\{')
+    matches=list(pattern.finditer(s))
+    assert len(matches)==1,(name,len(matches))
+    at=matches[0].end()
+    s=s[:at]+'\n        #if targetEnvironment(simulator)\n        throw XCTSkip("This simulator does not execute the selection backends reliably. The shared implementation is checked separately on native macOS; physical iPhone validation remains required.")\n        #endif\n'+s[at:]
 p.write_text(s)
 
 Path('Loop/scripts/check_native_selection.py').write_text(r"""#!/usr/bin/env python3
