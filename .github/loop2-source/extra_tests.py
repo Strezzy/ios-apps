@@ -46,8 +46,8 @@ final class CreativeExportTests: XCTestCase {
             let pool=try XCTUnwrap(adaptor.pixelBufferPool);var value:CVPixelBuffer?
             XCTAssertEqual(CVPixelBufferPoolCreatePixelBuffer(nil,pool,&value),kCVReturnSuccess)
             let buffer=try XCTUnwrap(value)
-            let stripeColor=try XCTUnwrap(CIColor(red:hdr ? 3:1,green:hdr ? 2:0.5,blue:0.2,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!))
-            let stripe=CIImage(color:stripeColor).cropped(to:CGRect(x:5+i*3,y:5,width:15,height:15))
+            let color=try XCTUnwrap(CIColor(red:hdr ? 3:1,green:hdr ? 2:0.5,blue:0.2,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!))
+            let stripe=CIImage(color:color).cropped(to:CGRect(x:5+i*3,y:5,width:15,height:15))
             context.render(stripe.composited(over:portrait).cropped(to:extent),to:buffer,bounds:extent,colorSpace:space)
             XCTAssertTrue(adaptor.append(buffer,withPresentationTime:CMTime(value:Int64(i),timescale:6)))
         }
@@ -114,25 +114,23 @@ final class CreativeExportTests: XCTestCase {
     }
 }
 ''')
-
 p=Path('Loop/Tests/CreativeTests.swift');s=p.read_text()
-old='CIImage(color:CIColor(red:2,green:1.5,blue:1,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!))'
-new='CIImage(color:try XCTUnwrap(CIColor(red:2,green:1.5,blue:1,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!)))'
-assert s.count(old)==1
-p.write_text(s.replace(old,new))
-
-p=Path('Loop/App/LoopStore.swift');s=p.read_text()
-old='''    func deleteProject(_ project: LoopProject) {
-        CreativeAssets.remove(project.id)
-        guard !isExporting, trackingProgress == nil else { return }'''
-new='''    func deleteProject(_ project: LoopProject) {
-        guard !isExporting, trackingProgress == nil else { return }'''
-assert s.count(old)==1
-s=s.replace(old,new)
-old='''            try FileManager.default.removeItem(at: projectDirectory(project.id))
-            projects.removeAll { $0.id == project.id }'''
-new='''            try FileManager.default.removeItem(at: projectDirectory(project.id))
-            CreativeAssets.remove(project.id)
-            projects.removeAll { $0.id == project.id }'''
-assert s.count(old)==1
-p.write_text(s.replace(old,new))
+s=s.replace('CIImage(color:CIColor(red:2,green:1.5,blue:1,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!))','CIImage(color:try XCTUnwrap(CIColor(red:2,green:1.5,blue:1,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!)))')
+p.write_text(s)
+p=Path('Loop/Core/Creative/SceneInference.swift');s=p.read_text()
+start=s.index('                let raw=CIImage(cvPixelBuffer:b)')
+end=s.index('                return fit(normalized,to:image.extent)',start)+len('                return fit(normalized,to:image.extent)')
+s=s[:start]+'''                // This pinned Core ML model emits normalized inverse depth in a
+                // grayscale-half image. Treat it as data, not display color.
+                let raw=CIImage(cvPixelBuffer:b,options:[.colorSpace:NSNull()])
+                let normalized=raw.applyingFilter("CIColorClamp",parameters:[
+                    "inputMinComponents":CIVector(x:0,y:0,z:0,w:0),
+                    "inputMaxComponents":CIVector(x:1,y:1,z:1,w:1)])
+                return fit(normalized,to:image.extent)'''+s[end:]
+s=s.replace('coordinates=Array(coordinates.prefix(32))','''// Prompt encoding appends one token; the bundled decoder permits 15.
+            coordinates=Array(coordinates.prefix(14))''')
+s=s.replace('let points=try MLMultiArray(shape:[1,NSNumber(value:coordinates.count),2],dataType:.float32)','''let pointsType=promptModel.modelDescription.inputDescriptionsByName["points"]?.multiArrayConstraint?.dataType ?? .float16
+            let labelsType=promptModel.modelDescription.inputDescriptionsByName["labels"]?.multiArrayConstraint?.dataType ?? .float16
+            let points=try MLMultiArray(shape:[1,NSNumber(value:coordinates.count),2],dataType:pointsType)''')
+s=s.replace('let labels=try MLMultiArray(shape:[1,NSNumber(value:coordinates.count)],dataType:.int32)','let labels=try MLMultiArray(shape:[1,NSNumber(value:coordinates.count)],dataType:labelsType)')
+p.write_text(s)
