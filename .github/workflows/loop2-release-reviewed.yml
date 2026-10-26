@@ -1,0 +1,88 @@
+name: Publish reviewed Loop 2 release
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/loop2-release/approved.json']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: loop2-reviewed-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify the reviewed build run
+        run: |
+          set -euo pipefail
+          cp .github/loop2-release/approved.json "$RUNNER_TEMP/loop2-approval.json"
+          python3 - <<'PY'
+          import json,os,re,subprocess
+          from pathlib import Path
+          a=json.loads(Path(os.environ['RUNNER_TEMP'],'loop2-approval.json').read_text())
+          assert isinstance(a['run_id'],int) and a['run_id']>0
+          assert re.fullmatch('[0-9a-f]{40}',a['build_head'])
+          assert re.fullmatch('[0-9a-f]{40}',a['source_commit'])
+          assert re.fullmatch('[0-9a-f]{64}',a['ipa_sha256'])
+          r=json.loads(subprocess.check_output(['gh','api',f"repos/{os.environ['GH_REPO']}/actions/runs/{a['run_id']}"]))
+          assert r['status']=='completed' and r['conclusion']=='success',r['conclusion']
+          assert r['head_branch']=='feature/loop-simple-power-2.0' and r['head_sha']==a['build_head']
+          assert r['path']=='.github/workflows/loop2-build.yml'
+          subprocess.run(['gh','run','download',str(a['run_id']),'--repo',os.environ['GH_REPO'],'--name','Loop-2-Candidate-and-Checks','--dir',os.environ['RUNNER_TEMP']+'/loop2-reviewed'],check=True)
+          PY
+      - name: Verify reports, archive and unchanged main ancestry
+        run: |
+          set -euo pipefail
+          SOURCE=$(python3 -c 'import json,os;print(json.load(open(os.environ["RUNNER_TEMP"]+"/loop2-approval.json"))["source_commit"])')
+          git fetch origin main
+          git cat-file -e "$SOURCE^{commit}"
+          git merge-base --is-ancestor origin/main "$SOURCE"
+          git diff --name-only origin/main "$SOURCE" > "$RUNNER_TEMP/loop2-publish-paths"
+          if grep -qv '^Loop/' "$RUNNER_TEMP/loop2-publish-paths"; then cat "$RUNNER_TEMP/loop2-publish-paths"; exit 1; fi
+          git checkout --detach "$SOURCE"
+          mkdir -p Loop/Build
+          cp -R "$RUNNER_TEMP/loop2-reviewed/." Loop/Build/
+          export GITHUB_SHA="$SOURCE"
+          python3 - <<'PY'
+          import hashlib,json,os,zipfile
+          from pathlib import Path
+          a=json.loads(Path(os.environ['RUNNER_TEMP'],'loop2-approval.json').read_text())
+          b=Path('Loop/Build')
+          report=json.loads((b/'BUILD-REPORT.json').read_text())
+          assert report['sourceCommit']==a['source_commit']==os.environ['GITHUB_SHA']
+          assert report['version']=='2.0.0' and str(report['build'])=='9'
+          assert report['sha256']==a['ipa_sha256']==hashlib.sha256((b/'Loop.ipa').read_bytes()).hexdigest()
+          for name,minimum in [('FOCUSED-CREATIVE-TESTS.json',50),('FOCUSED-UI-TESTS.json',1)]:
+              t=json.loads((b/name).read_text())
+              assert t['sourceCommit']==a['source_commit']
+              assert t['passedTests']>=minimum and t['failedTests']==0 and t.get('skippedTests',0)==0
+          with zipfile.ZipFile(b/'Loop-Source.zip') as archive:
+              for name in archive.namelist():
+                  if name.endswith('/'):continue
+                  p=Path(name)
+                  assert not p.is_absolute() and '..' not in p.parts
+                  assert archive.read(name)==(Path('Loop')/p).read_bytes(),name
+          assert (b/'Loop-Creative-Samples.zip').stat().st_size>0
+          PY
+          python3 Loop/scripts/verify_release.py
+      - name: Publish the checked update and refresh the app catalog
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA=$(python3 -c 'import json,os;print(json.load(open(os.environ["RUNNER_TEMP"]+"/loop2-approval.json"))["source_commit"])')
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git push origin HEAD:main
+          git checkout -B main HEAD
+          cd Loop
+          bash scripts/publish.sh
