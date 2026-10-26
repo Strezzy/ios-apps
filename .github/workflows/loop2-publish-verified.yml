@@ -1,0 +1,171 @@
+name: Publish verified Loop 2.0 build 9
+'on':
+  push:
+    branches:
+    - loop/publish-2.0-build9
+    paths:
+    - .github/workflows/loop2-publish-verified.yml
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: loop-release-publication
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_COMMIT: b962f64f2c9cfbb07014ff4266122ee77b3fb0e6
+      LOOP_TAG: loop-2.0.0-build9
+    steps:
+    - name: Check out the exact compiled source
+      uses: actions/checkout@v7
+      with:
+        ref: b962f64f2c9cfbb07014ff4266122ee77b3fb0e6
+        fetch-depth: 0
+    - name: Download artifacts from the successful verification run
+      run: |
+        set -euo pipefail
+        python3 - <<'PYTHON'
+        import json,subprocess
+        def api(path):
+            return json.loads(subprocess.check_output(['gh','api','repos/Strezzy/ios-apps/'+path],text=True))
+        run=api('actions/runs/40310441601')
+        assert run['status']=='completed' and run['conclusion']=='success',run['conclusion']
+        assert run['head_sha']=='d1b864b890b273a34decbdd25d0f9ee7a84aa894'
+        artifact=api('actions/artifacts/12643979451')
+        assert not artifact['expired'] and artifact['workflow_run']['id']==40310441601
+        assert artifact['name']=='Loop-2-Candidate-and-Checks'
+        assert artifact['digest']=='sha256:409f42f82b6ea81dedc3c06b1f968238eee9e0da522cba57d82af4bd8be746ac'
+        print('Successful source run and immutable artifact identity verified.')
+        PYTHON
+        gh run download 40310441601 --name Loop-2-Candidate-and-Checks --dir Loop/Build
+    - name: Verify binary, evidence, bundled models and source archive
+      run: |
+        set -euo pipefail
+        export GITHUB_SHA="$SOURCE_COMMIT"
+        python3 Loop/scripts/verify_release.py
+        python3 - <<'PYTHON'
+        import hashlib,json,os,zipfile
+        from pathlib import Path
+        root=Path('Loop');build=root/'Build'
+        report=json.loads((build/'BUILD-REPORT.json').read_text())
+        assert report['sourceCommit']==os.environ['SOURCE_COMMIT']
+        assert (report['version'],report['build'])==('2.0.0','9')
+        assert report['sha256']=='51382aab2c6b941422cb66284933cbcc622c5ab65c041f47d40cf62c0c832ab9'
+        with zipfile.ZipFile(build/'Loop-Source.zip') as archive:
+            for entry in archive.infolist():
+                if entry.is_dir():continue
+                path=root/entry.filename
+                assert path.resolve().is_relative_to(root.resolve())
+                assert archive.read(entry)==path.read_bytes(),entry.filename
+        models=root/'Resources/SceneModels'
+        manifest=json.loads((models/'SCENE-MODELS.json').read_text())
+        for model in manifest['models']:
+            for entry in model['files']:
+                path=models/entry['path']
+                assert path.stat().st_size==entry['bytes']
+                assert hashlib.sha256(path.read_bytes()).hexdigest()==entry['sha256'],entry['path']
+        assets=['Loop.ipa','Loop-Source.zip','Loop-XcodeProject.zip','BUILD-REPORT.json','SHA256SUMS.txt','Loop-Icon.png','VALIDATION-REPORT.json','FOCUSED-CREATIVE-TESTS.json','FOCUSED-UI-TESTS.json','MAC-SELECTION-TESTS.json','SCENE-MODELS.json','CREATIVE-RESEARCH.md','Loop-Creative-Samples.zip']
+        for name in assets:assert (build/name).is_file(),name
+        (build/'publication-assets.txt').write_text('\n'.join(assets)+'\n')
+        notes=(root/'docs/RELEASE.md').read_text()
+        notes+='\n\n## Verified release package\n'
+        notes+='Native arm64 iPhone Release build: passed. iOS simulator checks: 107 passed, 0 failed, 4 explicitly skipped selection-inference checks. Separate native macOS shared-selection checks: 6 passed. Focused simulator interface flow: 1 passed. Full legacy UI suite and physical-iPhone performance, thermals, long 4K exports and sideload-host behavior were not validated.\n'
+        notes+='\nThis IPA is intended for sideloading and is not distribution-signed. Update the existing com.billy.loop app while retaining its data container.\n'
+        notes+='\nSource commit: '+report['sourceCommit']+'\n\nIPA SHA-256: `'+report['sha256']+'`\n'
+        (build/'RELEASE-NOTES.md').write_text(notes)
+        print('Binary checksum, exact source archive, model provenance and validation evidence match.')
+        PYTHON
+    - name: Integrate only the verified Loop source into main
+      run: |
+        set -euo pipefail
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+        git fetch origin main
+        if git merge-base --is-ancestor origin/main "$SOURCE_COMMIT"; then
+          git diff --name-only origin/main "$SOURCE_COMMIT" > "$RUNNER_TEMP/loop-source-paths"
+          if grep -qv '^Loop/' "$RUNNER_TEMP/loop-source-paths"; then
+            echo 'Refusing changes outside Loop.'; exit 1
+          fi
+          git switch -C main origin/main
+          git merge --ff-only "$SOURCE_COMMIT"
+          git push origin HEAD:main
+        else
+          git merge-base --is-ancestor "$SOURCE_COMMIT" origin/main
+          git diff --exit-code "$SOURCE_COMMIT" origin/main -- Loop
+          git switch -C main origin/main
+        fi
+        git diff --exit-code "$SOURCE_COMMIT" HEAD -- Loop
+    - name: Publish the verified IPA and evidence
+      run: |
+        set -euo pipefail
+        if gh release view "$LOOP_TAG" --json tagName >/dev/null 2>&1; then
+          echo 'Existing tag will be checked without replacing any assets.'
+        else
+          assets=()
+          while IFS= read -r name; do assets+=("Loop/Build/$name"); done < Loop/Build/publication-assets.txt
+          gh release create "$LOOP_TAG" "${assets[@]}" --target "$SOURCE_COMMIT" \
+            --title 'Loop 2.0.0 (9) · Simple controls, deeper possibilities' \
+            --notes-file Loop/Build/RELEASE-NOTES.md
+        fi
+        gh api "repos/$GH_REPO/releases/tags/$LOOP_TAG" > Loop/Build/PUBLISHED-RELEASE.json
+        python3 - <<'PYTHON'
+        from pathlib import Path
+        import hashlib,json,os
+        build=Path('Loop/Build');release=json.loads((build/'PUBLISHED-RELEASE.json').read_text())
+        assert not release['draft'] and not release['prerelease']
+        assert release['tag_name']==os.environ['LOOP_TAG']
+        assert release['target_commitish']==os.environ['SOURCE_COMMIT']
+        assets={a['name']:a for a in release['assets']}
+        for name in (build/'publication-assets.txt').read_text().splitlines():
+            local=build/name;remote=assets[name]
+            assert remote['state']=='uploaded' and remote['size']==local.stat().st_size,name
+            if remote.get('digest'):
+                assert remote['digest']=='sha256:'+hashlib.sha256(local.read_bytes()).hexdigest(),name
+        print(release['html_url'])
+        PYTHON
+        gh release download "$LOOP_TAG" --pattern Loop.ipa --dir "$RUNNER_TEMP/published-loop"
+        echo "51382aab2c6b941422cb66284933cbcc622c5ab65c041f47d40cf62c0c832ab9  $RUNNER_TEMP/published-loop/Loop.ipa" | sha256sum -c -
+    - name: Update only Loop in the app catalog and README
+      run: |
+        set -euo pipefail
+        git fetch origin main
+        git merge --ff-only origin/main
+        git diff --exit-code "$SOURCE_COMMIT" HEAD -- Loop
+        python3 - <<'PYTHON'
+        import copy,importlib.util,json,os
+        from pathlib import Path
+        spec=importlib.util.spec_from_file_location('catalog','scripts/update_catalog.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        catalog=module.load(Path('apps.json'));before=copy.deepcopy(catalog)
+        registry=module.load(Path('app-registry.json'))
+        bundle='com.billy.loop'
+        registry[bundle]['subtitle']='Offline video effects, GIFs and loops'
+        registry[bundle]['localizedDescription']='Edit videos privately on your iPhone with one-tap cinematic looks, tracked subjects, Keep/Remove brush repairs, layered effects, local portrait and hair treatments, depth-aware atmosphere, saved looks and .cube color imports. Find loop endpoints, blend seams, freeze a subject or its surroundings, and add motion echoes. Keep the existing crop tracking, privacy overlays, captions, full-video imports and local projects. Save GIF, APNG, H.264, HEVC, optional 10-bit HLG HDR, or transparent APNG/HEVC video. Native Liquid Glass controls keep advanced settings tucked away. Models ship with the app; no accounts, ads, watermark, uploads or runtime model downloads. Selection may use a disclosed native compatibility fallback. Tracking, cutouts and depth remain estimates; HDR is not Dolby Vision passthrough. Requires iOS 26. Physical-iPhone performance, thermals, long 4K exports and sideload-host behavior still need device validation.'
+        index=next(i for i,a in enumerate(catalog['apps']) if a['bundleIdentifier']==bundle)
+        release=module.load(Path('Loop/Build/PUBLISHED-RELEASE.json'))
+        notes='Loop 2.0: simpler preset-first Looks and Save screens; named tracked subjects with Keep/Remove repairs; depth-aware atmosphere and portrait/hair treatments; up to 12 effect cards with timing, fades and strength points; saved looks and .cube import; cinemagraphs, motion echoes and loop suggestions; HDR HEVC, transparent output and improved GIF palettes. All processing stays on device. Validation: 107 iOS simulator tests passed, 4 selection checks explicitly skipped, 6 separate native macOS selection checks passed, and 1 focused interface flow passed. Physical iPhone and sideload-host testing remains required.'
+        single={'apps':[copy.deepcopy(catalog['apps'][index])]}
+        updated=module.update(single,{bundle:registry[bundle]},[Path('Loop/Build/Loop.ipa')],os.environ['LOOP_TAG'],release['published_at'],notes)
+        catalog['apps'][index]=updated['apps'][0]
+        assert [a for a in catalog['apps'] if a['bundleIdentifier']!=bundle]==[a for a in before['apps'] if a['bundleIdentifier']!=bundle]
+        latest=catalog['apps'][index]['versions'][0]
+        assert latest['version']=='2.0.0' and latest['buildVersion']=='9'
+        assert latest['sha256']=='51382aab2c6b941422cb66284933cbcc622c5ab65c041f47d40cf62c0c832ab9'
+        module.save(Path('app-registry.json'),registry);module.save(Path('apps.json'),catalog)
+        module.render_readme(catalog)
+        print(json.dumps(latest,indent=2))
+        PYTHON
+        git add app-registry.json apps.json README.md
+        git diff --cached --name-only > "$RUNNER_TEMP/loop-catalog-paths"
+        if grep -Ev '^(app-registry.json|apps.json|README.md)$' "$RUNNER_TEMP/loop-catalog-paths"; then exit 1; fi
+        if ! git diff --cached --quiet; then
+          git commit -m 'Publish verified Loop 2.0 build 9 in the app catalog'
+          git push origin HEAD:main
+        fi
+        git diff --exit-code "$SOURCE_COMMIT" HEAD -- Loop
+        printf 'Published %s\nCatalog commit: %s\n' "$LOOP_TAG" "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
