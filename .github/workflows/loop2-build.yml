@@ -2,7 +2,7 @@ name: Build Loop 2 simple power
 on:
   push:
     branches: ['feature/loop-simple-power-2.0']
-    paths: ['.github/loop2-source/**', '.github/workflows/loop2-build.yml']
+    paths: ['.github/loop2-source/**', '.github/loop2-review/**', '.github/workflows/loop2-build.yml']
 permissions:
   contents: write
   actions: read
@@ -25,6 +25,7 @@ jobs:
         run: |
           set -euo pipefail
           cp -R .github/loop2-source "$RUNNER_TEMP/loop2-source"
+          cp -R .github/loop2-review "$RUNNER_TEMP/loop2-review"
           cp -R Loop/Resources/SceneModels "$RUNNER_TEMP/loop2-models"
           git fetch origin main
           git switch -c "loop/creative-candidate-$GITHUB_RUN_ID" origin/main
@@ -51,6 +52,8 @@ jobs:
                   assert hashlib.sha256((root/f['path']).read_bytes()).hexdigest()==f['sha256']
           for name in ['fixes.py','extra_tests.py']:
               if (staging/name).exists():exec(compile((staging/name).read_text(),name,'exec'))
+          review=Path(os.environ['RUNNER_TEMP'])/'loop2-review'/'scope.py'
+          exec(compile(review.read_text(),'review-subject-scope.py','exec'))
           PY
           python3 -m py_compile Loop/scripts/package.py Loop/scripts/verify_release.py
           bash -n Loop/scripts/publish.sh
