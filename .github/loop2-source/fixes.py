@@ -1,4 +1,5 @@
 from pathlib import Path
+p=Path('Loop/project.yml');s=p.read_text();s=s.replace("    SWIFT_VERSION: '5.0'", "    SWIFT_VERSION: '5.0'\n    'EXCLUDED_ARCHS[sdk=iphonesimulator*]': x86_64",1);p.write_text(s)
 p=Path('Loop/Core/Creative/CreativeAssets.swift')
 s=p.read_text()
 old='        let prepared=try RealismKernels.color("loopLUTDomain",extent:image.extent,arguments:[image,CIVector(values:lut.domainMin.map(CGFloat.init),count:3),CIVector(values:lut.domainMax.map(CGFloat.init),count:3)])'
@@ -11,12 +12,15 @@ p=Path('Loop/Core/Creative/CreativeModels.swift');s=p.read_text()
 s=s.replace('var value=old;value.layers=[];value.tracks=[];value.bypass=false','var value=old;value.layers=[];value.tracks=[];value.bypass=false;value.faceTuning=nil;value.bodyTuning=nil;value.lut=nil;value.backdropTuning=nil')
 s=s.replace('scene.depthEnabled=true;scene.depthFog=0;scene.relight=0.15;scene.matchLighting=0.3','scene.depthEnabled=true;scene.depthFog=0;scene.depthBlur=0;scene.focus=0.65;scene.lightDirection = -0.5;scene.relight=0.15;scene.matchLighting=0.3')
 p.write_text(s)
-p=Path('Loop/App/Creative/CreativeToolsView.swift');s=p.read_text().replace('DisclosureGroup("Depth & lighting") {','DisclosureGroup("Depth & lighting") {')
+p=Path('Loop/App/Creative/CreativeToolsView.swift');s=p.read_text()
 s=s.replace('}.font(.subheadline)\n            }\n            DisclosureGroup("My effect mix', '}.font(.subheadline).accessibilityIdentifier("sceneAdvanced")\n            }\n            DisclosureGroup("My effect mix')
 s=s.replace('}.font(.subheadline.weight(.medium)).padding(.horizontal,4)','}.font(.subheadline.weight(.medium)).padding(.horizontal,4).accessibilityIdentifier("effectMixDisclosure")')
 p.write_text(s)
 p=Path('Loop/App/ExportOptionsView.swift');s=p.read_text()
 s=s.replace('}.font(.subheadline.weight(.semibold))','}.font(.subheadline.weight(.semibold)).accessibilityIdentifier("exportAdvanced")')
+p.write_text(s)
+p=Path('Loop/scripts/publish.sh');s=p.read_text()
+s=s.replace(' Build/FOCUSED-CREATIVE-TESTS.json Build/SCENE-MODELS.json', ' Build/FOCUSED-CREATIVE-TESTS.json Build/FOCUSED-UI-TESTS.json Build/SCENE-MODELS.json')
 p.write_text(s)
 Path('Loop/UITests/CreativeUITests.swift').write_text(r'''import XCTest
 
