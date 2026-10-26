@@ -17,7 +17,8 @@ s=s.replace('}.font(.subheadline)\n            }\n            DisclosureGroup("M
 s=s.replace('}.font(.subheadline.weight(.medium)).padding(.horizontal,4)','}.font(.subheadline.weight(.medium)).padding(.horizontal,4).accessibilityIdentifier("effectMixDisclosure")')
 p.write_text(s)
 p=Path('Loop/App/ExportOptionsView.swift');s=p.read_text()
-s=s.replace('}.font(.subheadline.weight(.semibold))','}.font(.subheadline.weight(.semibold)).accessibilityIdentifier("exportAdvanced")')
+s=s.replace('}.font(.subheadline.weight(.semibold))','}.font(.subheadline.weight(.semibold)).accessibilityIdentifier("exportAdvanced")
+')
 p.write_text(s)
 p=Path('Loop/scripts/publish.sh');s=p.read_text()
 s=s.replace(' Build/FOCUSED-CREATIVE-TESTS.json Build/SCENE-MODELS.json', ' Build/FOCUSED-CREATIVE-TESTS.json Build/FOCUSED-UI-TESTS.json Build/SCENE-MODELS.json')
@@ -78,3 +79,8 @@ final class CreativeUITests: XCTestCase {
     }
 }
 ''')
+# The review directory is preserved before switching to the latest main branch.
+import os
+runtime=Path(os.environ['RUNNER_TEMP'])/'loop2-review'/'runtime.py'
+text=runtime.read_text().replace('CIImage(color:.gray)', 'CIImage(color:CIColor(red:0.5,green:0.5,blue:0.5))')
+exec(compile(text,'review-native-runtime.py','exec'))
