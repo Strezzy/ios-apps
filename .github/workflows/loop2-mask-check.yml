@@ -1,0 +1,60 @@
+name: Check Loop mask readback
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-mask-check.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 6
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Run the exact mask conversion on a native portrait
+        run: |
+          set -euo pipefail
+          git show 5d2f62186c001653e6f854b9e1b3754f6ac3ce6b:Loop/Core/Creative/SceneInference.swift > "$RUNNER_TEMP/Scene.swift"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          p=Path(os.environ['RUNNER_TEMP'])/'Scene.swift'
+          s=p.read_text().split('struct SceneFrame {')[0]
+          s=s.replace('guard let url=Bundle.main.url(forResource:name,withExtension:"mlmodelc") else {','let package=URL(fileURLWithPath:FileManager.default.currentDirectoryPath).appendingPathComponent("Loop/Resources/SceneModels/"+name+".mlpackage"); let compiled=try MLModel.compileModel(at:package)\n        guard let url:URL=compiled else {')
+          s=s.replace('configuration.computeUnits = .all','configuration.computeUnits = .cpuAndGPU')
+          stub='''
+          enum LoopError:Error {case encoding(String),invalidSettings(String)}
+          struct SelectionPoint {var x:Double;var y:Double;var include:Bool}
+          struct NormalizedRect {var x:Double;var y:Double;var width:Double;var height:Double;func clamped()->Self{self}}
+          '''
+          p.write_text(s+stub)
+          PY
+          cat >> "$RUNNER_TEMP/Scene.swift" <<'SWIFT'
+          let image=CIImage(contentsOf:URL(fileURLWithPath:"Loop/Tests/Fixtures/portrait-fixture.png"))!
+          let id=UUID()
+          let masks=try PromptSelection.masks(image,prompts:[.init(id:id,points:[.init(x:0.5,y:0.65,include:true)],box:nil)])
+          guard let mask=masks[id] else{fatalError("No scored mask")}
+          let small=SceneModels.fit(mask,to:CGRect(x:0,y:0,width:192,height:192))
+          for space in [nil,CGColorSpaceCreateDeviceGray()] as [CGColorSpace?] {
+              var bytes=[UInt8](repeating:0,count:192*192)
+              SceneModels.context.render(small,toBitmap:&bytes,rowBytes:192,bounds:small.extent,format:.L8,colorSpace:space)
+              print("L8",space as Any,"range",bytes.min()!,bytes.max()!,"foreground",bytes.filter{$0>128}.count)
+          }
+          var rgba=[UInt8](repeating:0,count:192*192*4)
+          SceneModels.context.render(small,toBitmap:&rgba,rowBytes:192*4,bounds:small.extent,format:.RGBA8,colorSpace:SceneModels.rgb)
+          let reds=stride(from:0,to:rgba.count,by:4).map{rgba[$0]}
+          print("RGBA",reds.min()!,reds.max()!,"foreground",reds.filter{$0>128}.count)
+          do{print("BOUNDS",try PromptSelection.bounds(of:mask))}catch{print("BOUNDS ERROR",error)}
+          let synthetic=CIImage(color:.white).cropped(to:CGRect(x:30,y:20,width:90,height:100)).composited(over:CIImage(color:.black).cropped(to:small.extent))
+          do{print("SYNTHETIC",try PromptSelection.bounds(of:synthetic))}catch{print("SYNTHETIC ERROR",error)}
+          SWIFT
+          xcrun swift "$RUNNER_TEMP/Scene.swift" 2>&1 | tee "$RUNNER_TEMP/mask-check.log"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-Mask-Readback-Diagnostics
+          path: ${{ runner.temp }}/mask-check.log
