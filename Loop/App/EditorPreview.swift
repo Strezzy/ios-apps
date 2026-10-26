@@ -461,7 +461,7 @@ import CoreVideo
     private func reachedBoundary() {
         guard playing, activeSeek == nil, let project = currentProject else { return }
         if project.export.playback == .bounce { direction *= -1 }
-        requestSeek(direction < 0 ? clamp(project.trimEnd) : project.trimStart, exact: true, resume: true)
+        requestSeek(direction < 0 ? clamp(project.trimEnd) : project.trimStart + CreativeMotion.seamDuration(project), exact: true, resume: true)
     }
 
     private func itemReachedEnd(session token: UUID) {
@@ -487,7 +487,7 @@ import CoreVideo
         // that sample has no visible motion; Play there starts the selected loop.
         let finalSample = project.trimEnd - min(project.duration / 2,
             1 / max(1, project.metadata.nominalFrameRate))
-        if direction > 0 && requestedTime >= finalSample { return project.trimStart }
+        if direction > 0 && (requestedTime >= finalSample || requestedTime < project.trimStart + CreativeMotion.seamDuration(project)) { return project.trimStart + CreativeMotion.seamDuration(project) }
         if direction < 0 && requestedTime <= project.trimStart + 1.0 / 60_000 { return clamp(project.trimEnd) }
         return clamp(requestedTime)
     }
