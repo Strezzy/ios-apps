@@ -8,8 +8,8 @@ settings:
   base:
     SWIFT_VERSION: '5.0'
     SWIFT_STRICT_CONCURRENCY: minimal
-    MARKETING_VERSION: '1.1.2'
-    CURRENT_PROJECT_VERSION: '5'
+    MARKETING_VERSION: '1.2.0'
+    CURRENT_PROJECT_VERSION: '6'
     TARGETED_DEVICE_FAMILY: '1,2'
     CODE_SIGNING_ALLOWED: NO
     CODE_SIGNING_REQUIRED: NO
@@ -31,7 +31,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
-        NSPhotoLibraryAddUsageDescription: Save animations you choose to your photo library.
+        NSPhotoLibraryAddUsageDescription: Save animations and videos you choose to your photo library.
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

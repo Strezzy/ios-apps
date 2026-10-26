@@ -1,6 +1,6 @@
 {
-  "version": "1.1.2",
-  "build": "5",
   "profile": "build-only",
-  "reason": "The app owner requested this update without the lengthy simulator test suite and will test tracking and overlay timing on their iPhone. Compile and package the native Release app; do not report unrun tests as passed."
+  "version": "1.2.0",
+  "build": "6",
+  "reason": "The app owner requested focused implementation and publication without repeating intensive simulator testing. Verify the native arm64 Release build and package; physical-device effects, audio sync, tracking and export performance remain for device testing."
 }

@@ -28,7 +28,7 @@ report = {
     'deploymentTarget': info['MinimumOSVersion'], 'sdk': info.get('DTSDKName'),
     'xcode': info.get('DTXcode'), 'configuration': 'Release',
     'distributionSigned': False, 'architecture': architecture,
-    'implementation': 'Native SwiftUI, AVFoundation, Core Image, Vision; streaming GIF and APNG',
+    'implementation': 'Native SwiftUI, AVFoundation, Core Image, Vision; offline effects; streaming GIF, APNG, H.264 and HEVC',
     'sourceCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
     'ipaBytes': ipa.stat().st_size, 'sha256': digest,
     'physicalDeviceValidation': 'Not performed. Physical iPhone thermals, 4K long-export performance and sideload-host behavior require device testing.',

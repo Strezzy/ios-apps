@@ -255,6 +255,7 @@ struct EditorView: View {
         case .crop:
             CropEditorView(project: $project, preview: preview, showingResult: $showingResult, selectingSubject: $selectingCropSubject, subjectDraft: $cropSubjectDraft)
         case .overlays: OverlayEditorView(project: $project, selected: $selectedOverlay, preview: preview)
+        case .effects: EffectsEditorView(project: $project, preview: preview)
         case .export:
             ExportOptionsView(project: $project)
             Button {

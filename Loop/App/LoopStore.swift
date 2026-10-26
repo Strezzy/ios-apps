@@ -244,7 +244,11 @@ import UniformTypeIdentifiers
                 Task { @MainActor in self?.exportProgress = progress }
             }
             let thumbnailName = UUID().uuidString + ".jpg"
-            if let source = CGImageSourceCreateWithURL(result.url as CFURL, nil), let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 700] as CFDictionary) {
+            if project.export.format.isVideo {
+                if let image = try? await MediaEngine.thumbnail(url: result.url, time: 0, maximumDimension: 700) {
+                    writeThumbnail(image, to: exportsDirectory.appendingPathComponent(thumbnailName))
+                }
+            } else if let source = CGImageSourceCreateWithURL(result.url as CFURL, nil), let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 700] as CFDictionary) {
                 writeThumbnail(image, to: exportsDirectory.appendingPathComponent(thumbnailName))
             }
             let item = SavedExport(name: project.name, filename: filename, format: project.export.format, size: result.size, frameCount: result.frameCount, duration: result.duration, byteCount: result.byteCount, thumbnailFilename: thumbnailName)
@@ -344,7 +348,7 @@ import UniformTypeIdentifiers
                 let request = PHAssetCreationRequest.forAsset()
                 let options = PHAssetResourceCreationOptions()
                 options.originalFilename = item.name + "." + item.format.fileExtension
-                request.addResource(with: .photo, fileURL: url, options: options)
+                request.addResource(with: item.format.isVideo ? .video : .photo, fileURL: url, options: options)
             }
             notice = "Saved to Photos."
         } catch { self.error = "Photos could not save this animation. Use Share → Save to Files. \(error.localizedDescription)" }

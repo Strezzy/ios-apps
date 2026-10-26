@@ -36,7 +36,7 @@ struct LoopLibraryView: View {
                             }
                         } else {
                             if store.exports.isEmpty {
-                                ContentUnavailableView("Your loops live here", systemImage: "infinity", description: Text("Finished GIFs and APNGs are kept on your iPhone, ready to save or share."))
+                                ContentUnavailableView("Your loops live here", systemImage: "infinity", description: Text("Finished GIFs, APNGs and videos are kept on your iPhone, ready to save or share."))
                             }
                             ForEach(store.exports) { item in
                                 Button { selectedExport = item } label: { ExportRow(item: item, thumbnail: store.exportThumbnail(item)) }
@@ -102,7 +102,10 @@ struct ExportDetailView: View {
                             Image(systemName: "checkmark.seal.fill").foregroundStyle(LoopTheme.teal)
                             Text("Ready for another round.").font(.title3.weight(.bold))
                         }.padding(.top, 8)
-                        AnimatedExportPreview(url: store.exportURL(item))
+                        Group {
+                            if item.format.isVideo { SavedVideoPreview(url: store.exportURL(item)) }
+                            else { AnimatedExportPreview(url: store.exportURL(item)) }
+                        }
                             .aspectRatio(item.size.aspect, contentMode: .fit)
                             .frame(maxHeight: 420).clipShape(.rect(cornerRadius: 25))
                             .accessibilityIdentifier("exportAnimationPreview")
@@ -128,7 +131,7 @@ struct ExportDetailView: View {
                             }.buttonStyle(.glass).disabled(saving)
                             if let notice = store.notice { Label(notice, systemImage: "checkmark.circle").font(.caption).foregroundStyle(LoopTheme.teal) }
                         }
-                        Text(item.format == .gif ? "GIF playback may differ between viewers, particularly above 50 FPS. This preview reads the file’s original frame delays." : "APNG plays with full color and precise timing. Some sharing apps convert animated PNGs to still images.")
+                        Text(item.format.isVideo ? "Video is saved with the selected codec and all edits baked in. HDR sources are exported in standard color." : item.format == .gif ? "GIF playback may differ between viewers, particularly above 50 FPS. This preview reads the file’s original frame delays." : "APNG plays with full color and precise timing. Some sharing apps convert animated PNGs to still images.")
                             .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
                 }

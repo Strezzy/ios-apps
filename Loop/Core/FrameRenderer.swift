@@ -24,8 +24,9 @@ enum FrameRenderer {
             ? min(4096, Int(longEdge.rounded())) : project.export.maximumDimension)
         if let maximumDimension { target = min(target, Double(max(1, maximumDimension))) }
         let scale = project.export.allowUpscaling ? target / longEdge : min(1, target / longEdge)
-        return PixelSize(width: max(1, Int((width * scale).rounded())),
-                         height: max(1, Int((height * scale).rounded())))
+        let size = PixelSize(width: max(1, Int((width * scale).rounded())),
+                             height: max(1, Int((height * scale).rounded())))
+        return project.export.format.isVideo ? size.videoAligned : size
     }
 
     /// Radius/block size is defined in actual export pixels; previews scale this
@@ -80,6 +81,10 @@ enum FrameRenderer {
                 kCIInputContrastKey: max(0, min(4, project.adjustments.contrast)),
                 kCIInputSaturationKey: max(0, min(4, project.adjustments.saturation))
             ])
+            if let effects = project.effects, !effects.activeLayers.isEmpty {
+                frame = try OfflineEffectsRenderer.apply(frame, settings: effects, time: time,
+                                                         preview: maximumDimension != nil)
+            }
             let selectedCrop = project.crop.rect(source: project.metadata.size, at: time)
             let crop = editing ? NormalizedRect(x: 0, y: 0, width: 1, height: 1) : selectedCrop
             let sourceWidth = Double(image.width), sourceHeight = Double(image.height)
@@ -160,7 +165,7 @@ enum FrameRenderer {
         }
     }
 
-    static func clearCaches() { context.clearCaches() }
+    static func clearCaches() { context.clearCaches(); OfflineEffectsRenderer.clearCaches() }
 
     private static func makeMask(size: PixelSize, rectangle: CGRect,
                                  shape: OverlayShape, opacity: Double) throws -> CIImage {
