@@ -1,0 +1,48 @@
+name: Evaluate Loop decoder compatibility
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-repair-evaluate.yml']
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: xcode-27
+    timeout-minutes: 12
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Record parity and test the actual iOS output
+        run: |
+          set -euo pipefail
+          python -m pip install -q coremltools==8.3.0 numpy pillow pyyaml
+          python -u - <<'PY'
+          import yaml,subprocess
+          from pathlib import Path
+          w=yaml.safe_load(Path('.github/workflows/loop2-repair-sam.yml').read_text())
+          for name in ['Repair and compare real portrait inference','Prepare iOS inference verification','Verify real iOS mask inference']:
+              s=next(x['run'] for x in w['jobs']['repair']['steps'] if x.get('name')==name)
+              if name=='Repair and compare real portrait inference':
+                  # Diagnostic only: record the overlap of all ambiguous proposals
+                  # AND the highest-confidence mask. No model is committed here.
+                  s=s.replace('assert iou>.99 and mae<.002 and score<.005,result','print("SELECTED", int(a["scores"].argmax()), int(b["scores"].argmax()), flush=True)\n    for channel in range(am.shape[1]):\n        aa=am[0,channel]>0;bb=bm[0,channel]>0\n        print("CHANNEL",channel,"iou",float(np.logical_and(aa,bb).sum()/max(1,np.logical_or(aa,bb).sum())),"area",int(aa.sum()),int(bb.sum()),flush=True)\n    assert np.isfinite(bm).all(),result')
+              print('RUN',name,flush=True)
+              subprocess.run(s,shell=True,executable='/bin/bash',check=True,timeout=420)
+          PY
+      - name: Archive evaluated model for inspection
+        if: success()
+        run: |
+          cd Loop/Resources/SceneModels
+          zip -qr "$RUNNER_TEMP/Loop-Evaluated-Decoder.zip" SAM2TinyMaskDecoderFLOAT16.mlpackage SAM-IOS-REPAIR.json SCENE-MODELS.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-Decoder-Evaluation
+          path: |
+            ${{ runner.temp }}/sam-repair-ios.log
+            ${{ runner.temp }}/Loop-Evaluated-Decoder.zip
+            Loop/Resources/SceneModels/SAM-IOS-REPAIR.json
