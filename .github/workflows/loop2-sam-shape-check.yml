@@ -1,0 +1,78 @@
+name: Check SAM decoder shape compatibility
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-sam-shape-check.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 12
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Inspect and adjust only redundant decoder output dimensions
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet coremltools==9.0
+          python - <<'PY'
+          import hashlib,json,os,textwrap
+          from pathlib import Path
+          from coremltools.proto import Model_pb2
+          root=Path.cwd()
+          package=root/'Loop/Resources/SceneModels/SAM2TinyMaskDecoderFLOAT16.mlpackage'
+          p=package/'Data/com.apple.CoreML/model.mlmodel'
+          original=p.read_bytes();m=Model_pb2.Model();m.ParseFromString(original)
+          changed=[]
+          def visit(block):
+              for op in block.operations:
+                  if op.type=='conv_transpose' and 'output_shape' in op.inputs:
+                      changed.append(str(op.attributes.get('name', 'conv_transpose')))
+                      del op.inputs['output_shape']
+                  for child in op.blocks: visit(child)
+          for function in m.mlProgram.functions.values():
+              for block in function.block_specializations.values():visit(block)
+          assert len(changed)==2,changed
+          p.write_bytes(m.SerializeToString())
+          report={'originalSHA256':hashlib.sha256(original).hexdigest(),'patchedSHA256':hashlib.sha256(p.read_bytes()).hexdigest(),'removedRedundantOutputShapes':changed,'weightsChanged':False,'diagnosticOnly':True}
+          Path(os.environ['RUNNER_TEMP'],'shape-patch.json').write_text(json.dumps(report,indent=2))
+          print(json.dumps(report,indent=2))
+          raw=Path('.github/workflows/loop2-model-probe.yml').read_text()
+          s=textwrap.dedent(raw.split("<<'SWIFT'\n",1)[1].split('\n          SWIFT',1)[0])
+          s=s.replace('FileManager.default.currentDirectoryPath',json.dumps(str(root)))
+          s=s.replace('URL(fileURLWithPath:"Loop/Tests/Fixtures/portrait-fixture.png")','URL(fileURLWithPath:'+json.dumps(str(root/'Loop/Tests/Fixtures/portrait-fixture.png'))+')')
+          s=s.replace('[MLComputeUnits.cpuAndGPU,MLComputeUnits.all]','[MLComputeUnits.cpuOnly,MLComputeUnits.cpuAndGPU]')
+          s=s.replace('for count in [1,2,4,14]','for count in [1,4]')
+          s=s.replace('for compact in [false,true]','for compact in [true]')
+          Path(os.environ['RUNNER_TEMP'],'shapeprobe.swift').write_text(s)
+          PY
+          xcrun swiftc -O -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -target arm64-apple-ios26.0-simulator "$RUNNER_TEMP/shapeprobe.swift" -o "$RUNNER_TEMP/shapeprobe"
+      - name: Check the adjusted decoder in the native iOS runtime
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          chosen=next(x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable'))
+          udid=chosen['udid'];print(chosen,flush=True)
+          subprocess.run(['xcrun','simctl','boot',udid])
+          subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          log=os.environ['RUNNER_TEMP']+'/shape-probe.log'
+          with open(log,'w') as f:
+              try:p=subprocess.run(['xcrun','simctl','spawn',udid,os.environ['RUNNER_TEMP']+'/shapeprobe'],stdout=f,stderr=subprocess.STDOUT,timeout=300)
+              finally:
+                  f.flush();print(open(log).read(),flush=True)
+          p.check_returncode()
+          PY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-SAM-Shape-Diagnostic
+          path: |
+            ${{ runner.temp }}/shape-probe.log
+            ${{ runner.temp }}/shape-patch.json
