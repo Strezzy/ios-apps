@@ -87,6 +87,10 @@ enum MediaEngine {
 actor ExportEngine {
     func export(sourceURL: URL, project: LoopProject, destination: URL,
                 control: ExportControl, progress: @escaping @Sendable (ExportProgress) -> Void) async throws -> ExportResult {
+        if project.export.format.isVideo {
+            return try await VideoFileExporter.export(sourceURL: sourceURL, project: project, destination: destination,
+                                                      control: control, progress: progress)
+        }
         let plan = try ExportPlan(project: project)
         try await control.checkpoint()
         guard sourceURL.isFileURL, destination.isFileURL,

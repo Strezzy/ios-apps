@@ -9,7 +9,7 @@ struct ExportOptionsView: View {
                 Picker("Format", selection: $project.export.format) {
                     ForEach(AnimationFormat.allCases) { format in Text(format.title).tag(format) }
                 }.pickerStyle(.segmented).accessibilityIdentifier("exportFormat")
-                Text(project.export.format == .gif ? "GIF works almost everywhere. Up to 256 colors per frame, with no audio." : "APNG keeps full color and precise frame timing. Sharing-app support varies. No audio.")
+                Text(project.export.format.detailDescription)
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Text("Frame rate").font(.subheadline)
@@ -24,11 +24,11 @@ struct ExportOptionsView: View {
                                 .accessibilityIdentifier("fps-\(Int(rate))")
                         }
                         Button("Source") {
-                            project.export.frameRate = min(project.export.format == .gif ? 100 : 120, max(1, project.metadata.nominalFrameRate))
+                            project.export.frameRate = min(project.export.format.maximumFrameRate, max(1, project.metadata.nominalFrameRate))
                         }.buttonStyle(.glass)
                     }.padding(2)
                 }
-                Stepper(value: $project.export.frameRate, in: 1...(project.export.format == .gif ? 100 : 120), step: 1) {
+                Stepper(value: $project.export.frameRate, in: 1...(project.export.format.maximumFrameRate), step: 1) {
                     Text("Custom: \(LoopFormat.rate(project.export.frameRate)) FPS").font(.subheadline)
                 }
                 if project.export.format == .gif {
@@ -58,7 +58,7 @@ struct ExportOptionsView: View {
                 Text("Enlargement increases pixel dimensions, not captured detail. Very large animations can take time and create large files.")
                     .font(.caption).foregroundStyle(.secondary)
                 if project.metadata.isHDR {
-                    Label("HDR is converted to standard color for animation export.", systemImage: "sun.max")
+                    Label("HDR is converted to standard color for export; HDR and Dolby Vision metadata are not preserved.", systemImage: "sun.max")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -74,15 +74,26 @@ struct ExportOptionsView: View {
                 }
             }
             LoopCard {
-                EditorSectionTitle(title: "On repeat")
+                EditorSectionTitle(title: project.export.format.isVideo ? "Video options" : "On repeat")
+                if project.export.format.isVideo {
+                    Toggle("Include audio", isOn: Binding(get: { project.export.includeAudio != false }, set: { project.export.includeAudio = $0 }))
+                        .disabled(project.export.playback != .forward)
+                    Text(project.export.playback == .forward
+                        ? "Audio follows the selected clip and speed when a source audio track is available. Video files play once; repeat playback is controlled by the player."
+                        : "Reverse and ping-pong videos export silently. Switch to forward playback to include audio.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("Video encoding uses even pixel dimensions; an odd edge is rounded down by one pixel.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                } else {
                 Toggle("Loop forever", isOn: Binding(get: { project.export.loopCount == 0 }, set: { project.export.loopCount = $0 ? 0 : 1 }))
                 if project.export.loopCount > 0 {
                     Stepper("Play \(project.export.loopCount) time\(project.export.loopCount == 1 ? "" : "s")", value: $project.export.loopCount, in: 1...100)
                 }
+                }
                 outputSummary
             }
         }.onChange(of: project.export.format) { _, value in
-            project.export.frameRate = min(value == .gif ? 100 : 120, project.export.frameRate)
+            project.export.frameRate = min(value.maximumFrameRate, project.export.frameRate)
         }
     }
 

@@ -21,7 +21,7 @@ struct ExportPlan: Sendable {
               project.duration >= 0.02 else {
             throw LoopError.invalidSettings("Choose a valid clip of at least 0.02 seconds.")
         }
-        let ceiling = e.format == .gif ? 100.0 : 120.0
+        let ceiling = e.format.maximumFrameRate
         guard e.frameRate.isFinite, e.frameRate >= 1, e.frameRate <= ceiling,
               e.speed.isFinite, e.speed >= 0.1, e.speed <= 8,
               e.maximumDimension == 0 || (64...4096).contains(e.maximumDimension),
@@ -65,6 +65,7 @@ struct ExportPlan: Sendable {
         let scale = e.allowUpscaling ? requested / nativeLongEdge : min(1, requested / nativeLongEdge)
         size = PixelSize(width: max(1, Int((nativeWidth * scale).rounded())),
                          height: max(1, Int((nativeHeight * scale).rounded())))
+        if e.format.isVideo { size = size.videoAligned }
         let tightestCrop = project.crop.minimumRect(source: project.metadata.size,
             from: project.trimStart, through: project.trimEnd)
         let decodedLongEdge = min(Double(project.metadata.size.longEdge),
@@ -73,6 +74,9 @@ struct ExportPlan: Sendable {
         let decodedPixels = Double(project.metadata.size.width) * Double(project.metadata.size.height) * decodedScale * decodedScale
         estimatedWorkingBytes = Int64(decodedPixels * 16) + Int64(size.width) * Int64(size.height) * 12
 
+        if !(project.effects?.activeLayers.isEmpty ?? true) {
+            estimatedWorkingBytes += Int64(decodedPixels * 16)
+        }
         let forwardDuration = project.duration / e.speed
         let countDouble = ceil(forwardDuration * e.frameRate - 0.0000001)
         guard countDouble.isFinite, countDouble <= 30_000 else {

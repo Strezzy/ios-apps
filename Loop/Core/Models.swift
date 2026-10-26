@@ -93,10 +93,20 @@ struct CropSettings: Codable, Equatable, Sendable {
 }
 
 enum AnimationFormat: String, Codable, CaseIterable, Identifiable, Sendable {
-    case gif, apng
+    case gif, apng, mp4, hevc
     var id: String { rawValue }
     var title: String { rawValue.uppercased() }
-    var fileExtension: String { self == .gif ? "gif" : "png" }
+    var fileExtension: String { isVideo ? "mp4" : self == .gif ? "gif" : "png" }
+    var isVideo: Bool { self == .mp4 || self == .hevc }
+    var maximumFrameRate: Double { isVideo ? 60 : self == .gif ? 100 : 120 }
+    var detailDescription: String {
+        switch self {
+        case .gif: return "GIF works almost everywhere. Up to 256 colors per frame, with no audio."
+        case .apng: return "APNG keeps full color and precise frame timing. Sharing-app support varies. No audio."
+        case .mp4: return "H.264 video in an MP4 file. Full color, up to 4K60, with optional audio. Broad player support."
+        case .hevc: return "HEVC (H.265) video in an MP4 file. Full color and efficient high-quality compression, up to 4K60. Older players may need H.264."
+        }
+    }
 }
 
 enum PlaybackMode: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -118,6 +128,8 @@ struct ExportSettings: Codable, Equatable, Sendable {
     var loopCount: Int = 0
     var paletteSize: Int = 256
     var dither: Bool = true
+    /// Nil preserves the default for projects saved before video export.
+    var includeAudio: Bool?
 }
 
 enum OverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -206,11 +218,13 @@ struct LoopProject: Codable, Equatable, Identifiable, Sendable {
     var export = ExportSettings()
     var overlays: [OverlayItem] = []
     var adjustments = ColorAdjustments()
+    /// Optional so older projects decode with their original appearance.
+    var effects: EffectSettings?
     init(name: String, sourceFilename: String, metadata: VideoMetadata) {
         self.name = name
         self.sourceFilename = sourceFilename
         self.metadata = metadata
-        self.trimEnd = min(metadata.duration, 6)
+        self.trimEnd = metadata.duration
     }
     var duration: Double { max(0, trimEnd - trimStart) }
 }
