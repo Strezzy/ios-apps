@@ -24,7 +24,7 @@ jobs:
           import os
           p=Path(os.environ['RUNNER_TEMP'])/'Scene.swift'
           s=p.read_text().split('struct SceneFrame {')[0]
-          s=s.replace('guard let url=Bundle.main.url(forResource:name,withExtension:"mlmodelc") else {','let package=URL(fileURLWithPath:FileManager.default.currentDirectoryPath).appendingPathComponent("Loop/Resources/SceneModels/"+name+".mlpackage"); let compiled=try MLModel.compileModel(at:package)\n        guard let url:URL=compiled else {')
+          s=s.replace('guard let url=Bundle.main.url(forResource:name,withExtension:"mlmodelc") else {','let package=URL(fileURLWithPath:FileManager.default.currentDirectoryPath).appendingPathComponent("Loop/Resources/SceneModels/"+name+".mlpackage"); let compiled:URL?=try MLModel.compileModel(at:package)\n        guard let url=compiled else {')
           s=s.replace('configuration.computeUnits = .all','configuration.computeUnits = .cpuAndGPU')
           stub='''
           enum LoopError:Error {case encoding(String),invalidSettings(String)}
