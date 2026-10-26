@@ -1,0 +1,50 @@
+name: Verify repaired Loop SAM decoder
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-repair-sam-deterministic.yml']
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: xcode-27
+    timeout-minutes: 12
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Compare decoder semantics and execute iOS predictions
+        run: |
+          set -euo pipefail
+          python -m pip install -q coremltools==8.3.0 numpy pillow pyyaml
+          python -u - <<'PY'
+          import yaml,subprocess
+          from pathlib import Path
+          workflow=yaml.safe_load(Path('.github/workflows/loop2-repair-sam.yml').read_text())
+          names=['Repair and compare real portrait inference','Prepare iOS inference verification','Verify real iOS mask inference']
+          for name in names:
+              script=next(s['run'] for s in workflow['jobs']['repair']['steps'] if s.get('name')==name)
+              if name==names[0]:
+                  script=script.replace('old,new=load(original),load(package)','old=ct.models.MLModel(str(original),compute_units=ct.ComputeUnit.CPU_ONLY)\nnew=ct.models.MLModel(str(package),compute_units=ct.ComputeUnit.CPU_ONLY)')
+              print('RUN',name,flush=True)
+              subprocess.run(script,shell=True,executable='/bin/bash',check=True,timeout=420)
+          PY
+      - name: Save only a verified repair
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/sam-repair-ios.log" Loop/Resources/SceneModels/SAM-IOS-REPAIR.log
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Loop/Resources/SceneModels
+          git commit -m 'Repair SAM decoder shape inference with deterministic parity and verified iOS masks'
+          git push origin HEAD:feature/loop-simple-power-2.0
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-SAM-Verified-Repair
+          path: |
+            ${{ runner.temp }}/sam-repair-ios.log
+            Loop/Resources/SceneModels/SAM-IOS-REPAIR.json
