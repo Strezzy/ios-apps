@@ -75,10 +75,10 @@ float4 loopAgingDetail(sample_t original,sample_t originalLow,sample_t aged,floa
     float3 restored=aged.rgb+(original.rgb-originalLow.rgb)*detail;
     return float4(clamp(restored,0.0,1.0),original.a);
 }
-float4 loopWeather(sampler scene,float2 dimensions,float time,float mode,float layer,float density,float speed,float wind,float size,destination dest) {
+float4 loopWeather(sampler scene,float2 dimensions,float time,float mode,float layer,float density,float speed,float wind,float size,float2 camera,destination dest) {
     float2 px=dest.coord(),uv=px/dimensions;
     float ratio=dimensions.x/dimensions.y;
-    float2 p=float2(uv.x*ratio,uv.y);
+    float2 p=float2((uv.x-camera.x)*ratio,uv.y-camera.y);
     float t=time*speed;
     float3 rgb=0;float alpha=0;
     float depth=layer<.5?.38:(layer<1.5?.72:1.25);

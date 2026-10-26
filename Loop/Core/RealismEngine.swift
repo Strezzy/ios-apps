@@ -64,6 +64,7 @@ struct BodyGeometry: Sendable {
 }
 
 final class RealismSession: @unchecked Sendable {
+    let creative = SceneRuntime()
     fileprivate let lock = NSLock()
     fileprivate var previousMask: CGImage?
     fileprivate var previousImage: CGImage?
@@ -76,6 +77,7 @@ final class RealismSession: @unchecked Sendable {
     fileprivate var lastAnalysis: EffectsAnalysis?
     fileprivate var personRequest = VNGeneratePersonSegmentationRequest()
     fileprivate func reset() {
+        creative.reset()
         previousMask = nil; previousImage = nil; previousFaces = []; previousBodies = []
         lastAnalysis = nil; direction = 0
         personRequest = VNGeneratePersonSegmentationRequest()
@@ -108,7 +110,7 @@ enum RealismKernels {
         if let existing = cached[name] { return existing }
         let result: CIKernel
         if name == "loopReshape" { result = try CIWarpKernel(functionName: name, fromMetalLibraryData: data.get()) }
-        else if ["loopSkinMask","loopRetouch","loopTemporalMatte","loopAgingDetail"].contains(name) {
+        else if ["loopSkinMask","loopRetouch","loopTemporalMatte","loopAgingDetail","loopCosmetic","loopDepthLayer","loopLUTDomain"].contains(name) {
             result = try CIColorKernel(functionName: name, fromMetalLibraryData: data.get())
         } else { result = try CIKernel(functionName: name, fromMetalLibraryData: data.get()) }
         cached[name] = result; return result
