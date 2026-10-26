@@ -1,0 +1,60 @@
+name: Review Loop simple controls
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-ui-review.yml']
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: xcode-27
+    timeout-minutes: 15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 92ef77b47d8083b330d988b388678f1d88c0154a
+      - name: Prepare the native interface build
+        run: |
+          set -euo pipefail
+          command -v xcodegen || brew install xcodegen
+          cd Loop
+          mkdir -p Build
+          xcodegen generate
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath Build/Simulator CODE_SIGNING_ALLOWED=NO build-for-testing > Build/ui-build.log 2>&1 || { tail -100 Build/ui-build.log; exit 1; }
+      - name: Boot simulator
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          devices=[x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable')]
+          chosen=next((x for x in devices if x['name']=='iPhone 17 Pro'),devices[0])
+          print(chosen,flush=True);udid=chosen['udid']
+          open(os.environ['RUNNER_TEMP']+'/loop-ui-sim','w').write(udid)
+          subprocess.run(['xcrun','simctl','boot',udid])
+          subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          PY
+      - name: Exercise the simple controls
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          cd Loop
+          SIMULATOR=$(cat "$RUNNER_TEMP/loop-ui-sim")
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath Build/Simulator -resultBundlePath Build/ReviewUI.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 240 -only-testing:LoopUITests/CreativeUITests CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee Build/ui-check.log
+      - name: Collect screenshots and result
+        if: always()
+        run: |
+          if [ -d Loop/Build/ReviewUI.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path Loop/Build/ReviewUI.xcresult --format json > Loop/Build/UI-REVIEW.json
+            xcrun xcresulttool export attachments --path Loop/Build/ReviewUI.xcresult --output-path Loop/Build/UI-Review-Screenshots || true
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-Simple-UI-Review
+          path: |
+            Loop/Build/*.log
+            Loop/Build/*.json
+            Loop/Build/UI-Review-Screenshots
