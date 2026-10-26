@@ -1,0 +1,57 @@
+name: Inspect Loop simple interface
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-interface-check.yml']
+permissions:
+  contents: read
+jobs:
+  interface:
+    runs-on: xcode-27
+    timeout-minutes: 12
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: '638ef46de119bea443e82e19db477f7663e1a12c'
+      - name: Prepare simulator build
+        run: |
+          set -euo pipefail
+          command -v xcodegen || brew install xcodegen
+          cd Loop
+          mkdir -p Build
+          xcodegen generate
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath Build/Simulator CODE_SIGNING_ALLOWED=NO build-for-testing > Build/interface-build.log 2>&1 || { tail -100 Build/interface-build.log; exit 1; }
+      - name: Boot iPhone
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          chosen=next(x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable'))
+          udid=chosen['udid'];open(os.environ['RUNNER_TEMP']+'/loop-ui-simulator','w').write(udid)
+          subprocess.run(['xcrun','simctl','boot',udid]);subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          PY
+      - name: Walk through the simple editor
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          cd Loop
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$(cat "$RUNNER_TEMP/loop-ui-simulator")" -derivedDataPath Build/Simulator -resultBundlePath Build/CreativeUI.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 240 -only-testing:LoopUITests/CreativeUITests CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee Build/interface-test.log
+      - name: Collect screenshots and result
+        if: always()
+        run: |
+          if [ -d Loop/Build/CreativeUI.xcresult ]; then
+            xcrun xcresulttool get test-results summary --path Loop/Build/CreativeUI.xcresult --format json > Loop/Build/INTERFACE-CHECK.json || true
+            xcrun xcresulttool export attachments --path Loop/Build/CreativeUI.xcresult --output-path Loop/Build/UIScreenshots || true
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-Simple-Interface-Review
+          path: |
+            Loop/Build/UIScreenshots
+            Loop/Build/INTERFACE-CHECK.json
+            Loop/Build/interface-test.log
+            Loop/Build/interface-build.log
