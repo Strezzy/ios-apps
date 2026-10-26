@@ -44,7 +44,9 @@ import UniformTypeIdentifiers
 
     func projectDirectory(_ id: UUID) -> URL { projectsDirectory.appendingPathComponent(id.uuidString, isDirectory: true) }
     func sourceURL(_ project: LoopProject) -> URL {
-        projectDirectory(project.id).appendingPathComponent(URL(fileURLWithPath: project.sourceFilename).lastPathComponent)
+        let url = projectDirectory(project.id).appendingPathComponent(URL(fileURLWithPath: project.sourceFilename).lastPathComponent)
+        CreativeAssets.register(project, url: url)
+        return url
     }
     func projectThumbnail(_ project: LoopProject) -> URL { projectDirectory(project.id).appendingPathComponent("preview.jpg") }
     func exportURL(_ item: SavedExport) -> URL { exportsDirectory.appendingPathComponent(URL(fileURLWithPath: item.filename).lastPathComponent) }
@@ -192,6 +194,7 @@ import UniformTypeIdentifiers
     }
 
     func deleteProject(_ project: LoopProject) {
+        CreativeAssets.remove(project.id)
         guard !isExporting, trackingProgress == nil else { return }
         saveTasks[project.id]?.cancel(); saveTasks[project.id] = nil
         do {
