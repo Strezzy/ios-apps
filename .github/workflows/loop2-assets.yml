@@ -1,0 +1,56 @@
+name: Prepare Loop 2 offline assets
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-assets.yml']
+permissions:
+  contents: write
+jobs:
+  assets:
+    runs-on: xcode-27
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Retrieve and record offline models
+        run: |
+          python3 - <<'PY'
+          import urllib.request,json,hashlib,time
+          from pathlib import Path
+          root=Path('Loop/Resources/SceneModels');root.mkdir(parents=True,exist_ok=True)
+          report={'models':[],'runtimeNetworkAccess':False}
+          def get(url):
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Loop-offline-build/2.0'}),timeout=120) as r:return r.read()
+                  except Exception:
+                      if attempt==3:raise
+                      time.sleep(3*(attempt+1))
+          for repo,selector in [('apple/coreml-depth-anything-v2-small',lambda p:p.startswith('DepthAnythingV2SmallF16.mlpackage/')),('apple/coreml-sam2-tiny',lambda p:'.mlpackage/' in p)]:
+              meta=json.loads(get('https://huggingface.co/api/models/'+repo));rev=meta['sha'];files=[]
+              for f in meta['siblings']:
+                  path=f['rfilename']
+                  if not selector(path):continue
+                  assert '..' not in Path(path).parts
+                  data=get('https://huggingface.co/'+repo+'/resolve/'+rev+'/'+path)
+                  destination=root/path;destination.parent.mkdir(parents=True,exist_ok=True);destination.write_bytes(data)
+                  files.append({'path':path,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+                  print(path,len(data),flush=True)
+              assert files,repo
+              report['models'].append({'source':repo,'revision':rev,'license':'Apache-2.0','files':files})
+          google=[('face_landmarker.task','https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'),('selfie_multiclass_256x256.tflite','https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/1/selfie_multiclass_256x256.tflite')]
+          for name,url in google:
+              data=get(url);(root/name).write_bytes(data)
+              report['models'].append({'source':url,'license':'Apache-2.0','files':[{'path':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}]})
+              print(name,len(data),flush=True)
+          (root/'Apache-2.0.txt').write_bytes(get('https://raw.githubusercontent.com/google-ai-edge/mediapipe/bfafeaed685be63fbf7ace1c3fbc4bfcbbc30128/LICENSE'))
+          (root/'SCENE-MODELS.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          PY
+      - name: Commit assets on feature branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Loop/Resources/SceneModels
+          git commit -m 'Bundle offline Core ML depth and SAM2 selection models with provenance'
+          git pull --rebase origin feature/loop-simple-power-2.0
+          git push origin HEAD:feature/loop-simple-power-2.0
