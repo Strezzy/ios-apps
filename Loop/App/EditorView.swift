@@ -271,6 +271,7 @@ struct EditorView: View {
 
     private var clipControls: some View {
         VStack(spacing: 16) {
+            MotionToolsView(project: $project, preview: preview)
             LoopCard {
                 EditorSectionTitle(title: "Find your moment", subtitle: "\(project.metadata.size.label) · \(LoopFormat.rate(project.metadata.nominalFrameRate)) FPS source · \(LoopFormat.time(project.metadata.duration))")
                 ValueSlider(title: "Start", value: Binding(get: { project.trimStart }, set: { newValue in

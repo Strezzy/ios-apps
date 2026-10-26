@@ -11,7 +11,7 @@ struct RealismControls: View {
                     Label("Local portrait aging",systemImage:"cpu").font(.subheadline.weight(.semibold))
                     Text("A bundled 512 px neural model changes facial texture, then blends it into the original-resolution frame. Best with a clear, mostly front-facing face. This is an appearance effect, not a prediction of your future face. Preview can be slower.")
                         .font(.caption).foregroundStyle(.secondary)
-                } else if id != "faceBlur" && id != "facePixel" {
+                } else if id != "faceBlur" && id != "facePixel" && !MeshPortrait.cosmetics.contains(id) {
                     DisclosureGroup("Fine-tune face & skin") {
                         VStack(spacing:12) {
                             faceSlider("Face width · fuller / slimmer",\.width)

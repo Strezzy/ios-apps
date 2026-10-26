@@ -1,0 +1,101 @@
+{
+  "models": [
+    {
+      "source": "apple/coreml-depth-anything-v2-small",
+      "revision": "cfef6f6f2a70783dedc0bfae40cecbc2052285d3",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "DepthAnythingV2SmallF16.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+          "bytes": 399433,
+          "sha256": "44ac97a3efcfd52113183fb2862ff59cd0368e9ec2e30a90a54980dd11407042"
+        },
+        {
+          "path": "DepthAnythingV2SmallF16.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+          "bytes": 49419072,
+          "sha256": "fa60d9b6a155734f59029ebb882fd54e549bfaee3539c1a9cbd2cbbab64a0fed"
+        },
+        {
+          "path": "DepthAnythingV2SmallF16.mlpackage/Manifest.json",
+          "bytes": 617,
+          "sha256": "2883ae290c48fe916dc5ececac03a7d847fa277165a49ef5652fa1d2b9cb55f7"
+        }
+      ]
+    },
+    {
+      "source": "apple/coreml-sam2-tiny",
+      "revision": "6d04587b4937500c26afbdeeb9777a336efaeef6",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "SAM2TinyImageEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+          "bytes": 154984,
+          "sha256": "95baf50c6e4b7ba659c962b7badb311d9da0ba1b51169cfd9559497182dd846d"
+        },
+        {
+          "path": "SAM2TinyImageEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+          "bytes": 67069504,
+          "sha256": "a773aad6b0a28f906b5d28a8141dbf639ebcb57a48323ec60f3b1f640d91b1ed"
+        },
+        {
+          "path": "SAM2TinyImageEncoderFLOAT16.mlpackage/Manifest.json",
+          "bytes": 617,
+          "sha256": "9553062890eb4aed121c10e389ee07f2f8b278cd2f13807f88ccc6214a339cfa"
+        },
+        {
+          "path": "SAM2TinyMaskDecoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+          "bytes": 75239,
+          "sha256": "24bd23b9267c8ccc172a5370bc3507d4e11f7a33ba14d529dfd904e7ebf50847"
+        },
+        {
+          "path": "SAM2TinyMaskDecoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+          "bytes": 10222400,
+          "sha256": "75d30eb00ad294872463b07efbfa17b536ae9ec4168f9b78f12a4fb57245ee94"
+        },
+        {
+          "path": "SAM2TinyMaskDecoderFLOAT16.mlpackage/Manifest.json",
+          "bytes": 617,
+          "sha256": "33ba96c9c6babca854fb1820917f73d0262432a096184ccae29f58dbb9c8ed62"
+        },
+        {
+          "path": "SAM2TinyPromptEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/model.mlmodel",
+          "bytes": 20804,
+          "sha256": "3ef4f5a82aacfeaa10d39be293116ed9a00bd4bacf48bd1f6fb8c1bf89714ec8"
+        },
+        {
+          "path": "SAM2TinyPromptEncoderFLOAT16.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+          "bytes": 2101056,
+          "sha256": "9a44d58c9fdf3026b58034183eb414b64e83139768d6ee6e206a75a5599c57ce"
+        },
+        {
+          "path": "SAM2TinyPromptEncoderFLOAT16.mlpackage/Manifest.json",
+          "bytes": 617,
+          "sha256": "cb078094eda6773fbdb90ca27e44c7e6525d6c69273376a63fe7db596c7de676"
+        }
+      ]
+    },
+    {
+      "source": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "face_landmarker.task",
+          "bytes": 3758596,
+          "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+        }
+      ]
+    },
+    {
+      "source": "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/1/selfie_multiclass_256x256.tflite",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "selfie_multiclass_256x256.tflite",
+          "bytes": 16371837,
+          "sha256": "c6748b1253a99067ef71f7e26ca71096cd449baefa8f101900ea23016507e0e0"
+        }
+      ]
+    }
+  ],
+  "runtimeNetworkAccess": false
+}
