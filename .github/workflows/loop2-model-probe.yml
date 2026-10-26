@@ -1,0 +1,85 @@
+name: Diagnose Loop subject model
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-model-probe.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 8
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+      - name: Inspect native SAM2 inference and tensor layout
+        run: |
+          cat > "$RUNNER_TEMP/probe.swift" <<'SWIFT'
+          import Foundation
+          import CoreML
+          import CoreImage
+          import CoreVideo
+          import ImageIO
+          let root=URL(fileURLWithPath:FileManager.default.currentDirectoryPath).appendingPathComponent("Loop/Resources/SceneModels")
+          let ctx=CIContext(options:[.cacheIntermediates:false])
+          let image=CIImage(contentsOf:URL(fileURLWithPath:"Loop/Tests/Fixtures/portrait-fixture.png"))!
+          var compiled:[String:URL]=[:]
+          func model(_ name:String,_ units:MLComputeUnits)throws->MLModel {
+              let url:URL
+              if let c=compiled[name]{url=c}else{url=try MLModel.compileModel(at:root.appendingPathComponent(name+".mlpackage"));compiled[name]=url}
+              let c=MLModelConfiguration();c.computeUnits=units
+              let m=try MLModel(contentsOf:url,configuration:c)
+              print("MODEL",name,m.modelDescription)
+              return m
+          }
+          func stats(_ a:MLMultiArray,_ label:String) {
+              var lo=Double.infinity,hi = -Double.infinity,sum=0.0,positive=0
+              for i in 0..<a.count {let v=a[i].doubleValue;lo=min(lo,v);hi=max(hi,v);sum+=v;if v>0{positive+=1}}
+              print(label,"shape",a.shape,"strides",a.strides,"type",a.dataType.rawValue,"min",lo,"max",hi,"mean",sum/Double(a.count),"positive",positive)
+          }
+          for units in [MLComputeUnits.cpuAndGPU,MLComputeUnits.all] {
+              print("CONFIG",units.rawValue)
+              let enc=try model("SAM2TinyImageEncoderFLOAT16",units)
+              let prompt=try model("SAM2TinyPromptEncoderFLOAT16",units)
+              let dec=try model("SAM2TinyMaskDecoderFLOAT16",units)
+              var pb:CVPixelBuffer?
+              CVPixelBufferCreate(nil,1024,1024,kCVPixelFormatType_32BGRA,[kCVPixelBufferIOSurfacePropertiesKey:[:]] as CFDictionary,&pb)
+              ctx.render(image.transformed(by:CGAffineTransform(scaleX:2,y:2)),to:pb!,bounds:CGRect(x:0,y:0,width:1024,height:1024),colorSpace:CGColorSpace(name:CGColorSpace.sRGB)!)
+              let features=try enc.prediction(from:MLDictionaryFeatureProvider(dictionary:["image":MLFeatureValue(pixelBuffer:pb!)]))
+              for n in features.featureNames {if let a=features.featureValue(for:n)?.multiArrayValue{stats(a,n)}}
+              for count in [1,2,4,14] {
+                  for compact in [false,true] {
+                      do {
+                          let pc=prompt.modelDescription.inputDescriptionsByName["points"]!.multiArrayConstraint!
+                          let lc=prompt.modelDescription.inputDescriptionsByName["labels"]!.multiArrayConstraint!
+                          let points=try MLMultiArray(shape:[1,NSNumber(value:count),2],dataType:pc.dataType)
+                          let labels=try MLMultiArray(shape:[1,NSNumber(value:count)],dataType:lc.dataType)
+                          for i in 0..<count {points[[0,NSNumber(value:i),0]]=512;points[[0,NSNumber(value:i),1]]=NSNumber(value:0.65*1024);labels[[0,NSNumber(value:i)]]=NSNumber(value:i==0 ? 1:-1)}
+                          let pf=try prompt.prediction(from:MLDictionaryFeatureProvider(dictionary:["points":points,"labels":labels]))
+                          var f:[String:MLFeatureValue]=[:]
+                          let aliases=["sparse_embedding":"sparse_embeddings","dense_embedding":"dense_embeddings"]
+                          for n in dec.modelDescription.inputDescriptionsByName.keys {
+                              let v=features.featureValue(for:n) ?? pf.featureValue(for:n) ?? pf.featureValue(for:aliases[n] ?? n)
+                              if compact,let a=v?.multiArrayValue {
+                                  let b=try MLMultiArray(shape:a.shape,dataType:dec.modelDescription.inputDescriptionsByName[n]!.multiArrayConstraint!.dataType)
+                                  for j in 0..<a.count{b[j]=a[j]};f[n]=MLFeatureValue(multiArray:b)
+                              }else{f[n]=v}
+                          }
+                          print("CASE",count,"compact",compact)
+                          let o=try dec.prediction(from:MLDictionaryFeatureProvider(dictionary:f))
+                          for n in o.featureNames {if let a=o.featureValue(for:n)?.multiArrayValue{stats(a,n);if a.count<16{print("VALUES",n,(0..<a.count).map{a[$0].doubleValue})}}}
+                          if let a=o.featureValue(for:"low_res_masks")?.multiArrayValue {
+                              for c in 0..<a.shape[1].intValue {print("MASKPOINT",c,a[[0,NSNumber(value:c),166,128]])}
+                          }
+                      }catch{print("PROBE ERROR",count,compact,error)}
+                  }
+              }
+          }
+          SWIFT
+          xcrun swift "$RUNNER_TEMP/probe.swift" 2>&1 | tee "$RUNNER_TEMP/model-probe.log"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-Subject-Model-Diagnostics
+          path: ${{ runner.temp }}/model-probe.log
