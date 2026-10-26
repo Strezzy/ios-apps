@@ -71,12 +71,12 @@ enum MediaEngine {
         return try await generator.image(at: CMTime(seconds: clamped, preferredTimescale: 60_000)).image
     }
 
-    static func makeGenerator(url: URL, maximumDimension: Int) -> AVAssetImageGenerator {
+    static func makeGenerator(url: URL, maximumDimension: Int, preserveHDR: Bool = false) -> AVAssetImageGenerator {
         let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
         generator.appliesPreferredTrackTransform = true
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
-        generator.dynamicRangePolicy = .forceSDR
+        generator.dynamicRangePolicy = preserveHDR ? .matchSource : .forceSDR
         if maximumDimension > 0 {
             generator.maximumSize = CGSize(width: maximumDimension, height: maximumDimension)
         }
@@ -87,6 +87,7 @@ enum MediaEngine {
 actor ExportEngine {
     func export(sourceURL: URL, project: LoopProject, destination: URL,
                 control: ExportControl, progress: @escaping @Sendable (ExportProgress) -> Void) async throws -> ExportResult {
+        CreativeAssets.register(project, url: sourceURL)
         if project.export.format.isVideo {
             return try await VideoFileExporter.export(sourceURL: sourceURL, project: project, destination: destination,
                                                       control: control, progress: progress)
@@ -131,6 +132,20 @@ actor ExportEngine {
         let generator = MediaEngine.makeGenerator(url: sourceURL,
             maximumDimension: min(project.metadata.size.longEdge, requiredSourceEdge))
         defer { generator.cancelAllCGImageGeneration() }
+        if project.export.stableGIFPalette == true, let gif = writer as? GIFEncoder {
+            let sampleGenerator=MediaEngine.makeGenerator(url:sourceURL,maximumDimension:256)
+            defer {sampleGenerator.cancelAllCGImageGeneration()}
+            var thumbnails=[CGImage]()
+            var sampleProject=project;sampleProject.effects?.matteTuning?.showMask=false
+            for i in 0..<min(8,plan.frames.count) {
+                try await control.checkpoint()
+                let frame=plan.frames[i*(plan.frames.count-1)/max(1,min(8,plan.frames.count)-1)]
+                let source=try await sampleGenerator.image(at:CMTime(seconds:frame.sourceTime,preferredTimescale:60_000)).image
+                thumbnails.append(try FrameRenderer.render(source,project:sampleProject,time:frame.sourceTime,maximumDimension:128))
+                progress(ExportProgress(fraction:0,completedFrames:0,totalFrames:plan.frames.count,message:"Choosing consistent GIF colors…"))
+            }
+            try gif.prepareStablePalette(thumbnails)
+        }
         for (index, frame) in plan.frames.enumerated() {
             if ProcessInfo.processInfo.thermalState == .critical {
                 progress(ExportProgress(fraction: Double(index) / Double(plan.frames.count), completedFrames: index,
