@@ -1,6 +1,6 @@
 {
   "profile": "build-only",
-  "version": "1.2.0",
-  "build": "6",
-  "reason": "The app owner requested focused implementation and publication without repeating intensive simulator testing. Verify the native arm64 Release build and package; physical-device effects, audio sync, tracking and export performance remain for device testing."
+  "version": "1.3.0",
+  "build": "7",
+  "reason": "Owner requested scoped validation rather than the lengthy full simulator/UI suite. Native release build and package checks are mandatory. Additional focused realism and model conversion checks are recorded separately; physical iPhone testing is not claimed."
 }

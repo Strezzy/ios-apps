@@ -8,6 +8,8 @@ import ImageIO
 struct EffectsAnalysis: @unchecked Sendable {
     var faces: [VNFaceObservation] = []
     var personMask: CIImage?
+    var geometry: [FaceGeometry] = []
+    var bodies: [BodyGeometry] = []
 }
 
 /// All effects are local Core Image / Vision operations. No network or downloaded models.
@@ -15,76 +17,13 @@ enum OfflineEffectsRenderer {
     private static let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
     private static let context = CIContext(options: [.cacheIntermediates: false, .highQualityDownsample: true])
 
-    static func analyze(_ image: CIImage, faces: Bool, person: Bool, preview: Bool) throws -> EffectsAnalysis {
-        guard faces || person else { return EffectsAnalysis() }
-        let extent = image.extent
-        let scale = min(1, (preview ? 512.0 : 768.0) / max(extent.width, extent.height))
-        let small = image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-        guard let raster = context.createCGImage(small, from: small.extent, format: .RGBA8, colorSpace: colorSpace) else {
-            throw LoopError.encoding("The effect's analysis frame could not be prepared.")
-        }
-        let faceRequest = VNDetectFaceLandmarksRequest()
-        let maskRequest = VNGeneratePersonSegmentationRequest()
-        maskRequest.qualityLevel = preview ? .balanced : .accurate
-        maskRequest.outputPixelFormat = kCVPixelFormatType_OneComponent8
-        var requests: [VNRequest] = []
-        if faces { requests.append(faceRequest) }
-        if person { requests.append(maskRequest) }
-        do { try VNImageRequestHandler(cgImage: raster, orientation: .up, options: [:]).perform(requests) }
-        catch { throw LoopError.encoding("On-device effect analysis failed: \(error.localizedDescription)") }
-        var result = EffectsAnalysis(faces: Array((faceRequest.results ?? []).filter { $0.confidence >= 0.35 }.prefix(6)))
-        if let buffer = maskRequest.results?.first?.pixelBuffer {
-            let mask = CIImage(cvPixelBuffer: buffer)
-            result.personMask = mask.transformed(by: CGAffineTransform(
-                scaleX: extent.width / mask.extent.width, y: extent.height / mask.extent.height))
-                .transformed(by: CGAffineTransform(translationX: extent.minX, y: extent.minY))
-                .clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: max(0.5, extent.width / 2400)])
-                .cropped(to: extent)
-        }
-        return result
+    static func analyze(_ image: CIImage, faces: Bool, person: Bool, preview: Bool, body: Bool = false) throws -> EffectsAnalysis {
+        try RealismAnalysis.analyze(image, faces: faces, person: person, body: body, preview: preview,
+                                    time: 0, tuning: MatteTuning(), session: nil)
     }
-
     static func apply(_ input: CIImage, settings: EffectSettings, time: Double,
-                      preview: Bool, analysis supplied: EffectsAnalysis? = nil) throws -> CIImage {
-        let layers = settings.activeLayers
-        guard !layers.isEmpty else { return input }
-        let needsFaces = layers.contains { EffectLibrary.preset($0.preset)?.category == .face }
-        let needsPerson = layers.contains { let c = EffectLibrary.preset($0.preset)?.category; return c == .body || c == .background }
-        let analysis = try supplied ?? analyze(input, faces: needsFaces, person: needsPerson, preview: preview)
-        let extent = input.extent
-        var image = input
-        // Masks refer to the original upright source. Finish with grades, optics and atmosphere.
-        for category in [EffectCategory.background, .body, .face, .looks, .lens, .atmosphere] {
-            guard let layer = layers.first(where: { EffectLibrary.preset($0.preset)?.category == category }) else { continue }
-            let amount = min(1, max(0, layer.amount))
-            var output = image
-            switch category {
-            case .looks: output = look(image, id: layer.preset)
-            case .lens: output = lens(image, id: layer.preset, time: time)
-            case .face: output = FaceEffects.apply(image, id: layer.preset, faces: analysis.faces, time: time)
-            case .body:
-                if let mask = analysis.personMask {
-                    let styled = body(image, id: layer.preset, time: time)
-                    output = styled.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: image, kCIInputMaskImageKey: mask])
-                    if layer.preset == "neonBody" || layer.preset == "electricBody" {
-                        let glow = mask.applyingFilter("CIEdges", parameters: [kCIInputIntensityKey: 3])
-                            .applyingFilter("CIFalseColor", parameters: ["inputColor0": CIColor(red: 0, green: 0, blue: 0), "inputColor1": CIColor(red: 0.1, green: 0.85, blue: 1)])
-                            .applyingFilter("CIBloom", parameters: [kCIInputRadiusKey: extent.width * 0.006, kCIInputIntensityKey: 1])
-                        output = glow.applyingFilter("CIScreenBlendMode", parameters: [kCIInputBackgroundImageKey: output])
-                    }
-                }
-            case .background:
-                if let mask = analysis.personMask {
-                    let background = background(image, id: layer.preset, time: time, custom: settings.backgroundImage)
-                    output = image.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: background, kCIInputMaskImageKey: mask])
-                }
-            case .atmosphere:
-                let overlay = ProceduralEffects.overlay(id: layer.preset, extent: extent, time: time)
-                output = overlay.composited(over: image)
-            }
-            image = blend(image, output.cropped(to: extent), amount: amount).cropped(to: extent)
-        }
-        return image
+                      preview: Bool, analysis: EffectsAnalysis? = nil, session: RealismSession? = nil) throws -> CIImage {
+        try RealismCompositor.apply(input, settings: settings, time: time, preview: preview, analysis: analysis, session: session)
     }
 
     static func thumbnail(_ source: CGImage, preset: EffectPreset, time: Double,
@@ -187,27 +126,7 @@ enum OfflineEffectsRenderer {
         default: return image
         }
     }
-    private static func body(_ image: CIImage, id: String, time: Double) -> CIImage {
-        let e = image.extent
-        switch id {
-        case "hologram": return ProceduralEffects.overlay(id: "scanlines", extent: e, time: time).composited(over: falseColor(image, dark: CIColor(red: 0, green: 0.07, blue: 0.2), light: CIColor(red: 0.3, green: 1, blue: 1)))
-        case "goldStatue": return falseColor(controls(image, saturation: 0, contrast: 1.3), dark: CIColor(red: 0.12, green: 0.06, blue: 0.01), light: CIColor(red: 1, green: 0.84, blue: 0.3))
-        case "silverStatue": return controls(image, saturation: 0, contrast: 1.45, brightness: 0.04)
-        case "galaxyBody": return blend(image, ProceduralEffects.background(id: "deepSpace", extent: e, time: time), amount: 0.86)
-        case "thermalBody": return image.applyingFilter("CIThermal")
-        case "neonBody": return falseColor(image.applyingFilter("CIEdges", parameters: [kCIInputIntensityKey: 3]), dark: .black, light: CIColor(red: 0.1, green: 0.9, blue: 1))
-        case "ghostBody": return blend(image, controls(image, saturation: 0, contrast: 0.65, brightness: 0.2), amount: 0.8)
-        case "inkBody": return image.applyingFilter("CILineOverlay", parameters: ["inputNRNoiseLevel": 0.07, "inputEdgeIntensity": 1.7, "inputContrast": 40])
-        case "pixelBody": return image.applyingFilter("CIPixellate", parameters: [kCIInputScaleKey: max(4, e.width * 0.015)])
-        case "silhouette": return CIImage(color: CIColor(red: 0.015, green: 0.02, blue: 0.04)).cropped(to: e)
-        case "paperBody": return controls(image.applyingFilter("CIColorPosterize", parameters: ["inputLevels": 4]), saturation: 0.6, brightness: 0.08)
-        case "electricBody": return image.applyingFilter("CIEdges", parameters: [kCIInputIntensityKey: 5]).applyingFilter("CIBloom", parameters: [kCIInputIntensityKey: 1, kCIInputRadiusKey: e.width * 0.005])
-        case "auroraBody": return blend(image, ProceduralEffects.background(id: "auroraSky", extent: e, time: time), amount: 0.75)
-        case "rainbowBody": return image.applyingFilter("CIFalseColor", parameters: ["inputColor0": CIColor(red: 0.65, green: 0.05, blue: 1), "inputColor1": CIColor(red: 0.1, green: 1, blue: 0.45)])
-        default: return image
-        }
-    }
-    private static func background(_ image: CIImage, id: String, time: Double, custom: Data?) -> CIImage {
+    static func background(_ image: CIImage, id: String, time: Double, custom: Data?) -> CIImage {
         let e = image.extent
         switch id {
         case "portraitBlur": return image.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: min(e.width, e.height) * 0.025]).cropped(to: e)

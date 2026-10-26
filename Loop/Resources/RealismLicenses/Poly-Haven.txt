@@ -1,0 +1,4 @@
+Powered by Poly Haven
+CC0 environments from https://polyhaven.com/
+License: https://polyhaven.com/license
+All six photographs were derived from the original CC0 HDRI assets, not website previews. Asset URLs and checksums are in RealismAssets.json.

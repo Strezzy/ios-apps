@@ -40,15 +40,15 @@ enum FrameRenderer {
     }
 
     static func render(_ image: CGImage, project: LoopProject, time: Double,
-                       maximumDimension: Int? = nil) throws -> CGImage {
-        try renderFrame(image, project: project, time: time, maximumDimension: maximumDimension, editing: false)
+                       maximumDimension: Int? = nil, effectsSession: RealismSession? = nil) throws -> CGImage {
+        try renderFrame(image, project: project, time: time, maximumDimension: maximumDimension, editing: false, effectsSession: effectsSession)
     }
 
     /// Full upright source with real effects, for direct manipulation. Crop/mirror stay
     /// in the final-result view; positions here remain in original source coordinates.
     static func renderEditing(_ image: CGImage, project: LoopProject, time: Double,
-                              maximumDimension: Int = 960) throws -> CGImage {
-        try renderFrame(image, project: project, time: time, maximumDimension: maximumDimension, editing: true)
+                              maximumDimension: Int = 960, effectsSession: RealismSession? = nil) throws -> CGImage {
+        try renderFrame(image, project: project, time: time, maximumDimension: maximumDimension, editing: true, effectsSession: effectsSession)
     }
 
     /// Normalize native player buffers once, then retain only this bounded preview raster.
@@ -74,7 +74,7 @@ enum FrameRenderer {
     }
 
     private static func renderFrame(_ image: CGImage, project: LoopProject, time: Double,
-                                    maximumDimension: Int?, editing: Bool) throws -> CGImage {
+                                    maximumDimension: Int?, editing: Bool, effectsSession: RealismSession?) throws -> CGImage {
         try autoreleasepool {
             var frame = CIImage(cgImage: image).applyingFilter("CIColorControls", parameters: [
                 kCIInputBrightnessKey: max(-1, min(1, project.adjustments.brightness)),
@@ -83,7 +83,7 @@ enum FrameRenderer {
             ])
             if let effects = project.effects, !effects.activeLayers.isEmpty {
                 frame = try OfflineEffectsRenderer.apply(frame, settings: effects, time: time,
-                                                         preview: maximumDimension != nil)
+                                                         preview: maximumDimension != nil, session: effectsSession)
             }
             let selectedCrop = project.crop.rect(source: project.metadata.size, at: time)
             let crop = editing ? NormalizedRect(x: 0, y: 0, width: 1, height: 1) : selectedCrop

@@ -21,7 +21,7 @@ import UniformTypeIdentifiers
                 let prepared = try await Task.detached(priority: .utility) { () throws -> (CGImage, EffectsAnalysis) in
                     guard let small = OfflineEffectsRenderer.boundedImage(source, edge: 320) else { throw LoopError.encoding("The gallery frame could not be resized.") }
                     let analysis = try OfflineEffectsRenderer.analyze(CIImage(cgImage: small), faces: category == .face,
-                        person: category == .body || category == .background, preview: true)
+                        person: category == .body || category == .background || category == .atmosphere, preview: true, body: category == .body)
                     return (small, analysis)
                 }.value
                 guard !Task.isCancelled, self?.generation == token else { return }
@@ -88,7 +88,7 @@ struct EffectsEditorView: View {
                         }.padding(2)
                     }
                 }
-                Text("Stack one effect from each category. Existing overlays and privacy covers remain on top. Previews adapt to processing speed; exports render every frame.")
+                Text("Combine a preset from each category and fine-tune its controls. Illustrative face/body masks have been retired. Existing privacy covers remain on top; check covers after strong reshaping. Exports render every selected frame.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             LoopCard {
@@ -103,6 +103,7 @@ struct EffectsEditorView: View {
                     }.padding(2)
                 }
                 Text(category.guidance).font(.caption).foregroundStyle(.secondary)
+                RealismControls(settings: Binding(get: { settings }, set: { project.effects = $0 }), category: category)
                 if selected != nil {
                     ValueSlider(title: "Intensity", value: Binding(get: { selected?.amount ?? 1 }, set: { value in change { $0.setAmount(value, category: category) } }), range: 0...1,
                                 display: "\(Int((selected?.amount ?? 1) * 100))%")

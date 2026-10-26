@@ -1,0 +1,1 @@
+Public-domain NASA portrait fixture distributed by scikit-image. Used solely for rendering tests. Source: https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.astronaut

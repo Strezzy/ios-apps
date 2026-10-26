@@ -91,6 +91,7 @@ enum VideoFileExporter {
     static func export(sourceURL: URL, project: LoopProject, destination: URL,
                        control: ExportControl, progress: @escaping @Sendable (ExportProgress) -> Void) async throws -> ExportResult {
         let plan = try ExportPlan(project: project)
+        let realismSession = RealismSession()
         guard sourceURL.isFileURL, destination.isFileURL,
               FileManager.default.fileExists(atPath: sourceURL.path), !FileManager.default.fileExists(atPath: destination.path) else {
             throw LoopError.encoding("Keep the source video available and choose a new local export filename.")
@@ -138,7 +139,7 @@ enum VideoFileExporter {
                     let source = try await generator.image(at: CMTime(seconds: frame.sourceTime, preferredTimescale: 60_000)).image
                     try await control.checkpoint()
                     try autoreleasepool {
-                        let rendered = try FrameRenderer.render(source, project: project, time: frame.sourceTime)
+                        let rendered = try FrameRenderer.render(source, project: project, time: frame.sourceTime, effectsSession: realismSession)
                         guard let pool = session.adaptor.pixelBufferPool else { throw LoopError.encoding("The video buffer pool is unavailable.") }
                         var buffer: CVPixelBuffer?
                         guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer) == kCVReturnSuccess, let buffer else { throw LoopError.encoding("Not enough memory for this video frame. Choose a smaller resolution.") }

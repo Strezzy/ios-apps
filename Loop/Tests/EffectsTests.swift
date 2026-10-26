@@ -9,10 +9,10 @@ final class EffectsTests: XCTestCase {
     func testStackIsBoundedAndReplacesOnlyTheChosenCategory() throws {
         var settings = EffectSettings()
         settings.select("noir", category: .looks)
-        settings.select("cat", category: .face)
+        settings.select("faceSculpt", category: .face)
         settings.select("goldenHour", category: .looks)
         XCTAssertEqual(settings.activeLayers.count, 2)
-        XCTAssertEqual(settings.layer(.face)?.preset, "cat")
+        XCTAssertEqual(settings.layer(.face)?.preset, "faceSculpt")
         settings.bypass = true
         XCTAssertTrue(settings.activeLayers.isEmpty)
         XCTAssertEqual(try JSONDecoder().decode(EffectSettings.self, from: JSONEncoder().encode(settings)), settings)

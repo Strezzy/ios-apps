@@ -254,7 +254,7 @@ struct LoopSettingsView: View {
                         }
                         LoopCard {
                             Label("Made on your iPhone", systemImage: "lock.shield").font(.headline)
-                            Text("Video decoding, motion tracking, effects and animation export all happen on device. No account, ads, analytics, server uploads or model downloads.")
+                            Text("Video decoding, motion tracking, effects and animation export all happen on device. No account, ads, analytics, server uploads or runtime model downloads. Portrait models are bundled with the app.")
                                 .font(.subheadline).foregroundStyle(.secondary)
                             Text("Projects and exports stay in Loop’s local storage and are excluded from automatic cloud backup. Delete them from Library when you no longer need them. Uninstalling Loop removes this library.")
                                 .font(.caption).foregroundStyle(.secondary)

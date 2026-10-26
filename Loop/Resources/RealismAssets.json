@@ -1,0 +1,109 @@
+{
+  "models": [
+    {
+      "name": "LoopAging",
+      "source": "https://github.com/HasnainRaz/Fast-AgingGAN/tree/f452c3afe63ccc65ac86b52f2338f8173f023925",
+      "license": "MIT",
+      "checkpointSHA256": "a9aed2772b8e4ba68af274c85d52438f16420430f8a290fd96c76ec81b5e71a6",
+      "inputSize": 512,
+      "coreMLPredictionMAE_0_255": 0.3127301037311554,
+      "conversionValidation": "passed"
+    },
+    {
+      "name": "LoopMatte",
+      "source": "https://github.com/ZHKKKe/MODNet/tree/28165a451e4610c9d77cfdf925a94610bb2810fb",
+      "license": "Apache-2.0",
+      "checkpointSHA256": "913b82b66558db39b6286c150f809017d7528c872b156eb14333c9c6cb52108b",
+      "inputSize": 512,
+      "coreMLPredictionMAE_0_255": 0.4158962666988373,
+      "conversionValidation": "passed"
+    }
+  ],
+  "backgrounds": [
+    {
+      "id": "ph_venice_sunset",
+      "name": "Venice Sunset",
+      "license": "CC0-1.0",
+      "author": "Poly Haven contributors",
+      "source": "https://polyhaven.com/a/venice_sunset",
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/venice_sunset_4k.hdr",
+      "sourceSHA256": "f243a060f84df1437705d2e50bbdbcce66aa55ddb2d913c18eb3f87873213b10",
+      "outputSize": [
+        2560,
+        1440
+      ],
+      "outputSHA256": "992799323a8a428ddf86bed965ac7b63ea2a4b60c6372fb9b771ee6dd22a151c"
+    },
+    {
+      "id": "ph_kiara_1_dawn",
+      "name": "Savanna Dawn",
+      "license": "CC0-1.0",
+      "author": "Poly Haven contributors",
+      "source": "https://polyhaven.com/a/kiara_1_dawn",
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kiara_1_dawn_4k.hdr",
+      "sourceSHA256": "61f024d80f21bc9800bfdd5bf5d4034bc36d7a10494da73185edc40e1b81dc8b",
+      "outputSize": [
+        2560,
+        1440
+      ],
+      "outputSHA256": "6f8b17d8b877f9479fa3260e0d220c776ae0d33c34d54926e6ad07bc2f036e83"
+    },
+    {
+      "id": "ph_forest_slope",
+      "name": "Forest Light",
+      "license": "CC0-1.0",
+      "author": "Poly Haven contributors",
+      "source": "https://polyhaven.com/a/forest_slope",
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/forest_slope_4k.hdr",
+      "sourceSHA256": "112c4035c56e7699637ec798800edaade535cba6f3bfb8b0a602172c4ec30e52",
+      "outputSize": [
+        2560,
+        1440
+      ],
+      "outputSHA256": "cd47c07b152249547ead832bed4cc8a8b5b2cdbfe15561f1ac434977e841e6d8"
+    },
+    {
+      "id": "ph_modern_buildings_2",
+      "name": "City Courtyard",
+      "license": "CC0-1.0",
+      "author": "Poly Haven contributors",
+      "source": "https://polyhaven.com/a/modern_buildings_2",
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/modern_buildings_2_4k.hdr",
+      "sourceSHA256": "0b3a5c76f84bfc309c03835ba977ac5af520f3b715cde25eaec4aa2c4dfa9c67",
+      "outputSize": [
+        2560,
+        1440
+      ],
+      "outputSHA256": "5201a4d39c9529415b22ab899a74476f8fb9c0dd6e71d17c667229af65dcb705"
+    },
+    {
+      "id": "ph_studio_small_03",
+      "name": "Photo Studio",
+      "license": "CC0-1.0",
+      "author": "Poly Haven contributors",
+      "source": "https://polyhaven.com/a/studio_small_03",
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/studio_small_03_4k.hdr",
+      "sourceSHA256": "b3a6ae365559247a45ce667a6c3806bb6d2c8f7b6af3a89cc2c38ddc47806d9c",
+      "outputSize": [
+        2560,
+        1440
+      ],
+      "outputSHA256": "8a4f3b51a34bfaae59cf89a73d42fc30b5ec1d53a1b46a1e8c7899760f315164"
+    },
+    {
+      "id": "ph_moonless_golf",
+      "name": "Moonlit Landscape",
+      "license": "CC0-1.0",
+      "author": "Poly Haven contributors",
+      "source": "https://polyhaven.com/a/moonless_golf",
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/moonless_golf_4k.hdr",
+      "sourceSHA256": "d114c8e235f7aeacc30a9efe3b8545ea4202f7a33933071a1066efb904f4ea16",
+      "outputSize": [
+        2560,
+        1440
+      ],
+      "outputSHA256": "92bc7cd1b5d8598ebe9efb83ee80e1b36e3b4cb12d7c0cff759f2d1c66225a84"
+    }
+  ],
+  "runtimeNetworkAccess": false
+}

@@ -101,12 +101,12 @@ struct PreviewRenderedFrames: @unchecked Sendable {
                 editing = nil; result = nil
             case .editing:
                 editing = try FrameRenderer.renderEditing(source, project: request.project,
-                                                          time: request.sourceTime, maximumDimension: 960)
+                                                          time: request.sourceTime, maximumDimension: 960, effectsSession: RealismSessions.preview(request.session))
                 result = nil
             case .result:
                 editing = nil
                 result = try FrameRenderer.render(source, project: request.project,
-                                                 time: request.sourceTime, maximumDimension: 960)
+                                                 time: request.sourceTime, maximumDimension: 960, effectsSession: RealismSessions.preview(request.session))
             }
             return PreviewRenderedFrames(source: source, editing: editing, result: result,
                                          sourceTime: request.sourceTime, session: request.session)

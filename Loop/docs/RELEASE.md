@@ -1,23 +1,31 @@
-# Loop 1.2.0 (build 6)
+# Loop 1.3.0 (build 7): rebuilt portrait and atmosphere effects
 
-## Offline effects studio
+## Replaced, not repainted
 
-A new Effects tab adds 109 effect choices across six categories: 30 color looks, 12 lens/texture treatments, 25 face effects, 14 whole-person styles, 18 background choices (including your own photo), and 10 animated atmosphere layers. Everything renders on the device using Core Image, Vision and procedural artwork. No cloud rendering, accounts, filter downloads or third-party model packs.
+The illustrated face masks and flat body silhouettes from 1.2 are removed. The existing cinematic grades, lens looks, crop and overlay tools, video exports and full-video import default remain.
 
-Stack one effect from each category, adjust individual intensities, save favorites, search the gallery, compare with the original, and remove effects without disturbing the rest of the edit. Gallery thumbnails are generated from a still frame of your clip; tap Refresh previews to update them. The main video preview shows the selected effects in motion.
+Face presets now deform the source image: face width, jaw, chin, eyes, nose and lips, plus edge-preserving skin smoothing, detail and tone. Each has adjustable controls. Mature and Older use a bundled, converted Fast-AgingGAN Core ML model. Youthful Retouch is explicitly a retouch preset, not trained age regression. Automatic face blur and pixelation are available; review detections before relying on privacy protection.
 
-Face effects include landmark-based warps and illustrated masks/accessories. They are 2D effects, not Snapchat's Lens library or photorealistic 3D character replacements. Body styles use person segmentation; they do not replace clothing, reconstruct hidden anatomy or generate new motion. Background and face quality depends on visible subjects, lighting, occlusion and motion blur. Missed faces are left unchanged. Complex stacks can reduce preview frame rate; export processes every selected frame at the chosen resolution. No 4K real-time benchmark is claimed.
+Body presets use pose-guided source-pixel reshaping for waist, shoulders, hips, torso, arms and legs. They do not paint a body-shaped texture over the subject, invent clothing, or reconstruct hidden limbs. Strong shape edits can distort nearby scenery.
 
-## Video export
+## Cleaner foreground separation
 
-Export H.264 MP4 or HEVC/H.265 MP4 alongside the existing GIF and APNG options. Video supports full-color SDR output up to a 4096-pixel long edge and 60 FPS when the device encoder supports the chosen settings. Select native-crop resolution and source frame rate in Export to preserve source dimensions/rate within those limits. Defaults for existing export settings remain unchanged.
+Studio quality uses bundled MODNet portrait alpha matting, source-guided edge refinement and motion-gated temporal stabilization. Accurate native matting remains available. Foreground-object mode can protect salient non-person objects. Edge, feather and stability controls plus preview-only mask inspection help with difficult clips. Seeking and changing direction reset temporal state rather than reusing an unrelated silhouette.
 
-The selected crop, timing, playback direction, effects, captions and privacy overlays are rendered into the output. Forward video can retain source audio, including trim and speed edits; reverse and ping-pong video exports are silent and labeled accordingly. Videos appear in Library with native playback, sharing, thumbnails and Save to Photos. Encoding streams frames instead of retaining the entire clip. Even video dimensions may round an odd edge down by one pixel. HDR/Dolby Vision sources are converted to SDR.
+## Layered atmosphere and photographic backgrounds
 
-## Full video on import
+All ten atmosphere effects use the new GPU renderer, including soft rain streaks, depth-scaled snow, embers, fireflies, confetti, refractive bubbles, volumetric-style fog and light leaks. Choose layered, behind-subject or foreground placement and adjust density, size, speed and wind. Rear particles are occluded by the foreground mask. This is layered compositing, not full 3D scene reconstruction.
 
-New projects now select the complete imported video instead of the first six seconds. Existing projects retain their saved trim ranges. Cropping, subject tracking, overlay timing controls, gestures and the rest of the editor have not been redesigned.
+Six CC0 photographic backgrounds from Poly Haven join the retained background collection. Photographic backgrounds support framing and zoom; background blur, exposure and warmth can be adjusted. The six embedded photographs are 2560 x 1440 perspective projections of original 4K HDRI assets. Imported photos retain the existing up-to-4096-pixel support.
+
+## Offline, exports and compatibility
+
+All shaders, models and photographic assets are bundled. No account, runtime downloads or server rendering. Existing GIF/APNG/MP4/HEVC output, audio rules, trimming, crop tracking and overlay timing remain. New video imports still select the complete clip. Old projects continue to open; retired illustrated-effect identifiers are ignored, while other edits are preserved.
+
+Neural aging processes a 512-pixel face crop, then composites it into the source-resolution frame. It does not generate native-4K facial detail or guarantee an exact age, identity preservation, flicker-free motion or real-time playback. Heavy effects can reduce preview rate and slow export. HDR sources still export as SDR.
 
 ## Verification
 
-Native Release compilation and package verification are required before publication. Focused source checks cover the catalog, migration and integration points. New regression test source is included; simulator tests and physical-device performance, appearance and audio-sync validation are not claimed unless explicitly recorded in the build report.
+The release requires native arm64 compilation and package verification, plus a separate focused XCTest run covering shaders, source-pixel warps, foreground occlusion, deterministic animation, bundled models, migration and photographic assets. A real portrait fixture also exercises detection, matting and rendering. Reports record actual results. The long full-editor UI suite and physical-iPhone validation are not claimed. Model conversion parity checks ran with native Core ML on macOS. Full provenance and limitations are in `docs/REALISM-RESEARCH.md`.
+
+Update the existing `com.billy.loop` installation and retain its data container to keep projects and exports.

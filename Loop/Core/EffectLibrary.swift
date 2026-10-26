@@ -28,10 +28,10 @@ enum EffectCategory: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .looks: return "Full-color grades, rendered on your device."
         case .lens: return "Optical and graphic treatments. Stack with a color look."
-        case .face: return "Automatic 2D face landmarks, warps and illustrated masks. Best on clearly visible, front-facing faces. Not a 3D face replacement."
-        case .body: return "Styles the visible person using an on-device mask. These change appearance, not clothing or body anatomy."
+        case .face: return "Source-pixel shaping, edge-preserving skin treatments and local neural aging. No illustrated masks. Clear, mostly front-facing faces work best."
+        case .body: return "Pose-guided proportion edits at render resolution. No painted silhouettes, clothing replacement or invented limbs."
         case .background: return "Replaces or styles the area behind visible people. Hair, motion blur and occlusion can affect the cutout."
-        case .atmosphere: return "Animated, procedural layers. No downloads or generated video."
+        case .atmosphere: return "Layered GPU particles, refractive bubbles and drifting fog with subject occlusion. Entirely offline."
         }
     }
 }
@@ -53,6 +53,11 @@ struct EffectSettings: Codable, Equatable, Sendable {
     var bypass: Bool = false
     /// Optional for backward-compatible projects and small, local-only backgrounds.
     var backgroundImage: Data?
+    var faceTuning: FaceTuning?
+    var bodyTuning: BodyTuning?
+    var matteTuning: MatteTuning?
+    var atmosphereTuning: AtmosphereTuning?
+    var backdropTuning: BackdropTuning?
     var activeLayers: [EffectLayer] {
         guard !bypass else { return [] }
         // One bounded layer per category, even for hand-edited project JSON.
@@ -64,6 +69,8 @@ struct EffectSettings: Codable, Equatable, Sendable {
         layers.last { EffectLibrary.preset($0.preset)?.category == category }
     }
     mutating func select(_ id: String?, category: EffectCategory) {
+        if category == .face { faceTuning = nil }
+        if category == .body { bodyTuning = nil }
         layers.removeAll { EffectLibrary.preset($0.preset)?.category == category }
         if let id, EffectLibrary.preset(id)?.category == category { layers.append(EffectLayer(preset: id)) }
     }
@@ -95,21 +102,26 @@ enum EffectLibrary {
             ("comic", "Comic Ink"), ("poster", "Poster Print"), ("halftone", "Halftone"),
             ("crystal", "Crystal"), ("kaleidoscope", "Kaleidoscope"), ("prism", "Prism")
         ]) + group(.face, [
-            ("bigEyes", "Big Eyes"), ("tinyEyes", "Tiny Eyes"), ("bigMouth", "Big Smile"),
-            ("tinyMouth", "Tiny Mouth"), ("wideNose", "Button Nose"), ("alien", "Alien"),
-            ("ogre", "Ogre"), ("doll", "Doll"), ("sunglasses", "Sunglasses"),
-            ("heartEyes", "Heart Eyes"), ("laserEyes", "Laser Eyes"), ("neonVisor", "Neon Visor"),
-            ("cat", "Cat"), ("fox", "Fox"), ("bunny", "Bunny"), ("devil", "Little Devil"),
-            ("angel", "Halo"), ("crown", "Crown"), ("pirate", "Pirate"),
-            ("robot", "Robot"), ("skull", "Skull Mask"), ("clown", "Clown"),
-            ("blush", "Blush"), ("glam", "Glam"), ("neonMask", "Neon Mask")
+            ("faceSculpt", "Portrait Sculpt"), ("faceSlim", "Slimmer Face"), ("faceFull", "Fuller Face"),
+            ("jawDefine", "Defined Jaw"), ("jawSoft", "Soft Jaw"), ("chinLong", "Longer Chin"),
+            ("chinShort", "Shorter Chin"), ("eyesOpen", "Open Eyes"), ("eyesSmall", "Smaller Eyes"),
+            ("noseRefine", "Refined Nose"), ("noseWide", "Wider Nose"), ("lipsFull", "Fuller Lips"),
+            ("lipsFine", "Finer Lips"), ("skinSilk", "Silk Skin"), ("skinDetail", "Skin Detail"),
+            ("warmPortrait", "Warm Portrait"), ("coolPortrait", "Cool Portrait"),
+            ("portraitEditorial", "Editorial Portrait"), ("youthRetouch", "Youthful Retouch"),
+            ("ageMature", "Mature · Neural"), ("ageOlder", "Older · Neural"),
+            ("faceBlur", "Face Blur"), ("facePixel", "Face Pixelation")
         ]) + group(.body, [
-            ("hologram", "Hologram"), ("goldStatue", "Golden Statue"), ("silverStatue", "Silver Statue"),
-            ("galaxyBody", "Galaxy"), ("thermalBody", "Thermal Style"), ("neonBody", "Neon Outline"),
-            ("ghostBody", "Ghost"), ("inkBody", "Ink Figure"), ("pixelBody", "Pixel Figure"),
-            ("silhouette", "Silhouette"), ("paperBody", "Paper Cutout"), ("electricBody", "Electric"),
-            ("auroraBody", "Aurora Figure"), ("rainbowBody", "Spectrum")
+            ("bodySculpt", "Body Sculpt"), ("waistDefine", "Defined Waist"), ("waistFull", "Fuller Waist"),
+            ("shouldersBroad", "Broader Shoulders"), ("shouldersFine", "Narrower Shoulders"),
+            ("hipsFull", "Fuller Hips"), ("hipsFine", "Narrower Hips"),
+            ("legsLong", "Longer Legs"), ("legsCompact", "Shorter Legs"),
+            ("torsoLong", "Longer Torso"), ("torsoCompact", "Shorter Torso"),
+            ("armsFine", "Refined Arms"), ("athleticShape", "Athletic Shape"), ("softShape", "Soft Shape")
         ]) + group(.background, [
+            ("ph_venice_sunset", "Venice Sunset"), ("ph_kiara_1_dawn", "Savanna Dawn"),
+            ("ph_forest_slope", "Forest Light"), ("ph_modern_buildings_2", "City Courtyard"),
+            ("ph_studio_small_03", "Photo Studio"), ("ph_moonless_golf", "Moonlit Landscape"),
             ("portraitBlur", "Portrait Blur"), ("monoBackground", "Color Pop"), ("blackStudio", "Black Studio"),
             ("whiteStudio", "White Studio"), ("roseStudio", "Rose Studio"), ("blueStudio", "Blue Studio"),
             ("sunsetSky", "Sunset Sky"), ("auroraSky", "Aurora"), ("deepSpace", "Deep Space"),

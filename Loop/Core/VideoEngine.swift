@@ -92,6 +92,7 @@ actor ExportEngine {
                                                       control: control, progress: progress)
         }
         let plan = try ExportPlan(project: project)
+        let realismSession = RealismSession()
         try await control.checkpoint()
         guard sourceURL.isFileURL, destination.isFileURL,
               FileManager.default.fileExists(atPath: sourceURL.path),
@@ -140,7 +141,7 @@ actor ExportEngine {
                 CMTime(seconds: frame.sourceTime, preferredTimescale: 60_000)).image
             try await control.checkpoint()
             try autoreleasepool {
-                let rendered = try FrameRenderer.render(source, project: project, time: frame.sourceTime)
+                let rendered = try FrameRenderer.render(source, project: project, time: frame.sourceTime, effectsSession: realismSession)
                 try writer.add(rendered, delay: frame.delay, gifDelayCentiseconds: frame.gifDelayCentiseconds)
             }
             if index % 16 == 0 {
