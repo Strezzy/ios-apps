@@ -2,7 +2,7 @@ name: Publish Loop 1.3 realism overhaul
 on:
   push:
     branches: ['feature/loop-realism-1.3']
-    paths: ['.github/loop-realism-1.3/part*.b64', '.github/loop-realism-1.3/fixes.py', '.github/workflows/loop-realism-1.3.yml']
+    paths: ['.github/loop-realism-1.3/part*.b64', '.github/loop-realism-1.3/fixes.py', '.github/loop-realism-1.3/refine.py', '.github/workflows/loop-realism-1.3.yml']
 permissions:
   contents: write
   actions: read
@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build:
     runs-on: xcode-27
-    timeout-minutes: 40
+    timeout-minutes: 25
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
       GH_TOKEN: ${{ github.token }}
@@ -44,6 +44,7 @@ jobs:
           shutil.copytree(Path(os.environ['RUNNER_TEMP'])/'loop-realism-assets','Loop/Resources',dirs_exist_ok=True)
           preparation=(staging/'prepare_assets.py').read_text().replace('    mae = float(np.abs(native-expected).mean())','    if native.ndim == 3 and native.shape[-1] == 4: native = native[:, :, :3]\n    if expected.ndim == 2 and native.ndim == 3: native = native[:, :, 0]\n    mae = float(np.abs(native-expected).mean())')
           Path('Loop/scripts/prepare_realism_assets.py').write_text(preparation)
+          exec(compile((staging/'refine.py').read_text(),'refine-realism.py','exec'))
           if (staging/'fixes.py').is_file(): exec(compile((staging/'fixes.py').read_text(),'realism-fixes.py','exec'))
           report=json.loads(Path('Loop/Resources/RealismAssets.json').read_text())
           assert len(report['models'])==2 and all(m['conversionValidation']=='passed' for m in report['models'])
@@ -72,34 +73,54 @@ jobs:
           test -f Build/Device/Build/Products/Release-iphoneos/Loop.app/default.metallib
           test -d Build/Device/Build/Products/Release-iphoneos/Loop.app/LoopAging.mlmodelc
           test -d Build/Device/Build/Products/Release-iphoneos/Loop.app/LoopMatte.mlmodelc
-      - name: Focused native renderer and migration tests
+      - name: Compile focused simulator checks
+        timeout-minutes: 5
         run: |
           set -euo pipefail
-          xcrun simctl list devices available -j > "$RUNNER_TEMP/simulators.json"
-          SIMULATOR=$(python3 -c 'import json,os;d=json.load(open(os.environ["RUNNER_TEMP"]+"/simulators.json"));a=[x for k,v in d["devices"].items() if "iOS" in k for x in v if "iPhone" in x["name"] and x.get("isAvailable")];assert a;print(a[-1]["udid"])')
-          echo "$SIMULATOR" > "$RUNNER_TEMP/loop-simulator"
-          xcrun simctl boot "$SIMULATOR" || true
-          xcrun simctl bootstatus "$SIMULATOR" -b
           cd Loop
-          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath Build/Simulator -resultBundlePath Build/Realism.xcresult -parallel-testing-enabled NO -only-testing:LoopTests/RealismTests -only-testing:LoopTests/EffectsTests CODE_SIGNING_ALLOWED=NO test > Build/realism-tests.log 2>&1 || {
-            python3 scripts/show_errors.py Build/realism-tests.log
-            tail -160 Build/realism-tests.log
-            exit 1
-          }
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath Build/Simulator -only-testing:LoopTests/RealismTests -only-testing:LoopTests/EffectsTests CODE_SIGNING_ALLOWED=NO build-for-testing > Build/simulator-build.log 2>&1 || { python3 scripts/show_errors.py Build/simulator-build.log; tail -120 Build/simulator-build.log; exit 1; }
+      - name: Boot the current iPhone simulator
+        timeout-minutes: 4
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          devices=[x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable')]
+          chosen=next((x for x in devices if x['name']=='iPhone 17 Pro'),devices[0]);print(chosen,flush=True)
+          udid=chosen['udid'];open(os.environ['RUNNER_TEMP']+'/loop-simulator','w').write(udid)
+          subprocess.run(['xcrun','simctl','boot',udid])
+          subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          PY
+      - name: Run focused native renderer and migration tests
+        timeout-minutes: 7
+        run: |
+          set -euo pipefail
+          SIMULATOR=$(cat "$RUNNER_TEMP/loop-simulator")
+          cd Loop
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath Build/Simulator -resultBundlePath Build/Realism.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120 -only-testing:LoopTests/RealismTests -only-testing:LoopTests/EffectsTests CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee Build/realism-tests.log
           xcrun xcresulttool get test-results summary --path Build/Realism.xcresult --format json > Build/FOCUSED-REALISM-TESTS.json
           python3 - <<'PY'
           import json
-          p='Build/FOCUSED-REALISM-TESTS.json';r=json.load(open(p));print(json.dumps(r,indent=2))
-          assert r['passedTests'] >= 19 and r['failedTests']==0 and r.get('skippedTests',0)==0
+          r=json.load(open('Build/FOCUSED-REALISM-TESTS.json'));print(json.dumps(r,indent=2))
+          assert r['passedTests'] >= 21 and r['failedTests']==0 and r.get('skippedTests',0)==0
           PY
-          DATA=$(xcrun simctl get_app_container "$SIMULATOR" com.billy.loop data)
-          cp -R "$DATA/Documents/LoopRealismChecks" Build/Realism-Samples
-          test -f Build/Realism-Samples/ageOlder.png
-          test -f Build/Realism-Samples/layered-rain.png
+      - name: Collect render evidence and diagnostics
+        if: always()
+        run: |
+          mkdir -p Loop/Build
+          if [ -f "$RUNNER_TEMP/loop-simulator" ]; then
+            DATA=$(xcrun simctl get_app_container "$(cat "$RUNNER_TEMP/loop-simulator")" com.billy.loop data 2>/dev/null || true)
+            if [ -d "$DATA/Documents/LoopRealismChecks" ]; then cp -R "$DATA/Documents/LoopRealismChecks" Loop/Build/Realism-Samples; fi
+          fi
+          if [ -f Loop/Build/realism-tests.log ]; then tail -120 Loop/Build/realism-tests.log; fi
       - name: Package source and validation evidence
+        if: success()
         run: |
           set -euo pipefail
           cd Loop
+          test -f Build/Realism-Samples/ageOlder.png
+          test -f Build/Realism-Samples/layered-rain.png
           git -C .. archive -o Loop/Build/Loop-Source.zip HEAD:Loop
           zip -qr Build/Loop-XcodeProject.zip Loop.xcodeproj
           zip -qr Build/Loop-Realism-Samples.zip Build/Realism-Samples
