@@ -1,0 +1,100 @@
+name: Publish Loop 1.2 offline effects
+
+on:
+  push:
+    branches: ['feature/loop-offline-effects-1.2']
+    paths: ['.github/loop-effects-1.2/**', '.github/workflows/loop-effects-1.2.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: loop-effects-1.2-publication
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 35
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Integrate scoped source against the latest main branch
+        run: |
+          set -euo pipefail
+          cp -R .github/loop-effects-1.2 "$RUNNER_TEMP/loop-effects-source"
+          git fetch origin main
+          git switch -c "loop/effects-1.2-candidate-$GITHUB_RUN_ID" origin/main
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib, json, lzma, os
+          source = Path(os.environ['RUNNER_TEMP']) / 'loop-effects-source'
+          encoded = ''.join((source / f'part{i}.b64').read_text().strip() for i in range(4))
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True))
+          assert hashlib.sha256(raw).hexdigest() == 'ba3a72b705fe62f63d17042649fbd2cb1a4ef7ad0a1b9e403b4d0a4f09c90bbb'
+          payload = json.loads(raw)
+          for name, text in payload['files'].items():
+              p = Path(name)
+              assert p.parts[0] == 'Loop' and '..' not in p.parts and not p.is_absolute()
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(text)
+          exec(compile(payload['integration'], 'loop-effects-integration.py', 'exec'))
+          fixes = source / 'fixes.py'
+          if fixes.is_file():
+              exec(compile(fixes.read_text(), 'loop-effects-fixes.py', 'exec'))
+          p = Path('Loop/scripts/package.py')
+          p.write_text(p.read_text().replace('streaming GIF and APNG', 'offline effects; streaming GIF, APNG, H.264 and HEVC'))
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Loop
+          git diff --cached --name-only | tee "$RUNNER_TEMP/loop-changed-paths.txt"
+          if grep -qv '^Loop/' "$RUNNER_TEMP/loop-changed-paths.txt"; then exit 1; fi
+          git commit -m 'Loop 1.2.0: offline effects library, video export and full-duration imports'
+          git push origin HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/loop-candidate-sha"
+      - name: Install project generator
+        run: command -v xcodegen || brew install xcodegen
+      - name: Compile native arm64 Release and verify package
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop-candidate-sha")"
+          cd Loop
+          bash scripts/build.sh
+          bash scripts/validate.sh
+          git -C .. archive -o Loop/Build/Loop-Source.zip HEAD:Loop
+          zip -qr Build/Loop-XcodeProject.zip Loop.xcodeproj
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Loop-Icon.png
+          python3 scripts/verify_release.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-1.2-Release-Candidate
+          path: |
+            Loop/Build/*.ipa
+            Loop/Build/*.zip
+            Loop/Build/*.json
+            Loop/Build/*.txt
+            Loop/Build/*.log
+            Loop/Build/*.png
+          retention-days: 30
+      - name: Publish only the successfully compiled candidate
+        if: success()
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop-candidate-sha")"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin main
+          # Never overwrite concurrent changes. A non-fast-forward update fails safely.
+          git merge-base --is-ancestor origin/main HEAD
+          git push origin HEAD:main
+          git checkout -B main HEAD
+          cd Loop
+          bash scripts/publish.sh
