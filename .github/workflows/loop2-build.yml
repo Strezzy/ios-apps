@@ -1,0 +1,150 @@
+name: Build Loop 2 simple power
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/loop2-source/**', '.github/workflows/loop2-build.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: loop2-build
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Apply checked Loop-only changes
+        run: |
+          set -euo pipefail
+          cp -R .github/loop2-source "$RUNNER_TEMP/loop2-source"
+          cp -R Loop/Resources/SceneModels "$RUNNER_TEMP/loop2-models"
+          git fetch origin main
+          git switch -c "loop/creative-candidate-$GITHUB_RUN_ID" origin/main
+          python3 - <<'PY'
+          import base64,hashlib,json,lzma,os,shutil,subprocess
+          from pathlib import Path
+          staging=Path(os.environ['RUNNER_TEMP'])/'loop2-source'
+          raw=lzma.decompress(base64.b64decode(''.join((staging/f'part{i}.b64').read_text().strip() for i in range(5)),validate=True))
+          assert hashlib.sha256(raw).hexdigest()=='9b66b518ec4c952ab64accd09fb8bc5ddbb539a48be9babb221db36fe3360e03'
+          payload=json.loads(raw)
+          for name,digest in payload['baseline'].items():
+              p=Path(name)
+              assert p.parts[0]=='Loop' and '..' not in p.parts and not p.is_absolute()
+              if digest is None:assert not p.exists(),name
+              else:assert hashlib.sha256(p.read_bytes()).hexdigest()==digest,name
+          patch=payload['patch'].encode()
+          subprocess.run(['git','apply','--check','-'],input=patch,check=True)
+          subprocess.run(['git','apply','-'],input=patch,check=True)
+          shutil.copytree(Path(os.environ['RUNNER_TEMP'])/'loop2-models','Loop/Resources/SceneModels',dirs_exist_ok=True)
+          root=Path('Loop/Resources/SceneModels')
+          manifest=json.loads((root/'SCENE-MODELS.json').read_text())
+          for model in manifest['models']:
+              for f in model['files']:
+                  assert hashlib.sha256((root/f['path']).read_bytes()).hexdigest()==f['sha256']
+          for name in ['fixes.py','extra_tests.py']:
+              if (staging/name).exists():exec(compile((staging/name).read_text(),name,'exec'))
+          PY
+          python3 -m py_compile Loop/scripts/package.py Loop/scripts/verify_release.py
+          bash -n Loop/scripts/publish.sh
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Loop
+          git diff --cached --name-only | tee "$RUNNER_TEMP/loop2-paths"
+          if grep -qv '^Loop/' "$RUNNER_TEMP/loop2-paths"; then exit 1; fi
+          git commit -m 'Loop 2.0: simple creative controls, offline scene models, motion and professional exports'
+          git push origin HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/loop2-candidate-sha"
+      - name: Install project generator
+        run: command -v xcodegen || brew install xcodegen
+      - name: Compile native iPhone Release
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop2-candidate-sha")"
+          cd Loop
+          bash scripts/build.sh
+          python3 scripts/verify_release.py --binary
+      - name: Compile focused simulator checks
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          cd Loop
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath Build/Simulator CODE_SIGNING_ALLOWED=NO build-for-testing > Build/simulator-build.log 2>&1 || { python3 scripts/show_errors.py Build/simulator-build.log; tail -140 Build/simulator-build.log; exit 1; }
+      - name: Boot available iPhone simulator
+        timeout-minutes: 4
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          devices=[x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable')]
+          chosen=next((x for x in devices if x['name']=='iPhone 17 Pro'),devices[0]);print(chosen,flush=True)
+          udid=chosen['udid'];open(os.environ['RUNNER_TEMP']+'/loop2-simulator','w').write(udid)
+          subprocess.run(['xcrun','simctl','boot',udid])
+          subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          PY
+      - name: Execute native rendering and compatibility checks
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          SIMULATOR=$(cat "$RUNNER_TEMP/loop2-simulator")
+          cd Loop
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath Build/Simulator -resultBundlePath Build/Creative.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 -only-testing:LoopTests/CreativeTests -only-testing:LoopTests/RealismTests -only-testing:LoopTests/EffectsTests -only-testing:LoopTests/EncoderTests -only-testing:LoopTests/ExportPlanTests -only-testing:LoopTests/CreativeExportTests CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee Build/creative-tests.log
+          xcrun xcresulttool get test-results summary --path Build/Creative.xcresult --format json > Build/FOCUSED-CREATIVE-TESTS.json
+          python3 - <<'PY'
+          import json,subprocess
+          p='Build/FOCUSED-CREATIVE-TESTS.json';r=json.load(open(p));print(json.dumps(r,indent=2))
+          assert r['passedTests']>=50 and r['failedTests']==0 and r.get('skippedTests',0)==0,r
+          r['sourceCommit']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          r['scope']='Focused native scene models, masks, depth, rendering, effect timing, motion, palette encoding, project migration and export settings. Full editor UI suite and physical-device validation were not run.'
+          open(p,'w').write(json.dumps(r,indent=2)+'\n')
+          PY
+      - name: Collect render evidence and diagnostics
+        if: always()
+        run: |
+          mkdir -p Loop/Build
+          if [ -f "$RUNNER_TEMP/loop2-simulator" ]; then
+            DATA=$(xcrun simctl get_app_container "$(cat "$RUNNER_TEMP/loop2-simulator")" com.billy.loop data 2>/dev/null || true)
+            for NAME in LoopCreativeChecks LoopRealismChecks; do
+              if [ -d "$DATA/Documents/$NAME" ]; then cp -R "$DATA/Documents/$NAME" "Loop/Build/$NAME"; fi
+            done
+          fi
+          for LOG in device-build simulator-build creative-tests; do
+            if [ -f "Loop/Build/$LOG.log" ]; then tail -140 "Loop/Build/$LOG.log"; fi
+          done
+      - name: Package source and checked candidate
+        if: success()
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop2-candidate-sha")"
+          cd Loop
+          python3 scripts/verify_release.py
+          git -C .. archive -o Loop/Build/Loop-Source.zip HEAD:Loop
+          zip -qr Build/Loop-XcodeProject.zip Loop.xcodeproj
+          zip -qr Build/Loop-Creative-Samples.zip Build/LoopCreativeChecks Build/LoopRealismChecks
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Loop-Icon.png
+          cp Resources/SceneModels/SCENE-MODELS.json Build/SCENE-MODELS.json
+          cp docs/CREATIVE-RESEARCH.md Build/CREATIVE-RESEARCH.md
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-2-Candidate-and-Checks
+          path: |
+            Loop/Build/*.ipa
+            Loop/Build/*.zip
+            Loop/Build/*.json
+            Loop/Build/*.txt
+            Loop/Build/*.log
+            Loop/Build/*.png
+            Loop/Build/*.md
+            Loop/Build/LoopCreativeChecks
+            Loop/Build/LoopRealismChecks
+          retention-days: 30
