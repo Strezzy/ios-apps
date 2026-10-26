@@ -8,11 +8,9 @@ for name in names:
     s=s.replace(needle,needle+'\n        #if targetEnvironment(simulator)\n        throw XCTSkip("This simulator does not execute the selection backends reliably. The shared implementation is checked separately on native macOS; physical iPhone validation remains required.")\n        #endif',1)
 p.write_text(s)
 
-Path('Loop/scripts/check_native_selection.py').write_text(r'''#!/usr/bin/env python3
-"""Exercise the app's actual shared selection code in a native macOS bundle.
-
-This is an additional platform check, not a physical-iPhone performance test.
-"""
+Path('Loop/scripts/check_native_selection.py').write_text(r"""#!/usr/bin/env python3
+# Exercise the app's actual shared selection code in a native macOS bundle.
+# This is an additional platform check, not a physical-iPhone performance test.
 from pathlib import Path
 import hashlib,json,os,plistlib,subprocess
 root=Path(__file__).resolve().parents[1]
@@ -42,7 +40,7 @@ scene=(root/'Core/Creative/SceneInference.swift').read_text().split('\nstruct Sc
 (build/'NativeSubjectSelection.swift').write_text((root/'Core/Creative/NativeSubjectSelection.swift').read_text())
 models=(root/'Core/Models.swift').read_text();a=models.index('struct NormalizedRect:');b=models.index('\nenum CropAspect:',a)
 creative=(root/'Core/Creative/CreativeModels.swift').read_text();c=creative.index('struct SelectionPoint:');d=creative.index('\nstruct MaskStroke:',c)
-(build/'SharedTypes.swift').write_text('import Foundation\nimport CoreGraphics\n'+models[a:b]+'\n'+creative[c:d]+'''\nenum LoopError:Error {case encoding(String);case invalidSettings(String)}\n''')
+(build/'SharedTypes.swift').write_text('import Foundation\nimport CoreGraphics\n'+models[a:b]+'\n'+creative[c:d]+'\nenum LoopError:Error {case encoding(String);case invalidSettings(String)}\n')
 main=build/'Runner.swift'
 main.write_text(r'''import Foundation
 import CoreImage
@@ -97,27 +95,18 @@ import ImageIO
     }
 }
 ''')
-subprocess.run(['xcrun','swiftc','-O','-parse-as-library',str(build/'SharedSelection.swift'),str(build/'NativeSubjectSelection.swift'),str(build/'SharedTypes.swift'),str(main),'-o',str(binary)],check=True)
+subprocess.run(['xcrun','swiftc','-O','-parse-as-library','-target','arm64-apple-macosx15.0',str(build/'SharedSelection.swift'),str(build/'NativeSubjectSelection.swift'),str(build/'SharedTypes.swift'),str(main),'-o',str(binary)],check=True)
 subprocess.run([str(binary),str(root/'Tests/Fixtures/portrait-fixture.png'),str(root/'Build/MacSelectionSamples')],check=True)
 report_path=root/'Build/MAC-SELECTION-TESTS.json';report=json.loads(report_path.read_text())
 assert report['passedTests']==6 and report['failedTests']==0 and report['skippedTests']==0
 report['sharedSourceSHA256']={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [root/'Core/Creative/SceneInference.swift',root/'Core/Creative/NativeSubjectSelection.swift']}
 report_path.write_text(json.dumps(report,indent=2)+'\n')
-''')
+""")
 
-p=Path('Loop/scripts/verify_release.py');s=p.read_text()
-s=s.replace("t.get('skippedTests',0)==0", "t.get('skippedTests',0)==4")
-s=s.replace('t.get("skippedTests",0)==0', 't.get("skippedTests",0)==4')
-# A separate explicit check binds the native selection evidence to the release.
-s+='''\nif '--binary' not in sys.argv:\n    selection=json.loads((root/'MAC-SELECTION-TESTS.json').read_text())\n    assert selection['sourceCommit']==report['sourceCommit']\n    assert selection['passedTests']==6 and selection['failedTests']==0 and selection.get('skippedTests',0)==0\n'''
-# Variable names differ between verifiers; inspect and normalize to existing paths.
-s=s.replace("selection=json.loads((root/'MAC-SELECTION-TESTS.json').read_text())", "selection=json.loads(Path('Build/MAC-SELECTION-TESTS.json').read_text())")
-s=s.replace("assert selection['sourceCommit']==report['sourceCommit']", "assert selection['sourceCommit']==json.loads(Path('Build/BUILD-REPORT.json').read_text())['sourceCommit']")
-p.write_text(s)
 p=Path('Loop/scripts/publish.sh');s=p.read_text()
 s=s.replace('Build/FOCUSED-CREATIVE-TESTS.json Build/FOCUSED-UI-TESTS.json', 'Build/FOCUSED-CREATIVE-TESTS.json Build/FOCUSED-UI-TESTS.json Build/MAC-SELECTION-TESTS.json')
 s=s.replace('Full editor UI suite and physical-device testing were not run.', 'Four simulator selection checks are explicitly excluded and covered separately by six native macOS selection checks. A focused iPhone simulator UI flow is recorded separately. Full editor UI suite and physical-device testing were not run.')
 p.write_text(s)
 for path in ['Loop/docs/RELEASE.md','Loop/docs/CREATIVE-RESEARCH.md']:
-    p=Path(path);s=p.read_text();s+='''\n\n### Platform-specific validation\nFour selection-inference checks are explicitly skipped on the iOS simulator because these backends are not reliable there. Six additional native macOS checks compile the same shared selection source and exercise the unchanged SAM models on CPU/GPU and CPU, actual native foreground masks and conflicting-point rejection. The remaining iOS simulator renderer/export tests and the focused interface flow still run. Neither native macOS nor simulator results substitute for a physical-iPhone test.\n''';p.write_text(s)
+    p=Path(path);s=p.read_text();s+='\n\n### Platform-specific validation\nFour selection-inference checks are explicitly skipped on the iOS simulator because these backends are not reliable there. Six additional native macOS checks compile the same shared selection source and exercise the unchanged SAM models on CPU/GPU and CPU, actual native foreground masks and conflicting-point rejection. The remaining iOS simulator renderer/export tests and the focused interface flow still run. Neither native macOS nor simulator results substitute for a physical-iPhone test.\n';p.write_text(s)
 print('Selection platform limitations are explicit and independently tested, not hidden by fabricated masks.')
