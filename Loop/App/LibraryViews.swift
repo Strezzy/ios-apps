@@ -131,7 +131,7 @@ struct ExportDetailView: View {
                             }.buttonStyle(.glass).disabled(saving)
                             if let notice = store.notice { Label(notice, systemImage: "checkmark.circle").font(.caption).foregroundStyle(LoopTheme.teal) }
                         }
-                        Text(item.format.isVideo ? "Video is saved with the selected codec and all edits baked in. HDR sources are exported in standard color." : item.format == .gif ? "GIF playback may differ between viewers, particularly above 50 FPS. This preview reads the file’s original frame delays." : "APNG plays with full color and precise timing. Some sharing apps convert animated PNGs to still images.")
+                        Text(item.format.isVideo ? "Video is saved with the selected codec and edits baked in. HDR and transparency require compatible players." : item.format == .gif ? "GIF playback may differ between viewers, particularly above 50 FPS. This preview reads the file’s original frame delays." : "APNG plays with full color and precise timing. Some sharing apps convert animated PNGs to still images.")
                             .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }.padding(22).frame(maxWidth: 680).frame(maxWidth: .infinity)
                 }
