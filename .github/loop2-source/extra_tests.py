@@ -46,7 +46,8 @@ final class CreativeExportTests: XCTestCase {
             let pool=try XCTUnwrap(adaptor.pixelBufferPool);var value:CVPixelBuffer?
             XCTAssertEqual(CVPixelBufferPoolCreatePixelBuffer(nil,pool,&value),kCVReturnSuccess)
             let buffer=try XCTUnwrap(value)
-            let stripe=CIImage(color:CIColor(red:hdr ? 3:1,green:hdr ? 2:0.5,blue:0.2,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!)).cropped(to:CGRect(x:5+i*3,y:5,width:15,height:15))
+            let stripeColor=try XCTUnwrap(CIColor(red:hdr ? 3:1,green:hdr ? 2:0.5,blue:0.2,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!))
+            let stripe=CIImage(color:stripeColor).cropped(to:CGRect(x:5+i*3,y:5,width:15,height:15))
             context.render(stripe.composited(over:portrait).cropped(to:extent),to:buffer,bounds:extent,colorSpace:space)
             XCTAssertTrue(adaptor.append(buffer,withPresentationTime:CMTime(value:Int64(i),timescale:6)))
         }
@@ -77,7 +78,7 @@ final class CreativeExportTests: XCTestCase {
         let asset=AVURLAsset(url:output),tracks=try await asset.loadTracks(withMediaType:.video)
         let track=try XCTUnwrap(tracks.first),formats=try await track.load(.formatDescriptions)
         let format=try XCTUnwrap(formats.first)
-        let extensions=CMFormatDescriptionGetExtensions(format) as NSDictionary
+        let extensions=try XCTUnwrap(CMFormatDescriptionGetExtensions(format)) as NSDictionary
         XCTAssertEqual((extensions[kCMFormatDescriptionExtension_ContainsAlphaChannel] as? NSNumber)?.boolValue,true)
         let generator=MediaEngine.makeGenerator(url:output,maximumDimension:256)
         let image=CIImage(cgImage:try await generator.image(at:CMTime(seconds:0.3,preferredTimescale:60000)).image)
@@ -113,3 +114,25 @@ final class CreativeExportTests: XCTestCase {
     }
 }
 ''')
+
+p=Path('Loop/Tests/CreativeTests.swift');s=p.read_text()
+old='CIImage(color:CIColor(red:2,green:1.5,blue:1,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!))'
+new='CIImage(color:try XCTUnwrap(CIColor(red:2,green:1.5,blue:1,alpha:1,colorSpace:CGColorSpace(name:CGColorSpace.extendedLinearSRGB)!)))'
+assert s.count(old)==1
+p.write_text(s.replace(old,new))
+
+p=Path('Loop/App/LoopStore.swift');s=p.read_text()
+old='''    func deleteProject(_ project: LoopProject) {
+        CreativeAssets.remove(project.id)
+        guard !isExporting, trackingProgress == nil else { return }'''
+new='''    func deleteProject(_ project: LoopProject) {
+        guard !isExporting, trackingProgress == nil else { return }'''
+assert s.count(old)==1
+s=s.replace(old,new)
+old='''            try FileManager.default.removeItem(at: projectDirectory(project.id))
+            projects.removeAll { $0.id == project.id }'''
+new='''            try FileManager.default.removeItem(at: projectDirectory(project.id))
+            CreativeAssets.remove(project.id)
+            projects.removeAll { $0.id == project.id }'''
+assert s.count(old)==1
+p.write_text(s.replace(old,new))
