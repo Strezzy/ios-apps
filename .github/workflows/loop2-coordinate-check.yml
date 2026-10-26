@@ -1,0 +1,35 @@
+name: Check Loop coordinate conventions
+on:
+  push:
+    branches: ['feature/loop-simple-power-2.0']
+    paths: ['.github/workflows/loop2-coordinate-check.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: xcode-27
+    timeout-minutes: 3
+    steps:
+      - name: Inspect analytical mask coordinates
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/coordinates.swift" <<'SWIFT'
+          import Foundation
+          import CoreImage
+          let c=CIContext(options:[.cacheIntermediates:false]),rgb=CGColorSpace(name:CGColorSpace.sRGB)!
+          let e=CGRect(x:0,y:0,width:128,height:128)
+          let image=CIImage(color:.white).cropped(to:CGRect(x:32,y:64,width:64,height:32)).composited(over:CIImage(color:.black).cropped(to:e))
+          var b=[UInt8](repeating:0,count:128*128*4)
+          c.render(image,toBitmap:&b,rowBytes:128*4,bounds:e,format:.RGBA8,colorSpace:rgb)
+          let ys=(0..<128).filter{b[($0*128+64)*4]>128}
+          print("BITMAP_WHITE_ROWS",ys.min()!,ys.max()!)
+          for y in [16,48,80,112] {var p=[UInt8](repeating:0,count:4);c.render(image,toBitmap:&p,rowBytes:4,bounds:CGRect(x:64,y:y,width:1,height:1),format:.RGBA8,colorSpace:rgb);print("CI_PIXEL",y,p)}
+          var data=[UInt8](repeating:0,count:16);data[4]=255
+          let raw=CIImage(bitmapData:Data(data),bytesPerRow:4,size:CGSize(width:4,height:4),format:.L8,colorSpace:nil)
+          for y in 0..<4 {var p=[UInt8](repeating:0,count:4);c.render(raw,toBitmap:&p,rowBytes:4,bounds:CGRect(x:0,y:y,width:1,height:1),format:.RGBA8,colorSpace:rgb);print("RAW_ROW",y,p)}
+          SWIFT
+          xcrun swift "$RUNNER_TEMP/coordinates.swift" | tee "$RUNNER_TEMP/coordinate-check.log"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Loop-Coordinate-Check
+          path: ${{ runner.temp }}/coordinate-check.log
