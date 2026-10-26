@@ -4,7 +4,7 @@ import UIKit
 enum EditorTool: String, CaseIterable, Identifiable {
     case clip, crop, overlays, effects, export
     var id: String { rawValue }
-    var title: String { rawValue.capitalized }
+    var title: String { self == .effects ? "Looks" : self == .export ? "Save" : rawValue.capitalized }
     var symbol: String {
         switch self { case .clip: return "scissors"; case .crop: return "crop"; case .overlays: return "square.on.circle"; case .effects: return "camera.filters"; case .export: return "square.and.arrow.up" }
     }

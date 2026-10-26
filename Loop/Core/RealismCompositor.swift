@@ -4,61 +4,126 @@ import CoreGraphics
 
 enum RealismCompositor {
     static func apply(_ input:CIImage,settings:EffectSettings,time:Double,preview:Bool,
-                      analysis supplied:EffectsAnalysis? = nil,session:RealismSession? = nil) throws -> CIImage {
-        let layers=settings.activeLayers
-        guard !layers.isEmpty else{return input}
+                      analysis supplied:EffectsAnalysis? = nil,session:RealismSession? = nil,
+                      transparent:Bool=false) throws -> CIImage {
+        guard !settings.bypass || transparent else{return input}
+        let tracks=settings.bypass ? []:settings.visibleTracks.filter{$0.strength(at:time)>0}
+        let scene=settings.scene ?? SceneSettings()
         let matte=settings.matteTuning ?? MatteTuning()
-        let face=layers.first{EffectLibrary.preset($0.preset)?.category == .face}
-        let body=layers.first{EffectLibrary.preset($0.preset)?.category == .body}
-        let background=layers.first{EffectLibrary.preset($0.preset)?.category == .background}
-        let weather=layers.first{EffectLibrary.preset($0.preset)?.category == .atmosphere}
-        let analysis=try supplied ?? RealismAnalysis.analyze(input,faces:face != nil,person:background != nil || body != nil || weather != nil,
-            body:body != nil,preview:preview,time:time,tuning:matte,session:session)
+        let faceTracks=tracks.filter{EffectLibrary.preset($0.preset)?.category == .face}
+        let bodyTracks=tracks.filter{EffectLibrary.preset($0.preset)?.category == .body}
+        let needsPerson=transparent || !bodyTracks.isEmpty || tracks.contains{let c=EffectLibrary.preset($0.preset)?.category;return c == .background || c == .atmosphere || $0.target != "all"}
+        if tracks.isEmpty,!scene.depthEnabled,settings.lut==nil,!transparent{return input}
+        let analysis=try supplied ?? RealismAnalysis.analyze(input,faces:!faceTracks.isEmpty,person:needsPerson,body:!bodyTracks.isEmpty,preview:preview,time:time,tuning:matte,session:session)
+        let needsParts=tracks.contains{MeshPortrait.cosmetics.contains($0.preset) || ["hair","skin","clothes"].contains($0.target)}
+        let runtime=session?.creative ?? SceneRuntime()
+        let information=try runtime.analyze(input,settings:scene,time:time,portrait:!faceTracks.isEmpty,parts:needsParts)
+        let geometry=MeshPortrait.geometry(analysis.geometry,detail:information.portrait)
         var surface=PortraitSurface(image:input,mask:analysis.personMask)
-        if let face {
-            surface=try PortraitTransforms.face(surface,id:face.preset,geometry:analysis.geometry,
-                tuning:settings.faceTuning ?? FaceTuning.recipe(face.preset),amount:clamp(face.amount))
+        func targetMask(_ track:EffectTrack)->CIImage? {
+            if let id=track.subjectID{return information.masks[id] ?? CIImage(color:.black).cropped(to:input.extent)}
+            if let part=information.parts[track.target]{return part}
+            if track.target=="subject"{return surface.mask}
+            if track.target=="background"{return surface.mask?.applyingFilter("CIColorInvert")}
+            return nil
         }
-        if let body {
-            surface=try PortraitTransforms.body(surface,bodies:analysis.bodies,
-                tuning:settings.bodyTuning ?? BodyTuning.recipe(body.preset),amount:clamp(body.amount))
+        func region(_ track:EffectTrack)->NormalizedRect? {scene.subjects.first{$0.id==track.subjectID}?.box(at:time)}
+        func selected(_ point:CGPoint,_ box:NormalizedRect)->Bool {box.cgRect.contains(CGPoint(x:point.x,y:1-point.y))}
+        for track in faceTracks {
+            // A selected subject must have a current mask. Never retarget to another person.
+            if let id=track.subjectID, information.masks[id] == nil {continue}
+            guard track.target != "background" else {continue}
+            let before=surface.image,amount=track.strength(at:time)
+            let box=region(track)
+            let faces=geometry.filter{box==nil || selected(CGPoint(x:$0.bounds.midX,y:$0.bounds.midY),box!)}
+            if MeshPortrait.cosmetics.contains(track.preset) {
+                surface.image=try MeshPortrait.apply(surface.image,id:track.preset,detail:information.portrait,amount:amount)
+            } else {surface=try PortraitTransforms.face(surface,id:track.preset,geometry:faces,tuning:settings.faceTuning ?? FaceTuning.recipe(track.preset),amount:amount)}
+            if let mask=targetMask(track){surface.image=surface.image.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:before,kCIInputMaskImageKey:mask])}
         }
-        if let mask=surface.mask {surface.mask=try RealismAnalysis.refined(mask,image:surface.image,tuning:matte)}
+        for track in bodyTracks {
+            if let id=track.subjectID, information.masks[id] == nil {continue}
+            guard track.target != "background" else {continue}
+            let before=surface,box=region(track)
+            let bodies=analysis.bodies.filter{body in guard let box,let hip=body.joints["lh"] else{return box==nil};return selected(hip,box)}
+            surface=try PortraitTransforms.body(surface,bodies:bodies,tuning:settings.bodyTuning ?? BodyTuning.recipe(track.preset),amount:track.strength(at:time))
+            if scene.protectBackground,let oldMask=before.mask,let newMask=surface.mask {
+                let background=try RealismKernels.general("loopBackgroundFill",extent:input.extent,arguments:[before.image.clampedToExtent(),oldMask.clampedToExtent(),min(input.extent.width,input.extent.height)*0.15],padding:max(input.extent.width,input.extent.height)*0.15)
+                surface.image=surface.image.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:background,kCIInputMaskImageKey:newMask])
+            }
+        }
+        if let mask=surface.mask{surface.mask=try RealismAnalysis.refined(mask,image:surface.image,tuning:matte)}
         if preview,matte.showMask,let mask=surface.mask{return mask}
         var image=surface.image
-        if let background,let mask=surface.mask {
-            let back=try RealismBackdrop.make(image,id:background.preset,time:time,custom:settings.backgroundImage,
-                tuning:settings.backdropTuning ?? BackdropTuning())
-            let composite=image.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:back,kCIInputMaskImageKey:mask])
-            image=OfflineEffectsRenderer.blend(image,composite,amount:clamp(background.amount))
-        }
-        if let weather {
-            image=try RealismAtmosphere.apply(image,id:weather.preset,time:time,mask:surface.mask,
-                amount:clamp(weather.amount),tuning:settings.atmosphereTuning ?? AtmosphereTuning())
-        }
-        // Grade the composite together so subject, photographed background and weather share a palette.
-        for category in [EffectCategory.looks,.lens] {
-            if let layer=layers.first(where:{EffectLibrary.preset($0.preset)?.category == category}) {
-                let modified = category == .looks ? OfflineEffectsRenderer.look(image,id:layer.preset)
-                    : OfflineEffectsRenderer.lens(image,id:layer.preset,time:time)
-                image=OfflineEffectsRenderer.blend(image,modified,amount:clamp(layer.amount))
+        for track in tracks {
+            guard let preset=EffectLibrary.preset(track.preset),preset.category != .face,preset.category != .body else{continue}
+            let amount=track.strength(at:time),before=image
+            var modified=image
+            switch preset.category {
+            case .background:
+                // A named subject defines what is kept, not where the new background is painted.
+                let foreground = track.subjectID.map { information.masks[$0] } ?? surface.mask
+                if let mask=foreground {
+                    let back=try RealismBackdrop.make(image,id:track.preset,time:time,custom:settings.backgroundImage,tuning:settings.backdropTuning ?? BackdropTuning())
+                    let subject=match(image,to:back,strength:scene.matchLighting)
+                    modified=subject.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:back,kCIInputMaskImageKey:mask])
+                }
+            case .atmosphere:
+                modified=try RealismAtmosphere.apply(image,id:track.preset,time:time,mask:surface.mask,amount:1,tuning:settings.atmosphereTuning ?? AtmosphereTuning(),depth:information.depth,camera:CameraKey.offset(scene.cameraKeys ?? [],at:time))
+            case .looks:modified=OfflineEffectsRenderer.look(image,id:track.preset)
+            case .lens:modified=OfflineEffectsRenderer.lens(image,id:track.preset,time:time)
+            default:break
             }
+            image=OfflineEffectsRenderer.blend(before,modified,amount:amount)
+            if preset.category != .background, let mask=targetMask(track){image=image.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:before,kCIInputMaskImageKey:mask])}
+        }
+        if let depth=information.depth {
+            image=try RealismKernels.general("loopDepthLook",extent:input.extent,arguments:[image.clampedToExtent(),depth.clampedToExtent(),CIVector(x:scene.relight,y:scene.lightWarmth,z:scene.lightDirection,w:scene.depthFog),CIVector(x:scene.focus,y:scene.depthBlur,z:0,w:0),CIVector(x:input.extent.width,y:input.extent.height)],padding:min(input.extent.width,input.extent.height)*0.03)
+        }
+        if let lut=settings.lut{image=try CubeParser.apply(lut,to:image)}
+        if transparent {
+            let empty=CIImage(color:.black).cropped(to:input.extent)
+            let mask:CIImage
+            if let selected=scene.selectedID {
+                mask=information.masks[selected] ?? empty
+            } else {
+                mask=surface.mask ?? empty
+            }
+            image=image.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:CIImage(color:.clear).cropped(to:input.extent),kCIInputMaskImageKey:mask])
         }
         return image.cropped(to:input.extent)
     }
-    private static func clamp(_ x:Double)->Double{x.isFinite ? min(1,max(0,x)):0}
+    private static func match(_ input:CIImage,to background:CIImage,strength:Double)->CIImage {
+        guard strength>0 else{return input}
+        func average(_ image:CIImage)->[Float] {
+            let average=image.applyingFilter("CIAreaAverage",parameters:[kCIInputExtentKey:CIVector(cgRect:image.extent)])
+            var pixels=[Float](repeating:0,count:4)
+            SceneModels.context.render(average,toBitmap:&pixels,rowBytes:16,bounds:CGRect(x:0,y:0,width:1,height:1),format:.RGBAf,colorSpace:SceneModels.rgb)
+            return pixels
+        }
+        let a=average(input),b=average(background)
+        let gains=(0..<3).map{i in min(1.25,max(0.8,Double(b[i]+0.04)/Double(a[i]+0.04)))}
+        let colored=input.applyingFilter("CIColorMatrix",parameters:["inputRVector":CIVector(x:gains[0],y:0,z:0,w:0),"inputGVector":CIVector(x:0,y:gains[1],z:0,w:0),"inputBVector":CIVector(x:0,y:0,z:gains[2],w:0)])
+        return OfflineEffectsRenderer.blend(input,colored,amount:min(1,strength))
+    }
 }
 
 enum RealismAtmosphere {
     static let modes=["snow","rain","embers","sparkles","dust","bubbles","confetti","fog","lightLeak","fireflies"]
-    static func apply(_ image:CIImage,id:String,time:Double,mask:CIImage?,amount:Double,tuning:AtmosphereTuning) throws -> CIImage {
+    static func apply(_ image:CIImage,id:String,time:Double,mask:CIImage?,amount:Double,tuning:AtmosphereTuning,depth:CIImage?=nil,camera:CGPoint = .zero) throws -> CIImage {
         guard let mode=modes.firstIndex(of:id) else{return image}
         let e=image.extent
         func overlay(_ depth:Double)->CIImage? {
             try? RealismKernels.general("loopWeather",extent:e,arguments:[image.clampedToExtent(),CIVector(x:e.width,y:e.height),time,Double(mode),depth,
-                max(0.05,min(1,tuning.density)),max(0.1,min(3,tuning.speed)),max(-1,min(1,tuning.wind)),max(0.1,min(1,tuning.size))],padding:max(e.width,e.height)*0.03)
+                max(0.05,min(1,tuning.density)),max(0.1,min(3,tuning.speed)),max(-1,min(1,tuning.wind)),max(0.1,min(1,tuning.size)),CIVector(cgPoint:camera)],padding:max(e.width,e.height)*0.03)
         }
-        guard let far=overlay(0),let middle=overlay(1),let near=overlay(2) else{throw LoopError.encoding("Atmosphere rendering could not start.")}
+        guard var far=overlay(0),var middle=overlay(1),var near=overlay(2) else{throw LoopError.encoding("Atmosphere rendering could not start.")}
+        if let depth,tuning.placement=="layered" {
+            far=try RealismKernels.color("loopDepthLayer",extent:e,arguments:[far,depth,0.0,1.0])
+            middle=try RealismKernels.color("loopDepthLayer",extent:e,arguments:[middle,depth,1.0,1.0])
+            near=try RealismKernels.color("loopDepthLayer",extent:e,arguments:[near,depth,2.0,1.0])
+            return OfflineEffectsRenderer.blend(image,near.composited(over:middle.composited(over:far)).composited(over:image),amount:amount).cropped(to:e)
+        }
         let behind=middle.composited(over:far).composited(over:image)
         let backgroundOnly:CIImage
         if let mask {backgroundOnly=image.applyingFilter("CIBlendWithMask",parameters:[kCIInputBackgroundImageKey:behind,kCIInputMaskImageKey:mask])}
