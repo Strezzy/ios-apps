@@ -78,7 +78,5 @@ final class CreativeUITests: XCTestCase {
     }
 }
 ''')
-import os
-runtime=Path(os.environ['RUNNER_TEMP'])/'loop2-review'/'runtime.py'
-text=runtime.read_text().replace('CIImage(color:.gray)', 'CIImage(color:CIColor(red:0.5,green:0.5,blue:0.5))')
-exec(compile(text,'review-native-runtime.py','exec'))
+# The workflow runs scope.py first, then runtime.py exactly once. Runtime
+# corrections depend on scope.py's motion fallback and must not run here.
