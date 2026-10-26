@@ -1,0 +1,140 @@
+name: Finish Loop portrait quality update
+on:
+  push:
+    branches: ['feature/loop-portrait-quality-1.3']
+    paths: ['.github/loop-quality-finish/**', '.github/workflows/loop-quality-finish.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: loop-quality-finish
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 25
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Apply scoped refinements to the current app
+        run: |
+          set -euo pipefail
+          cp -R .github/loop-quality-finish "$RUNNER_TEMP/loop-quality-finish"
+          git fetch origin main
+          git switch -c "loop/quality-finish-$GITHUB_RUN_ID" origin/main
+          python3 "$RUNNER_TEMP/loop-quality-finish/refine.py"
+          python3 "$RUNNER_TEMP/loop-quality-finish/extra_tests.py"
+          if [ -f "$RUNNER_TEMP/loop-quality-finish/fixes.py" ]; then python3 "$RUNNER_TEMP/loop-quality-finish/fixes.py"; fi
+          python3 -m py_compile Loop/scripts/package.py
+          bash -n Loop/scripts/publish.sh
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Loop
+          git diff --cached --name-only | tee "$RUNNER_TEMP/loop-quality-paths"
+          if grep -qv '^Loop/' "$RUNNER_TEMP/loop-quality-paths"; then exit 1; fi
+          git commit -m 'Loop 1.3.1: refine matte edges, optimize layered weather and verify portrait rendering'
+          git push origin HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/loop-quality-sha"
+      - name: Install project generator
+        run: command -v xcodegen || brew install xcodegen
+      - name: Compile the native iPhone release
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop-quality-sha")"
+          cd Loop
+          bash scripts/build.sh
+          bash scripts/validate.sh
+          test -f Build/Device/Build/Products/Release-iphoneos/Loop.app/default.metallib
+          test -d Build/Device/Build/Products/Release-iphoneos/Loop.app/LoopAging.mlmodelc
+          test -d Build/Device/Build/Products/Release-iphoneos/Loop.app/LoopMatte.mlmodelc
+      - name: Compile focused simulator checks
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          cd Loop
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath Build/Simulator -only-testing:LoopTests/RealismTests -only-testing:LoopTests/EffectsTests CODE_SIGNING_ALLOWED=NO build-for-testing > Build/simulator-build.log 2>&1 || { python3 scripts/show_errors.py Build/simulator-build.log; tail -120 Build/simulator-build.log; exit 1; }
+      - name: Boot iPhone simulator
+        timeout-minutes: 4
+        run: |
+          python3 - <<'PY'
+          import json,re,subprocess,os
+          d=json.loads(subprocess.check_output(['xcrun','simctl','list','devices','available','-j']))
+          keys=sorted([k for k in d['devices'] if 'iOS' in k],key=lambda k:tuple(map(int,re.findall(r'\d+',k))),reverse=True)
+          devices=[x for x in d['devices'][keys[0]] if 'iPhone' in x['name'] and x.get('isAvailable')]
+          chosen=next((x for x in devices if x['name']=='iPhone 17 Pro'),devices[0]);print(chosen,flush=True)
+          udid=chosen['udid'];open(os.environ['RUNNER_TEMP']+'/loop-quality-simulator','w').write(udid)
+          subprocess.run(['xcrun','simctl','boot',udid])
+          subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
+          PY
+      - name: Check rendering, models, occlusion and compatibility
+        timeout-minutes: 7
+        run: |
+          set -euo pipefail
+          SIMULATOR=$(cat "$RUNNER_TEMP/loop-quality-simulator")
+          cd Loop
+          xcodebuild -project Loop.xcodeproj -scheme Loop -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id=$SIMULATOR" -derivedDataPath Build/Simulator -resultBundlePath Build/Realism.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120 -only-testing:LoopTests/RealismTests -only-testing:LoopTests/EffectsTests CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee Build/realism-tests.log
+          xcrun xcresulttool get test-results summary --path Build/Realism.xcresult --format json > Build/FOCUSED-REALISM-TESTS.json
+          python3 - <<'PY'
+          import json,subprocess
+          p='Build/FOCUSED-REALISM-TESTS.json'
+          r=json.load(open(p))
+          assert r['passedTests'] >= 24 and r['failedTests']==0 and r.get('skippedTests',0)==0,r
+          r['sourceCommit']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          r['scope']='Focused effects renderer, actual bundled models, portrait fixture, atmosphere occlusion, migration and exports settings. Not the full editor UI suite or physical-device testing.'
+          open(p,'w').write(json.dumps(r,indent=2)+'\n');print(json.dumps(r,indent=2))
+          PY
+      - name: Collect actual rendered samples
+        if: always()
+        run: |
+          mkdir -p Loop/Build
+          if [ -f "$RUNNER_TEMP/loop-quality-simulator" ]; then
+            DATA=$(xcrun simctl get_app_container "$(cat "$RUNNER_TEMP/loop-quality-simulator")" com.billy.loop data 2>/dev/null || true)
+            if [ -d "$DATA/Documents/LoopRealismChecks" ]; then cp -R "$DATA/Documents/LoopRealismChecks" Loop/Build/Realism-Samples; fi
+          fi
+          if [ -f Loop/Build/realism-tests.log ]; then tail -100 Loop/Build/realism-tests.log; fi
+      - name: Package source and evidence
+        if: success()
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop-quality-sha")"
+          cd Loop
+          test -f Build/Realism-Samples/ageOlder.png
+          test -f Build/Realism-Samples/layered-rain.png
+          git -C .. archive -o Loop/Build/Loop-Source.zip HEAD:Loop
+          zip -qr Build/Loop-XcodeProject.zip Loop.xcodeproj
+          zip -qr Build/Loop-Realism-Samples.zip Build/Realism-Samples
+          cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Loop-Icon.png
+          cp Resources/RealismAssets.json Build/REALISM-ASSET-REPORT.json
+          cp docs/REALISM-RESEARCH.md Build/REALISM-RESEARCH.md
+          python3 scripts/verify_release.py
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Loop-Quality-Final-Build-and-Checks
+          path: |
+            Loop/Build/*.ipa
+            Loop/Build/*.zip
+            Loop/Build/*.json
+            Loop/Build/*.txt
+            Loop/Build/*.log
+            Loop/Build/*.png
+            Loop/Build/*.md
+            Loop/Build/Realism-Samples
+          retention-days: 30
+      - name: Publish only the checked release and update the catalog
+        if: success()
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop-quality-sha")"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          git push origin HEAD:main
+          git checkout -B main HEAD
+          cd Loop
+          bash scripts/publish.sh
