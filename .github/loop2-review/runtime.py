@@ -1,9 +1,7 @@
 from pathlib import Path
 
 # scope.py supplies the runtime fallback and compact SAM prompt contract.
-# These final corrections follow actual native Core Image coordinate probes:
-# bitmapData and render(toBitmap:) both use top-first rows, while CI points use
-# bottom-left coordinates. Do not flip a tensor image a second time.
+# bitmapData and render(toBitmap:) use top-first rows; CI points use bottom-left.
 p=Path('Loop/Core/Creative/SceneInference.swift');s=p.read_text()
 assert 'static func translation(from old:CGImage,to current:CGImage)' in s
 old='return raw.transformed(by:CGAffineTransform(a:1,b:0,c:0,d:-1,tx:0,ty:CGFloat(h)))'
@@ -17,6 +15,14 @@ old='return CGPoint(x:offset.x/CGFloat(w),y:offset.y/CGFloat(h))'
 assert s.count(old)==1
 s=s.replace(old,'return CGPoint(x:offset.x/CGFloat(w),y:-offset.y/CGFloat(h))')
 p.write_text(s)
+
+p=Path('Loop/Core/Creative/PortraitModels.swift');s=p.read_text()
+old='''                let raw=CIImage(bitmapData:Data(bytes),bytesPerRow:w,size:CGSize(width:w,height:h),format:.L8,colorSpace:nil)
+                    .transformed(by:CGAffineTransform(a:1,b:0,c:0,d:-1,tx:0,ty:CGFloat(h)))'''
+new='''                // Confidence-mask storage is already top-first, just like CI bitmapData.
+                let raw=CIImage(bitmapData:Data(bytes),bytesPerRow:w,size:CGSize(width:w,height:h),format:.L8,colorSpace:nil)'''
+assert s.count(old)==1
+p.write_text(s.replace(old,new))
 
 p=Path('Loop/Tests/CreativeTests.swift');s=p.read_text();pos=s.rfind('\n}');assert pos>0
 s=s[:pos]+r'''
@@ -41,7 +47,13 @@ s=s[:pos]+r'''
         let image=CIImage(color:CIColor(red:0.5,green:0.5,blue:0.5)).cropped(to:e),cg=try SceneModels.raster(image,edge:128)
         XCTAssertEqual(SceneOpticalFlow.translation(from:cg,to:cg),.zero)
     }
+    func testHairMaskMatchesHairRatherThanLowerClothing() throws {
+        let portrait=try PortraitModels.analyze(fixture(),mesh:false,parts:true)
+        let hair=try XCTUnwrap(portrait.masks["hair"])
+        XCTAssertGreaterThan(pixel(hair,x:220,y:440)[0],100)
+        XCTAssertLessThan(pixel(hair,x:250,y:70)[0],60)
+    }
 '''+s[pos:];p.write_text(s)
 for name in ['Loop/docs/CREATIVE-RESEARCH.md','Loop/docs/RELEASE.md']:
- p=Path(name);s=p.read_text();s+='\n\n### Coordinate and runtime safeguards\nTensor masks and bitmap readbacks follow Core Image top-first memory rows without duplicate vertical flips. Native regression checks cover known mask positions and translated images. When Vision dense-flow model assets are unavailable, bounded global translation alignment is used; this is not dense non-rigid flow or recovered 3D motion.\n';p.write_text(s)
-print('Native-probed mask and motion coordinate conventions applied.')
+ p=Path(name);s=p.read_text();s+='\n\n### Coordinate and runtime safeguards\nTensor masks, hair/feature masks and bitmap readbacks follow Core Image top-first memory rows without duplicate vertical flips. Native regression checks cover known mask positions, real hair placement and translated images. When Vision dense-flow model assets are unavailable, bounded global translation alignment is used; this is not dense non-rigid flow or recovered 3D motion.\n';p.write_text(s)
+print('Native-probed mask, hair and motion coordinate conventions applied.')
