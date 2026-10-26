@@ -55,6 +55,7 @@ struct EffectsEditorView: View {
     @State private var importingBackground = false
     @State private var importError: String?
     @State private var loadingBackground = false
+    @State private var addAnother = false
     private var settings: EffectSettings { project.effects ?? EffectSettings() }
     private var favoriteIDs: Set<String> { Set(favorites.split(separator: ",").map(String.init)) }
     private var selected: EffectLayer? { settings.layer(category) }
@@ -68,15 +69,16 @@ struct EffectsEditorView: View {
     }
     var body: some View {
         VStack(spacing: 16) {
+            CreativeToolsView(project: $project, preview: preview)
             LoopCard {
-                EditorSectionTitle(title: "A different world", subtitle: "\(EffectLibrary.presets.count) bundled effects · fully on-device")
+                EditorSectionTitle(title: "Choose an effect", subtitle: "All effects stay on your iPhone")
                 HStack {
                     Toggle("Compare original", isOn: Binding(get: { settings.bypass }, set: { newValue in change { $0.bypass = newValue } }))
                         .font(.subheadline).accessibilityIdentifier("effectsBypass")
                     Button("Reset", systemImage: "arrow.counterclockwise") { project.effects = nil }
                         .labelStyle(.iconOnly).buttonStyle(.glass).accessibilityLabel("Remove all effects")
                 }
-                if !settings.layers.isEmpty {
+                if !settings.visibleTracks.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(EffectCategory.allCases) { group in
@@ -88,7 +90,7 @@ struct EffectsEditorView: View {
                         }.padding(2)
                     }
                 }
-                Text("Combine a preset from each category and fine-tune its controls. Illustrative face/body masks have been retired. Existing privacy covers remain on top; check covers after strong reshaping. Exports render every selected frame.")
+                Text("Tap to try an effect. Use My effect mix above to combine effects or change when they appear.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             LoopCard {
@@ -103,6 +105,7 @@ struct EffectsEditorView: View {
                     }.padding(2)
                 }
                 Text(category.guidance).font(.caption).foregroundStyle(.secondary)
+                Toggle("Add another effect instead of replacing", isOn: $addAnother).font(.caption)
                 RealismControls(settings: Binding(get: { settings }, set: { project.effects = $0 }), category: category)
                 if selected != nil {
                     ValueSlider(title: "Intensity", value: Binding(get: { selected?.amount ?? 1 }, set: { value in change { $0.setAmount(value, category: category) } }), range: 0...1,
@@ -159,7 +162,12 @@ struct EffectsEditorView: View {
         VStack(spacing: 7) {
             Button {
                 if preset.id == "customBackground" && settings.backgroundImage == nil { importingBackground = true }
-                else { change { $0.select(preset.id, category: category); $0.bypass = false } }
+                else { change {
+                    $0.moveLegacyToMix()
+                    if addAnother { $0.add(preset.id, target: $0.scene?.selectedID == nil ? "all" : "subject", subjectID: $0.scene?.selectedID) }
+                    else { $0.select(preset.id, category: category) }
+                    $0.bypass = false
+                }; addAnother = false }
             } label: {
                 ZStack(alignment: .bottomTrailing) {
                     Rectangle().fill(LoopTheme.teal.opacity(0.08))
