@@ -15,8 +15,7 @@ old='return CGPoint(x:offset.x/CGFloat(w),y:offset.y/CGFloat(h))'
 assert s.count(old)==1
 s=s.replace(old,'return CGPoint(x:offset.x/CGFloat(w),y:-offset.y/CGFloat(h))')
 
-# Model outputs can use deferred/strided storage. Logical indexing guarantees
-# synchronized numeric conversion instead of assuming a CPU Float16 pointer.
+# Logical indexing supports deferred/strided model output storage.
 start=s.index('    static func scalar(');end=s.index('    /// Tensor planes',start)
 s=s[:start]+'''    static func scalar(_ array:MLMultiArray,_ offset:Int)->Float {
         array[offset].floatValue
@@ -49,6 +48,40 @@ replace='''        if logits {
         }
         if normalize {
             let sample=values.enumerated()'''
+assert s.count(needle)==1;s=s.replace(needle,replace)
+
+# Some Core ML execution plans return flat masks without throwing. Retry the
+# complete image/prompt/mask pipeline on CPU, never manufacture a substitute
+# segmentation. Retain the safe backend after a failure to avoid repeated work.
+needle='    private static var loaded:[String:MLModel]=[:]'
+replace='''    private static var loaded:[String:MLModel]=[:]
+    private(set) static var samUsesCPU = false
+    static func useSafeSAMBackend() {
+        lock.lock();defer{lock.unlock()}
+        samUsesCPU = true
+        for key in Array(loaded.keys) where key.hasPrefix("SAM2") {loaded.removeValue(forKey:key)}
+    }'''
+assert s.count(needle)==1;s=s.replace(needle,replace)
+needle='configuration.computeUnits = name.hasPrefix("SAM2") ? .cpuAndGPU : .all'
+replace='configuration.computeUnits = name.hasPrefix("SAM2") ? (samUsesCPU ? .cpuOnly : .cpuAndGPU) : .all'
+assert s.count(needle)==1;s=s.replace(needle,replace)
+needle='''    static func masks(_ image:CIImage,prompts:[Prompt])throws->[UUID:CIImage] {
+        guard !prompts.isEmpty else{return [:]}
+        SceneModels.lock.lock();defer{SceneModels.lock.unlock()}'''
+replace='''    static func masks(_ image:CIImage,prompts:[Prompt])throws->[UUID:CIImage] {
+        guard !prompts.isEmpty else{return [:]}
+        SceneModels.lock.lock();defer{SceneModels.lock.unlock()}
+        do {return try inferMasks(image,prompts:prompts)}
+        catch {
+            guard !SceneModels.samUsesCPU else {throw error}
+            #if DEBUG
+            print("SAM execution rejected; retrying all components on CPU:",error)
+            #endif
+            SceneModels.useSafeSAMBackend()
+            return try inferMasks(image,prompts:prompts)
+        }
+    }
+    private static func inferMasks(_ image:CIImage,prompts:[Prompt])throws->[UUID:CIImage] {'''
 assert s.count(needle)==1;s=s.replace(needle,replace)
 p.write_text(s)
 
@@ -105,5 +138,5 @@ s=s[:pos]+r'''
     }
 '''+s[pos:];p.write_text(s)
 for name in ['Loop/docs/CREATIVE-RESEARCH.md','Loop/docs/RELEASE.md']:
- p=Path(name);s=p.read_text();s+='\n\n### Coordinate and runtime safeguards\nTensor masks, hair/feature masks and bitmap readbacks follow Core Image top-first memory rows without duplicate vertical flips. Native regression checks cover known mask positions, half-precision tensor channels, real hair placement and translated images. Flat selection outputs are rejected rather than treated as the entire frame. When Vision dense-flow model assets are unavailable, bounded global translation alignment is used; this is not dense non-rigid flow or recovered 3D motion.\n';p.write_text(s)
-print('Synchronized tensor reads and native-probed mask, hair and motion coordinate conventions applied.')
+ p=Path(name);s=p.read_text();s+='\n\n### Coordinate and runtime safeguards\nTensor masks, hair/feature masks and bitmap readbacks follow Core Image top-first memory rows without duplicate vertical flips. Native regression checks cover known mask positions, half-precision tensor channels, real hair placement and translated images. Flat selection outputs are rejected rather than treated as the entire frame. An invalid accelerated SAM execution retries the complete pipeline using the CPU and retains that safer backend; no replacement mask is fabricated. When Vision dense-flow model assets are unavailable, bounded global translation alignment is used; this is not dense non-rigid flow or recovered 3D motion.\n';p.write_text(s)
+print('Coordinate, model-output validation and execution-backend safeguards applied.')
