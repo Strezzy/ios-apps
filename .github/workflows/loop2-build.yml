@@ -52,8 +52,13 @@ jobs:
                   assert hashlib.sha256((root/f['path']).read_bytes()).hexdigest()==f['sha256']
           for name in ['fixes.py','extra_tests.py']:
               if (staging/name).exists():exec(compile((staging/name).read_text(),name,'exec'))
-          review=Path(os.environ['RUNNER_TEMP'])/'loop2-review'/'scope.py'
-          exec(compile(review.read_text(),'review-subject-scope.py','exec'))
+          review=Path(os.environ['RUNNER_TEMP'])/'loop2-review'
+          for name in ['scope.py','runtime.py']:
+              exec(compile((review/name).read_text(),name,'exec'))
+          source=Path('Loop/Core/Creative/SceneInference.swift').read_text()
+          assert 'y:Double(minY)/Double(h)' in source
+          assert 'y:-offset.y/CGFloat(h)' in source
+          assert 'return raw.transformed(by:CGAffineTransform(a:1,b:0,c:0,d:-1' not in source
           PY
           python3 -m py_compile Loop/scripts/package.py Loop/scripts/verify_release.py
           bash -n Loop/scripts/publish.sh
