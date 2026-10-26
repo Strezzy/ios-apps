@@ -93,17 +93,18 @@ struct CropSettings: Codable, Equatable, Sendable {
 }
 
 enum AnimationFormat: String, Codable, CaseIterable, Identifiable, Sendable {
-    case gif, apng, mp4, hevc
+    case gif, apng, mp4, hevc, hevcAlpha
     var id: String { rawValue }
-    var title: String { rawValue.uppercased() }
-    var fileExtension: String { isVideo ? "mp4" : self == .gif ? "gif" : "png" }
-    var isVideo: Bool { self == .mp4 || self == .hevc }
+    var title: String { self == .hevcAlpha ? "Transparent video" : rawValue.uppercased() }
+    var fileExtension: String { self == .hevcAlpha ? "mov" : isVideo ? "mp4" : self == .gif ? "gif" : "png" }
+    var isVideo: Bool { self == .mp4 || self == .hevc || self == .hevcAlpha }
     var maximumFrameRate: Double { isVideo ? 60 : self == .gif ? 100 : 120 }
     var detailDescription: String {
         switch self {
         case .gif: return "GIF works almost everywhere. Up to 256 colors per frame, with no audio."
         case .apng: return "APNG keeps full color and precise frame timing. Sharing-app support varies. No audio."
         case .mp4: return "H.264 video in an MP4 file. Full color, up to 4K60, with optional audio. Broad player support."
+        case .hevcAlpha: return "HEVC with an alpha channel in a MOV file. Removes the background for use in compatible editors. Not every player supports transparency."
         case .hevc: return "HEVC (H.265) video in an MP4 file. Full color and efficient high-quality compression, up to 4K60. Older players may need H.264."
         }
     }
@@ -130,6 +131,9 @@ struct ExportSettings: Codable, Equatable, Sendable {
     var dither: Bool = true
     /// Nil preserves the default for projects saved before video export.
     var includeAudio: Bool?
+    var transparentBackground: Bool?
+    var hdrOutput: Bool?
+    var stableGIFPalette: Bool?
 }
 
 enum OverlayKind: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -220,6 +224,7 @@ struct LoopProject: Codable, Equatable, Identifiable, Sendable {
     var adjustments = ColorAdjustments()
     /// Optional so older projects decode with their original appearance.
     var effects: EffectSettings?
+    var motion: MotionSettings?
     init(name: String, sourceFilename: String, metadata: VideoMetadata) {
         self.name = name
         self.sourceFilename = sourceFilename

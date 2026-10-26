@@ -77,13 +77,31 @@ struct ExportPlan: Sendable {
         if !(project.effects?.activeLayers.isEmpty ?? true) {
             estimatedWorkingBytes += Int64(decodedPixels * 16)
         }
-        let forwardDuration = project.duration / e.speed
+        let seam = CreativeMotion.seamDuration(project)
+        if e.hdrOutput == true && e.format != .hevc { throw LoopError.invalidSettings("HDR output requires HEVC video.") }
+        if e.transparentBackground == true && e.format != .apng && e.format != .hevcAlpha { throw LoopError.invalidSettings("Choose APNG or Transparent video to keep a transparent background.") }
+        if let motion=project.motion, motion.mode != "off", motion.referenceAsset == nil {
+            throw LoopError.invalidSettings("Choose a still frame in Motion before exporting a cinemagraph.")
+        }
+        let scene=project.effects?.scene ?? SceneSettings()
+        var used=Set((project.effects?.tracks ?? []).filter { $0.enabled }.compactMap(\.subjectID))
+        if let motion=project.motion, motion.mode != "off" || motion.echoCount > 0, let id=motion.subjectID { used.insert(id) }
+        if e.format == .hevcAlpha || e.transparentBackground == true, let id=scene.selectedID { used.insert(id) }
+        for id in used {
+            guard let subject=scene.subjects.first(where:{$0.id==id}) else {
+                throw LoopError.invalidSettings("An effect uses a removed subject. Choose another subject or Whole clip in the effect card.")
+            }
+            guard subject.covers(project.trimStart+seam), subject.covers(project.trimEnd-0.002) else {
+                throw LoopError.invalidSettings("Track \(subject.name) across the selected clip, or choose Everyone before exporting.")
+            }
+        }
+        let forwardDuration = (project.duration-seam) / e.speed
         let countDouble = ceil(forwardDuration * e.frameRate - 0.0000001)
         guard countDouble.isFinite, countDouble <= 30_000 else {
             throw LoopError.invalidSettings("This export would exceed 30,000 frames. Trim the clip, increase its speed or lower its frame rate.")
         }
         let count = max(1, Int(countDouble))
-        var times = (0..<count).map { project.trimStart + Double($0) * e.speed / e.frameRate }
+        var times = (0..<count).map { project.trimStart + seam + Double($0) * e.speed / e.frameRate }
         var delays = (0..<count).map { index in min(1 / e.frameRate, max(0.000001, forwardDuration - Double(index) / e.frameRate)) }
         if e.playback == .reverse {
             times.reverse()

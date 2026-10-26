@@ -5,12 +5,11 @@ import CoreVideo
 @preconcurrency import UIKit
 
 /// The same compositor renders scrub previews and exported frames.
-/// Input frames are upright SDR images; all edit positions refer to that source.
+/// Input frames are upright; HDR exports retain floating-point source color. All edit positions refer to that source.
 enum FrameRenderer {
     private static let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
     private static let context = CIContext(options: [
         .workingColorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!,
-        .outputColorSpace: colorSpace,
         .cacheIntermediates: false,
         .highQualityDownsample: true
     ])
@@ -81,9 +80,12 @@ enum FrameRenderer {
                 kCIInputContrastKey: max(0, min(4, project.adjustments.contrast)),
                 kCIInputSaturationKey: max(0, min(4, project.adjustments.saturation))
             ])
-            if let effects = project.effects, !effects.activeLayers.isEmpty {
+            frame = try CreativeMotion.apply(frame, project: project, time: time, preview: maximumDimension != nil)
+            let transparent = project.export.format == .hevcAlpha || project.export.transparentBackground == true
+            if (project.effects?.hasWork ?? false) || transparent {
+                let effects = project.effects ?? EffectSettings()
                 frame = try OfflineEffectsRenderer.apply(frame, settings: effects, time: time,
-                                                         preview: maximumDimension != nil, session: effectsSession)
+                                                         preview: maximumDimension != nil, session: effectsSession, transparent: transparent)
             }
             let selectedCrop = project.crop.rect(source: project.metadata.size, at: time)
             let crop = editing ? NormalizedRect(x: 0, y: 0, width: 1, height: 1) : selectedCrop
@@ -157,15 +159,17 @@ enum FrameRenderer {
                                                                tx: CGFloat(output.width), ty: 0))
             }
             frame = frame.cropped(to: extent)
-            guard let result = context.createCGImage(frame, from: extent, format: .RGBA8,
-                                                      colorSpace: colorSpace) else {
+            let hdr = project.export.hdrOutput == true && project.export.format == .hevc && maximumDimension == nil
+            let outputSpace = hdr ? CGColorSpace(name: CGColorSpace.itur_2100_HLG)! : colorSpace
+            guard let result = context.createCGImage(frame, from: extent, format: hdr ? .RGBAh : .RGBA8,
+                                                      colorSpace: outputSpace) else {
                 throw LoopError.encoding("The frame could not be rendered. Try a smaller resolution.")
             }
             return result
         }
     }
 
-    static func clearCaches() { context.clearCaches(); OfflineEffectsRenderer.clearCaches() }
+    static func clearCaches() { context.clearCaches(); OfflineEffectsRenderer.clearCaches(); SceneModels.purge(); PortraitModels.purge(); RealismSessions.clear(); CreativeAssets.clear() }
 
     private static func makeMask(size: PixelSize, rectangle: CGRect,
                                  shape: OverlayShape, opacity: Double) throws -> CIImage {
