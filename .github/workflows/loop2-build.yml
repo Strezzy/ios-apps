@@ -2,7 +2,7 @@ name: Build Loop 2 simple power
 on:
   push:
     branches: ['feature/loop-simple-power-2.0']
-    paths: ['.github/loop2-source/**', '.github/loop2-review/**', '.github/loop2-compat/**', '.github/workflows/loop2-build.yml']
+    paths: ['.github/loop2-source/**', '.github/loop2-review/**', '.github/loop2-compat/**', '.github/loop2-final/**', '.github/workflows/loop2-build.yml']
 permissions:
   contents: write
   actions: read
@@ -21,22 +21,15 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Install pinned model-graph tooling
-        run: python3 -m pip install 'coremltools==9.0' 'numpy==2.2.6'
       - name: Apply checked Loop-only changes
         run: |
           set -euo pipefail
-          cp -R .github/loop2-source "$RUNNER_TEMP/loop2-source"
-          cp -R .github/loop2-review "$RUNNER_TEMP/loop2-review"
-          cp -R .github/loop2-compat "$RUNNER_TEMP/loop2-compat"
+          for NAME in source review compat final; do cp -R ".github/loop2-$NAME" "$RUNNER_TEMP/loop2-$NAME"; done
           cp -R Loop/Resources/SceneModels "$RUNNER_TEMP/loop2-models"
           git fetch origin main
           git switch -c "loop/creative-candidate-$GITHUB_RUN_ID" origin/main
           python3 - <<'PY'
-          import base64,hashlib,json,lzma,os,shutil,subprocess,sys
+          import base64,hashlib,json,lzma,os,shutil,subprocess
           from pathlib import Path
           staging=Path(os.environ['RUNNER_TEMP'])/'loop2-source'
           raw=lzma.decompress(base64.b64decode(''.join((staging/f'part{i}.b64').read_text().strip() for i in range(5)),validate=True))
@@ -56,30 +49,33 @@ jobs:
           for model in manifest['models']:
               for f in model['files']:
                   assert hashlib.sha256((root/f['path']).read_bytes()).hexdigest()==f['sha256']
-          for name in ['fixes.py','extra_tests.py']:
-              if (staging/name).exists():exec(compile((staging/name).read_text(),name,'exec'))
-          review=Path(os.environ['RUNNER_TEMP'])/'loop2-review'
-          for name in ['scope.py','runtime.py']:
-              exec(compile((review/name).read_text(),name,'exec'))
-          compat=Path(os.environ['RUNNER_TEMP'])/'loop2-compat'
-          shutil.copyfile(compat/'model_square.py','Loop/scripts/patch_sam_square.py')
-          subprocess.run([sys.executable,'Loop/scripts/patch_sam_square.py'],check=True)
-          exec(compile((compat/'ui.py').read_text(),'compat-ui.py','exec'))
+                  assert (root/f['path']).stat().st_size==f['bytes']
+          for folder,names in [('source',['fixes.py','extra_tests.py']),('review',['scope.py','runtime.py']),('compat',['ui.py']),('final',['selection.py','native_checks.py','release_gate.py'])]:
+              directory=Path(os.environ['RUNNER_TEMP'])/('loop2-'+folder)
+              for name in names:exec(compile((directory/name).read_text(),folder+'-'+name,'exec'))
           source=Path('Loop/Core/Creative/SceneInference.swift').read_text()
-          assert 'y:Double(minY)/Double(h)' in source
-          assert 'y:-offset.y/CGFloat(h)' in source
+          assert 'y:Double(minY)/Double(h)' in source and 'y:-offset.y/CGFloat(h)' in source
           assert 'return raw.transformed(by:CGAffineTransform(a:1,b:0,c:0,d:-1' not in source
+          assert not Path('Loop/scripts/patch_sam_square.py').exists()
           PY
-          python3 -m py_compile Loop/scripts/package.py Loop/scripts/verify_release.py
+          python3 -m py_compile Loop/scripts/package.py Loop/scripts/verify_release.py Loop/scripts/check_native_selection.py
           bash -n Loop/scripts/publish.sh
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Loop
           git diff --cached --name-only | tee "$RUNNER_TEMP/loop2-paths"
           if grep -qv '^Loop/' "$RUNNER_TEMP/loop2-paths"; then exit 1; fi
-          git commit -m 'Loop 2.0: simple creative controls, offline scene models, motion and professional exports'
+          git commit -m 'Loop 2.0: simple controls, offline scene tools, compatible selection and professional exports'
           git push origin HEAD
           git rev-parse HEAD > "$RUNNER_TEMP/loop2-candidate-sha"
+      - name: Check shared selection code on native macOS
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$(cat "$RUNNER_TEMP/loop2-candidate-sha")"
+          cd Loop
+          mkdir -p Build
+          python3 scripts/check_native_selection.py 2>&1 | tee Build/mac-selection.log
       - name: Install project generator
         run: command -v xcodegen || brew install xcodegen
       - name: Compile native iPhone Release
@@ -109,9 +105,7 @@ jobs:
           subprocess.run(['xcrun','simctl','boot',udid])
           subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
           PY
-      - name: Execute native rendering and compatibility checks
-        id: native
-        continue-on-error: true
+      - name: Execute iOS rendering and export checks
         timeout-minutes: 10
         run: |
           set -euo pipefail
@@ -122,14 +116,13 @@ jobs:
           python3 - <<'PY'
           import json,subprocess
           p='Build/FOCUSED-CREATIVE-TESTS.json';r=json.load(open(p));print(json.dumps(r,indent=2))
-          assert r['passedTests']>=100 and r['failedTests']==0 and r.get('skippedTests',0)==0,r
+          assert r['passedTests']>=107 and r['failedTests']==0 and r.get('skippedTests',0)==4,r
           r['sourceCommit']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
-          r['scope']='Focused native scene models, masks, depth, rendering, effect timing, motion, palette encoding, project migration and actual video exports. Full editor UI suite and physical-device validation were not run.'
+          r['expectedSimulatorSkips']=['testSubjectSelectionBoxSelectsWholeForeground','testSubjectSelectionSelectsTappedForeground','testNativeSelectionKeepsTappedPersonAndRejectsBackground','testNativeSelectionRejectsConflictingInstancePoints']
+          r['scope']='iOS rendering, depth, portrait masks, effect timing, motion, palette encoding, migration and actual exports. Four selection inference checks are explicitly excluded on this simulator and covered by the separate native macOS shared-code check. Physical iPhone testing was not performed.'
           open(p,'w').write(json.dumps(r,indent=2)+'\n')
           PY
       - name: Check simple editor controls and capture screenshots
-        id: ui
-        continue-on-error: true
         timeout-minutes: 10
         run: |
           set -euo pipefail
@@ -142,10 +135,10 @@ jobs:
           p='Build/FOCUSED-UI-TESTS.json';r=json.load(open(p));print(json.dumps(r,indent=2))
           assert r['passedTests']>=1 and r['failedTests']==0 and r.get('skippedTests',0)==0,r
           r['sourceCommit']=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
-          r['scope']='Focused preset-first Looks, subject-selection sheet and simple Save controls. Not the full legacy UI suite or physical-device testing.'
+          r['scope']='Preset-first Looks, subject-selection sheet and simple Save controls. Not the full legacy UI suite or physical-device testing.'
           open(p,'w').write(json.dumps(r,indent=2)+'\n')
           PY
-      - name: Collect render evidence and diagnostics
+      - name: Collect evidence and diagnostics
         if: always()
         run: |
           mkdir -p Loop/Build
@@ -158,15 +151,10 @@ jobs:
           if [ -d Loop/Build/CreativeUI.xcresult ]; then
             xcrun xcresulttool export attachments --path Loop/Build/CreativeUI.xcresult --output-path Loop/Build/UIScreenshots || true
           fi
-          for LOG in device-build simulator-build creative-tests creative-ui; do
+          for LOG in mac-selection device-build simulator-build creative-tests creative-ui; do
             if [ -f "Loop/Build/$LOG.log" ]; then tail -100 "Loop/Build/$LOG.log"; fi
           done
-      - name: Require both verification stages to pass
-        if: always()
-        run: |
-          test '${{ steps.native.outcome }}' = success
-          test '${{ steps.ui.outcome }}' = success
-      - name: Package source and checked candidate
+      - name: Package source and verified candidate
         if: success()
         run: |
           set -euo pipefail
@@ -175,7 +163,7 @@ jobs:
           python3 scripts/verify_release.py
           git -C .. archive -o Loop/Build/Loop-Source.zip HEAD:Loop
           zip -qr Build/Loop-XcodeProject.zip Loop.xcodeproj
-          zip -qr Build/Loop-Creative-Samples.zip Build/LoopCreativeChecks Build/LoopRealismChecks Build/UIScreenshots
+          zip -qr Build/Loop-Creative-Samples.zip Build/LoopCreativeChecks Build/LoopRealismChecks Build/MacSelectionSamples Build/UIScreenshots
           cp Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png Build/Loop-Icon.png
           cp Resources/SceneModels/SCENE-MODELS.json Build/SCENE-MODELS.json
           cp docs/CREATIVE-RESEARCH.md Build/CREATIVE-RESEARCH.md
@@ -193,5 +181,6 @@ jobs:
             Loop/Build/*.md
             Loop/Build/LoopCreativeChecks
             Loop/Build/LoopRealismChecks
+            Loop/Build/MacSelectionSamples
             Loop/Build/UIScreenshots
           retention-days: 30
