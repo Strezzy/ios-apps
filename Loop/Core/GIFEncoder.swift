@@ -17,6 +17,8 @@ final class GIFEncoder: AnimationWriter {
     private let expectedFrames: Int
     private let paletteSize: Int
     private let dither: Bool
+    private var sharedPalette: AdaptiveGIFPalette?
+    private var previousIndices: [UInt8]?
     private var addedFrames = 0
     private var finished = false
     private var failed = false
@@ -56,6 +58,15 @@ final class GIFEncoder: AnimationWriter {
         }
     }
 
+    func prepareStablePalette(_ images: [CGImage]) throws {
+        guard addedFrames == 0 else { return }
+        var pixels=[UInt8]()
+        for image in images.prefix(12) {
+            pixels += try EncoderRaster.rgba(image, size: PixelSize(width:image.width,height:image.height), opaque:true)
+        }
+        if !pixels.isEmpty {sharedPalette=AdaptiveGIFPalette(pixels:pixels,maximumColors:paletteSize)}
+    }
+
     func add(_ image: CGImage, delay: Double, gifDelayCentiseconds: Int) throws {
         guard !finished, !failed, addedFrames < expectedFrames else {
             throw LoopError.encoding("The GIF writer cannot accept another frame.")
@@ -66,7 +77,7 @@ final class GIFEncoder: AnimationWriter {
             }
             try autoreleasepool {
                 let pixels = try EncoderRaster.rgba(image, size: size, opaque: true)
-                let palette = AdaptiveGIFPalette(pixels: pixels, maximumColors: paletteSize)
+                let palette = sharedPalette ?? AdaptiveGIFPalette(pixels: pixels, maximumColors: paletteSize)
                 let indices = palette.indices(for: pixels, width: size.width, height: size.height, dither: dither)
 
                 // Retain the previous canvas until this full-frame image replaces it.
@@ -76,14 +87,30 @@ final class GIFEncoder: AnimationWriter {
                 try output.write(control)
 
                 let minimumCodeSize = paletteSize == 64 ? 6 : paletteSize == 128 ? 7 : 8
-                var descriptor: [UInt8] = [0x2c, 0, 0, 0, 0]
-                descriptor.appendLittleEndian(UInt16(size.width))
-                descriptor.appendLittleEndian(UInt16(size.height))
+                var x0=0,y0=0,x1=size.width-1,y1=size.height-1
+                if sharedPalette != nil, let old=previousIndices, old.count==indices.count {
+                    x0=size.width;y0=size.height;x1=0;y1=0
+                    for y in 0..<size.height {for x in 0..<size.width where indices[y*size.width+x] != old[y*size.width+x] {
+                        x0=min(x0,x);x1=max(x1,x);y0=min(y0,y);y1=max(y1,y)
+                    }}
+                    if x0>x1 || y0>y1 {x0=0;x1=0;y0=0;y1=0}
+                }
+                let patchWidth=x1-x0+1,patchHeight=y1-y0+1
+                var encoded=indices
+                if patchWidth != size.width || patchHeight != size.height {
+                    encoded=[];encoded.reserveCapacity(patchWidth*patchHeight)
+                    for y in y0...y1 {encoded.append(contentsOf:indices[(y*size.width+x0)...(y*size.width+x1)])}
+                }
+                if sharedPalette != nil {previousIndices=indices}
+                var descriptor: [UInt8] = [0x2c]
+                descriptor.appendLittleEndian(UInt16(x0));descriptor.appendLittleEndian(UInt16(y0))
+                descriptor.appendLittleEndian(UInt16(patchWidth))
+                descriptor.appendLittleEndian(UInt16(patchHeight))
                 descriptor.append(0x80 | UInt8(minimumCodeSize - 1))
                 try output.write(descriptor)
                 try output.write(palette.tableBytes(paddedTo: paletteSize))
                 try output.write([UInt8(minimumCodeSize)])
-                try GIFLZW.write(indices, minimumCodeSize: minimumCodeSize, to: output)
+                try GIFLZW.write(encoded, minimumCodeSize: minimumCodeSize, to: output)
             }
             addedFrames += 1
         } catch {
