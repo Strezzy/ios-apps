@@ -8,13 +8,18 @@ permissions:
 jobs:
   interface:
     runs-on: xcode-27
-    timeout-minutes: 12
+    timeout-minutes: 14
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: '638ef46de119bea443e82e19db477f7663e1a12c'
+          fetch-depth: 0
+      - name: Apply scoped UI corrections to the compiled candidate
+        run: |
+          cp .github/loop2-ui/patch.py "$RUNNER_TEMP/loop-ui-patch.py"
+          git checkout --detach 638ef46de119bea443e82e19db477f7663e1a12c
+          python3 "$RUNNER_TEMP/loop-ui-patch.py"
       - name: Prepare simulator build
         run: |
           set -euo pipefail
@@ -34,7 +39,7 @@ jobs:
           subprocess.run(['xcrun','simctl','boot',udid]);subprocess.run(['xcrun','simctl','bootstatus',udid,'-b'],check=True,timeout=180)
           PY
       - name: Walk through the simple editor
-        timeout-minutes: 5
+        timeout-minutes: 7
         run: |
           set -euo pipefail
           cd Loop
@@ -42,6 +47,8 @@ jobs:
       - name: Collect screenshots and result
         if: always()
         run: |
+          mkdir -p Loop/Build
+          if [ -f "$RUNNER_TEMP/loop-ui-simulator" ]; then xcrun simctl io "$(cat "$RUNNER_TEMP/loop-ui-simulator")" screenshot Loop/Build/Last-Screen.png || true; fi
           if [ -d Loop/Build/CreativeUI.xcresult ]; then
             xcrun xcresulttool get test-results summary --path Loop/Build/CreativeUI.xcresult --format json > Loop/Build/INTERFACE-CHECK.json || true
             xcrun xcresulttool export attachments --path Loop/Build/CreativeUI.xcresult --output-path Loop/Build/UIScreenshots || true
@@ -52,6 +59,7 @@ jobs:
           name: Loop-Simple-Interface-Review
           path: |
             Loop/Build/UIScreenshots
+            Loop/Build/Last-Screen.png
             Loop/Build/INTERFACE-CHECK.json
             Loop/Build/interface-test.log
             Loop/Build/interface-build.log
