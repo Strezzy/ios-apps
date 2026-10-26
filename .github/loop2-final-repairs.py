@@ -1,9 +1,9 @@
-"""Remove two redundant deconvolution output-shape arguments in a pinned model.
+"""Apply equivalent runtime adaptations to one checksum-pinned SAM2 decoder.
 
-The published decoder's 2x2, stride-2, zero-pad deconvolutions have unambiguous
-128x128 and 256x256 outputs. Explicit output_shape inputs prevent Core ML's
-flexible prompt-token shape propagation on the tested runtime. All trained
-weights, declared interfaces and other protobuf fields are preserved bytewise.
+The two 2x2, stride-2, zero-pad deconvolutions have unambiguous output sizes;
+remove redundant output_shape inputs. Express the single pow(x,2) as mul(x,x)
+to avoid negative-base backend power behavior. Trained weights are unchanged.
+The bounded protobuf visitor preserves every unrelated wire field bytewise.
 Schema: apple/coremltools mlmodel/format/{Model,MIL}.proto.
 """
 from pathlib import Path
@@ -65,11 +65,15 @@ def nested(data, field_number, function):
     return bytes(output)
 
 
-def text_field(data, field_number):
+def payload_field(data, field_number):
     found = [payload for number, wire, raw, payload in fields(data)
              if number == field_number and wire == 2]
     assert len(found) == 1
-    return found[0].decode('utf-8')
+    return found[0]
+
+
+def text_field(data, field_number):
+    return payload_field(data, field_number).decode('utf-8')
 
 
 changed = []
@@ -77,17 +81,25 @@ changed = []
 
 def operation(data):
     op_type = text_field(data, 1)
+    if op_type == 'pow':
+        inputs = {text_field(p, 1): payload_field(p, 2)
+                  for n, w, r, p in fields(data) if n == 2}
+        assert set(inputs) == {'x', 'y'}
+        # The checksum-pinned source has one square in its channel normalization.
+        assert text_field(payload_field(inputs['y'], 1), 1) == 'var_978_promoted_to_fp16'
+        assert text_field(payload_field(inputs['x'], 1), 1) == 'var_977_cast_fp16'
+        edited = nested(data, 1, lambda _: b'mul')
+        edited = nested(edited, 2, lambda entry: nested(entry, 2, lambda _: inputs['x'])
+                        if text_field(entry, 1) == 'y' else entry)
+        changed.append('pow(x,2) -> mul(x,x)')
+        return edited
     if op_type != 'conv_transpose':
-        # Operation.blocks (4) contains nested control-flow blocks, if any.
         return nested(data, 4, block)
-    output = bytearray()
-    keys = []
-    removed = 0
+    output = bytearray(); keys = []; removed = 0
     for number, wire, raw, payload in fields(data):
         if number == 2:
             assert wire == 2
-            key = text_field(payload, 1)
-            keys.append(key)
+            key = text_field(payload, 1); keys.append(key)
             if key == 'output_shape':
                 removed += 1
                 continue
@@ -95,7 +107,7 @@ def operation(data):
     assert removed == 1
     assert set(keys) == {'bias', 'dilations', 'groups', 'output_shape', 'pad',
                          'pad_type', 'strides', 'weight', 'x'}, keys
-    changed.append(op_type)
+    changed.append('conv_transpose output_shape removed')
     return bytes(output)
 
 
@@ -104,12 +116,10 @@ def block(data):
 
 
 def function(data):
-    # Function.block_specializations map (3), map value (2).
     return nested(data, 3, lambda entry: nested(entry, 2, block))
 
 
 def program(data):
-    # Program.functions map (2), map value (2).
     return nested(data, 2, lambda entry: nested(entry, 2, function))
 
 
@@ -122,9 +132,10 @@ assert original_sha == '24bd23b9267c8ccc172a5370bc3507d4e11f7a33ba14d529dfd904e7
 weights = path.parent / 'weights/weight.bin'
 weight_sha = hashlib.sha256(weights.read_bytes()).hexdigest()
 assert weight_sha == '75d30eb00ad294872463b07efbfa17b536ae9ec4168f9b78f12a4fb57245ee94'
-# Model.mlProgram is field 502. Unknown and unrelated fields are left untouched.
 after = nested(before, 502, program)
-assert len(changed) == 2 and len(after) < len(before)
+assert changed.count('conv_transpose output_shape removed') == 2
+assert changed.count('pow(x,2) -> mul(x,x)') == 1
+assert len(after) < len(before)
 path.write_bytes(after)
 assert hashlib.sha256(weights.read_bytes()).hexdigest() == weight_sha
 manifest_path = root / 'SCENE-MODELS.json'
@@ -135,10 +146,16 @@ for model in manifest['models']:
             item['upstreamSHA256'] = original_sha
             item['bytes'] = len(after)
             item['sha256'] = hashlib.sha256(after).hexdigest()
-            item['adaptation'] = 'Removed two redundant conv_transpose output_shape inputs; 2x2 kernels, stride 2, dilation 1 and zero padding preserve 128x128/256x256 outputs. Trained weights and interfaces unchanged.'
+            item['localGraphChanges'] = changed
+            item['unchangedWeightsSHA256'] = weight_sha
 manifest_path.write_text(json.dumps(manifest, indent=2)+'\n')
-script = Path('Loop/scripts/repair_sam_decoder.py')
-script.write_text(Path(__file__).read_text())
+Path('Loop/scripts/repair_sam_decoder.py').write_text(Path(__file__).read_text())
 research = Path('Loop/docs/CREATIVE-RESEARCH.md')
-research.write_text(research.read_text()+'\n## SAM2 decoder runtime adaptation\nThe pinned Apple-converted decoder contains two optional, constant `conv_transpose.output_shape` inputs. The tested runtime failed flexible prompt-token shape propagation and returned flat masks. Loop removes those two redundant arguments; their 2x2 kernels, stride 2, dilation 1 and zero padding still determine the same 128x128 and 256x256 outputs. Weights, biases and public model interfaces are unchanged. The manifest records upstream and adapted specification checksums. The repair is reproducible in `scripts/repair_sam_decoder.py`; native tap and box-selection tests must pass before publication.\n')
-print('Repaired SAM2 decoder specification:', original_sha, '->', hashlib.sha256(after).hexdigest(), '; trained weights unchanged')
+research.write_text(research.read_text()+'\n## SAM2 decoder runtime adaptation\nThe pinned decoder has three equivalent local graph changes: its single `pow(x, 2)` uses `mul(x, x)` to avoid negative-base power behavior; two redundant `conv_transpose.output_shape` arguments are removed because 2x2 kernels, stride 2, dilation 1 and zero padding still determine the same 128x128/256x256 outputs. Learned weights and interfaces are unchanged. The manifest records upstream/adapted graph and weight checksums. `scripts/repair_sam_decoder.py` reproduces the changes. Native real-subject tap and box-selection tests gate publication. Nonfinite or flat masks are rejected, not replaced by a fabricated selection.\n')
+p = Path('Loop/Core/Creative/SceneInference.swift')
+s = p.read_text()
+before_line = '            let f=array[indices].floatValue\n            let v=f.isFinite ? f:0'
+after_line = '            let f=array[indices].floatValue\n            if logits && !f.isFinite {throw LoopError.encoding("The selection model returned invalid numerical values.")}\n            let v=f.isFinite ? f:0'
+assert s.count(before_line) == 1
+p.write_text(s.replace(before_line, after_line))
+print('Adapted SAM2 decoder:', original_sha, '->', hashlib.sha256(after).hexdigest(), changed, '; weights unchanged')
