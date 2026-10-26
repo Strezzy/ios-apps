@@ -22,6 +22,19 @@ p.write_text(s)
 p=Path('Loop/scripts/publish.sh');s=p.read_text()
 s=s.replace(' Build/FOCUSED-CREATIVE-TESTS.json Build/SCENE-MODELS.json', ' Build/FOCUSED-CREATIVE-TESTS.json Build/FOCUSED-UI-TESTS.json Build/SCENE-MODELS.json')
 p.write_text(s)
+p=Path('Loop/App/LoopStore.swift');s=p.read_text()
+old='''    func deleteProject(_ project: LoopProject) {
+        CreativeAssets.remove(project.id)
+        guard !isExporting, trackingProgress == nil else { return }'''
+new='''    func deleteProject(_ project: LoopProject) {
+        guard !isExporting, trackingProgress == nil else { return }'''
+assert s.count(old)==1;s=s.replace(old,new)
+old='''            try FileManager.default.removeItem(at: projectDirectory(project.id))
+            projects.removeAll { $0.id == project.id }'''
+new='''            try FileManager.default.removeItem(at: projectDirectory(project.id))
+            CreativeAssets.remove(project.id)
+            projects.removeAll { $0.id == project.id }'''
+assert s.count(old)==1;p.write_text(s.replace(old,new))
 Path('Loop/UITests/CreativeUITests.swift').write_text(r'''import XCTest
 
 final class CreativeUITests: XCTestCase {
