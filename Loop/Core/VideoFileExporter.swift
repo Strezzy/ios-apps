@@ -4,6 +4,7 @@ import CoreGraphics
 import CoreVideo
 import CoreMedia
 import AudioToolbox
+import VideoToolbox
 @preconcurrency import AVFoundation
 
 extension PixelSize {
@@ -21,33 +22,38 @@ enum VideoFileExporter {
         var audioReader: AVAssetReader?
         var audioOutput: AVAssetReaderAudioMixOutput?
         let context = CIContext(options: [.cacheIntermediates: false])
+        let highRange: Bool
+        let colorSpace: CGColorSpace
         init(url: URL, project: LoopProject, plan: ExportPlan) throws {
-            writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
-            let codec: AVVideoCodecType = project.export.format == .hevc ? .hevc : .h264
+            writer = try AVAssetWriter(outputURL: url, fileType: project.export.format == .hevcAlpha ? .mov : .mp4)
+            highRange = project.export.hdrOutput == true && project.export.format == .hevc
+            colorSpace = CGColorSpace(name: highRange ? CGColorSpace.itur_2100_HLG : CGColorSpace.sRGB)!
+            let codec: AVVideoCodecType = project.export.format == .hevcAlpha ? .hevcWithAlpha : project.export.format == .hevc ? .hevc : .h264
             let bitRate = min(120_000_000, max(2_000_000, Int(Double(plan.size.width * plan.size.height) * project.export.frameRate * (codec == .hevc ? 0.10 : 0.15))))
             var compression: [String: Any] = [AVVideoAverageBitRateKey: bitRate,
                 AVVideoExpectedSourceFrameRateKey: project.export.frameRate,
                 AVVideoMaxKeyFrameIntervalKey: max(1, Int(project.export.frameRate * 2))]
             if codec == .h264 { compression[AVVideoProfileLevelKey] = AVVideoProfileLevelH264HighAutoLevel }
+            if highRange { compression[AVVideoProfileLevelKey] = kVTProfileLevel_HEVC_Main10_AutoLevel }
             let settings: [String: Any] = [AVVideoCodecKey: codec, AVVideoWidthKey: plan.size.width,
                 AVVideoHeightKey: plan.size.height, AVVideoCompressionPropertiesKey: compression,
-                AVVideoColorPropertiesKey: [AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                    AVVideoTransferFunctionKey: AVVideoTransferFunction_IEC_sRGB,
-                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2]]
+                AVVideoColorPropertiesKey: [AVVideoColorPrimariesKey: highRange ? AVVideoColorPrimaries_ITU_R_2020 : AVVideoColorPrimaries_ITU_R_709_2,
+                    AVVideoTransferFunctionKey: highRange ? AVVideoTransferFunction_ITU_R_2100_HLG : AVVideoTransferFunction_IEC_sRGB,
+                    AVVideoYCbCrMatrixKey: highRange ? AVVideoYCbCrMatrix_ITU_R_2020 : AVVideoYCbCrMatrix_ITU_R_709_2]]
             guard writer.canApply(outputSettings: settings, forMediaType: .video) else {
                 throw LoopError.encoding("This device cannot encode these video settings. Try MP4 or a smaller resolution.")
             }
             video = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
             video.expectsMediaDataInRealTime = false
             adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: video, sourcePixelBufferAttributes: [
-                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+                kCVPixelBufferPixelFormatTypeKey as String: highRange ? kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange : kCVPixelFormatType_32BGRA,
                 kCVPixelBufferWidthKey as String: plan.size.width, kCVPixelBufferHeightKey as String: plan.size.height,
                 kCVPixelBufferIOSurfacePropertiesKey as String: [:]])
             guard writer.canAdd(video) else { throw LoopError.encoding("The video encoder could not be started.") }
             writer.add(video); writer.shouldOptimizeForNetworkUse = true
         }
         func prepareAudio(sourceURL: URL, project: LoopProject, duration: Double) async throws {
-            guard project.export.includeAudio != false, project.export.playback == .forward else { return }
+            guard project.export.includeAudio != false, project.export.playback == .forward, CreativeMotion.seamDuration(project) == 0 else { return }
             let source = AVURLAsset(url: sourceURL)
             guard let original = try await source.loadTracks(withMediaType: .audio).first else { return }
             let sourceRange = try await original.load(.timeRange)
@@ -90,6 +96,7 @@ enum VideoFileExporter {
     }
     static func export(sourceURL: URL, project: LoopProject, destination: URL,
                        control: ExportControl, progress: @escaping @Sendable (ExportProgress) -> Void) async throws -> ExportResult {
+        CreativeAssets.register(project, url: sourceURL)
         let plan = try ExportPlan(project: project)
         let realismSession = RealismSession()
         guard sourceURL.isFileURL, destination.isFileURL,
@@ -98,7 +105,7 @@ enum VideoFileExporter {
         }
         let folder = destination.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let temporary = folder.appendingPathComponent(".loop-\(UUID().uuidString).mp4")
+        let temporary = folder.appendingPathComponent(".loop-\(UUID().uuidString).\(project.export.format.fileExtension)")
         let session = try Session(url: temporary, project: project, plan: plan)
         var complete = false
         defer {
@@ -130,7 +137,7 @@ enum VideoFileExporter {
             group.addTask {
                 let crop = project.crop.minimumRect(source: project.metadata.size, from: project.trimStart, through: project.trimEnd)
                 let required = Int(ceil(max(Double(plan.size.width) / crop.width, Double(plan.size.height) / crop.height)))
-                let generator = MediaEngine.makeGenerator(url: sourceURL, maximumDimension: min(project.metadata.size.longEdge, required))
+                let generator = MediaEngine.makeGenerator(url: sourceURL, maximumDimension: min(project.metadata.size.longEdge, required), preserveHDR: session.highRange)
                 defer { generator.cancelAllCGImageGeneration() }
                 var outputTime = 0.0
                 for (index, frame) in plan.frames.enumerated() {
@@ -144,7 +151,7 @@ enum VideoFileExporter {
                         var buffer: CVPixelBuffer?
                         guard CVPixelBufferPoolCreatePixelBuffer(nil, pool, &buffer) == kCVReturnSuccess, let buffer else { throw LoopError.encoding("Not enough memory for this video frame. Choose a smaller resolution.") }
                         let bounds = CGRect(x: 0, y: 0, width: plan.size.width, height: plan.size.height)
-                        session.context.render(CIImage(cgImage: rendered), to: buffer, bounds: bounds, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+                        session.context.render(CIImage(cgImage: rendered), to: buffer, bounds: bounds, colorSpace: session.colorSpace)
                         guard session.adaptor.append(buffer, withPresentationTime: CMTime(seconds: outputTime, preferredTimescale: 60_000)) else { throw session.writer.error ?? LoopError.encoding("A video frame could not be encoded.") }
                     }
                     outputTime += frame.delay
@@ -168,7 +175,7 @@ enum VideoFileExporter {
         guard session.writer.status == .completed else { throw session.writer.error ?? LoopError.encoding("The video could not be finalized.") }
         try await control.checkpoint()
         let verified = try await MediaEngine.inspect(url: temporary)
-        guard verified.size == plan.size, abs(verified.duration - plan.duration) < 0.15 else { throw LoopError.encoding("The saved video's dimensions or duration did not match the edit.") }
+        guard verified.size == plan.size, abs(verified.duration - plan.duration) < 0.15, !session.highRange || verified.isHDR else { throw LoopError.encoding("The saved video's dimensions or duration did not match the edit.") }
         try FileManager.default.moveItem(at: temporary, to: destination); complete = true
         progress(ExportProgress(fraction: 1, completedFrames: plan.frames.count, totalFrames: plan.frames.count, message: "Video ready"))
         let bytes = (try destination.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
