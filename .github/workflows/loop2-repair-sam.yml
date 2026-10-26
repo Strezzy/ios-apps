@@ -16,13 +16,14 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Repair only the redundant decoder shape arguments
+      - name: Repair and compare real portrait inference
         run: |
           set -euo pipefail
-          python -m pip install -q coremltools==8.3.0 numpy
-          python - <<'PY'
+          python -m pip install -q coremltools==8.3.0 numpy pillow
+          python -u - <<'PY'
           import coremltools as ct,numpy as np,shutil,hashlib,json,os
           from pathlib import Path
+          from PIL import Image
           root=Path('Loop/Resources/SceneModels');package=root/'SAM2TinyMaskDecoderFLOAT16.mlpackage'
           original=Path(os.environ['RUNNER_TEMP'])/'OriginalDecoder.mlpackage';shutil.copytree(package,original)
           spec=ct.models.MLModel(str(package),skip_model_load=True).get_spec();count=0
@@ -36,25 +37,30 @@ jobs:
           for f in spec.mlProgram.functions.values():
               for b in f.block_specializations.values():repair(b)
           assert count>0,count
-          proto=next(package.rglob('*.mlmodel'));before=hashlib.sha256(proto.read_bytes()).hexdigest()
-          proto.write_bytes(spec.SerializeToString())
-          old=ct.models.MLModel(str(original),compute_units=ct.ComputeUnit.CPU_AND_GPU)
-          new=ct.models.MLModel(str(package),compute_units=ct.ComputeUnit.CPU_AND_GPU)
-          rng=np.random.default_rng(34);results=[]
-          for tokens in [2,5,15]:
-              inputs={i.name:rng.normal(0,.2,size=tuple(i.type.multiArrayType.shape)).astype(np.float16) for i in spec.description.input}
-              inputs['sparse_embedding']=rng.normal(0,.2,size=(1,tokens,256)).astype(np.float16)
-              a=old.predict(inputs);b=new.predict(inputs)
-              error={k:float(np.abs(a[k].astype(np.float32)-b[k].astype(np.float32)).max()) for k in a}
-              print('Parity',tokens,error)
-              assert all(v<0.2 for v in error.values()),error
-              results.append({'tokens':tokens,'maximumAbsoluteErrors':error})
-          report={'change':'Remove redundant conv_transpose output_shape operands; spatial size is inferred from unchanged convolution weights, padding and strides.','operations':count,'originalModelSHA256':before,'modifiedModelSHA256':hashlib.sha256(proto.read_bytes()).hexdigest(),'macOSParity':results}
+          proto=next(package.rglob('*.mlmodel'));before=hashlib.sha256(proto.read_bytes()).hexdigest();proto.write_bytes(spec.SerializeToString())
+          def load(p):return ct.models.MLModel(str(p),compute_units=ct.ComputeUnit.CPU_AND_GPU)
+          old,new=load(original),load(package)
+          enc=load(root/'SAM2TinyImageEncoderFLOAT16.mlpackage');prompt=load(root/'SAM2TinyPromptEncoderFLOAT16.mlpackage')
+          image=Image.open('Loop/Tests/Fixtures/portrait-fixture.png').convert('RGB').resize((1024,1024))
+          features=enc.predict({'image':image});results=[]
+          for coords,labels in [([(512,665.6)],[1]), ([(430.08,327.68),(256,563.2),(20.48,20.48),(757.76,1003.52)],[1,1,2,3])]:
+              pf=prompt.predict({'points':np.array([coords],dtype=np.float16),'labels':np.array([labels],dtype=np.float16)})
+              inputs=dict(features,sparse_embedding=pf['sparse_embeddings'],dense_embedding=pf['dense_embeddings'])
+              a,b=old.predict(inputs),new.predict(inputs)
+              am,bm=a['low_res_masks'].astype(np.float32),b['low_res_masks'].astype(np.float32)
+              pa,pb=1/(1+np.exp(-np.clip(am,-40,40))),1/(1+np.exp(-np.clip(bm,-40,40)))
+              fgA,fgB=am>0,bm>0
+              union=np.logical_or(fgA,fgB).sum();iou=float(np.logical_and(fgA,fgB).sum()/max(1,union))
+              mae=float(np.abs(pa-pb).mean());score=float(np.abs(a['scores'].astype(np.float32)-b['scores'].astype(np.float32)).max())
+              result={'points':len(coords),'maskIoU':iou,'meanProbabilityError':mae,'maximumLogitError':float(np.abs(am-bm).max()),'maximumScoreError':score}
+              print('Portrait parity',result);results.append(result)
+              assert iou>.99 and mae<.002 and score<.005,result
+              assert am.max()-am.min()>1 and bm.max()-bm.min()>1
+          report={'change':'Remove redundant conv_transpose output_shape operands; spatial size is inferred from unchanged convolution weights, padding and strides.','operations':count,'originalModelSHA256':before,'modifiedModelSHA256':hashlib.sha256(proto.read_bytes()).hexdigest(),'macOSPortraitParity':results}
           (root/'SAM-IOS-REPAIR.json').write_text(json.dumps(report,indent=2)+'\n')
           manifest=json.loads((root/'SCENE-MODELS.json').read_text())
           for m in manifest['models']:
-              for f in m['files']:
-                  f['sha256']=hashlib.sha256((root/f['path']).read_bytes()).hexdigest()
+              for f in m['files']:f['sha256']=hashlib.sha256((root/f['path']).read_bytes()).hexdigest()
               if any('SAM2TinyMaskDecoder' in f['path'] for f in m['files']):m['localCompatibilityPatch']='SAM-IOS-REPAIR.json'
           (root/'SCENE-MODELS.json').write_text(json.dumps(manifest,indent=2)+'\n')
           PY
@@ -97,7 +103,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Loop/Resources/SceneModels
-          git commit -m 'Repair SAM decoder shape inference with verified iOS output and native parity'
+          git commit -m 'Repair SAM decoder shape inference with verified iOS output and portrait parity'
           git push origin HEAD:feature/loop-simple-power-2.0
       - uses: actions/upload-artifact@v7
         if: always()
