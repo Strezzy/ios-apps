@@ -38,7 +38,7 @@ s=s[:pos]+r'''
         try write(mask,"sam-full-subject")
     }
     func testMotionFallbackDoesNotInventFlatSceneMovement() throws {
-        let image=CIImage(color:.gray).cropped(to:e),cg=try SceneModels.raster(image,edge:128)
+        let image=CIImage(color:CIColor(red:0.5,green:0.5,blue:0.5)).cropped(to:e),cg=try SceneModels.raster(image,edge:128)
         XCTAssertEqual(SceneOpticalFlow.translation(from:cg,to:cg),.zero)
     }
 '''+s[pos:];p.write_text(s)
