@@ -628,13 +628,24 @@
     },
     {
       "name": "Loop",
-      "subtitle": "Offline GIF and animated PNG creator",
-      "localizedDescription": "Turn videos from Photos or Files into GIFs and full-color APNG animations. Follow a selected subject with a moving portrait, landscape or square crop, including optional size-follow as it approaches or recedes. Stack independent tracked blur, pixelation, covers, emoji and captions on top. Trim beside the pinned player controls, scrub continuously, preview effects live, and pinch zoom up to 12x for precise placement. Choose frame rate and resolution, reverse or ping-pong playback, and use the full system emoji keyboard. Native Liquid Glass, local projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.",
+      "subtitle": "Offline video effects, GIFs and loops",
+      "localizedDescription": "Edit videos privately on your iPhone with one-tap cinematic looks, tracked subjects, Keep/Remove brush repairs, layered effects, local portrait and hair treatments, depth-aware atmosphere, saved looks and .cube color imports. Find loop endpoints, blend seams, freeze a subject or its surroundings, and add motion echoes. Keep the existing crop tracking, privacy overlays, captions, full-video imports and local projects. Save GIF, APNG, H.264, HEVC, optional 10-bit HLG HDR, or transparent APNG/HEVC video. Native Liquid Glass controls keep advanced settings tucked away. Models ship with the app; no accounts, ads, watermark, uploads or runtime model downloads. Selection may use a disclosed native compatibility fallback. Tracking, cutouts and depth remain estimates; HDR is not Dolby Vision passthrough. Requires iOS 26. Physical-iPhone performance, thermals, long 4K exports and sideload-host behavior still need device validation.",
       "category": "photo-video",
       "tintColor": "#28B9A6",
       "bundleIdentifier": "com.billy.loop",
       "developerName": "Strezzy",
       "versions": [
+        {
+          "version": "2.0.0",
+          "buildVersion": "9",
+          "buildNumber": "9",
+          "date": "2026-10-26T18:11:58Z",
+          "localizedDescription": "Loop 2.0: simpler preset-first Looks and Save screens; named tracked subjects with Keep/Remove repairs; depth-aware atmosphere and portrait/hair treatments; up to 12 effect cards with timing, fades and strength points; saved looks and .cube import; cinemagraphs, motion echoes and loop suggestions; HDR HEVC, transparent output and improved GIF palettes. All processing stays on device. Validation: 107 iOS simulator tests passed, 4 selection checks explicitly skipped, 6 separate native macOS selection checks passed, and 1 focused interface flow passed. Physical iPhone and sideload-host testing remains required.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/loop-2.0.0-build9/Loop.ipa",
+          "size": 171518735,
+          "minOSVersion": "26.0",
+          "sha256": "51382aab2c6b941422cb66284933cbcc622c5ab65c041f47d40cf62c0c832ab9"
+        },
         {
           "version": "1.3.1",
           "buildVersion": "8",
@@ -731,11 +742,11 @@
           "NSPhotoLibraryAddUsageDescription": "Save animations and videos you choose to your photo library."
         }
       },
-      "version": "1.3.1",
-      "versionDate": "2026-10-26T07:10:56Z",
-      "versionDescription": "# Loop 1.3.1 (build 8): rebuilt portrait and atmosphere effects\n\n## Finishing fixes\n\nEdge expansion and contraction now operate locally on the matte boundary, without raising empty background or making an opaque subject translucent. Weather uses a spatial particle neighborhood instead of evaluating the entire particle set for every output pixel. Face edits are composed before body deformation, so the transformed face follows the body. Foreground stabilization responds immediately to a changed stability setting. These refinements retain the new model-based effects described below.\n\n## Replaced, not repainted\n\nThe illustrated face masks and flat body silhouettes from 1.2 are removed. The existing cinematic grades, lens looks, crop and overlay tools, video exports and full-video import default remain.\n\nFace presets now deform the source image: face width, jaw, chin, eyes, nose and lips, plus edge-preserving skin smoothing, detail and tone. Each has adjustable controls. Mature and Older use a bundled, converted Fast-AgingGAN Core ML model. Youthful Retouch is explicitly a retouch preset, not trained age regression. Automatic face blur and pixelation are available; review detections before relying on privacy protection.\n\nBody presets use pose-guided source-pixel reshaping for waist, shoulders, hips, torso, arms and legs. They do not paint a body-shaped texture over the subject, invent clothing, or reconstruct hidden limbs. Strong shape edits can distort nearby scenery.\n\n## Cleaner foreground separation\n\nStudio quality uses bundled MODNet portrait alpha matting, source-guided edge refinement and motion-gated temporal stabilization. Accurate native matting remains available. Foreground-object mode can protect salient non-person objects. Edge, feather and stability controls plus preview-only mask inspection help with difficult clips. Seeking and changing direction reset temporal state rather than reusing an unrelated silhouette.\n\n## Layered atmosphere and photographic backgrounds\n\nAll ten atmosphere effects use the new GPU renderer, including soft rain streaks, depth-scaled snow, embers, fireflies, confetti, refractive bubbles, volumetric-style fog and light leaks. Choose layered, behind-subject or foreground placement and adjust density, size, speed and wind. Rear particles are occluded by the foreground mask. This is layered compositing, not full 3D scene reconstruction.\n\nSix CC0 photographic backgrounds from Poly Haven join the retained background collection. Photographic backgrounds support framing and zoom; background blur, exposure and warmth can be adjusted. The six embedded photographs are 2560 x 1440 perspective projections of original 4K HDRI assets. Imported photos retain the existing up-to-4096-pixel support.\n\n## Offline, exports and compatibility\n\nAll shaders, models and photographic assets are bundled. No account, runtime downloads or server rendering. Existing GIF/APNG/MP4/HEVC output, audio rules, trimming, crop tracking and overlay timing remain. New video imports still select the complete clip. Old projects continue to open; retired illustrated-effect identifiers are ignored, while other edits are preserved.\n\nNeural aging processes a 512-pixel face crop, then composites it into the source-resolution frame. It does not generate native-4K facial detail or guarantee an exact age, identity preservation, flicker-free motion or real-time playback. Heavy effects can reduce preview rate and slow export. HDR sources still export as SDR.\n\n## Verification\n\nThe release requires native arm64 compilation and package verification, plus a separate focused XCTest run covering shaders, source-pixel warps, foreground occlusion, deterministic animation, bundled models, migration and photographic assets. A real portrait fixture also exercises detection, matting and rendering. Reports record actual results. The long full-editor UI suite and physical-iPhone validation are not claimed. Model conversion parity checks ran with native Core ML ",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/loop-1.3.1-build8/Loop.ipa",
-      "size": 25102095
+      "version": "2.0.0",
+      "versionDate": "2026-10-26T18:11:58Z",
+      "versionDescription": "Loop 2.0: simpler preset-first Looks and Save screens; named tracked subjects with Keep/Remove repairs; depth-aware atmosphere and portrait/hair treatments; up to 12 effect cards with timing, fades and strength points; saved looks and .cube import; cinemagraphs, motion echoes and loop suggestions; HDR HEVC, transparent output and improved GIF palettes. All processing stays on device. Validation: 107 iOS simulator tests passed, 4 selection checks explicitly skipped, 6 separate native macOS selection checks passed, and 1 focused interface flow passed. Physical iPhone and sideload-host testing remains required.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/loop-2.0.0-build9/Loop.ipa",
+      "size": 171518735
     },
     {
       "name": "Orbit",

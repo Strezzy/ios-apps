@@ -73,8 +73,8 @@
   },
   "com.billy.loop": {
     "name": "Loop",
-    "subtitle": "Offline GIF and animated PNG creator",
-    "localizedDescription": "Turn videos from Photos or Files into GIFs and full-color APNG animations. Follow a selected subject with a moving portrait, landscape or square crop, including optional size-follow as it approaches or recedes. Stack independent tracked blur, pixelation, covers, emoji and captions on top. Trim beside the pinned player controls, scrub continuously, preview effects live, and pinch zoom up to 12x for precise placement. Choose frame rate and resolution, reverse or ping-pong playback, and use the full system emoji keyboard. Native Liquid Glass, local projects and exports, no accounts, ads, watermark or uploads. GIF supports up to 100 sampled FPS with 10 ms timing steps; playback varies between viewers. APNG supports up to 120 FPS. Output is capped at a 4096-pixel longest edge. Requires iOS 26. Physical iPhone performance and sideload-host behavior still need device validation.",
+    "subtitle": "Offline video effects, GIFs and loops",
+    "localizedDescription": "Edit videos privately on your iPhone with one-tap cinematic looks, tracked subjects, Keep/Remove brush repairs, layered effects, local portrait and hair treatments, depth-aware atmosphere, saved looks and .cube color imports. Find loop endpoints, blend seams, freeze a subject or its surroundings, and add motion echoes. Keep the existing crop tracking, privacy overlays, captions, full-video imports and local projects. Save GIF, APNG, H.264, HEVC, optional 10-bit HLG HDR, or transparent APNG/HEVC video. Native Liquid Glass controls keep advanced settings tucked away. Models ship with the app; no accounts, ads, watermark, uploads or runtime model downloads. Selection may use a disclosed native compatibility fallback. Tracking, cutouts and depth remain estimates; HDR is not Dolby Vision passthrough. Requires iOS 26. Physical-iPhone performance, thermals, long 4K exports and sideload-host behavior still need device validation.",
     "icon": "Loop.png",
     "category": "photo-video",
     "tintColor": "#28B9A6"
