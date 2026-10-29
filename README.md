@@ -114,3 +114,13 @@ These steps cover updates to an app already inside LiveContainer. Moving an app 
 ---
 
 [Publishing and catalog maintenance](docs/PUBLISHING.md)
+
+<!-- glint:start -->
+## Glint
+
+Native Liquid Glass media downloader with source-stream preservation, Instagram HDR extraction, quality inspection and optional separate Photos copies.
+
+[Download Glint.ipa](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint.ipa) · [LiveContainer version](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint-LiveContainer.ipa) · [Release notes](https://github.com/Strezzy/ios-apps/releases/tag/glint-0.1.0-build3.1) · [Source](Glint/README.md)
+
+Preview 3.1. Compiled and automated-tested; real-device HDR, login and installation remain unverified. Refresh your existing Strezzy’s Apps source for the new listing.
+<!-- glint:end -->
