@@ -64,7 +64,7 @@ accent.write_text(json.dumps({'colors':[{'idiom':'universal','color':{'color-spa
 strings = ROOT / 'Palladium/Resources/Localizable.xcstrings'
 text = strings.read_text().replace('"value" : "Palladium"', '"value" : "Glint"').replace('"value": "Palladium"', '"value": "Glint"')
 strings.write_text(text)
-for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift', 'GlintPaste.swift', 'GlintPlayback.swift', 'GlintOrigin.swift', 'GlintBrowser.swift', 'GlintBrowserScript.swift']:
+for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift', 'GlintPaste.swift', 'GlintPlayback.swift', 'GlintOrigin.swift', 'GlintBrowser.swift', 'GlintFilesExporter.swift', 'GlintPlayer.swift']:
     shutil.copy2(OVERLAY / name, ROOT / 'Palladium/Views' / name)
 (ROOT / 'Palladium/Views/Tabs/FormatPickerSheetView.swift').write_text('// Source-aware replacement is in GlintDesign.swift.\n')
 
@@ -107,9 +107,10 @@ home.write_text(text)
 
 content = 'Palladium/Views/ContentView.swift'
 change(content, 'struct ContentView: View {', '''struct ContentView: View {
-    @State private var glintShowInstagram = false
+    @StateObject private var glintBrowser = GlintBrowserModel()
+    @State var glintBrowserQueueRequested = false
     @AppStorage("glint.showConsole") private var glintShowConsole = false''')
-change(content, '                SettingsTabView(', '                GlintSettingsShell(onConnect: { glintShowInstagram = true }) { SettingsTabView(')
+change(content, '                SettingsTabView(', '                GlintSettingsShell(onConnect: { selectedTab = .instagram }) { SettingsTabView(')
 change(content, '                    onDeleteCookieFile: deleteImportedCookieFile\n                )', '                    onDeleteCookieFile: deleteImportedCookieFile\n                ) }')
 change(content, '''                ConsoleTabView(logStore: consoleLogStore)
                     .tabItem {
@@ -121,12 +122,32 @@ change(content, '''                ConsoleTabView(logStore: consoleLogStore)
                         .tag(AppTab.console)
                 }''')
 change(content, '        .onChange(of: selectedPreset, initial: false)', '''        .tint(GlintPalette.accent)
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("GlintConnectInstagram"))) { _ in glintShowInstagram = true }
-        .sheet(isPresented: $glintShowInstagram) { GlintInstagramLogin(onImport: importBrowserCookies) }
-        .modifier(GlintBrowserHost(busy: isRunning || isPackageRunning || isResolvingFormats || isResolvingGallery, onAction: glintHandleBrowserAction))
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("GlintConnectInstagram"))) { _ in selectedTab = .instagram }
+        .modifier(GlintBrowserHost(busy: isRunning || isPackageRunning || isResolvingFormats || isResolvingGallery || isResolvingQueueQuality,
+            selectedTab: $selectedTab, browser: glintBrowser, queueBlocked: glintBrowserQueueBlocked,
+            onAction: glintHandleBrowserAction, onIdle: glintStartBrowserQueueIfReady))
         .onChange(of: selectedPreset, initial: false)''')
 change(content, 'onOpenOptions: openSavedDownloadActions\n                )', 'onOpenOptions: openSavedDownloadActions,\n                    isEngineBusy: isRunning || isPackageRunning\n                )')
 change(content, 'Label(String(localized: "tab.downloads", bundle: .app), systemImage: "tray.and.arrow.down")', 'Label("Library", systemImage: "square.grid.2x2")')
+
+# Keep Instagram alive across tab switches, including library post/profile navigation.
+change(content, '        case download\n', '        case download\n        case instagram\n')
+change(content, '                .tag(AppTab.download)\n', '''                .tag(AppTab.download)
+
+                GlintInstagramTab(browser: glintBrowser)
+                    .tabItem { Label("Instagram", systemImage: "camera") }
+                    .tag(AppTab.instagram)
+''')
+queue = 'Palladium/Views/ContentView+DownloadQueue.swift'
+queue_file = ROOT / queue
+queue_file.write_text(queue_file.read_text().replace('selectedTab = .download', 'if selectedTab != .instagram { selectedTab = .download }'))
+# Exporting completed media goes directly to Files, without changing log exports.
+change(content, 'ShareSheet(activityItems: payload.activityItems)', '''GlintFilesExporter(urls: payload.activityItems.compactMap { $0 as? URL }) { saved in
+                if !saved {
+                    shareSheetCompletion = awaitingQueueItemID == nil ? nil : { handleQueuePostDownloadActionCompletion(false) }
+                }
+                sharePayload = nil
+            }''')
 
 # Source selection must not be prefiltered to H.264/SDR by the upstream defaults.
 options = 'Palladium/Models/DownloadOptions.swift'
@@ -142,6 +163,15 @@ change(options, '''            return "--merge-output-format mp4 --remux-video m
 # The primary video action and automatic queue must keep the source-quality promise
 # even if an older install saved conversion, codec, thumbnail or website overrides.
 flow = 'Palladium/Views/ContentView+DownloadFlow.swift'
+change(flow, '        guard !isRunning, !isPackageRunning else { return }', '''        guard !isRunning, !isPackageRunning else { return }
+        guard !GlintBrowserActivity.shared.mediaBusy else {
+            progressText = "Preparing a library video. Try again when it finishes, or add a post from Instagram to the queue."
+            return
+        }''')
+packages = ROOT / 'Palladium/Views/ContentView+Packages.swift'
+packages.write_text(packages.read_text().replace('guard !isRunning,', 'guard !GlintBrowserActivity.shared.mediaBusy, !isRunning,'))
+# Do not mark queued work running while a library preview owns the media engine.
+change(queue, '        guard downloadQueue.isActive,', '        guard !GlintBrowserActivity.shared.mediaBusy, downloadQueue.isActive,')
 change(flow, '    func handlePastedURL(_ pastedURL: String) {\n        guard autoDownloadOnPaste else { return }', '''    func handlePastedURL(_ pastedURL: String) {
         urlText = ClipboardLinkDetector.firstLink(in: pastedURL) ?? pastedURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard autoDownloadOnPaste else { return }''')
@@ -186,7 +216,7 @@ change(runner, '                hasThumbnail: item["has_thumbnail"] as? Bool ?? 
                 thumbnailURL: item["thumbnail_url"] as? String''')
 append(runner, '''extension PythonFlowRunner {
     static func glintMedia(function: String, path: String) async -> String {
-        guard ["glint_inspect_media", "glint_make_photos_copy", "glint_transcode_photos_copy"].contains(function) else {
+        guard ["glint_inspect_media", "glint_make_photos_copy", "glint_transcode_photos_copy", "glint_make_preview"].contains(function) else {
             return "{\\"success\\":false,\\"error\\":\\"Unknown operation\\"}"
         }
         return await runOnPythonThread {
@@ -208,7 +238,7 @@ change('Palladium/Services/Python/palladium_ytdlp/ytdlp.py', '                "h
                 "thumbnail_url": info.get("thumbnail"),''')
 shutil.copy2(OVERLAY / 'glint_media.py', ROOT / 'Palladium/Services/Python/palladium_ytdlp/glint_media.py')
 change('Palladium/Services/Python/PythonScripts.swift', '        "palladium_ytdlp/ytdlp.py",', '        "palladium_ytdlp/ytdlp.py",\n        "palladium_ytdlp/glint_media.py",')
-append('Palladium/Services/Python/yt_dlp_flow.py', 'from palladium_ytdlp.glint_media import glint_inspect_media, glint_make_photos_copy, glint_transcode_photos_copy')
+append('Palladium/Services/Python/yt_dlp_flow.py', 'from palladium_ytdlp.glint_media import glint_inspect_media, glint_make_photos_copy, glint_transcode_photos_copy, glint_make_preview')
 
 # Capture each completed item's own URL/creator, including playlist entries.
 shutil.copy2(OVERLAY / 'glint_origin.py', ROOT / 'Palladium/Services/Python/palladium_ytdlp/glint_origin.py')
@@ -221,6 +251,14 @@ change('Palladium/Services/Python/palladium_ytdlp/ytdlp.py',
 # Keep per-file provenance attached through atomic saves, collision renames and
 # converted copies. It never becomes an extra media item in Photos or the player.
 post = 'Palladium/Views/ContentView+PostDownload.swift'
+post_file = ROOT / post
+text = post_file.read_text()
+text = text.replace('title: completedResultIsCollection ? String(localized: "post_download.action.share_all.title", bundle: .app) : String(localized: "post_download.action.share.title", bundle: .app),', 'title: "Save to Files",')
+text = text.replace('subtitle: completedResultIsCollection ? String(localized: "post_download.action.share_all.help", bundle: .app) : String(localized: "post_download.action.share.help", bundle: .app),', 'subtitle: "Export the downloaded files unchanged",')
+a = text.index('                if completedDownloadAllowsSaveToApplicationFolder {')
+b = text.index('            }\n            .padding(.horizontal)', a)
+text = text[:a] + text[b:]
+post_file.write_text(text)
 change(post, '                try fileManager.copyItem(at: itemURL, to: itemDestination)',
     '                try fileManager.copyItem(at: itemURL, to: itemDestination)\n                try GlintOriginStore.copy(from: itemURL, to: itemDestination)')
 change(post, '                try fileManager.copyItem(at: itemURL, to: stagedItem)',
@@ -321,13 +359,12 @@ text = text[:start] + '''    var body: some View {
                                     Button { openMedia(item) } label: { GlintLibraryTile(item: item) }
                                         .buttonStyle(.plain)
                                         .contextMenu {
-                                            Button("Quality & Photos copy", systemImage: "sparkles.tv") { glintInspection = GlintInspectionTarget(url: item.url) }.disabled(isEngineBusy)
-                                            Button("Share & save", systemImage: "square.and.arrow.up") { onOpenOptions(item) }
+                                            Button("Save to Photos or Files", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) }
                                             Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
                                         }
                                     if DownloadedMediaGroup.classify(item.url) == .video {
                                         Button("Save & source", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) }
-                                            .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(isEngineBusy)
+                                            .buttonStyle(.bordered).buttonBorderShape(.capsule)
                                     }
                                     }
                                 }
@@ -370,6 +407,14 @@ text = text.replace('''        .onAppear(perform: loadItems)
 
     private func loadItems()''')
 text = text.replace('            try FileManager.default.removeItem(at: item.url)', '            try FileManager.default.removeItem(at: item.url)\n            if !item.isFolder { GlintOriginStore.remove(for: item.url) }')
+a = text.index('private struct SavedMediaPlayerView:')
+b = text.index('private enum SavedDownloadThumbnailLoader', a)
+text = text[:a] + '''private struct SavedMediaPlayerView: View {
+    let item: SavedMediaPlaybackItem
+    var body: some View { GlintPlayer(url: item.url, title: item.title) }
+}
+
+''' + text[b:]
 library.write_text(text)
 
 # Restore normal TLS validation instead of inheriting permissive extractor settings.

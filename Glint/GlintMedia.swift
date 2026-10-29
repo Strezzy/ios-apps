@@ -37,15 +37,24 @@ struct GlintMediaSheet: View {
     @State private var copy: URL?
     @State private var busy = false
     @State private var message: String?
-    @State private var canSaveOriginal = false
+    @State private var exporting = false
+    @ObservedObject private var activity = GlintBrowserActivity.shared
     var body: some View {
         NavigationStack {
             ZStack {
                 GlintBackdrop()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
-                        Image(systemName: "sparkles.tv").font(.system(size: 50, weight: .light)).foregroundStyle(GlintPalette.accent).padding(.top, 20)
                         Text(url.lastPathComponent).font(.title3.bold()).textSelection(.enabled)
+                        Button { Task { await saveToPhotos(copy ?? url) } } label: {
+                            Label("Save to Photos", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity).padding(.vertical, 12)
+                        }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).disabled(busy || activity.busy || activity.mediaBusy)
+                        Button { exporting = true } label: {
+                            Label("Save to Files", systemImage: "folder").frame(maxWidth: .infinity).padding(.vertical, 12)
+                        }.buttonStyle(.bordered).buttonBorderShape(.capsule)
+                        Text("Files exports this original file unchanged, including VP9 and HDR. Photos uses a compatible copy when needed.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if activity.busy { Text("Photos conversion is available when the current download finishes. You can save to Files now.").font(.caption).foregroundStyle(.secondary) }
                         GlintOriginCard(url: url).disabled(busy)
                         if let report, report.success {
                             VStack(alignment: .leading, spacing: 16) {
@@ -64,31 +73,26 @@ struct GlintMediaSheet: View {
                         } else {
                             HStack { ProgressView(); Text("Inspecting the actual file…").font(.subheadline) }
                         }
-                        ShareLink(item: copy ?? url) {
-                            Label("Save to Files or share", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity).padding(.vertical, 12)
-                        }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).disabled(busy)
-                            Button { Task { await saveToPhotos(copy ?? url) } } label: {
-                                Label("Save to Photos", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity).padding(.vertical, 12)
-                            }.buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(busy)
-                        if !canSaveOriginal && copy == nil {
-                            Button { Task { await makeCopy() } } label: {
-                                Label("Prepare playable copy", systemImage: "doc.on.doc").frame(maxWidth: .infinity).padding(.vertical, 12)
-                            }.buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(busy || report?.success != true)
-                        }
                         if busy { HStack(spacing: 10) { ProgressView(); Text("Processing on your iPhone. Keep Glint open.").font(.caption) } }
                         if let message { Text(message).font(.subheadline).textSelection(.enabled).padding(18).glintGlass(20) }
                         Text("Playable files are saved as-is. When needed, Glint first tries a lossless video remux, then high-quality HEVC at the original resolution and timing. HLG/PQ HDR must survive verification. Re-encoding can lose detail and Dolby Vision dynamic metadata; the original stays available in Files → Glint → Originals.")
                             .font(.caption).foregroundStyle(.secondary)
                     }.padding(24)
                 }
-            }.navigationTitle("Quality & export").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("Save video").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.disabled(busy) } }
         }.tint(GlintPalette.accent).interactiveDismissDisabled(busy)
-            .onReceive(NotificationCenter.default.publisher(for: .glintBrowserDownloadStarted)) { _ in dismiss() }
-            .task {
+            .sheet(isPresented: $exporting) {
+                GlintFilesExporter(urls: [url]) { saved in
+                    exporting = false
+                    if saved { message = "Saved to Files. Original quality preserved." }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .glintOpenInstagram)) { _ in dismiss() }
+            .task(id: activity.busy || activity.mediaBusy) {
+                guard !activity.busy, !activity.mediaBusy else { return }
                 let payload = await PythonFlowRunner.glintMedia(function: "glint_inspect_media", path: url.path)
                 report = decode(payload)
-                canSaveOriginal = UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(url.path)
             }
     }
     private func info(_ title: String, _ value: String) -> some View {
@@ -97,27 +101,15 @@ struct GlintMediaSheet: View {
     private func decode(_ value: String) -> GlintMediaReport {
         (try? JSONDecoder().decode(GlintMediaReport.self, from: Data(value.utf8))) ?? GlintMediaReport(success: false, error: "The media engine returned an unreadable result.")
     }
-    @MainActor private func makeCopy() async {
-        guard !busy else { return }
-        guard ProcessInfo.processInfo.thermalState != .serious && ProcessInfo.processInfo.thermalState != .critical else {
-            message = "Your iPhone is warm. Let it cool before creating a copy. Exporting the original needs no conversion."
-            return
-        }
-        busy = true
-        defer { busy = false }
-        let result = await GlintPlayback.prepare(url, preserveOriginal: false)
-        if await GlintPlayback.isCompatible(result.url) { copy = result.url }
-        message = result.note
-    }
     @MainActor private func saveToPhotos(_ source: URL) async {
-        guard !busy else { return }
-        busy = true
-        defer { busy = false }
+        guard !busy, !activity.busy, !activity.mediaBusy else { return }
+        busy = true; activity.mediaBusy = true
+        defer { busy = false; activity.mediaBusy = false }
         let prepared = await GlintPlayback.prepare(source, preserveOriginal: false)
         let source = prepared.url
         if source != url { copy = source }
         guard await GlintPlayback.isCompatible(source) else {
-            message = prepared.note ?? "Original retained. Photos could not import this video."
+            message = prepared.note ?? "Photos cannot import this source yet. Save to Files keeps the original unchanged."
             return
         }
         let permission = await PHPhotoLibrary.requestAuthorization(for: .addOnly)

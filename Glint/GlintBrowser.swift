@@ -3,16 +3,11 @@ import SwiftUI
 import Combine
 import WebKit
 import UIKit
+import UniformTypeIdentifiers
 
 extension Notification.Name {
     static let glintOpenInstagram = Notification.Name("GlintOpenInstagram")
     static let glintBrowserAction = Notification.Name("GlintBrowserAction")
-    static let glintBrowserDownloadStarted = Notification.Name("GlintBrowserDownloadStarted")
-}
-
-struct GlintBrowserTarget: Identifiable {
-    let id = UUID()
-    let url: URL
 }
 
 struct GlintBrowserAction {
@@ -23,42 +18,48 @@ struct GlintBrowserAction {
 
 struct GlintBrowserHost: ViewModifier {
     let busy: Bool
+    @Binding var selectedTab: ContentView.AppTab
+    let browser: GlintBrowserModel
+    let queueBlocked: Bool
     let onAction: @MainActor (GlintBrowserAction) -> Void
-    @State private var browser: GlintBrowserTarget?
+    let onIdle: @MainActor () -> Void
     func body(content: Content) -> some View {
         content
             .onReceive(NotificationCenter.default.publisher(for: .glintOpenInstagram)) { notification in
-                browser = GlintBrowserTarget(url: notification.object as? URL ?? GlintInstagramURL.home)
+                browser.load(notification.object as? URL ?? GlintInstagramURL.home)
+                selectedTab = .instagram
             }
-            .sheet(item: $browser) { target in GlintInstagramBrowser(url: target.url) }
             .onReceive(NotificationCenter.default.publisher(for: .glintBrowserAction)) { notification in
                 if let action = notification.object as? GlintBrowserAction { onAction(action) }
             }
-            .onChange(of: busy, initial: true) { _, value in GlintBrowserActivity.shared.busy = value }
+            .onReceive(GlintBrowserActivity.shared.$mediaBusy) { value in if !value { DispatchQueue.main.async { onIdle() } } }
+            .onChange(of: queueBlocked) { _, blocked in if !blocked { onIdle() } }
+            .onChange(of: busy, initial: true) { _, value in
+                GlintBrowserActivity.shared.busy = value
+                if !value { onIdle() }
+            }
     }
 }
 
 @MainActor final class GlintBrowserActivity: ObservableObject {
     static let shared = GlintBrowserActivity()
     @Published var busy = false
+    @Published var mediaBusy = false
 }
 
 @MainActor final class GlintBrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
-    struct Post: Identifiable, Decodable {
-        let url: URL
-        let label: String
-        var id: URL { url }
-    }
     let webView: WKWebView
     @Published var url = GlintInstagramURL.home
     @Published var loading = false
     @Published var canGoBack = false
     @Published var canGoForward = false
     @Published var message: String?
-    @Published var finding = false
+    @Published var signedIn = false
+    private var ready = false
+    private var requestedURL: URL?
     private var observations: [NSKeyValueObservation] = []
 
-    init(initialURL: URL) {
+    override init() {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.allowsInlineMediaPlayback = true
@@ -78,7 +79,11 @@ struct GlintBrowserHost: ViewModifier {
                 }
             }
         ]
-        Task { await seedSession(); load(initialURL) }
+        Task {
+            await seedSession()
+            ready = true
+            if let requestedURL { load(requestedURL) }
+        }
     }
 
     private func seedSession() async {
@@ -96,33 +101,19 @@ struct GlintBrowserHost: ViewModifier {
     func cookies() async -> [HTTPCookie] {
         GlintBrowserCookies.instagramOnly(await webView.configuration.websiteDataStore.httpCookieStore.allCookies())
     }
+    func activate() { if requestedURL == nil { load(GlintInstagramURL.home) } }
     func load(_ url: URL) {
+        requestedURL = url
+        guard ready else { return }
         message = nil
         webView.load(URLRequest(url: url))
     }
-    func posts() async -> [Post] {
-        finding = true
-        defer { finding = false }
-        guard GlintInstagramURL.normalized(webView.url) != nil else {
-            message = "Open an Instagram post, profile, or feed to choose a download."
-            return []
-        }
-        var posts: [Post] = []
-        if let post = GlintInstagramURL.post(webView.url) { posts.append(Post(url: post, label: "Current post")) }
-        do {
-            let value = try await webView.evaluateJavaScript(GlintBrowserScript.posts)
-            if let json = value as? String, let data = json.data(using: .utf8) {
-                for candidate in try JSONDecoder().decode([Post].self, from: data) {
-                    guard let url = GlintInstagramURL.post(candidate.url), !posts.contains(where: { $0.url == url }) else { continue }
-                    posts.append(Post(url: url, label: candidate.label))
-                }
-            }
-        } catch { message = "Could not read post links. Open the post, or paste its link in Download." }
-        if posts.isEmpty { message = "No post links found in this view. Open a post from its timestamp or menu, then try again. You can also copy its link and paste it in Download." }
-        return posts
+    func refreshSession() async {
+        signedIn = await cookies().contains { $0.name == "sessionid" && !$0.value.isEmpty }
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         canGoBack = webView.canGoBack; canGoForward = webView.canGoForward
+        Task { await refreshSession() }
     }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { failed(error) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { failed(error) }
@@ -148,83 +139,99 @@ private struct GlintWebView: UIViewRepresentable {
     func updateUIView(_ view: WKWebView, context: Context) {}
 }
 
-struct GlintInstagramBrowser: View {
-    @Environment(\.dismiss) private var dismiss
-    @StateObject private var browser: GlintBrowserModel
+struct GlintInstagramTab: View {
+    @ObservedObject var browser: GlintBrowserModel
     @ObservedObject private var activity = GlintBrowserActivity.shared
-    @State private var posts: [GlintBrowserModel.Post] = []
-    @State private var choosing = false
+    @State private var composing = false
     @State private var sending = false
-    init(url: URL) { _browser = StateObject(wrappedValue: GlintBrowserModel(initialURL: url)) }
+    @State private var link = ""
+    @State private var linkError: String?
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                HStack(spacing: 18) {
-                    Button { browser.webView.goBack() } label: { Image(systemName: "chevron.left") }.disabled(!browser.canGoBack).accessibilityLabel("Back")
-                    Button { browser.webView.goForward() } label: { Image(systemName: "chevron.right") }.disabled(!browser.canGoForward).accessibilityLabel("Forward")
-                    Text(browser.url.host ?? "Instagram").font(.caption).lineLimit(1).frame(maxWidth: .infinity)
-                    Button { browser.webView.reload() } label: { Image(systemName: "arrow.clockwise") }.accessibilityLabel("Reload")
-                }.padding(.horizontal, 22).padding(.vertical, 12)
-                HStack(spacing: 12) {
-                    route("Home", path: "/", icon: "house")
-                    route("Reels", path: "/reels/", icon: "play.rectangle")
-                    route("Explore", path: "/explore/", icon: "safari")
-                }.padding(.horizontal).padding(.bottom, 10)
-                if browser.loading { ProgressView().frame(maxWidth: .infinity).padding(4) }
-                GlintWebView(browser: browser)
+        GlintWebView(browser: browser)
+            .overlay(alignment: .top) {
+                if browser.loading { ProgressView().padding(8).glintGlass(20).padding(.top, 4).allowsHitTesting(false) }
             }
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 9) {
-                    if let message = browser.message { Text(message).font(.caption).foregroundStyle(.secondary).textSelection(.enabled) }
-                    if activity.busy { Text("You can browse while Glint works. Download another post when it finishes.").font(.caption).foregroundStyle(.secondary) }
-                    Button {
-                        Task { posts = await browser.posts(); choosing = !posts.isEmpty }
-                    } label: {
-                        Label(browser.finding ? "Finding posts…" : "Choose post to download", systemImage: "arrow.down.circle.fill")
-                            .frame(maxWidth: .infinity).padding(.vertical, 10)
-                    }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).disabled(activity.busy || browser.finding || sending)
-                    Text("Instagram’s website · Sign in here or use your selected session.").font(.caption2).foregroundStyle(.secondary)
-                }.padding(14).background(.regularMaterial)
+            .overlay(alignment: .bottomLeading) { navigationMenu.padding(16) }
+            .overlay(alignment: .bottomTrailing) {
+                Button {
+                    link = GlintInstagramURL.post(browser.url)?.absoluteString ?? ""
+                    linkError = nil; composing = true
+                } label: {
+                    Label("Download", systemImage: activity.busy ? "plus" : "arrow.down")
+                        .font(.subheadline.weight(.semibold)).padding(.horizontal, 20).padding(.vertical, 15)
+                }.buttonStyle(.plain).glintGlass(30).padding(16)
             }
-            .navigationTitle("Instagram").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Use login") { Task { await send(post: nil) } }.disabled(activity.busy || sending)
+            .overlay(alignment: .top) {
+                if let message = browser.message {
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(message).font(.caption).fixedSize(horizontal: false, vertical: true)
+                        Button { browser.message = nil } label: { Image(systemName: "xmark") }.accessibilityLabel("Dismiss message")
+                    }.padding(14).glintGlass(20).padding(12)
                 }
             }
-            .sheet(isPresented: $choosing) {
-                NavigationStack {
-                    List(posts) { post in
-                        Button { Task { await send(post: post.url) } } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Label(post.label.isEmpty ? "Download post" : post.label, systemImage: "arrow.down.circle").font(.headline).lineLimit(2)
-                                Text(post.url.absoluteString).font(.caption).foregroundStyle(.secondary)
-                            }.padding(.vertical, 8)
-                        }.disabled(sending || activity.busy)
-                    }.navigationTitle("Choose a post")
-                        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { choosing = false } } }
-                }.presentationDetents([.medium, .large])
+            .sheet(isPresented: $composing) { composer }
+            .task(id: browser.message) {
+                let message = browser.message
+                guard message != nil else { return }
+                try? await Task.sleep(for: .seconds(6))
+                if !Task.isCancelled && browser.message == message { browser.message = nil }
             }
-        }.tint(GlintPalette.accent)
+            .onAppear { browser.activate(); Task { await browser.refreshSession() } }
+            .tint(GlintPalette.accent)
     }
-    private func route(_ title: String, path: String, icon: String) -> some View {
-        Button { browser.load(URL(string: "https://www.instagram.com\(path)")!) } label: {
-            Label(title, systemImage: icon).font(.caption.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 9)
-        }.buttonStyle(.plain).glintGlass(18)
+    private var navigationMenu: some View {
+        Menu {
+            Button("Back", systemImage: "chevron.left") { browser.webView.goBack() }.disabled(!browser.canGoBack)
+            Button("Forward", systemImage: "chevron.right") { browser.webView.goForward() }.disabled(!browser.canGoForward)
+            Button("Home", systemImage: "house") { browser.load(GlintInstagramURL.home) }
+            Button("Reels", systemImage: "play.rectangle") { browser.load(URL(string: "https://www.instagram.com/reels/")!) }
+            Button("Explore", systemImage: "safari") { browser.load(URL(string: "https://www.instagram.com/explore/")!) }
+            Button("Reload", systemImage: "arrow.clockwise") { browser.webView.reload() }
+            if !browser.signedIn {
+                Button("Sign in to Instagram", systemImage: "person.crop.circle") { browser.load(URL(string: "https://www.instagram.com/accounts/login/")!) }
+            }
+        } label: {
+            Image(systemName: "ellipsis").font(.headline).frame(width: 48, height: 48)
+        }.glintGlass(25).accessibilityLabel("Instagram navigation")
     }
-    @MainActor private func send(post: URL?) async {
-        guard !sending, !activity.busy else { return }
-        sending = true
-        defer { sending = false }
-        let cookies = await browser.cookies()
-        if post == nil && !cookies.contains(where: { $0.name == "sessionid" && !$0.value.isEmpty }) {
-            browser.message = "Finish signing in on Instagram, then tap Use login."
-            return
+    private var composer: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("Download post").font(.title3.bold())
+                Spacer()
+                Button("Cancel") { composing = false }.disabled(sending)
+            }
+            HStack(spacing: 10) {
+                TextField("Instagram post or Reel link", text: $link)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
+                    .submitLabel(.go).onSubmit { Task { await send() } }
+                PasteButton(supportedContentTypes: [.url, .plainText]) { providers in
+                    Task { @MainActor in
+                        if let value = await GlintPaste.read(providers) { link = value; linkError = nil }
+                        else { linkError = "The clipboard does not contain a post link." }
+                    }
+                }.labelStyle(.iconOnly)
+            }.padding(14).glintGlass(18)
+            if let linkError { Text(linkError).font(.caption).foregroundStyle(.red) }
+            Button { Task { await send() } } label: {
+                Label(sending ? "Adding…" : "Download", systemImage: "arrow.down")
+                    .frame(maxWidth: .infinity).padding(.vertical, 10)
+            }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).disabled(sending || link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Text("Highest available quality. Saved to Library while you browse. Your current Instagram login is used automatically.")
+                .font(.caption).foregroundStyle(.secondary)
+        }.padding(24).presentationDetents([.height(310), .medium]).presentationDragIndicator(.visible)
+    }
+    @MainActor private func send() async {
+        guard !sending else { return }
+        guard let post = GlintInstagramURL.post(URL(string: link.trimmingCharacters(in: .whitespacesAndNewlines))) else {
+            linkError = "Paste an Instagram post or Reel link."; return
         }
+        sending = true
+        let cookies = await browser.cookies()
         NotificationCenter.default.post(name: .glintBrowserAction, object: GlintBrowserAction(cookies: cookies, postURL: post) { success, message in
-            browser.message = message
-            if success && post != nil { choosing = false; dismiss() }
+            sending = false
+            if success { composing = false; browser.message = message }
+            else { linkError = message }
         })
     }
 }
@@ -232,7 +239,6 @@ struct GlintInstagramBrowser: View {
 struct GlintOriginCard: View {
     let url: URL
     @State private var origin: GlintOrigin?
-    @State private var browser: GlintBrowserTarget?
     @State private var editing = false
     @State private var link = ""
     @State private var error: String?
@@ -240,14 +246,14 @@ struct GlintOriginCard: View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Original post", systemImage: "link").font(.headline)
             if let origin {
-                Button { browser = GlintBrowserTarget(url: origin.postURL) } label: { Label("Open original post", systemImage: "arrow.up.right.square") }
+                Button { NotificationCenter.default.post(name: .glintOpenInstagram, object: origin.postURL) } label: { Label("Open original post", systemImage: "arrow.up.right.square") }
                 Text(origin.postURL.absoluteString).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 if let creator = origin.creatorURL {
-                    Button { browser = GlintBrowserTarget(url: creator) } label: {
+                    Button { NotificationCenter.default.post(name: .glintOpenInstagram, object: creator) } label: {
                         Label("Browse @\(origin.username ?? "creator")", systemImage: "person.crop.circle")
                     }
                 } else { Text("Open the post and tap its creator to visit their profile.").font(.caption).foregroundStyle(.secondary) }
-                ShareLink(item: origin.postURL) { Label("Share post link", systemImage: "square.and.arrow.up") }
+                Button { UIPasteboard.general.url = origin.postURL } label: { Label("Copy post link", systemImage: "doc.on.doc") }
             } else {
                 Text("This file has no saved post link. New Instagram downloads keep it automatically.").font(.caption).foregroundStyle(.secondary)
                 Button("Add original link") { editing = true }
@@ -267,50 +273,66 @@ struct GlintOriginCard: View {
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
         }.buttonStyle(.borderless).padding(18).glintGlass(22)
             .task(id: url) { origin = GlintOriginStore.read(url) }
-            .sheet(item: $browser) { target in GlintInstagramBrowser(url: target.url) }
     }
 }
 
 extension ContentView {
+    var glintBrowserQueueBlocked: Bool {
+        showDownloadActionSheet || sharePayload != nil || showAlert || awaitingQueueItemID != nil
+    }
     @MainActor func glintHandleBrowserAction(_ action: GlintBrowserAction) {
-        guard !isRunning, !isPackageRunning, !isResolvingFormats, !isResolvingGallery else {
-            action.complete(false, "Wait for the current operation to finish before downloading another post.")
-            return
-        }
+        guard let post = GlintInstagramURL.post(action.postURL) else { action.complete(false, "Enter a post or Reel link."); return }
         let cookies = GlintBrowserCookies.instagramOnly(action.cookies)
+        let signedIn = cookies.contains { $0.name == "sessionid" && !$0.value.isEmpty }
         do {
-            if cookies.contains(where: { $0.name == "sessionid" && !$0.value.isEmpty }) {
+            var cookieName = ""
+            if signedIn {
                 let text = try NetscapeCookieExporter.text(from: cookies)
-                let name = "instagram-browser-cookies.txt"
-                let file = try GlintPrivateStorage.cookiesDirectory().appendingPathComponent(name)
-                try Data(text.utf8).write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-                selectedCookieFileName = name; defaultUseCookies = true; useCookies = true
+                // Each queued request keeps its own session snapshot. Signing out or
+                // switching accounts cannot change a download already in the queue.
+                cookieName = "instagram-\(UUID().uuidString).txt"
+                let directory = try GlintPrivateStorage.cookiesDirectory()
+                try Data(text.utf8).write(to: directory.appendingPathComponent(cookieName), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                let selectedName = "instagram-browser-cookies.txt"
+                try Data(text.utf8).write(to: directory.appendingPathComponent(selectedName), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                selectedCookieFileName = selectedName; defaultUseCookies = true; useCookies = true
                 refreshImportedCookieFiles()
             }
-            guard let post = GlintInstagramURL.post(action.postURL) else {
-                action.complete(true, "Instagram session selected for downloads. It stays in Glint’s private storage.")
-                return
-            }
-            // Follow the browser's current login state for this download.
-            useCookies = cookies.contains(where: { $0.name == "sessionid" && !$0.value.isEmpty })
-            selectedTab = .download
-            selectedPreset = .autoVideo
-            urlText = post.absoluteString
-            runDownloadFlow(urlOverride: post.absoluteString, presetOverride: .autoVideo)
-            action.complete(true, nil)
-            NotificationCenter.default.post(name: .glintBrowserDownloadStarted, object: nil)
+            let configuration = QueuedDownloadConfiguration(
+                presetRawValue: DownloadPreset.autoVideo.rawValue, presetArgumentsJSON: "{}", extraArguments: "",
+                downloadPlaylist: false, downloadSubtitles: downloadSubtitles, embedThumbnail: false,
+                autoRetryFailedDownloads: false, subtitleLanguagePattern: resolvedSubtitleLanguagePattern,
+                useCookies: signedIn, cookieFileName: cookieName,
+                afterDownloadBehaviorRawValue: AfterDownloadBehavior.saveToApplicationFolder.rawValue,
+                postProcessing: PostProcessingPreferences(), filenameExportPreset: filenameExportPreset,
+                customFilenameTemplate: customFilenameTemplate)
+            downloadQueue.append(linksText: post.absoluteString, configuration: configuration)
+            persistDownloadQueue()
+            glintBrowserQueueRequested = !downloadQueue.isActive
+            glintStartBrowserQueueIfReady()
+            action.complete(true, isRunning ? "Added to downloads. Keep browsing; your video will appear in Library." : "Queued. Downloads resume when the current operation finishes.")
         } catch { action.complete(false, error.localizedDescription) }
+    }
+
+    @MainActor func glintStartBrowserQueueIfReady() {
+        guard !GlintBrowserActivity.shared.mediaBusy, !isRunning, !isPackageRunning,
+              !isResolvingFormats, !isResolvingGallery, !isResolvingQueueQuality,
+              awaitingQueueItemID == nil, !showDownloadActionSheet, sharePayload == nil, !showAlert else { return }
+        if glintBrowserQueueRequested {
+            completedDownloadResult = nil
+            glintBrowserQueueRequested = false
+            startDownloadQueue()
+        } else { runNextQueuedDownloadIfNeeded() }
     }
 }
 
 struct GlintFolderSourceView: View {
     let folder: URL
     @State private var creator: URL?
-    @State private var browser: GlintBrowserTarget?
     var body: some View {
         Group {
             if let creator {
-                Button { browser = GlintBrowserTarget(url: creator) } label: {
+                Button { NotificationCenter.default.post(name: .glintOpenInstagram, object: creator) } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "person.crop.circle").font(.title2)
                         VStack(alignment: .leading, spacing: 4) {
@@ -326,6 +348,6 @@ struct GlintFolderSourceView: View {
             let origins = files.compactMap(GlintOriginStore.read)
             let creators = Set(origins.compactMap(\.creatorURL))
             creator = !origins.isEmpty && origins.allSatisfy { $0.creatorURL != nil } && creators.count == 1 ? creators.first : nil
-        }.sheet(item: $browser) { target in GlintInstagramBrowser(url: target.url) }
+        }
     }
 }

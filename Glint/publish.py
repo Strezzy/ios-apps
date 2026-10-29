@@ -64,7 +64,7 @@ def put_file(path, transform, message):
 required = ['Glint.ipa', 'Glint-LiveContainer.ipa', 'Glint-Source.zip', 'Glint.png',
             'build-info.json', 'SHA256SUMS.txt', 'glint-tests.txt', 'engine-tests.txt', 'hdr-plugin-tests.txt',
             'selection-tests.txt', 'quality-arguments.json', 'catalog-tests.txt', 'paste-tests.txt', 'remux-tests.txt',
-            'origin-tests.txt', 'browser-tests.txt']
+            'origin-tests.txt']
 for filename in required:
     if not (DIST / filename).is_file() or (DIST / filename).stat().st_size == 0:
         raise RuntimeError(f'Missing build result: {filename}')
@@ -83,9 +83,13 @@ notes = f'''# Glint 0.1.0 · Preview {BUILD['build']}
 
 A warm Liquid Glass downloader with maximum-resolution selection, HDR support, a local library, queues, and protected local sign-in sessions.
 
-New Instagram downloads retain their original post URL and available creator profile beside each media file. Provenance survives iPhone conversion, folder saves and filename collisions. Existing folder organization is preserved. Saved folders also contain portable Original post shortcuts. Library's Save & source controls open the post or creator in Glint; folders with one known creator show a Browse creator shortcut. Older files can have a post link attached manually.
+Instagram is now a permanent tab in the native Liquid Glass bar. Library post and creator links open that same tab and browsing session. A floating Download button opens a compact link/paste composer and queues downloads into Library without changing the page or switching tabs. Navigation lives in a small menu; no oversized header, footer or Use login button. The current browser login is captured automatically for each download.
 
-Browse Instagram inside Glint: Home, Reels and Explore use Instagram's own website. Your selected Instagram session is imported into a temporary WebKit store. You can sign in there and tap Use login to save that session privately for downloads. Choose post to download lists the visible post links for explicit selection, then uses the existing highest-quality download flow. No feed is automatically downloaded. Website layouts, login challenges and availability remain controlled by Instagram.
+Save video offers only Save to Photos and Save to Files. Files opens the destination picker directly and exports the selected file unchanged, including VP9, without requiring playback or conversion. Photos prepares a compatible copy when possible. Source links remain available and can be copied without a share sheet.
+
+VP9 and other FFmpeg-decodable formats can use a separate H.264 playback preview when Apple's native player cannot decode the source. Previews are clearly labeled, limited to 1080 pixels / 30 fps, tone-map explicit HLG/PQ to SDR, and live in a disposable cache. They never replace the source download or the full-quality Photos copy. Actual device decoder/encoder support still matters.
+
+Full-quality conversion now checks a bounded sample of decoded frames for missing color and pixel-format metadata. Incomplete HDR metadata no longer triggers a blanket device-unsupported error: known tags are retained in 10-bit HEVC and unverified HDR stays labeled unverified. Copies that lose dimensions, timing, bit depth or known color tags are rejected, with the original retained.
 
 The main action still chooses the highest exposed resolution, preferring HDR at that resolution. SDR and unknown-range videos remain downloadable. Paste handles URLs and shared text, and Instagram login remains optional for accessible public downloads.
 
@@ -102,7 +106,7 @@ Unsigned archives require your installer to sign or prepare them. Minimum OS rep
 Source downloads do not resize or re-encode the service's stream. Compatibility conversion preserves dimensions, orientation, frame timing and verified HLG/PQ HDR, with a generous source- and resolution-based bitrate. Re-encoding is not lossless and does not preserve Dolby Vision dynamic metadata. The original is retained in Files → Glint → Originals before automatic preparation. If preparation cannot preserve these properties, Glint keeps the download and explains why a playable copy was unavailable. “Source” is the service's stream, not the creator's camera-original file.
 
 ## Verification and limitations
-Native Xcode archive completed. Attached reports cover native URL/text paste payloads, provenance and cookie parsing, browser post-chooser fixtures, real yt-dlp selection fixtures, conversion safeguards, the engine and HDR plugin. The real-remux report runs when host FFmpeg is available and explicitly reports a skip otherwise. **Physical iPhone testing has not been performed for this release.** Live authenticated Instagram browsing, login/HDR retrieval, VideoToolbox conversion, Photos import, LiveContainer behavior, background continuation, and device thermals still need testing. Browser fixtures do not establish compatibility with every live Instagram layout.
+Native Xcode archive completed. Attached reports cover native URL/text paste payloads, provenance and cookie parsing, real yt-dlp selection fixtures, conversion safeguards, the engine and HDR plugin. Real host-FFmpeg fixtures cover lossless H.264 remux, VP9 HLG/PQ decoding, missing stream-tag recovery, HEVC source-size/color verification, H.264/AAC preview generation and failure cleanup. Host software encoders substitute for iPhone VideoToolbox in these tests. **Physical iPhone testing has not been performed for this release.** Live authenticated Instagram browsing, login/HDR retrieval, VideoToolbox conversion, Photos import, LiveContainer behavior, background continuation, and device thermals still need testing.
 
 Automated Instagram access can trigger account verification or restrictions. Stop if challenged. Save only media you own or have permission to download.
 

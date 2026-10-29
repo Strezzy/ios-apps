@@ -59,9 +59,13 @@ class ExportTests(unittest.TestCase):
         self.input_video = stream(avg_frame_rate='30/1', duration='10', nb_frames='300')
         self.output_updates = {}
         self.audio = []
+        self.frames = []
         owner = self
         class Bridge:
-            def probe_metadata(self, path):
+            def probe_metadata(self, path, opts=None):
+                if opts:
+                    owner.probe_options = opts
+                    return {"frames": owner.frames}
                 source = Path(path).resolve() == owner.source
                 output = dict(owner.input_video)
                 if not source:
@@ -171,6 +175,45 @@ class ExportTests(unittest.TestCase):
         self.return_code = 1
         result = json.loads(media.glint_make_photos_copy(str(self.source)))
         self.assertTrue(result['retryWithEncode'])
+
+    def test_decoded_vp9_frame_supplies_missing_hdr_tags(self):
+        self.input_video.update(pix_fmt=None, color_primaries=None)
+        self.frames = [{'media_type':'video', 'stream_index':0, 'pix_fmt':'yuv420p10le', 'color_primaries':'bt2020'}]
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertTrue(result['success'], result)
+        self.assertTrue(result['verifiedHDR'])
+        self.assertIn('%+#8', self.probe_options)
+
+    def test_incomplete_hdr_metadata_does_not_prevent_known_tag_conversion(self):
+        self.input_video['color_primaries'] = None
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertTrue(result['success'], result)
+        self.assertFalse(result['verifiedHDR'])
+        self.assertIn('p010le', self.arguments)
+        self.assertIn('arib-std-b67', self.arguments)
+        self.assertNotIn('-color_primaries', self.arguments)
+        self.assertIn('incomplete', result['note'])
+
+    def test_conflicting_frame_tags_are_not_guessed(self):
+        self.input_video['color_primaries'] = None
+        self.frames = [{'media_type':'video', 'color_primaries':value} for value in ['bt709', 'bt2020']]
+        result = json.loads(media.glint_inspect_media(str(self.source)))
+        self.assertFalse(result['verifiedHDR'])
+        self.assertEqual(result['primaries'], 'Unknown')
+
+    def test_known_transfer_survives_even_with_unverified_hdr(self):
+        self.input_video['color_primaries'] = None
+        self.output_updates['color_transfer'] = 'bt709'
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertFalse(result['success'])
+        self.assertEqual(self.source.read_bytes(), self.original)
+
+    def test_dolby_without_standard_base_is_not_silently_relabelled(self):
+        self.input_video.update(color_transfer=None, side_data_list=[{'side_data_type':'DOVI configuration record'}])
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertFalse(result['success'])
+        self.assertIn('base layer', result['error'])
+        self.assertEqual(self.arguments, [])
 
 
 if __name__ == '__main__':

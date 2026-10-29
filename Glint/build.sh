@@ -41,6 +41,7 @@ done < <(find "$ENGINE/Palladium" -name '*.swift' -print0)
   PYTHONDONTWRITEBYTECODE=1 "$PY" -m unittest scripts.test_format_resolution
 ) 2>&1 | tee "$OUT/engine-tests.txt"
 "$PY" "$REPO_ROOT/Glint/test_media.py" 2>&1 | tee "$OUT/glint-tests.txt"
+if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then brew install ffmpeg; fi
 "$PY" "$REPO_ROOT/Glint/test_media_real.py" 2>&1 | tee "$OUT/remux-tests.txt"
 "$PY" "$REPO_ROOT/Glint/test_catalog.py" 2>&1 | tee "$OUT/catalog-tests.txt"
 swiftc "$REPO_ROOT/Glint/GlintQuality.swift" "$REPO_ROOT/Glint/QualityProbe.swift" -o "$WORK/quality-probe"
@@ -51,7 +52,6 @@ swiftc "$REPO_ROOT/Glint/GlintPaste.swift" "$ENGINE/Palladium/Models/ClipboardLi
 "$PY" "$REPO_ROOT/Glint/test_origin.py" 2>&1 | tee "$OUT/origin-tests.txt"
 swiftc "$REPO_ROOT/Glint/GlintOrigin.swift" "$REPO_ROOT/Glint/OriginProbe.swift" -o "$WORK/origin-probe"
 "$WORK/origin-probe" 2>&1 | tee -a "$OUT/origin-tests.txt"
-node "$REPO_ROOT/Glint/test_browser.cjs" 2>&1 | tee "$OUT/browser-tests.txt"
 (cd "$HDR" && "$PY" -m unittest discover -s tests) 2>&1 | tee "$OUT/hdr-plugin-tests.txt"
 
 mkdir -p "$ENGINE/Frameworks" "$WORK/downloads" "$OUT/dependency-sources"
