@@ -2,15 +2,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WORK="${RUNNER_TEMP:-/tmp}/glint-build-${GITHUB_RUN_ID:-local}"
+WORK="${RUNNER_TEMP:-/tmp}/glint-build-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}"
 ENGINE="$WORK/engine"
 HDR="$WORK/hdr"
 OUT="$REPO_ROOT/Glint/dist"
 export GLINT_BUILD="${GITHUB_RUN_NUMBER:-1}.${GITHUB_RUN_ATTEMPT:-1}"
 export GLINT_TAG="glint-0.1.0-build${GLINT_BUILD}"
 mkdir -p "$WORK" "$OUT"
+exec > >(tee "$OUT/build.log") 2>&1
 python3 -m venv "$WORK/venv"
+python3 -m venv "$WORK/clean-tests"
 PY="$WORK/venv/bin/python"
+CLEAN="$WORK/clean-tests/bin/python"
 "$PY" -m pip install --disable-pip-version-check 'Pillow==11.3.0' 'yt-dlp[default]==2026.8.19' 'yt-dlp-apple-webkit-jsi==0.1.1'
 fetch_commit() {
   local repo="$1" sha="$2" destination="$3"
@@ -24,9 +27,23 @@ fetch_commit tfourj/Palladium 9793491d168b63a36c50bee425140f2459d08c5a "$ENGINE"
 fetch_commit viniciusron7/yt-dlp-instagram-hdr 812fbd7ad2b33e1f4b03f49b386e065f199054fd "$HDR"
 "$PY" "$REPO_ROOT/Glint/assemble.py" "$ENGINE"
 "$PY" -m compileall -q "$ENGINE/Palladium/Services/Python" "$REPO_ROOT/Glint"
+tar -czf "$OUT/Assembled-Source.tar.gz" --exclude=.git --exclude=Frameworks -C "$ENGINE" .
+while IFS= read -r -d '' source; do
+  xcrun swiftc -frontend -parse "$source"
+done < <(find "$ENGINE/Palladium" -name '*.swift' -print0)
+
+# Package installation/removal tests intentionally require an empty environment.
+# Format tests require real yt-dlp. Never let one suite contaminate the other.
+(
+  cd "$ENGINE"
+  PYTHONDONTWRITEBYTECODE=1 "$CLEAN" -m unittest scripts.test_package_source_modes
+  PYTHONDONTWRITEBYTECODE=1 "$CLEAN" -m unittest discover -s scripts/python_tests -t .
+  PYTHONDONTWRITEBYTECODE=1 "$PY" -m unittest scripts.test_format_resolution
+) 2>&1 | tee "$OUT/engine-tests.txt"
+"$PY" "$REPO_ROOT/Glint/test_media.py" 2>&1 | tee "$OUT/glint-tests.txt"
+(cd "$HDR" && "$PY" -m unittest discover -s tests) 2>&1 | tee "$OUT/hdr-plugin-tests.txt"
 
 mkdir -p "$ENGINE/Frameworks" "$WORK/downloads" "$OUT/dependency-sources"
-# Release tags and source archives are recorded alongside the exact downloaded binaries.
 get_release() {
   local repo="$1" pattern="$2" name="$3"
   mkdir -p "$WORK/downloads/$name"
@@ -45,7 +62,6 @@ test -n "$PY_FRAMEWORK"
 cp -R "$PY_FRAMEWORK" "$ENGINE/Frameworks/Python.xcframework"
 HEADER="$ENGINE/Frameworks/Python.xcframework/ios-arm64/Python.framework/Headers/patchlevel.h"
 grep -Eq '^#define PY_VERSION[[:space:]]+"3\.15\.' "$HEADER"
-
 for name in SwiftFFmpeg-iOS SwiftCurlCffi-iOS; do
   get_release "tfourj/$name" "$name.zip" "$name"
   mkdir -p "$WORK/$name-extracted"
@@ -64,18 +80,7 @@ echo '97c80625b26775a4c7ca618c004d4ea24cf99cbf867e4eba78bd927a8b23d106  '"$WORK/
 mkdir -p "$ENGINE/Frameworks/QuickJS"
 tar -xzf "$WORK/downloads/quickjs.tar.gz" --strip-components=1 -C "$ENGINE/Frameworks/QuickJS"
 cp "$WORK/downloads/quickjs.tar.gz" "$OUT/dependency-sources/quickjs-source.tar.gz"
-(
-  cd "$ENGINE"
-  PYTHONDONTWRITEBYTECODE=1 "$PY" -m unittest scripts.test_package_source_modes
-  PYTHONDONTWRITEBYTECODE=1 "$PY" -m unittest discover -s scripts/python_tests -t .
-  PYTHONDONTWRITEBYTECODE=1 "$PY" -m unittest scripts.test_format_resolution
-) 2>&1 | tee "$OUT/engine-tests.txt"
-if [ -f "$REPO_ROOT/Glint/test_media.py" ]; then
-  "$PY" "$REPO_ROOT/Glint/test_media.py" 2>&1 | tee "$OUT/glint-tests.txt"
-fi
-(cd "$HDR" && "$PY" -m unittest discover -s tests) 2>&1 | tee "$OUT/hdr-plugin-tests.txt"
 
-# Compile and archive with Apple's toolchain. No developer account is required here.
 cd "$ENGINE"
 export PALLADIUM_DISABLE_PYTHON_DYLIB_CODESIGN=1
 xcodebuild archive -project Palladium.xcodeproj -scheme Palladium -configuration Release \
@@ -85,10 +90,11 @@ xcodebuild archive -project Palladium.xcodeproj -scheme Palladium -configuration
   PALLADIUM_DISABLE_PYTHON_DYLIB_CODESIGN=1 2>&1 | tee "$OUT/xcodebuild.log"
 APP="$WORK/Glint.xcarchive/Products/Applications/Palladium.app"
 test -d "$APP"
-# Bundle pure-Python packages for first-use readiness. Never ship macOS extensions.
+# Only platform-independent wheels go into the bundled package directory.
 "$PY" -m pip install --disable-pip-version-check --target "$APP/python-packages" --no-compile --no-deps \
   --only-binary=:all: --platform any --implementation py --abi none --python-version 3.15 \
-  'yt-dlp==2026.8.19' 'yt-dlp-apple-webkit-jsi==0.1.1' yt-dlp-ejs gallery-dl mutagen pip certifi requests urllib3 idna charset-normalizer
+  'yt-dlp==2026.8.19' 'yt-dlp-apple-webkit-jsi==0.1.1' 'yt-dlp-ejs==0.8.0' gallery-dl mutagen pip certifi requests urllib3 idna charset-normalizer
+mkdir -p "$APP/python-packages/yt_dlp_plugins"
 cp -R "$HDR/yt_dlp_plugins/." "$APP/python-packages/yt_dlp_plugins/"
 if find "$APP/python-packages" -type f \( -name '*.so' -o -name '*.dylib' \) | grep .; then
   echo 'Host binary found in pure-Python package payload.' >&2; exit 1
@@ -100,7 +106,7 @@ cp "$REPO_ROOT/Glint/README.md" "$APP/GlintLicenses/Glint-README.md"
 cp "$ENGINE/Palladium/Resources/Assets.xcassets/GlintIcon.appiconset/Glint.png" "$OUT/Glint.png"
 export APP OUT ENGINE HDR REPO_ROOT WORK
 "$PY" - <<'PY'
-import hashlib, importlib.metadata, json, os, pathlib, plistlib, shutil
+import importlib.metadata, json, os, pathlib, plistlib
 app = pathlib.Path(os.environ['APP'])
 out = pathlib.Path(os.environ['OUT'])
 info = plistlib.loads((app/'Info.plist').read_bytes())
@@ -115,17 +121,14 @@ manifest = {'name':'Glint','version':'0.1.0','build':os.environ['GLINT_BUILD'],'
 (out/'build-info.json').write_text(json.dumps(manifest,indent=2)+'\n')
 (app/'GlintLicenses/build-info.json').write_text(json.dumps(manifest,indent=2)+'\n')
 PY
-# Remove any stale signatures; the user's installer will sign the app and frameworks.
 find "$APP" -type d -name _CodeSignature -prune -exec rm -rf {} +
 find "$APP" -name embedded.mobileprovision -delete
 mkdir -p "$WORK/standard/Payload"
 cp -R "$APP" "$WORK/standard/Payload/Glint.app"
 (cd "$WORK/standard" && ditto -c -k --keepParent Payload "$OUT/Glint.ipa")
-# LiveContainer cannot host share extensions. Keep the standard IPA intact as well.
 rm -rf "$WORK/standard/Payload/Glint.app/PlugIns"
 (cd "$WORK/standard" && ditto -c -k --keepParent Payload "$OUT/Glint-LiveContainer.ipa")
 
-# Complete modified application sources, build recipe, pure Python sources and native dependency source archives.
 mkdir -p "$WORK/corresponding-source/Glint/Engine" "$WORK/corresponding-source/Glint/Overlay"
 rsync -a --exclude .git --exclude Frameworks --exclude build "$ENGINE/" "$WORK/corresponding-source/Glint/Engine/"
 rsync -a --exclude dist --exclude __pycache__ "$REPO_ROOT/Glint/" "$WORK/corresponding-source/Glint/Overlay/"
