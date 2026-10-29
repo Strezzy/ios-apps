@@ -17,6 +17,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonwake.png" width="44" alt=""/> **Moonwake** — A starlight pixel adventure | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png" width="44" alt=""/> **Loop** — Offline video effects, GIFs and loops | 2.0.0 (9) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/loop-2.0.0-build9/Loop.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Orbit.png" width="44" alt=""/> **Orbit** — Spatial videos, with a little more depth | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/orbit-1.0-build1/Orbit.ipa) | iOS 26.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Glint.png" width="44" alt=""/> **Glint** — Maximum-resolution HDR downloader | 0.1.0 (4.1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build4.1/Glint-LiveContainer.ipa) | iOS 17.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -72,6 +73,10 @@ Edit videos privately on your iPhone with one-tap cinematic looks, tracked subje
 
 Open original spatial videos from Photos or Files and watch them full screen with depth that responds to left/right and up/down phone tilt. Native stereo decoding and on-device Metal rendering, portrait and landscape playback, depth strength, recenter, touch look-around, fit/fill, scrubbing, mute, looping and a local video library. Ice-blue and violet Liquid Glass interface. No accounts, ads, analytics, media uploads or model downloads. Regular movies play in 2D. The effect is a limited motion-parallax reconstruction; stereo artifacts can occur and hidden surfaces cannot be recovered. Requires iOS 26 or later. Physical iPhone quality, thermals and sideload-host behavior still need device validation.
 
+### Glint
+
+Save Instagram Reels and videos in the highest resolution HDR stream Instagram exposes. Native warm Liquid Glass interface, yt-dlp on device, manual stream inspection, queues, a local library and protected Instagram sign-in. The main video action requires HDR and never silently falls back to SDR. Source video is not resized or re-encoded. Optional Photos copies are separate HEVC exports; Dolby Vision metadata is not preserved in converted copies. Preview: physical iPhone login, HDR retrieval, Photos export and LiveContainer behavior still need device testing.
+
 ## Add my apps to LiveContainer
 
 You only need to add this source once.
@@ -114,13 +119,3 @@ These steps cover updates to an app already inside LiveContainer. Moving an app 
 ---
 
 [Publishing and catalog maintenance](docs/PUBLISHING.md)
-
-<!-- glint:start -->
-## Glint
-
-Native Liquid Glass media downloader with source-stream preservation, Instagram HDR extraction, quality inspection and optional separate Photos copies.
-
-[Download Glint.ipa](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint.ipa) · [LiveContainer version](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint-LiveContainer.ipa) · [Release notes](https://github.com/Strezzy/ios-apps/releases/tag/glint-0.1.0-build3.1) · [Source](Glint/README.md)
-
-Preview 3.1. Compiled and automated-tested; real-device HDR, login and installation remain unverified. Refresh your existing Strezzy’s Apps source for the new listing.
-<!-- glint:end -->
