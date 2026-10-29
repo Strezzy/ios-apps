@@ -10,7 +10,7 @@ The **Build Glint** GitHub Actions workflow compiles the native application and 
 - **Glint-LiveContainer.ipa**: the same app without the Share Extension, which LiveContainer cannot host. Paste links in Glint instead.
 - **Glint-Source.zip**, dependency provenance, test reports and SHA-256 checksums.
 
-The repository's existing `apps.json` is updated after a successful release. No new source URL is necessary. A workflow/source upload is not proof that an IPA has finished building: check the workflow and its release assets.
+The repository's existing `apps.json` is updated after a successful release, using the LiveContainer IPA. Glint is registered with the shared catalog generator so later app releases retain its listing. No new source URL is necessary. A workflow/source upload is not proof that an IPA has finished building: check the workflow and its release assets.
 
 This is a **preview**, not a device-certified release. Native compilation and automated tests do not verify real Instagram authentication, a real HDR Reel, Photos import, LiveContainer compatibility, background continuation or on-device thermal behavior. Those require physical iPhone testing. Background tasks are subject to iOS scheduling and sideloading entitlements; they are not guaranteed to continue indefinitely or after force-quitting.
 
@@ -22,7 +22,8 @@ Liquid Glass uses the native iOS 26 API on supported systems, with material and 
 
 ## Quality and HDR
 
-- Defaults prefer reported HDR and the best available resolution, then frame rate and bitrate, without restricting video to H.264. This prioritizes HDR over SDR; a manual picker exposes the alternatives.
+- **Download maximum HDR** requires a reported HDR stream, then selects the largest available source resolution, followed by frame rate and bitrate. A larger SDR stream never displaces HDR, and SDR-only or unknown-range responses produce an error. There is no silent SDR fallback. Connect Instagram and use the quality inspector to see what the service exposed.
+- The main video action ignores previously saved codec, resizing, custom argument and conversion preferences. Exact manual format selections remain explicit alternatives, including SDR. Automatic video queues use the same maximum-resolution HDR policy.
 - Default video downloading copies the delivered encoded streams, rather than re-encoding them. Separate input streams are retained with `--keep-video` when yt-dlp merges them.
 - The quality picker shows **reported stream metadata**. It does not claim that a file has already been downloaded or verified.
 - Library's **Quality & Photos copy** action uses native FFprobe to inspect the saved file. HDR verification requires appropriate transfer, BT.2020 primaries and at least 10-bit evidence. Bit depth alone is never labeled HDR.

@@ -63,6 +63,7 @@ struct GlintHome: View {
     let progress: String
     let error: String?
     let queueCount: Int
+    let downloadTitle: String
     let onDownload: () -> Void
     let onInspect: () -> Void
     let onCancel: () -> Void
@@ -137,10 +138,12 @@ struct GlintHome: View {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "sparkles.tv").font(.title3).foregroundStyle(GlintPalette.accent)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("Source first").font(.subheadline.weight(.semibold))
-                                Text("HDR when available. No video re-encoding by default.").font(.caption).foregroundStyle(.secondary)
+                                Text("Maximum resolution + HDR").font(.subheadline.weight(.semibold))
+                                Text("The largest HDR stream available. Original encoded video, with no resizing or re-encoding.").font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                        Text("No HDR stream? We’ll tell you. SDR is only available through an explicit manual choice.")
+                            .font(.caption).foregroundStyle(.secondary)
                     }.padding(22).glintGlass(30)
                     if busy {
                         VStack(alignment: .leading, spacing: 12) {
@@ -158,7 +161,7 @@ struct GlintHome: View {
                     } else {
                         VStack(spacing: 12) {
                             Button { focused = false; onDownload() } label: {
-                                Label("Download best", systemImage: "arrow.down")
+                                Label(downloadTitle, systemImage: "arrow.down")
                                     .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 15)
                             }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).tint(GlintPalette.accent).disabled(!hasURL)
                             Button(action: onInspect) {
@@ -168,6 +171,10 @@ struct GlintHome: View {
                         }
                     }
                     if let error, !error.isEmpty {
+                        if error.localizedCaseInsensitiveContains("requested format") {
+                            Label("No matching HDR stream was returned. Connect Instagram, then inspect the available streams. Glint has not substituted an SDR download.", systemImage: "sparkles.tv")
+                                .font(.subheadline).padding(18).glintGlass(22)
+                        }
                         DisclosureGroup {
                             Text(error).font(.caption).textSelection(.enabled).padding(.top, 8)
                         } label: {

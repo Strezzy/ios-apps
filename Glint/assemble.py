@@ -64,7 +64,7 @@ accent.write_text(json.dumps({'colors':[{'idiom':'universal','color':{'color-spa
 strings = ROOT / 'Palladium/Resources/Localizable.xcstrings'
 text = strings.read_text().replace('"value" : "Palladium"', '"value" : "Glint"').replace('"value": "Palladium"', '"value": "Glint"')
 strings.write_text(text)
-for name in ['GlintDesign.swift', 'GlintMedia.swift']:
+for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift']:
     shutil.copy2(OVERLAY / name, ROOT / 'Palladium/Views' / name)
 (ROOT / 'Palladium/Views/Tabs/FormatPickerSheetView.swift').write_text('// Source-aware replacement is in GlintDesign.swift.\n')
 
@@ -77,6 +77,7 @@ text = text[:start] + '''    var body: some View {
         GlintHome(url: $urlText, running: isRunning, resolving: isResolvingFormats || isResolvingGallery,
             connected: useCookies && !selectedCookieFileName.isEmpty, progress: progressText,
             error: downloadErrorText, queueCount: downloadQueue.outstandingCount,
+            downloadTitle: selectedPreset == .autoVideo ? "Download maximum HDR" : selectedPreset == .mute ? "Download HDR without audio" : "Download " + selectedPreset.title,
             onDownload: primaryDownloadAction, onInspect: onChooseFormat, onCancel: onCancel,
             onPaste: onPastedURL, onOptions: { showDownloadOptions = true },
             onHistory: { showHistorySheet = true }, onQueue: { showDownloadQueueSheet = true },
@@ -95,7 +96,7 @@ text = text[:start] + '''    var body: some View {
                     }
                     Section("Session") { cookieSelectionRow }
                     Section {
-                        Text("The default video mode copies the best available streams. Advanced conversion preferences can change that. Use Library > Quality & export to make a separate Photos copy.").font(.caption).foregroundStyle(.secondary)
+                        Text("Video mode always downloads the largest available HDR stream without conversion. Use the manual quality picker for SDR or Library > Quality & export for a separate Photos copy.").font(.caption).foregroundStyle(.secondary)
                     }
                 }.navigationTitle("Options").navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showDownloadOptions = false } } }
@@ -132,15 +133,37 @@ change(options, 'var videoCodec: VideoDownloadCodec = .photosCompatible', 'var v
 change(options, 'VideoDownloadCodec(rawValue: defaults.string(forKey: videoCodecKey) ?? "") ?? .photosCompatible', 'VideoDownloadCodec(rawValue: defaults.string(forKey: videoCodecKey) ?? "") ?? .best')
 change(options, '    private func videoArguments(includeAudio: Bool) -> String {', '''    private func videoArguments(includeAudio: Bool) -> String {
         if videoCodec == .best && videoQuality == .best {
-            return includeAudio
-                ? "-f \\"bv*+ba/b\\" --format-sort-force -S \\"hdr,res,fps,br\\" --keep-video"
-                : "-f bv/b --format-sort-force -S \\"hdr,res,fps,br\\" --keep-video"
-        }'''.replace('\\"', '\\"'))
+            return GlintSourceQuality.downloadArguments(includeAudio: includeAudio)
+        }''')
 change(options, '''            return "--merge-output-format mp4 --remux-video mp4 "
-                + "-S vcodec:h264,lang,quality,res,fps,hdr:12,acodec:aac"''', '''            return "-f \\"bv*+ba/b\\" --format-sort-force -S \\"hdr,res,fps,br\\" --keep-video"'''.replace('\\"', '\\"'))
+                + "-S vcodec:h264,lang,quality,res,fps,hdr:12,acodec:aac"''', '''            return GlintSourceQuality.downloadArguments()''')
+
+# The primary video action and automatic queue must keep the source-quality promise
+# even if an older install saved conversion, codec, thumbnail or website overrides.
+flow = 'Palladium/Views/ContentView+DownloadFlow.swift'
+change(flow, '        let queuedBatchQuality = queuedConfiguration?.batchQuality', '''        let queuedBatchQuality = queuedConfiguration?.batchQuality
+        let glintSourceHDR = formatOverride == nil && queuedBatchQuality == nil
+            && (effectiveDownloadPreset == .autoVideo || effectiveDownloadPreset == .mute)''')
+change(flow, '        if let formatOverride {\n            let formatPreset:', '        if glintSourceHDR {\n            presetAtStart = DownloadPreset.custom.pythonValue\n        } else if let formatOverride {\n            let formatPreset:')
+change(flow, '        if let formatOverride {\n            let formatArguments', '''        if glintSourceHDR {
+            extraArgsAtStart = GlintSourceQuality.downloadArguments(includeAudio: effectiveDownloadPreset != .mute)
+                + " --sleep-requests 2 --retries 1 --extractor-retries 0"
+        } else if let formatOverride {
+            let formatArguments''')
+change(flow, '        let postProcessingJSONAtStart = postProcessing.configurationJSON(for: postProcessingPreset)',
+    '        let postProcessingJSONAtStart = (glintSourceHDR ? PostProcessingPreferences() : postProcessing).configurationJSON(for: postProcessingPreset)')
+change(flow, '''        let presetArgsJSONAtStart = usesQualitySettings
+            ? queuedConfiguration?.presetArgumentsJSON ?? buildPresetArgumentsJSON()
+            : "{}"''', '''        let presetArgsJSONAtStart = glintSourceHDR ? "{}" : (usesQualitySettings
+            ? queuedConfiguration?.presetArgumentsJSON ?? buildPresetArgumentsJSON()
+            : "{}")''')
+change(flow, '        let embedThumbnailAtStart = queuedConfiguration?.embedThumbnail ?? embedThumbnail',
+    '        let embedThumbnailAtStart = glintSourceHDR ? false : (queuedConfiguration?.embedThumbnail ?? embedThumbnail)')
 
 # Add manifest metadata without inferring HDR from pixel depth or the filename.
 runner = 'Palladium/Services/Python/PythonFlowRunner.swift'
+change(runner, '        var arguments = "--format \\(resolvedDownloadID ?? id)"',
+    '        var arguments = "--format \\(resolvedDownloadID ?? id) --keep-video"')
 change(runner, '    var hasThumbnail: Bool = false', '    var hasThumbnail: Bool = false\n    var dynamicRange: String? = nil\n    var thumbnailURL: String? = nil')
 change(runner, '                hasThumbnail: item["has_thumbnail"] as? Bool ?? false', '''                hasThumbnail: item["has_thumbnail"] as? Bool ?? false,
                 dynamicRange: item["dynamic_range"] as? String,
@@ -289,7 +312,8 @@ library.write_text(text)
 # Restore normal TLS validation instead of inheriting permissive extractor settings.
 for path in (ROOT / 'Palladium/Services/Python').rglob('*.py'):
     text = path.read_text().replace('"nocheckcertificate": True', '"nocheckcertificate": False')
-    text = text.replace('"--no-check-certificates",', '').replace("'--no-check-certificates',", '')
+    # yt-dlp accepts the singular spelling too; upstream uses both spellings.
+    text = re.sub(r'''["']--no-check-certificates?["'],?''', '', text)
     path.write_text(text)
 
 # Generate a full-size app asset. iOS supplies the external icon mask.

@@ -148,7 +148,7 @@ def api(path):
         return json.load(response)
 
 
-def render_readme(catalog):
+def readme_text(catalog, template):
     downloads = ["| App | Version | Download | Requires |",
                  "| --- | --- | --- | --- |"]
     for app in catalog["apps"]:
@@ -158,13 +158,18 @@ def render_readme(catalog):
             f"| {version['version']} ({version['buildVersion']}) | [Download IPA]({version['downloadURL']}) "
             f"| iOS {version['minOSVersion']}+ |")
     details = "\n\n".join(f"### {app['name']}\n\n{app['localizedDescription']}" for app in catalog["apps"])
-    text = (ROOT / "scripts" / "README.template.md").read_text(encoding="utf-8")
+    text = template
     replacements = {"{{SOURCE_URL}}": f"{RAW}/apps.json",
                     "{{APP_DOWNLOADS}}": "\n".join(downloads),
                     "{{APP_DETAILS}}": details}
     for placeholder, value in replacements.items():
         text = text.replace(placeholder, value)
-    (ROOT / "README.md").write_text(text, encoding="utf-8")
+    return text
+
+
+def render_readme(catalog):
+    template = (ROOT / "scripts" / "README.template.md").read_text(encoding="utf-8")
+    (ROOT / "README.md").write_text(readme_text(catalog, template), encoding="utf-8")
 
 
 def main():

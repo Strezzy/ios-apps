@@ -86,5 +86,13 @@
     "icon": "Orbit.png",
     "category": "photo-video",
     "tintColor": "#7C9EEB"
+  },
+  "com.strezzy.glint": {
+    "name": "Glint",
+    "subtitle": "Maximum-resolution HDR downloader",
+    "localizedDescription": "Save Instagram Reels and videos in the highest resolution HDR stream Instagram exposes. Native warm Liquid Glass interface, yt-dlp on device, manual stream inspection, queues, a local library and protected Instagram sign-in. The main video action requires HDR and never silently falls back to SDR. Source video is not resized or re-encoded. Optional Photos copies are separate HEVC exports; Dolby Vision metadata is not preserved in converted copies. Preview: physical iPhone login, HDR retrieval, Photos export and LiveContainer behavior still need device testing.",
+    "icon": "Glint.png",
+    "category": "photo-video",
+    "tintColor": "#F05C29"
   }
 }

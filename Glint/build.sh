@@ -41,6 +41,10 @@ done < <(find "$ENGINE/Palladium" -name '*.swift' -print0)
   PYTHONDONTWRITEBYTECODE=1 "$PY" -m unittest scripts.test_format_resolution
 ) 2>&1 | tee "$OUT/engine-tests.txt"
 "$PY" "$REPO_ROOT/Glint/test_media.py" 2>&1 | tee "$OUT/glint-tests.txt"
+"$PY" "$REPO_ROOT/Glint/test_catalog.py" 2>&1 | tee "$OUT/catalog-tests.txt"
+swiftc "$REPO_ROOT/Glint/GlintQuality.swift" "$REPO_ROOT/Glint/QualityProbe.swift" -o "$WORK/quality-probe"
+"$WORK/quality-probe" > "$OUT/quality-arguments.json"
+GLINT_QUALITY_ARGUMENTS="$OUT/quality-arguments.json" "$PY" "$REPO_ROOT/Glint/test_selection.py" 2>&1 | tee "$OUT/selection-tests.txt"
 (cd "$HDR" && "$PY" -m unittest discover -s tests) 2>&1 | tee "$OUT/hdr-plugin-tests.txt"
 
 mkdir -p "$ENGINE/Frameworks" "$WORK/downloads" "$OUT/dependency-sources"
