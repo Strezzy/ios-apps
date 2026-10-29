@@ -786,12 +786,23 @@
       "name": "Glint",
       "subtitle": "Highest-quality video downloader",
       "developerName": "Strezzy",
-      "localizedDescription": "Save Instagram Reels and videos at the highest available resolution, preferring HDR at equal resolution and accepting SDR when needed. Fixed URL and text pasting, warm native Liquid Glass, on-device yt-dlp, queues, a local library and optional Instagram login for additional streams. Downloads are checked for iPhone playback and Photos import. Incompatible files get a separate MP4 remux or high-quality HEVC/AAC copy at source resolution and timing, preserving verified HLG/PQ HDR. Automatic preparation retains originals in Files. Conversion is not lossless and does not preserve Dolby Vision dynamic metadata. Save to Photos or Files from Library. Preview: physical iPhone login, HDR retrieval, conversion, Photos export and LiveContainer behavior still need device testing.",
+      "localizedDescription": "Save Instagram Reels and videos at the highest available resolution, preferring HDR at equal resolution and accepting SDR when needed. Native Liquid Glass, on-device yt-dlp, queues and a local library. New downloads keep original post links and creator profiles through conversions and folder saves, with portable post shortcuts in Files. Browse the creator, your signed-in Home feed, Reels and Explore inside Glint; choose a visible post to download. Optional Instagram login stays in private storage. Incompatible downloads get a separate MP4 remux or high-quality HEVC/AAC copy at source resolution and timing, preserving verified HLG/PQ HDR and keeping originals. Conversion is not lossless and does not preserve Dolby Vision dynamic metadata. Save to Photos or Files from Library. Preview: live Instagram browsing, physical iPhone login, HDR retrieval, conversion, Photos export and LiveContainer behavior still need device testing.",
       "category": "photo-video",
       "tintColor": "#F05C29",
       "bundleIdentifier": "com.strezzy.glint",
       "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Glint.png",
       "versions": [
+        {
+          "version": "0.1.0",
+          "buildVersion": "7.1",
+          "buildNumber": "7.1",
+          "date": "2026-10-29T03:39:01Z",
+          "localizedDescription": "Save Instagram Reels and videos at the highest available resolution, preferring HDR at equal resolution and accepting SDR when needed. Native Liquid Glass, on-device yt-dlp, queues and a local library. New downloads keep original post links and creator profiles through conversions and folder saves, with portable post shortcuts in Files. Browse the creator, your signed-in Home feed, Reels and Explore inside Glint; choose a visible post to download. Optional Instagram login stays in private storage. Incompatible downloads get a separate MP4 remux or high-quality HEVC/AAC copy at source resolution and timing, preserving verified HLG/PQ HDR and keeping originals. Conversion is not lossless and does not preserve Dolby Vision dynamic metadata. Save to Photos or Files from Library. Preview: live Instagram browsing, physical iPhone login, HDR retrieval, conversion, Photos export and LiveContainer behavior still need device testing.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build7.1/Glint-LiveContainer.ipa",
+          "size": 47179376,
+          "minOSVersion": "17.0",
+          "sha256": "fb103ff90b29e76f0e5fdae9c694638676d2e30c3652c1487d76a6010a3aa85b"
+        },
         {
           "version": "0.1.0",
           "buildVersion": "5.1",
@@ -827,10 +838,10 @@
         }
       ],
       "version": "0.1.0",
-      "versionDate": "2026-10-29T02:51:23Z",
-      "versionDescription": "Save Instagram Reels and videos at the highest available resolution, preferring HDR at equal resolution and accepting SDR when needed. Fixed URL and text pasting, warm native Liquid Glass, on-device yt-dlp, queues, a local library and optional Instagram login for additional streams. Downloads are checked for iPhone playback and Photos import. Incompatible files get a separate MP4 remux or high-quality HEVC/AAC copy at source resolution and timing, preserving verified HLG/PQ HDR. Automatic preparation retains originals in Files. Conversion is not lossless and does not preserve Dolby Vision dynamic metadata. Save to Photos or Files from Library. Preview: physical iPhone login, HDR retrieval, conversion, Photos export and LiveContainer behavior still need device testing.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build5.1/Glint-LiveContainer.ipa",
-      "size": 47047142,
+      "versionDate": "2026-10-29T03:39:01Z",
+      "versionDescription": "Save Instagram Reels and videos at the highest available resolution, preferring HDR at equal resolution and accepting SDR when needed. Native Liquid Glass, on-device yt-dlp, queues and a local library. New downloads keep original post links and creator profiles through conversions and folder saves, with portable post shortcuts in Files. Browse the creator, your signed-in Home feed, Reels and Explore inside Glint; choose a visible post to download. Optional Instagram login stays in private storage. Incompatible downloads get a separate MP4 remux or high-quality HEVC/AAC copy at source resolution and timing, preserving verified HLG/PQ HDR and keeping originals. Conversion is not lossless and does not preserve Dolby Vision dynamic metadata. Save to Photos or Files from Library. Preview: live Instagram browsing, physical iPhone login, HDR retrieval, conversion, Photos export and LiveContainer behavior still need device testing.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build7.1/Glint-LiveContainer.ipa",
+      "size": 47179376,
       "appPermissions": {
         "entitlements": [],
         "privacy": {
