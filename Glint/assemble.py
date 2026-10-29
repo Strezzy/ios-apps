@@ -108,7 +108,6 @@ home.write_text(text)
 content = 'Palladium/Views/ContentView.swift'
 change(content, 'struct ContentView: View {', '''struct ContentView: View {
     @State private var glintShowInstagram = false
-    @State private var glintBrowser: GlintBrowserTarget?
     @AppStorage("glint.showConsole") private var glintShowConsole = false''')
 change(content, '                SettingsTabView(', '                GlintSettingsShell(onConnect: { glintShowInstagram = true }) { SettingsTabView(')
 change(content, '                    onDeleteCookieFile: deleteImportedCookieFile\n                )', '                    onDeleteCookieFile: deleteImportedCookieFile\n                ) }')
@@ -124,16 +123,7 @@ change(content, '''                ConsoleTabView(logStore: consoleLogStore)
 change(content, '        .onChange(of: selectedPreset, initial: false)', '''        .tint(GlintPalette.accent)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("GlintConnectInstagram"))) { _ in glintShowInstagram = true }
         .sheet(isPresented: $glintShowInstagram) { GlintInstagramLogin(onImport: importBrowserCookies) }
-        .onReceive(NotificationCenter.default.publisher(for: .glintOpenInstagram)) { notification in
-            glintBrowser = GlintBrowserTarget(url: notification.object as? URL ?? GlintInstagramURL.home)
-        }
-        .sheet(item: $glintBrowser) { target in GlintInstagramBrowser(url: target.url) }
-        .onReceive(NotificationCenter.default.publisher(for: .glintBrowserAction)) { notification in
-            if let action = notification.object as? GlintBrowserAction { glintHandleBrowserAction(action) }
-        }
-        .onChange(of: isRunning || isPackageRunning || isResolvingFormats || isResolvingGallery, initial: true) { _, busy in
-            GlintBrowserActivity.shared.busy = busy
-        }
+        .modifier(GlintBrowserHost(busy: isRunning || isPackageRunning || isResolvingFormats || isResolvingGallery, onAction: glintHandleBrowserAction))
         .onChange(of: selectedPreset, initial: false)''')
 change(content, 'onOpenOptions: openSavedDownloadActions\n                )', 'onOpenOptions: openSavedDownloadActions,\n                    isEngineBusy: isRunning || isPackageRunning\n                )')
 change(content, 'Label(String(localized: "tab.downloads", bundle: .app), systemImage: "tray.and.arrow.down")', 'Label("Library", systemImage: "square.grid.2x2")')
@@ -379,6 +369,7 @@ text = text.replace('''        .onAppear(perform: loadItems)
     }
 
     private func loadItems()''')
+text = text.replace('            try FileManager.default.removeItem(at: item.url)', '            try FileManager.default.removeItem(at: item.url)\n            if !item.isFolder { GlintOriginStore.remove(for: item.url) }')
 library.write_text(text)
 
 # Restore normal TLS validation instead of inheriting permissive extractor settings.

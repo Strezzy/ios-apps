@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import SwiftUI
+import Combine
 import WebKit
 import UIKit
 
@@ -18,6 +19,23 @@ struct GlintBrowserAction {
     let cookies: [HTTPCookie]
     let postURL: URL?
     let complete: @MainActor (Bool, String?) -> Void
+}
+
+struct GlintBrowserHost: ViewModifier {
+    let busy: Bool
+    let onAction: @MainActor (GlintBrowserAction) -> Void
+    @State private var browser: GlintBrowserTarget?
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: .glintOpenInstagram)) { notification in
+                browser = GlintBrowserTarget(url: notification.object as? URL ?? GlintInstagramURL.home)
+            }
+            .sheet(item: $browser) { target in GlintInstagramBrowser(url: target.url) }
+            .onReceive(NotificationCenter.default.publisher(for: .glintBrowserAction)) { notification in
+                if let action = notification.object as? GlintBrowserAction { onAction(action) }
+            }
+            .onChange(of: busy, initial: true) { _, value in GlintBrowserActivity.shared.busy = value }
+    }
 }
 
 @MainActor final class GlintBrowserActivity: ObservableObject {

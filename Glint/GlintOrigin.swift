@@ -73,9 +73,17 @@ enum GlintOriginStore {
     }
     static func writeLink(for url: URL) throws {
         guard let origin = read(url) else { return }
-        let name = String(url.deletingPathExtension().lastPathComponent.prefix(65))
-        let link = url.deletingLastPathComponent().appendingPathComponent("\(name) — Original post \(key(url).prefix(8)).webloc")
+        let link = linkURL(for: url, origin: origin)
         try PropertyListSerialization.data(fromPropertyList: ["URL": origin.postURL.absoluteString], format: .xml, options: 0).write(to: link, options: .atomic)
+    }
+    private static func linkURL(for url: URL, origin: GlintOrigin) -> URL {
+        // Keep the shortcut below filesystem byte limits even for emoji titles.
+        let code = String(origin.postURL.lastPathComponent.prefix(40))
+        return url.deletingLastPathComponent().appendingPathComponent("Original post — \(code) — \(key(url).prefix(8)).webloc")
+    }
+    static func remove(for url: URL) {
+        if let origin = read(url) { try? FileManager.default.removeItem(at: linkURL(for: url, origin: origin)) }
+        try? FileManager.default.removeItem(at: sidecar(url))
     }
     static func writeLinks(in folder: URL) throws {
         for url in try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {

@@ -33,6 +33,12 @@ import Foundation
         precondition(links.count == 1)
         let plist = try PropertyListSerialization.propertyList(from: Data(contentsOf: links[0]), options: [], format: nil) as! [String: String]
         precondition(plist["URL"] == post.absoluteString)
+        GlintOriginStore.remove(for: copy)
+        precondition(GlintOriginStore.read(copy) == nil && !FileManager.default.fileExists(atPath: links[0].path))
+        let emoji = folder.appendingPathComponent(String(repeating: "🎬", count: 60) + ".mp4")
+        try GlintOriginStore.write(record, for: emoji)
+        try GlintOriginStore.writeLink(for: emoji)
+        GlintOriginStore.remove(for: emoji)
         try Data("invalid json".utf8).write(to: GlintOriginStore.sidecar(copy))
         precondition(GlintOriginStore.read(copy) == nil)
         GlintOriginStore.ensure(paths: [copy.path], sourceURL: post)
