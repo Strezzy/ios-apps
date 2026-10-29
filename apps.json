@@ -781,6 +781,40 @@
       "versionDescription": "# Orbit 1.0\n\nA full-screen spatial-video viewer with two-axis tilt depth, portrait and landscape playback, Photos/Files import, a local library, touch look-around, depth strength, recenter, fit/fill, scrubbing, mute and looping. Native ice-blue/violet Liquid Glass interface; processing stays on device. Requires iOS 26.\n\nThe arm64 IPA is unsigned for the existing sideloading workflow. Use original spatial recordings; ordinary or flattened videos play in 2D. Depth is a bounded custom stereo reconstruction, with possible artifacts around occlusions, reflections and low-texture areas.\n\n## Validation\n\nThe native Release IPA was successfully built at `564d52ddfc4e433f73737347624cf18c5d1abefb`. The original functional tests at `8abeda5be908b06b3a49c715d06d6d142f6d34fe` recorded **7 passed, 0 failed, 1 skipped**. The app, playback, renderer, unit-test, project and icon sources are identical between these commits. Those existing results are reused; no new test execution is claimed. The skipped check is real stereo MV-HEVC decoding, unsupported by the simulator. The GPU disparity test and portrait/landscape rotation and import-control assertions passed.\n\nOnly the verified original portrait capture is attached. The incorrectly cropped landscape capture is omitted. A later screenshot retry timed out during simulator/test-runner preparation before assertions were recorded; it is not counted as a pass. Physical iPhone depth quality, motion, thermals and sideload-host behavior remain untested.\n\nThe source archive matches the packaged native build and includes the XcodeGen project specification.\n\nIPA SHA-256: `691a31195f2cc6dba4b38be58a0efadc01753e88b1c799c22a4d1e8ae33a2f64`\n",
       "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/orbit-1.0-build1/Orbit.ipa",
       "size": 976162
+    },
+    {
+      "name": "Glint",
+      "subtitle": "Source-first video downloader",
+      "developerName": "Strezzy",
+      "localizedDescription": "Preview: native Liquid Glass downloader; source-first streams, reported HDR formats, saved-file HDR inspection and separate Photos copies. Compiled and automated-tested; physical iPhone behavior remains unverified.",
+      "category": "utilities",
+      "tintColor": "#F05C29",
+      "bundleIdentifier": "com.strezzy.glint",
+      "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Glint.png",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "buildVersion": "3.1",
+          "buildNumber": "3.1",
+          "date": "2026-10-29T01:51:06Z",
+          "localizedDescription": "Preview: native Liquid Glass downloader; source-first streams, reported HDR formats, saved-file HDR inspection and separate Photos copies. Compiled and automated-tested; physical iPhone behavior remains unverified.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint.ipa",
+          "size": 47032881,
+          "minOSVersion": "17.0",
+          "sha256": "63610d3c3fe27c3728b0998050e4df726ea8a9c1e54afd84e8a2e70ea9f0499f"
+        }
+      ],
+      "version": "0.1.0",
+      "versionDate": "2026-10-29T01:51:06Z",
+      "versionDescription": "Preview: native Liquid Glass downloader; source-first streams, reported HDR formats, saved-file HDR inspection and separate Photos copies. Compiled and automated-tested; physical iPhone behavior remains unverified.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint.ipa",
+      "size": 47032881,
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSPhotoLibraryAddUsageDescription": "Glint adds videos to Photos only when you choose Save to Photos."
+        }
+      }
     }
   ],
   "news": []
