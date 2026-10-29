@@ -1,0 +1,55 @@
+name: Build Glint
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Glint/**'
+      - '.github/workflows/glint.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: glint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compile, test, and publish Glint
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          python3 --version
+
+      - name: Build unsigned app and run quality checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash Glint/build.sh
+
+      - name: Upload build outputs and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Glint-${{ github.run_number }}-${{ github.run_attempt }}
+          path: Glint/dist/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish preview and update existing app source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 Glint/publish.py
