@@ -48,6 +48,10 @@ swiftc "$REPO_ROOT/Glint/GlintQuality.swift" "$REPO_ROOT/Glint/QualityProbe.swif
 GLINT_QUALITY_ARGUMENTS="$OUT/quality-arguments.json" "$PY" "$REPO_ROOT/Glint/test_selection.py" 2>&1 | tee "$OUT/selection-tests.txt"
 swiftc "$REPO_ROOT/Glint/GlintPaste.swift" "$ENGINE/Palladium/Models/ClipboardLinkDetector.swift" "$REPO_ROOT/Glint/PasteProbe.swift" -o "$WORK/paste-probe"
 "$WORK/paste-probe" 2>&1 | tee "$OUT/paste-tests.txt"
+"$PY" "$REPO_ROOT/Glint/test_origin.py" 2>&1 | tee "$OUT/origin-tests.txt"
+swiftc "$REPO_ROOT/Glint/GlintOrigin.swift" "$REPO_ROOT/Glint/OriginProbe.swift" -o "$WORK/origin-probe"
+"$WORK/origin-probe" 2>&1 | tee -a "$OUT/origin-tests.txt"
+node "$REPO_ROOT/Glint/test_browser.cjs" 2>&1 | tee "$OUT/browser-tests.txt"
 (cd "$HDR" && "$PY" -m unittest discover -s tests) 2>&1 | tee "$OUT/hdr-plugin-tests.txt"
 
 mkdir -p "$ENGINE/Frameworks" "$WORK/downloads" "$OUT/dependency-sources"

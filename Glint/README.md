@@ -20,6 +20,16 @@ Three primary tabs: **Download**, **Library**, **Settings**. The main screen off
 
 Liquid Glass uses the native iOS 26 API on supported systems, with material and reduced-transparency fallbacks. The interface supports light/dark appearance and respects Reduce Motion for its added transitions. The icon and background are rendered locally; no remote design assets are needed.
 
+## Original posts and Instagram browsing
+
+New Instagram downloads save a small per-file record of the original post and available creator profile. Those records follow converted copies, atomic folder saves and collision renames without changing the video bytes. Existing folder organization stays intact. Saved folders also contain **Original post** `.webloc` shortcuts for use outside Glint.
+
+In Library, **Save & source** opens the original post, the creator's profile, Photos export and Files sharing. Folders containing one known creator offer **Browse @creator**. Older downloads without records can have an original post link added manually; unknown creators are never inferred from a display name or numeric account ID.
+
+**Browse Instagram** opens the actual Instagram website in the app, with Home, Reels, Explore, back/forward and reload controls. Your selected Instagram cookie file seeds a temporary WebKit session. You can also sign in on the website and tap **Use login** to save the session privately for downloads. **Choose post to download** lists visible post links and the current post for you to select; it never starts a profile or feed batch automatically. These downloads use the same highest-resolution and iPhone preparation policy as pasted links.
+
+Instagram controls what its website shows, including recommendations, login challenges and regional availability. If the website does not expose a post link in the current view, open the post from its timestamp/menu or copy its link and paste it into Download. The browser is implemented and fixture-tested; live signed-in browsing still requires physical-device testing.
+
 ## Quality and HDR
 
 - **Download best quality** chooses the largest available resolution, then HDR, frame rate and bitrate. A larger SDR stream wins over a smaller HDR stream; HDR wins at equal resolution. SDR-only and unknown-range videos remain downloadable. Connect Instagram and use the quality inspector to see additional streams the service exposes.
@@ -39,6 +49,8 @@ Instagram login is optional for accessible public downloads. Connect through its
 Downloads and processing happen on the iPhone; no Glint download server or analytics service is added. Network access is still necessary for the requested media service, its CDN and login pages. Optional advanced package updates contact package repositories. Pure-Python packages and the pinned HDR plugin are bundled for first use.
 
 The sign-in browser uses an ephemeral website data store. Only Instagram-domain cookies are imported by the focused login flow. Session files live in an app-private Application Support directory, outside Files-visible Documents, protected until first device unlock and excluded from device backups. This uses iOS file protection, not a separate custom encryption scheme. Remove imported sessions through Settings > Download preferences > Cookies. Do not share session exports or logs containing private URLs.
+
+The browsing session is also temporary; opening it imports only unexpired Instagram cookies from the selected session. **Use login** or choosing a download saves its current Instagram session in the same protected location. Web navigation and feed requests go directly to Instagram. Source records include only public-style post/profile URLs and a short title; they never include account cookies, request headers, signed CDN URLs or tracking query strings. Original links can still identify private posts you can access, so consider that when sharing whole download folders.
 
 Only download content you own or have permission to save. Glint does not bypass DRM or grant access to private content your account cannot access.
 

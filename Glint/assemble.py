@@ -64,7 +64,7 @@ accent.write_text(json.dumps({'colors':[{'idiom':'universal','color':{'color-spa
 strings = ROOT / 'Palladium/Resources/Localizable.xcstrings'
 text = strings.read_text().replace('"value" : "Palladium"', '"value" : "Glint"').replace('"value": "Palladium"', '"value": "Glint"')
 strings.write_text(text)
-for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift', 'GlintPaste.swift', 'GlintPlayback.swift']:
+for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift', 'GlintPaste.swift', 'GlintPlayback.swift', 'GlintOrigin.swift', 'GlintBrowser.swift', 'GlintBrowserScript.swift']:
     shutil.copy2(OVERLAY / name, ROOT / 'Palladium/Views' / name)
 (ROOT / 'Palladium/Views/Tabs/FormatPickerSheetView.swift').write_text('// Source-aware replacement is in GlintDesign.swift.\n')
 
@@ -108,6 +108,7 @@ home.write_text(text)
 content = 'Palladium/Views/ContentView.swift'
 change(content, 'struct ContentView: View {', '''struct ContentView: View {
     @State private var glintShowInstagram = false
+    @State private var glintBrowser: GlintBrowserTarget?
     @AppStorage("glint.showConsole") private var glintShowConsole = false''')
 change(content, '                SettingsTabView(', '                GlintSettingsShell(onConnect: { glintShowInstagram = true }) { SettingsTabView(')
 change(content, '                    onDeleteCookieFile: deleteImportedCookieFile\n                )', '                    onDeleteCookieFile: deleteImportedCookieFile\n                ) }')
@@ -123,6 +124,16 @@ change(content, '''                ConsoleTabView(logStore: consoleLogStore)
 change(content, '        .onChange(of: selectedPreset, initial: false)', '''        .tint(GlintPalette.accent)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("GlintConnectInstagram"))) { _ in glintShowInstagram = true }
         .sheet(isPresented: $glintShowInstagram) { GlintInstagramLogin(onImport: importBrowserCookies) }
+        .onReceive(NotificationCenter.default.publisher(for: .glintOpenInstagram)) { notification in
+            glintBrowser = GlintBrowserTarget(url: notification.object as? URL ?? GlintInstagramURL.home)
+        }
+        .sheet(item: $glintBrowser) { target in GlintInstagramBrowser(url: target.url) }
+        .onReceive(NotificationCenter.default.publisher(for: .glintBrowserAction)) { notification in
+            if let action = notification.object as? GlintBrowserAction { glintHandleBrowserAction(action) }
+        }
+        .onChange(of: isRunning || isPackageRunning || isResolvingFormats || isResolvingGallery, initial: true) { _, busy in
+            GlintBrowserActivity.shared.busy = busy
+        }
         .onChange(of: selectedPreset, initial: false)''')
 change(content, 'onOpenOptions: openSavedDownloadActions\n                )', 'onOpenOptions: openSavedDownloadActions,\n                    isEngineBusy: isRunning || isPackageRunning\n                )')
 change(content, 'Label(String(localized: "tab.downloads", bundle: .app), systemImage: "tray.and.arrow.down")', 'Label("Library", systemImage: "square.grid.2x2")')
@@ -164,6 +175,7 @@ change(flow, '        let embedThumbnailAtStart = queuedConfiguration?.embedThum
     '        let embedThumbnailAtStart = glintSourceBest ? false : (queuedConfiguration?.embedThumbnail ?? embedThumbnail)')
 change(flow, '            FFmpegBridgeControl.setLiveLogFD(nil)', '''            let glintPrepared: (paths: [String], primary: String?, note: String?)
             if (outcome.resultKind == "success" || outcome.resultKind == "partial" || outcome.statusText == "success"), !downloadCancelRequested {
+                GlintOriginStore.ensure(paths: outcome.downloadedPaths, sourceURL: URL(string: targetURL))
                 glintPrepared = await glintPrepareDownloads(paths: outcome.downloadedPaths, primary: outcome.primaryDownloadedPath)
             } else {
                 glintPrepared = (outcome.downloadedPaths, outcome.primaryDownloadedPath, nil)
@@ -207,6 +219,30 @@ change('Palladium/Services/Python/palladium_ytdlp/ytdlp.py', '                "h
 shutil.copy2(OVERLAY / 'glint_media.py', ROOT / 'Palladium/Services/Python/palladium_ytdlp/glint_media.py')
 change('Palladium/Services/Python/PythonScripts.swift', '        "palladium_ytdlp/ytdlp.py",', '        "palladium_ytdlp/ytdlp.py",\n        "palladium_ytdlp/glint_media.py",')
 append('Palladium/Services/Python/yt_dlp_flow.py', 'from palladium_ytdlp.glint_media import glint_inspect_media, glint_make_photos_copy, glint_transcode_photos_copy')
+
+# Capture each completed item's own URL/creator, including playlist entries.
+shutil.copy2(OVERLAY / 'glint_origin.py', ROOT / 'Palladium/Services/Python/palladium_ytdlp/glint_origin.py')
+change('Palladium/Services/Python/PythonScripts.swift', '        "palladium_ytdlp/ytdlp.py",', '        "palladium_ytdlp/ytdlp.py",\n        "palladium_ytdlp/glint_origin.py",')
+append('Palladium/Services/Python/palladium_ytdlp/ytdlp.py', 'from .glint_origin import capture_origins')
+change('Palladium/Services/Python/palladium_ytdlp/ytdlp.py',
+    '                                filter_embedded_playlist_entries(filter_embedded_entries),',
+    '                                filter_embedded_playlist_entries(filter_embedded_entries),\n                                capture_origins(run_output_dir or downloads_dir or os.getcwd(), download_url),')
+
+# Keep per-file provenance attached through atomic saves, collision renames and
+# converted copies. It never becomes an extra media item in Photos or the player.
+post = 'Palladium/Views/ContentView+PostDownload.swift'
+change(post, '                try fileManager.copyItem(at: itemURL, to: itemDestination)',
+    '                try fileManager.copyItem(at: itemURL, to: itemDestination)\n                try GlintOriginStore.copy(from: itemURL, to: itemDestination)')
+change(post, '                try fileManager.copyItem(at: itemURL, to: stagedItem)',
+    '                try fileManager.copyItem(at: itemURL, to: stagedItem)\n                try GlintOriginStore.copy(from: itemURL, to: stagedItem)')
+change(post, '                appendedItems.append(destination)',
+    '                appendedItems.append(destination)\n                try GlintOriginStore.copy(from: stagedItem, to: destination)')
+change(post, '                try? fileManager.removeItem(at: appendedItem)',
+    '                try? fileManager.removeItem(at: appendedItem)\n                try? fileManager.removeItem(at: GlintOriginStore.sidecar(appendedItem))')
+change(post, '                }\n                cleanupTemporaryDownloadSource(for: result)',
+    '                }\n                try GlintOriginStore.writeLinks(in: destinationFolder)\n                cleanupTemporaryDownloadSource(for: result)')
+change(post, '                try FileManager.default.copyItem(at: itemURL, to: destination)',
+    '                try FileManager.default.copyItem(at: itemURL, to: destination)\n                try GlintOriginStore.copy(from: itemURL, to: destination)\n                try GlintOriginStore.writeLink(for: destination)')
 
 # Private sessions: no credentials in the Files-visible Documents directory or backups.
 change('Palladium/Views/ContentView+Cookies.swift', '        try documentsDirectoryURL().appendingPathComponent("Cookies", isDirectory: true)', '        try GlintPrivateStorage.cookiesDirectory()')
@@ -300,7 +336,7 @@ text = text[:start] + '''    var body: some View {
                                             Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
                                         }
                                     if DownloadedMediaGroup.classify(item.url) == .video {
-                                        Button("Save", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) }
+                                        Button("Save & source", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) }
                                             .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(isEngineBusy)
                                     }
                                     }
@@ -324,6 +360,7 @@ text = text[:start] + '''    var body: some View {
 ''' + text[end:]
 # Nested folders get the same quality action, not only top-level files.
 text = text.replace('private struct SavedDownloadsFolderView: View {', 'private struct SavedDownloadsFolderView: View {\n    @State private var glintInspection: GlintInspectionTarget?')
+text = text.replace('        .navigationTitle(folder.displayName)', '        .safeAreaInset(edge: .top) { GlintFolderSourceView(folder: folder.url) }\n        .navigationTitle(folder.displayName)')
 needle = '                                    onOpenOptions(item)\n                                }'
 # Preserve all existing actions; add inspection to media rows inside folders.
 text = text.replace('                                    onOpenPlayback(item)\n                                }', '                                    onOpenPlayback(item)\n                                }\n                                .contextMenu { Button("Save to Photos or Files", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) } }')

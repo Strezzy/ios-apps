@@ -46,6 +46,7 @@ struct GlintMediaSheet: View {
                     VStack(alignment: .leading, spacing: 22) {
                         Image(systemName: "sparkles.tv").font(.system(size: 50, weight: .light)).foregroundStyle(GlintPalette.accent).padding(.top, 20)
                         Text(url.lastPathComponent).font(.title3.bold()).textSelection(.enabled)
+                        GlintOriginCard(url: url).disabled(busy)
                         if let report, report.success {
                             VStack(alignment: .leading, spacing: 16) {
                                 GlintQualityBadge(text: report.rangeLabel ?? "Range unknown", highlighted: report.verifiedHDR == true)
@@ -83,6 +84,7 @@ struct GlintMediaSheet: View {
             }.navigationTitle("Quality & export").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.disabled(busy) } }
         }.tint(GlintPalette.accent).interactiveDismissDisabled(busy)
+            .onReceive(NotificationCenter.default.publisher(for: .glintBrowserDownloadStarted)) { _ in dismiss() }
             .task {
                 let payload = await PythonFlowRunner.glintMedia(function: "glint_inspect_media", path: url.path)
                 report = decode(payload)

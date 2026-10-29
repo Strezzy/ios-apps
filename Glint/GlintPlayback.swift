@@ -27,6 +27,7 @@ enum GlintPlayback {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 source = folder.appendingPathComponent(url.lastPathComponent)
                 try FileManager.default.copyItem(at: url, to: source)
+                try GlintOriginStore.copy(from: url, to: source)
             }
             guard !Task.isCancelled else { throw CancellationError() }
             guard ProcessInfo.processInfo.thermalState != .critical else {
@@ -48,6 +49,7 @@ enum GlintPlayback {
                     let name = String(url.deletingPathExtension().lastPathComponent.prefix(80))
                     let destination = url.deletingLastPathComponent().appendingPathComponent("\(name) — iPhone \(UUID().uuidString.prefix(6)).mp4")
                     try FileManager.default.moveItem(at: generated, to: destination)
+                    try GlintOriginStore.copy(from: url, to: destination)
                     return Prepared(url: destination, note: report.note)
                 }
                 try? FileManager.default.removeItem(at: generated)

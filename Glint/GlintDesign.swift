@@ -195,6 +195,18 @@ struct GlintHome: View {
                             Text("Open Library → Save for Photos or Files.").font(.subheadline)
                         }.padding(20).glintGlass()
                     }
+                    Button {
+                        NotificationCenter.default.post(name: .glintOpenInstagram, object: GlintInstagramURL.home)
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "safari").font(.title2).foregroundStyle(GlintPalette.accent)
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Browse Instagram").font(.headline)
+                                Text("Your feed, Reels, and favorite creators. Find your next download.").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(); Image(systemName: "arrow.up.right").font(.subheadline)
+                        }.padding(20).frame(maxWidth: .infinity, alignment: .leading).glintGlass()
+                    }.buttonStyle(.plain)
                     Button(action: onConnect) {
                         HStack(spacing: 12) {
                             Image(systemName: connected ? "checkmark.shield" : "person.crop.circle.badge.checkmark").font(.title2)
