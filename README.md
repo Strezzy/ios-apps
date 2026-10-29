@@ -17,7 +17,7 @@ I'm Strezzy. These are passion projects I build for myself and share here for fr
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Moonwake.png" width="44" alt=""/> **Moonwake** — A starlight pixel adventure | 1.0.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/moonwake-1.0.0-build1/Moonwake.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Loop.png" width="44" alt=""/> **Loop** — Offline video effects, GIFs and loops | 2.0.0 (9) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/loop-2.0.0-build9/Loop.ipa) | iOS 26.0+ |
 | <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Orbit.png" width="44" alt=""/> **Orbit** — Spatial videos, with a little more depth | 1.0 (1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/orbit-1.0-build1/Orbit.ipa) | iOS 26.0+ |
-| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Glint.png" width="44" alt=""/> **Glint** — Maximum-resolution HDR downloader | 0.1.0 (4.1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build4.1/Glint-LiveContainer.ipa) | iOS 17.0+ |
+| <img src="https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Glint.png" width="44" alt=""/> **Glint** — Highest-quality video downloader | 0.1.0 (5.1) | [Download IPA](https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build5.1/Glint-LiveContainer.ipa) | iOS 17.0+ |
 
 The number in parentheses is the build number. If the version number stays the same, a higher build number means a newer update. You can read what's changed on the [releases page](https://github.com/Strezzy/ios-apps/releases).
 
@@ -75,7 +75,7 @@ Open original spatial videos from Photos or Files and watch them full screen wit
 
 ### Glint
 
-Save Instagram Reels and videos in the highest resolution HDR stream Instagram exposes. Native warm Liquid Glass interface, yt-dlp on device, manual stream inspection, queues, a local library and protected Instagram sign-in. The main video action requires HDR and never silently falls back to SDR. Source video is not resized or re-encoded. Optional Photos copies are separate HEVC exports; Dolby Vision metadata is not preserved in converted copies. Preview: physical iPhone login, HDR retrieval, Photos export and LiveContainer behavior still need device testing.
+Save Instagram Reels and videos at the highest available resolution, preferring HDR at equal resolution and accepting SDR when needed. Fixed URL and text pasting, warm native Liquid Glass, on-device yt-dlp, queues, a local library and optional Instagram login for additional streams. Downloads are checked for iPhone playback and Photos import. Incompatible files get a separate MP4 remux or high-quality HEVC/AAC copy at source resolution and timing, preserving verified HLG/PQ HDR. Automatic preparation retains originals in Files. Conversion is not lossless and does not preserve Dolby Vision dynamic metadata. Save to Photos or Files from Library. Preview: physical iPhone login, HDR retrieval, conversion, Photos export and LiveContainer behavior still need device testing.
 
 ## Add my apps to LiveContainer
 
