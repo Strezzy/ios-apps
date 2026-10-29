@@ -22,16 +22,17 @@ Liquid Glass uses the native iOS 26 API on supported systems, with material and 
 
 ## Quality and HDR
 
-- **Download maximum HDR** requires a reported HDR stream, then selects the largest available source resolution, followed by frame rate and bitrate. A larger SDR stream never displaces HDR, and SDR-only or unknown-range responses produce an error. There is no silent SDR fallback. Connect Instagram and use the quality inspector to see what the service exposed.
-- The main video action ignores previously saved codec, resizing, custom argument and conversion preferences. Exact manual format selections remain explicit alternatives, including SDR. Automatic video queues use the same maximum-resolution HDR policy.
-- Default video downloading copies the delivered encoded streams, rather than re-encoding them. Separate input streams are retained with `--keep-video` when yt-dlp merges them.
+- **Download best quality** chooses the largest available resolution, then HDR, frame rate and bitrate. A larger SDR stream wins over a smaller HDR stream; HDR wins at equal resolution. SDR-only and unknown-range videos remain downloadable. Connect Instagram and use the quality inspector to see additional streams the service exposes.
+- The main video action ignores previously saved codec, resizing, custom argument and conversion preferences. Exact manual format selections remain explicit alternatives. Automatic video queues use the same maximum-resolution policy.
+- Source downloading copies the delivered encoded streams without re-encoding. iOS checks whether the result can play and import into Photos. Compatible files remain unchanged.
 - The quality picker shows **reported stream metadata**. It does not claim that a file has already been downloaded or verified.
-- Library's **Quality & Photos copy** action uses native FFprobe to inspect the saved file. HDR verification requires appropriate transfer, BT.2020 primaries and at least 10-bit evidence. Bit depth alone is never labeled HDR.
-- A Photos-compatible HEVC/AAC copy is opt-in, separate from the source, and verified after encoding. Failed HDR retention causes the copy to be discarded. The source is not replaced or deleted.
+- Library's **Save** action offers Photos and Files export plus native FFprobe inspection. HDR verification requires appropriate transfer, BT.2020 primaries and at least 10-bit evidence. Bit depth alone is never labeled HDR.
+- Incompatible files are prepared automatically. Glint first preserves an independent original in Files → Glint → Originals, then tries MP4 with the video stream copied without re-encoding. If necessary it creates HEVC/AAC with a generous source- and pixel-rate-based bitrate, without resizing, capping frame rate or tone-mapping HDR. Conversion can introduce loss; the untouched original remains available.
+- Prepared copies must retain resolution, orientation, duration/frame timing, audio and verified HLG/PQ HDR. iOS also checks playback and Photos compatibility. A failed copy is discarded while the original download remains successful and available. Device limits, heat or insufficient storage can prevent preparation; the app explains this and allows retry from Library.
 - Dolby Vision metadata detection is distinct from HLG/PQ verification. **Converting a copy does not preserve Dolby Vision metadata.** Playback support depends on codec, container, player and device.
 - Instagram does not provide arbitrary access to the creator's camera-original upload. Here, “source” means the encoded streams the service actually makes available. It cannot invent 4K, HDR or detail missing from those streams.
 
-Connect Instagram through its official website when HDR extraction needs an authenticated session. Availability is not guaranteed for every account, post or region. Requests are paced and automated retry is disabled by default. The HDR extractor stops on access restrictions. Using an automated client can still trigger verification or account limitations; stop and resolve those in Instagram rather than repeatedly retrying.
+Instagram login is optional for accessible public downloads. Connect through its official website when additional streams or HDR extraction need an authenticated session. Availability is not guaranteed for every account, post or region. Missing HDR never blocks an otherwise available download. Requests are paced and automated retry is disabled by default. The HDR extractor stops on access restrictions. Using an automated client can still trigger verification or account limitations; stop and resolve those in Instagram rather than repeatedly retrying.
 
 ## Privacy
 

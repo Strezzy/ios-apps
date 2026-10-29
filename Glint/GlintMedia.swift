@@ -26,6 +26,8 @@ struct GlintMediaReport: Decodable {
     var path: String? = nil
     var sourceUnchanged: Bool? = nil
     var note: String? = nil
+    var videoCopied: Bool? = nil
+    var retryWithEncode: Bool? = nil
 }
 
 struct GlintMediaSheet: View {
@@ -61,22 +63,20 @@ struct GlintMediaSheet: View {
                         } else {
                             HStack { ProgressView(); Text("Inspecting the actual file…").font(.subheadline) }
                         }
-                        ShareLink(item: url) {
-                            Label("Export untouched source", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity).padding(.vertical, 12)
+                        ShareLink(item: copy ?? url) {
+                            Label("Save to Files or share", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity).padding(.vertical, 12)
                         }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).disabled(busy)
-                        if canSaveOriginal || copy != nil {
                             Button { Task { await saveToPhotos(copy ?? url) } } label: {
-                                Label(copy == nil ? "Save original to Photos" : "Save compatible copy to Photos", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity).padding(.vertical, 12)
+                                Label("Save to Photos", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity).padding(.vertical, 12)
                             }.buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(busy)
-                        }
                         if !canSaveOriginal && copy == nil {
                             Button { Task { await makeCopy() } } label: {
-                                Label("Make a Photos-compatible copy", systemImage: "doc.on.doc").frame(maxWidth: .infinity).padding(.vertical, 12)
+                                Label("Prepare playable copy", systemImage: "doc.on.doc").frame(maxWidth: .infinity).padding(.vertical, 12)
                             }.buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(busy || report?.success != true)
                         }
                         if busy { HStack(spacing: 10) { ProgressView(); Text("Processing on your iPhone. Keep Glint open.").font(.caption) } }
                         if let message { Text(message).font(.subheadline).textSelection(.enabled).padding(18).glintGlass(20) }
-                        Text("A compatible copy is a new HEVC/AAC encode, not source quality. Verified HLG/PQ is required to remain HDR; failed HDR exports are discarded. Dolby Vision metadata is not carried into a converted copy. Your source file remains unchanged.")
+                        Text("Playable files are saved as-is. When needed, Glint first tries a lossless video remux, then high-quality HEVC at the original resolution and timing. HLG/PQ HDR must survive verification. Re-encoding can lose detail and Dolby Vision dynamic metadata; the original stays available in Files → Glint → Originals.")
                             .font(.caption).foregroundStyle(.secondary)
                     }.padding(24)
                 }
@@ -103,18 +103,19 @@ struct GlintMediaSheet: View {
         }
         busy = true
         defer { busy = false }
-        let result = decode(await PythonFlowRunner.glintMedia(function: "glint_make_photos_copy", path: url.path))
-        if result.success, let path = result.path {
-            copy = URL(fileURLWithPath: path)
-            message = result.note ?? "Compatible copy created. Original unchanged."
-        } else { message = result.error ?? "The copy could not be made. Your original is safe." }
+        let result = await GlintPlayback.prepare(url, preserveOriginal: false)
+        if await GlintPlayback.isCompatible(result.url) { copy = result.url }
+        message = result.note
     }
     @MainActor private func saveToPhotos(_ source: URL) async {
         guard !busy else { return }
         busy = true
         defer { busy = false }
-        guard UIVideoAtPathIsCompatibleWithSavedPhotosAlbum(source.path) else {
-            message = "Photos cannot import this file on this device. Export the source to Files instead."
+        let prepared = await GlintPlayback.prepare(source, preserveOriginal: false)
+        let source = prepared.url
+        if source != url { copy = source }
+        guard await GlintPlayback.isCompatible(source) else {
+            message = prepared.note ?? "Original retained. Photos could not import this video."
             return
         }
         let permission = await PHPhotoLibrary.requestAuthorization(for: .addOnly)

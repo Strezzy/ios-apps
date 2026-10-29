@@ -7,7 +7,6 @@ import shlex
 import unittest
 
 import yt_dlp
-from yt_dlp.utils import ExtractorError
 
 ARGUMENTS = json.loads(Path(os.environ['GLINT_QUALITY_ARGUMENTS']).read_text())
 
@@ -44,18 +43,20 @@ class SourceSelectionTests(unittest.TestCase):
         result = select([small, video('largest', 2160, 3840), AUDIO])
         self.assertEqual(self.selected_video(result)['format_id'], 'largest')
 
-    def test_larger_sdr_cannot_displace_hdr(self):
+    def test_larger_sdr_wins_over_lower_resolution_hdr(self):
         result = select([video('sdr', 2160, 3840, 'SDR'), video('hdr', 1080, 1920), AUDIO])
-        self.assertEqual(self.selected_video(result)['format_id'], 'hdr')
+        self.assertEqual(self.selected_video(result)['format_id'], 'sdr')
         self.assertEqual(result['requested_formats'][1]['format_id'], 'audio')
 
-    def test_sdr_only_is_error_not_fallback(self):
-        with self.assertRaisesRegex(ExtractorError, 'Requested format'):
-            select([video('sdr', 1080, 1920, 'SDR'), AUDIO])
+    def test_sdr_only_downloads_successfully(self):
+        self.assertEqual(self.selected_video(select([video('sdr', 1080, 1920, 'SDR'), AUDIO]))['format_id'], 'sdr')
 
-    def test_unknown_range_is_not_hdr(self):
-        with self.assertRaisesRegex(ExtractorError, 'Requested format'):
-            select([video('unknown', 1080, 1920, None), AUDIO])
+    def test_unknown_range_does_not_block_download(self):
+        self.assertEqual(self.selected_video(select([video('unknown', 1080, 1920, None), AUDIO]))['format_id'], 'unknown')
+
+    def test_hdr_wins_at_equal_resolution(self):
+        result = select([video('sdr', 1080, 1920, 'SDR'), video('hdr', 1080, 1920), AUDIO])
+        self.assertEqual(self.selected_video(result)['format_id'], 'hdr')
 
     def test_progressive_hdr_fallback_has_audio(self):
         progressive = video('progressive', 1080, 1920)
@@ -71,15 +72,15 @@ class SourceSelectionTests(unittest.TestCase):
             with self.subTest(label=label):
                 self.assertEqual(self.selected_video(select([video('hdr', 1080, 1920, label), AUDIO]))['format_id'], 'hdr')
 
-    def test_mute_still_requires_hdr(self):
+    def test_mute_also_prioritizes_resolution(self):
         result = select([video('sdr', 2160, 3840, 'SDR'), video('hdr', 1080, 1920), AUDIO], 'mute')
-        self.assertEqual(result['format_id'], 'hdr')
+        self.assertEqual(result['format_id'], 'sdr')
         self.assertEqual(result['acodec'], 'none')
 
-    def test_source_streams_are_kept_without_conversion(self):
+    def test_source_video_is_not_converted_by_downloader(self):
         for mode in ARGUMENTS:
             opts = options(mode)
-            self.assertTrue(opts['keepvideo'])
+            self.assertFalse(opts['keepvideo'])
             self.assertFalse(opts.get('nocheckcertificate'))
             self.assertFalse(any(p['key'] in {'FFmpegVideoConvertor', 'FFmpegExtractAudio'} for p in opts['postprocessors']))
 

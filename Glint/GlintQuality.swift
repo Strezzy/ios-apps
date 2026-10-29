@@ -3,10 +3,11 @@ import Foundation
 
 enum GlintSourceQuality {
     static func downloadArguments(includeAudio: Bool = true) -> String {
-        // Positive HDR evidence is required. Unknown range and SDR cannot match.
-        let hdr = "[dynamic_range~='^(HLG|HDR10[+]?|HDR|PQ|DV|Dolby Vision)$']"
-        let selector = includeAudio ? "bv*\(hdr)+ba/b\(hdr)" : "bv\(hdr)/b\(hdr)"
-        // Filter to HDR first, then maximize source dimensions, fps and bitrate.
-        return "-f \"\(selector)\" --format-sort-force -S \"res,fps,br\" --keep-video"
+        let selector = includeAudio ? "bv*+ba/b" : "bv/b"
+        // Resolution comes first. Prefer HDR at equal resolution; SDR and unknown
+        // range remain eligible. Merge by stream copy, without retaining duplicate
+        // elementary tracks in the user's library. Preserve the finished original
+        // separately whenever a playable copy needs conversion.
+        return "-f \"\(selector)\" --format-sort-force -S \"res,hdr,fps,br\""
     }
 }

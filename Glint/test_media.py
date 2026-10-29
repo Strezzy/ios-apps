@@ -56,14 +56,20 @@ class ExportTests(unittest.TestCase):
         self.output_hdr = True
         self.return_code = 0
         self.arguments = []
+        self.input_video = stream(avg_frame_rate='30/1', duration='10', nb_frames='300')
+        self.output_updates = {}
+        self.audio = []
         owner = self
         class Bridge:
             def probe_metadata(self, path):
                 source = Path(path).resolve() == owner.source
-                output = stream(codec_name='vp9' if source else 'hevc')
+                output = dict(owner.input_video)
+                if not source:
+                    output.update(codec_name=owner.input_video['codec_name'] if 'copy' == owner.arguments[owner.arguments.index('-c:v') + 1] else 'hevc')
+                    output.update(owner.output_updates)
                 if not source and not owner.output_hdr:
                     output.update(color_transfer='bt709',color_primaries='bt709',pix_fmt='yuv420p')
-                return {'streams':[output], 'format':{'bit_rate':'5000000'}}
+                return {'streams':[output, *owner.audio], 'format':{'bit_rate':'5000000'}}
             def run_ffmpeg(self, args):
                 owner.arguments = args
                 Path(args[-1]).write_bytes(b'new-compatible-encode')
@@ -109,6 +115,62 @@ class ExportTests(unittest.TestCase):
         self.assertTrue(result['success'])
         self.assertEqual(result['codec'],'vp9')
         self.assertEqual(self.source.read_bytes(),self.original)
+
+    def test_compatible_hevc_is_remuxed_without_video_loss(self):
+        self.input_video['codec_name'] = 'hevc'
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertTrue(result['success'], result)
+        self.assertTrue(result['videoCopied'])
+        self.assertEqual(self.arguments[self.arguments.index('-c:v') + 1], 'copy')
+        self.assertNotIn('-b:v', self.arguments)
+
+    def test_compatible_h264_and_aac_are_copied(self):
+        self.input_video.update(codec_name='h264', pix_fmt='yuv420p', color_transfer='bt709', color_primaries='bt709')
+        self.audio = [{'index':1, 'codec_type':'audio', 'codec_name':'aac', 'profile':'LC'}]
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertTrue(result['success'], result)
+        self.assertEqual(self.arguments[self.arguments.index('-c:a') + 1], 'copy')
+        self.assertTrue(result['videoCopied'])
+
+    def test_forced_retry_uses_hevc_at_original_resolution(self):
+        self.input_video['codec_name'] = 'hevc'
+        result = json.loads(media.glint_transcode_photos_copy(str(self.source)))
+        self.assertTrue(result['success'], result)
+        self.assertFalse(result['videoCopied'])
+        self.assertIn('passthrough', self.arguments)
+        self.assertNotIn('-vf', self.arguments)
+        self.assertNotIn('-r', self.arguments)
+
+    def test_high_bitrate_source_is_not_capped_at_60mbps(self):
+        self.input_video['bit_rate'] = '90000000'
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertTrue(result['success'], result)
+        self.assertGreaterEqual(int(self.arguments[self.arguments.index('-b:v') + 1]), 180000000)
+        self.assertNotIn('-q:v', self.arguments)  # Not available in iOS VideoToolbox.
+
+    def test_downscaled_copy_is_discarded(self):
+        self.output_updates.update(width=720, height=1280)
+        self.assertFalse(json.loads(media.glint_make_photos_copy(str(self.source)))['success'])
+        self.assertEqual(self.source.read_bytes(), self.original)
+
+    def test_truncated_copy_is_discarded(self):
+        self.output_updates['duration'] = '5'
+        self.assertFalse(json.loads(media.glint_make_photos_copy(str(self.source)))['success'])
+
+    def test_frame_rate_loss_is_rejected(self):
+        self.output_updates['avg_frame_rate'] = '24/1'
+        self.assertFalse(json.loads(media.glint_make_photos_copy(str(self.source)))['success'])
+
+    def test_rotation_loss_is_rejected(self):
+        self.input_video['side_data_list'] = [{'side_data_type':'Display Matrix', 'rotation':-90}]
+        self.output_updates['side_data_list'] = []
+        self.assertFalse(json.loads(media.glint_make_photos_copy(str(self.source)))['success'])
+
+    def test_failed_remux_can_retry_encoding(self):
+        self.input_video['codec_name'] = 'hevc'
+        self.return_code = 1
+        result = json.loads(media.glint_make_photos_copy(str(self.source)))
+        self.assertTrue(result['retryWithEncode'])
 
 
 if __name__ == '__main__':

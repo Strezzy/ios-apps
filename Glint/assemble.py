@@ -64,7 +64,7 @@ accent.write_text(json.dumps({'colors':[{'idiom':'universal','color':{'color-spa
 strings = ROOT / 'Palladium/Resources/Localizable.xcstrings'
 text = strings.read_text().replace('"value" : "Palladium"', '"value" : "Glint"').replace('"value": "Palladium"', '"value": "Glint"')
 strings.write_text(text)
-for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift']:
+for name in ['GlintDesign.swift', 'GlintMedia.swift', 'GlintQuality.swift', 'GlintPaste.swift', 'GlintPlayback.swift']:
     shutil.copy2(OVERLAY / name, ROOT / 'Palladium/Views' / name)
 (ROOT / 'Palladium/Views/Tabs/FormatPickerSheetView.swift').write_text('// Source-aware replacement is in GlintDesign.swift.\n')
 
@@ -76,8 +76,8 @@ end = text.index('        .sheet(isPresented: $showHistorySheet)', start)
 text = text[:start] + '''    var body: some View {
         GlintHome(url: $urlText, running: isRunning, resolving: isResolvingFormats || isResolvingGallery,
             connected: useCookies && !selectedCookieFileName.isEmpty, progress: progressText,
-            error: downloadErrorText, queueCount: downloadQueue.outstandingCount,
-            downloadTitle: selectedPreset == .autoVideo ? "Download maximum HDR" : selectedPreset == .mute ? "Download HDR without audio" : "Download " + selectedPreset.title,
+            error: downloadErrorText, queueCount: downloadQueue.outstandingCount, status: statusText,
+            downloadTitle: selectedPreset == .autoVideo ? "Download best quality" : selectedPreset == .mute ? "Download video without audio" : "Download " + selectedPreset.title,
             onDownload: primaryDownloadAction, onInspect: onChooseFormat, onCancel: onCancel,
             onPaste: onPastedURL, onOptions: { showDownloadOptions = true },
             onHistory: { showHistorySheet = true }, onQueue: { showDownloadQueueSheet = true },
@@ -96,7 +96,7 @@ text = text[:start] + '''    var body: some View {
                     }
                     Section("Session") { cookieSelectionRow }
                     Section {
-                        Text("Video mode always downloads the largest available HDR stream without conversion. Use the manual quality picker for SDR or Library > Quality & export for a separate Photos copy.").font(.caption).foregroundStyle(.secondary)
+                        Text("Video mode downloads the highest available resolution, preferring HDR at the same resolution. Incompatible videos automatically get a high-quality playable copy. Originals are retained. Use Library to save to Photos or Files.").font(.caption).foregroundStyle(.secondary)
                     }
                 }.navigationTitle("Options").navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showDownloadOptions = false } } }
@@ -141,36 +141,50 @@ change(options, '''            return "--merge-output-format mp4 --remux-video m
 # The primary video action and automatic queue must keep the source-quality promise
 # even if an older install saved conversion, codec, thumbnail or website overrides.
 flow = 'Palladium/Views/ContentView+DownloadFlow.swift'
+change(flow, '    func handlePastedURL(_ pastedURL: String) {\n        guard autoDownloadOnPaste else { return }', '''    func handlePastedURL(_ pastedURL: String) {
+        urlText = ClipboardLinkDetector.firstLink(in: pastedURL) ?? pastedURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard autoDownloadOnPaste else { return }''')
 change(flow, '        let queuedBatchQuality = queuedConfiguration?.batchQuality', '''        let queuedBatchQuality = queuedConfiguration?.batchQuality
-        let glintSourceHDR = formatOverride == nil && queuedBatchQuality == nil
+        let glintSourceBest = formatOverride == nil && queuedBatchQuality == nil
             && (effectiveDownloadPreset == .autoVideo || effectiveDownloadPreset == .mute)''')
-change(flow, '        if let formatOverride {\n            let formatPreset:', '        if glintSourceHDR {\n            presetAtStart = DownloadPreset.custom.pythonValue\n        } else if let formatOverride {\n            let formatPreset:')
-change(flow, '        if let formatOverride {\n            let formatArguments', '''        if glintSourceHDR {
+change(flow, '        if let formatOverride {\n            let formatPreset:', '        if glintSourceBest {\n            presetAtStart = DownloadPreset.custom.pythonValue\n        } else if let formatOverride {\n            let formatPreset:')
+change(flow, '        if let formatOverride {\n            let formatArguments', '''        if glintSourceBest {
             extraArgsAtStart = GlintSourceQuality.downloadArguments(includeAudio: effectiveDownloadPreset != .mute)
                 + " --sleep-requests 2 --retries 1 --extractor-retries 0"
         } else if let formatOverride {
             let formatArguments''')
 change(flow, '        let postProcessingJSONAtStart = postProcessing.configurationJSON(for: postProcessingPreset)',
-    '        let postProcessingJSONAtStart = (glintSourceHDR ? PostProcessingPreferences() : postProcessing).configurationJSON(for: postProcessingPreset)')
+    '        let postProcessingJSONAtStart = (glintSourceBest ? PostProcessingPreferences() : postProcessing).configurationJSON(for: postProcessingPreset)')
 change(flow, '''        let presetArgsJSONAtStart = usesQualitySettings
             ? queuedConfiguration?.presetArgumentsJSON ?? buildPresetArgumentsJSON()
-            : "{}"''', '''        let presetArgsJSONAtStart = glintSourceHDR ? "{}" : (usesQualitySettings
+            : "{}"''', '''        let presetArgsJSONAtStart = glintSourceBest ? "{}" : (usesQualitySettings
             ? queuedConfiguration?.presetArgumentsJSON ?? buildPresetArgumentsJSON()
             : "{}")''')
 change(flow, '        let embedThumbnailAtStart = queuedConfiguration?.embedThumbnail ?? embedThumbnail',
-    '        let embedThumbnailAtStart = glintSourceHDR ? false : (queuedConfiguration?.embedThumbnail ?? embedThumbnail)')
+    '        let embedThumbnailAtStart = glintSourceBest ? false : (queuedConfiguration?.embedThumbnail ?? embedThumbnail)')
+change(flow, '            FFmpegBridgeControl.setLiveLogFD(nil)', '''            let glintPrepared: (paths: [String], primary: String?, note: String?)
+            if (outcome.resultKind == "success" || outcome.resultKind == "partial" || outcome.statusText == "success"), !downloadCancelRequested {
+                glintPrepared = await glintPrepareDownloads(paths: outcome.downloadedPaths, primary: outcome.primaryDownloadedPath)
+            } else {
+                glintPrepared = (outcome.downloadedPaths, outcome.primaryDownloadedPath, nil)
+            }
+            FFmpegBridgeControl.setLiveLogFD(nil)''')
+change(flow, '                    items: outcome.downloadedPaths.map { URL(fileURLWithPath: $0) },\n                    primaryMediaURL: outcome.primaryDownloadedPath.map { URL(fileURLWithPath: $0) },',
+    '                    items: glintPrepared.paths.map { URL(fileURLWithPath: $0) },\n                    primaryMediaURL: glintPrepared.primary.map { URL(fileURLWithPath: $0) },')
+change(flow, '            if finalResultKind == "error" {', '''            if finalResultKind == "success" || finalResultKind == "partial" {
+                progressText += "\\n" + (glintPrepared.note ?? "Ready to play. Open Library to save to Photos or Files.")
+            }
+            if finalResultKind == "error" {''')
 
 # Add manifest metadata without inferring HDR from pixel depth or the filename.
 runner = 'Palladium/Services/Python/PythonFlowRunner.swift'
-change(runner, '        var arguments = "--format \\(resolvedDownloadID ?? id)"',
-    '        var arguments = "--format \\(resolvedDownloadID ?? id) --keep-video"')
 change(runner, '    var hasThumbnail: Bool = false', '    var hasThumbnail: Bool = false\n    var dynamicRange: String? = nil\n    var thumbnailURL: String? = nil')
 change(runner, '                hasThumbnail: item["has_thumbnail"] as? Bool ?? false', '''                hasThumbnail: item["has_thumbnail"] as? Bool ?? false,
                 dynamicRange: item["dynamic_range"] as? String,
                 thumbnailURL: item["thumbnail_url"] as? String''')
 append(runner, '''extension PythonFlowRunner {
     static func glintMedia(function: String, path: String) async -> String {
-        guard ["glint_inspect_media", "glint_make_photos_copy"].contains(function) else {
+        guard ["glint_inspect_media", "glint_make_photos_copy", "glint_transcode_photos_copy"].contains(function) else {
             return "{\\"success\\":false,\\"error\\":\\"Unknown operation\\"}"
         }
         return await runOnPythonThread {
@@ -192,7 +206,7 @@ change('Palladium/Services/Python/palladium_ytdlp/ytdlp.py', '                "h
                 "thumbnail_url": info.get("thumbnail"),''')
 shutil.copy2(OVERLAY / 'glint_media.py', ROOT / 'Palladium/Services/Python/palladium_ytdlp/glint_media.py')
 change('Palladium/Services/Python/PythonScripts.swift', '        "palladium_ytdlp/ytdlp.py",', '        "palladium_ytdlp/ytdlp.py",\n        "palladium_ytdlp/glint_media.py",')
-append('Palladium/Services/Python/yt_dlp_flow.py', 'from palladium_ytdlp.glint_media import glint_inspect_media, glint_make_photos_copy')
+append('Palladium/Services/Python/yt_dlp_flow.py', 'from palladium_ytdlp.glint_media import glint_inspect_media, glint_make_photos_copy, glint_transcode_photos_copy')
 
 # Private sessions: no credentials in the Files-visible Documents directory or backups.
 change('Palladium/Views/ContentView+Cookies.swift', '        try documentsDirectoryURL().appendingPathComponent("Cookies", isDirectory: true)', '        try GlintPrivateStorage.cookiesDirectory()')
@@ -277,6 +291,7 @@ text = text[:start] + '''    var body: some View {
                                 if item.isFolder {
                                     NavigationLink(value: item) { GlintLibraryTile(item: item) }.buttonStyle(.plain)
                                 } else {
+                                    VStack(spacing: 8) {
                                     Button { openMedia(item) } label: { GlintLibraryTile(item: item) }
                                         .buttonStyle(.plain)
                                         .contextMenu {
@@ -284,6 +299,11 @@ text = text[:start] + '''    var body: some View {
                                             Button("Share & save", systemImage: "square.and.arrow.up") { onOpenOptions(item) }
                                             Button("Delete", systemImage: "trash", role: .destructive) { delete(item) }
                                         }
+                                    if DownloadedMediaGroup.classify(item.url) == .video {
+                                        Button("Save", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) }
+                                            .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(isEngineBusy)
+                                    }
+                                    }
                                 }
                             }
                         }.padding(20)
@@ -306,7 +326,22 @@ text = text[:start] + '''    var body: some View {
 text = text.replace('private struct SavedDownloadsFolderView: View {', 'private struct SavedDownloadsFolderView: View {\n    @State private var glintInspection: GlintInspectionTarget?')
 needle = '                                    onOpenOptions(item)\n                                }'
 # Preserve all existing actions; add inspection to media rows inside folders.
-text = text.replace('                                    onOpenPlayback(item)\n                                }', '                                    onOpenPlayback(item)\n                                }\n                                .contextMenu { Button("Quality & Photos copy", systemImage: "sparkles.tv") { glintInspection = GlintInspectionTarget(url: item.url) } }\n                                .sheet(item: $glintInspection) { target in GlintMediaSheet(url: target.url) }')
+text = text.replace('                                    onOpenPlayback(item)\n                                }', '                                    onOpenPlayback(item)\n                                }\n                                .contextMenu { Button("Save to Photos or Files", systemImage: "square.and.arrow.down") { glintInspection = GlintInspectionTarget(url: item.url) } }')
+text = text.replace('''                            SavedDownloadRow(item: item) {
+                                onOpenOptions(item)
+                            }''', '''                            SavedDownloadRow(item: item) {
+                                if DownloadedMediaGroup.classify(item.url) == .video {
+                                    glintInspection = GlintInspectionTarget(url: item.url)
+                                } else { onOpenOptions(item) }
+                            }''')
+text = text.replace('''        .onAppear(perform: loadItems)
+    }
+
+    private func loadItems()''', '''        .onAppear(perform: loadItems)
+        .sheet(item: $glintInspection) { target in GlintMediaSheet(url: target.url) }
+    }
+
+    private func loadItems()''')
 library.write_text(text)
 
 # Restore normal TLS validation instead of inheriting permissive extractor settings.

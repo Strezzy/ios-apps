@@ -63,7 +63,7 @@ def put_file(path, transform, message):
 
 required = ['Glint.ipa', 'Glint-LiveContainer.ipa', 'Glint-Source.zip', 'Glint.png',
             'build-info.json', 'SHA256SUMS.txt', 'glint-tests.txt', 'engine-tests.txt', 'hdr-plugin-tests.txt',
-            'selection-tests.txt', 'quality-arguments.json', 'catalog-tests.txt']
+            'selection-tests.txt', 'quality-arguments.json', 'catalog-tests.txt', 'paste-tests.txt', 'remux-tests.txt']
 for filename in required:
     if not (DIST / filename).is_file() or (DIST / filename).stat().st_size == 0:
         raise RuntimeError(f'Missing build result: {filename}')
@@ -80,9 +80,11 @@ metadata = json.loads((ROOT / 'app-registry.json').read_text())[BUILD['bundleIde
 
 notes = f'''# Glint 0.1.0 · Preview {BUILD['build']}
 
-A warm Liquid Glass downloader with maximum-resolution HDR selection, a quality picker, a local library, queues, and protected local sign-in sessions.
+A warm Liquid Glass downloader with maximum-resolution selection, HDR support, a local library, queues, and protected local sign-in sessions.
 
-This build requires HDR for the main video action, then chooses the largest HDR stream exposed by the service. It does not silently fall back to SDR. Manual stream selection remains available. Saved conversion preferences cannot override the main action. Certificate validation is enabled, and the app source now uses the LiveContainer package and registers Glint with the shared catalog generator.
+Paste now fills the link field even when automatic downloading is disabled, and handles both URLs and shared text. The main action chooses the highest exposed resolution, preferring HDR at that resolution. SDR and unknown-range videos remain downloadable. Instagram login may expose additional streams, including HDR, but is optional for accessible public downloads.
+
+Downloads are automatically checked for iPhone playback and Photos compatibility. When needed, Glint keeps an original in Files, tries MP4 with the existing video stream, then creates a high-quality HEVC/AAC copy. Library videos have a visible Save button for Photos or Files.
 
 ## Install
 - **Glint.ipa** includes the Share Extension. Use your signing/sideloading installer.
@@ -92,10 +94,10 @@ This build requires HDR for the main video action, then chooses the largest HDR 
 Unsigned archives require your installer to sign or prepare them. Minimum OS reported by the compiled app: **iOS {BUILD['minimumOS']}**.
 
 ## Quality
-Default video downloads copy the delivered encoded streams without resizing or re-encoding. HDR availability depends on the media and authenticated session. No exposed HDR stream means an error, not an SDR substitution. Library's quality inspector checks the saved file's actual color metadata. A Photos-compatible HEVC copy is optional and separate from the untouched source. Conversion does not preserve Dolby Vision metadata. “Source” is the service's stream, not the creator's camera-original file.
+Source downloads do not resize or re-encode the service's stream. Compatibility conversion preserves dimensions, orientation, frame timing and verified HLG/PQ HDR, with a generous source- and resolution-based bitrate. Re-encoding is not lossless and does not preserve Dolby Vision dynamic metadata. The original is retained in Files → Glint → Originals before automatic preparation. If preparation cannot preserve these properties, Glint keeps the download and explains why a playable copy was unavailable. “Source” is the service's stream, not the creator's camera-original file.
 
 ## Verification and limitations
-Native Xcode archive completed and the attached automated tests passed. **Physical iPhone testing has not been performed for this release.** Real Instagram login/HDR retrieval, Photos import, LiveContainer behavior, background continuation, and device thermals still need testing. The media tests use a mocked native bridge and are not hardware encoder tests.
+Native Xcode archive completed. Attached reports cover native URL/text paste payloads, real yt-dlp selection fixtures, conversion safeguards, the engine and HDR plugin. The real-remux report runs when host FFmpeg is available and explicitly reports a skip otherwise. **Physical iPhone testing has not been performed for this release.** Real Instagram login/HDR retrieval, VideoToolbox conversion, Photos import, LiveContainer behavior, background continuation, and device thermals still need testing. Mocked conversion tests are not hardware encoder tests.
 
 Automated Instagram access can trigger account verification or restrictions. Stop if challenged. Save only media you own or have permission to download.
 

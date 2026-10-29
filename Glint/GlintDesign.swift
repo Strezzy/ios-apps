@@ -2,6 +2,7 @@
 // Glint interface. The downloader engine is derived from Palladium; see README.md.
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct GlintGlass: ViewModifier {
     var radius: CGFloat = 26
@@ -63,6 +64,7 @@ struct GlintHome: View {
     let progress: String
     let error: String?
     let queueCount: Int
+    let status: String
     let downloadTitle: String
     let onDownload: () -> Void
     let onInspect: () -> Void
@@ -74,6 +76,7 @@ struct GlintHome: View {
     let onConnect: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var focused: Bool
+    @State private var pasteMessage: String?
     private var busy: Bool { running || resolving }
     private var hasURL: Bool { !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var progressFraction: Double? {
@@ -123,10 +126,17 @@ struct GlintHome: View {
                             .autocorrectionDisabled().focused($focused).disabled(busy)
                             .accessibilityLabel("Video link").submitLabel(.done)
                         HStack {
-                            PasteButton(payloadType: String.self) { values in
-                                guard let text = values.first else { return }
-                                onPaste(text)
-                                focused = false
+                            PasteButton(supportedContentTypes: [.url, .plainText]) { providers in
+                                Task { @MainActor in
+                                    guard let text = await GlintPaste.read(providers) else {
+                                        pasteMessage = "Copy a video link, then tap Paste. You can also touch and hold the link field to paste."
+                                        return
+                                    }
+                                    url = text
+                                    pasteMessage = nil
+                                    onPaste(text)
+                                    focused = false
+                                }
                             }.buttonBorderShape(.capsule).labelStyle(.titleAndIcon).disabled(busy)
                             Spacer()
                             if hasURL {
@@ -134,22 +144,23 @@ struct GlintHome: View {
                                     .font(.caption).foregroundStyle(.secondary).disabled(busy)
                             }
                         }
+                        if let pasteMessage { Text(pasteMessage).font(.caption).foregroundStyle(.secondary) }
                         Divider().opacity(0.45)
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "sparkles.tv").font(.title3).foregroundStyle(GlintPalette.accent)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text("Maximum resolution + HDR").font(.subheadline.weight(.semibold))
-                                Text("The largest HDR stream available. Original encoded video, with no resizing or re-encoding.").font(.caption).foregroundStyle(.secondary)
+                                Text("Highest quality. Ready for iPhone.").font(.subheadline.weight(.semibold))
+                                Text("Maximum available resolution, with HDR when available. We prepare a playable copy only when needed.").font(.caption).foregroundStyle(.secondary)
                             }
                         }
-                        Text("No HDR stream? We’ll tell you. SDR is only available through an explicit manual choice.")
+                        Text("Instagram sign-in may unlock HDR and additional streams. Without HDR, you still get the best available video.")
                             .font(.caption).foregroundStyle(.secondary)
                     }.padding(22).glintGlass(30)
                     if busy {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 ProgressView().tint(GlintPalette.accent)
-                                Text(resolving && !running ? "Finding available streams…" : "Saving your moment…").font(.headline)
+                                Text(resolving && !running ? "Finding available streams…" : progress.hasPrefix("Preparing") ? "Preparing for iPhone…" : "Saving your moment…").font(.headline)
                                 Spacer()
                             }
                             if let fraction = progressFraction, running { ProgressView(value: fraction).tint(GlintPalette.accent) }
@@ -171,22 +182,25 @@ struct GlintHome: View {
                         }
                     }
                     if let error, !error.isEmpty {
-                        if error.localizedCaseInsensitiveContains("requested format") {
-                            Label("No matching HDR stream was returned. Connect Instagram, then inspect the available streams. Glint has not substituted an SDR download.", systemImage: "sparkles.tv")
-                                .font(.subheadline).padding(18).glintGlass(22)
-                        }
                         DisclosureGroup {
                             Text(error).font(.caption).textSelection(.enabled).padding(.top, 8)
                         } label: {
                             Label("This download needs attention", systemImage: "exclamationmark.circle").font(.subheadline.weight(.semibold))
                         }.tint(.red).padding(18).glintGlass(22)
                     }
+                    if !busy && ["success", "partial"].contains(status) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Download ready", systemImage: "checkmark.circle.fill").font(.headline)
+                            Text(progress).font(.caption).foregroundStyle(.secondary)
+                            Text("Open Library → Save for Photos or Files.").font(.subheadline)
+                        }.padding(20).glintGlass()
+                    }
                     Button(action: onConnect) {
                         HStack(spacing: 12) {
                             Image(systemName: connected ? "checkmark.shield" : "person.crop.circle.badge.checkmark").font(.title2)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(connected ? "Instagram session selected" : "Connect Instagram for HDR").font(.subheadline.weight(.semibold))
-                                Text(connected ? "Availability depends on the Reel and your session." : "Sign in on Instagram itself. Your session stays on this device.")
+                                Text(connected ? "Instagram session selected" : "Connect Instagram · Optional").font(.subheadline.weight(.semibold))
+                                Text(connected ? "Availability depends on the Reel and your session." : "Sign-in may unlock HDR. Public videos can still download without it.")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -230,7 +244,7 @@ struct GlintSettingsShell<Advanced: View>: View {
                             Label("Quality, without the guessing", systemImage: "sparkles.tv").font(.headline)
                             Text("Source means the best stream Instagram makes available, not the creator’s camera original. HDR labels come from stream metadata. Check a saved file in Library to verify its actual color information.")
                                 .font(.subheadline).foregroundStyle(.secondary)
-                            Text("Photos copies are separate exports. Your source download stays untouched. HDR-to-HEVC conversion does not preserve Dolby Vision metadata.")
+                            Text("Playable downloads save to Library automatically. Incompatible videos get a high-quality HEVC copy at the original resolution and frame timing. HLG/PQ HDR is verified after conversion. Originals remain in Files → Glint → Originals. Dolby Vision dynamic metadata is not recreated during conversion.")
                                 .font(.subheadline).foregroundStyle(.secondary)
                         }.padding(22).glintGlass()
                         VStack(alignment: .leading, spacing: 14) {

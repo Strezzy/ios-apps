@@ -78,9 +78,60 @@ def glint_inspect_media(path):
         return json.dumps({'success': False, 'error': str(error)})
 
 
-def glint_make_photos_copy(path):
-    """Create a different HEVC/AAC file; never replace, rename or delete the source."""
+def _number(value, default=0):
+    try:
+        from fractions import Fraction
+        return float(Fraction(str(value)))
+    except (ValueError, TypeError, ZeroDivisionError):
+        return default
+
+
+def _rotation(video):
+    for side in video.get('side_data_list') or []:
+        if 'rotation' in side:
+            return round(_number(side['rotation'])) % 360
+    return round(_number((video.get('tags') or {}).get('rotate'))) % 360
+
+
+def _duration(metadata, video):
+    return _number(video.get('duration')) or _number((metadata.get('format') or {}).get('duration'))
+
+
+def _verify_copy(before_metadata, after_metadata, copied_video_codec):
+    before_video, after_video = _video(before_metadata), _video(after_metadata)
+    if not after_video or after_video.get('codec_name') != copied_video_codec:
+        raise RuntimeError('The playable copy failed codec verification.')
+    for key in ('width', 'height'):
+        if not before_video.get(key) or after_video.get(key) != before_video[key]:
+            raise RuntimeError('The copy changed the source resolution; it was discarded.')
+    if _rotation(before_video) != _rotation(after_video):
+        raise RuntimeError('The copy changed the video orientation; it was discarded.')
+    before, after = classify_video(before_video), classify_video(after_video)
+    if before['verifiedHDR'] and (not after['verifiedHDR'] or after['transfer'] != before['transfer']):
+        raise RuntimeError('The copy did not retain HDR. It was discarded; the original is untouched.')
+    if before['bitDepth'] and (after['bitDepth'] or 0) < min(10, before['bitDepth']):
+        raise RuntimeError('The copy lost video bit depth; it was discarded.')
+    fps = _number(before_video.get('avg_frame_rate'))
+    out_fps = _number(after_video.get('avg_frame_rate'))
+    duration, out_duration = _duration(before_metadata, before_video), _duration(after_metadata, after_video)
+    if duration and (not out_duration or abs(duration - out_duration) > max(0.15, 2 / (fps or 24))):
+        raise RuntimeError('The copy changed the video duration; it was discarded.')
+    if fps and out_fps and abs(fps - out_fps) > max(0.05, fps * 0.005):
+        raise RuntimeError('The copy changed the frame rate; it was discarded.')
+    frames, out_frames = _number(before_video.get('nb_frames')), _number(after_video.get('nb_frames'))
+    if frames and out_frames and frames != out_frames:
+        raise RuntimeError('The copy changed the frame count; it was discarded.')
+    if any(s.get('codec_type') == 'audio' for s in before_metadata.get('streams', [])):
+        audio = next((s for s in after_metadata.get('streams', []) if s.get('codec_type') == 'audio'), None)
+        if not audio or audio.get('codec_name') not in {'aac', 'alac'}:
+            raise RuntimeError('The copy did not retain playable audio; it was discarded.')
+    return after
+
+
+def _make_photos_copy(path, force_encode=False):
+    """Remux when possible; otherwise encode a high-quality HEVC copy, never resize."""
     temporary = None
+    copy_video = False
     try:
         source = _file(path)
         bridge = _bridge()
@@ -89,42 +140,71 @@ def glint_make_photos_copy(path):
         if not video:
             raise ValueError('No video stream found.')
         before = classify_video(video)
-        if (before['dolbyVision'] or video.get('color_transfer') in {'arib-std-b67', 'smpte2084'}) and not before['verifiedHDR']:
-            raise ValueError('The HDR base layer cannot be verified. Export the original instead; no SDR fallback was made.')
-        available = shutil.disk_usage(source.parent).free
-        if available < max(source.stat().st_size * 5, 512 * 1024 * 1024):
-            raise ValueError('Not enough free space for a separate Photos copy. Free some storage and try again.')
+        codec = video.get('codec_name')
+        # H.264 high-bit-depth/chroma profiles do not decode on ordinary iPhones.
+        copy_video = not force_encode and (
+            codec == 'h264' and video.get('pix_fmt') in {'yuv420p', 'yuvj420p', 'nv12'}
+            or codec == 'hevc' and video.get('pix_fmt') in {'yuv420p', 'yuv420p10le', 'p010le', 'nv12'})
+        if not copy_video and (before['dolbyVision'] or video.get('color_transfer') in {'arib-std-b67', 'smpte2084'}) and not before['verifiedHDR']:
+            raise ValueError('Downloaded original retained. This HDR format cannot be safely converted on this device.')
+        audio = next((s for s in metadata.get('streams', []) if s.get('codec_type') == 'audio'), None)
+        copy_audio = audio and not force_encode and audio.get('codec_name') in {'aac', 'alac'} and audio.get('profile') not in {'xHE-AAC', 'USAC'}
+        fps = _number(video.get('avg_frame_rate'), 30) or 30
+        source_rate = _number(video.get('bit_rate')) or _number((metadata.get('format') or {}).get('bit_rate'))
+        # VideoToolbox -q:v is not supported on iOS. Use a generous source- and
+        # pixel-rate-scaled bitrate, with quality prioritized over encoding speed.
+        rate = round(max(24000000, source_rate * 2, _number(video.get('width')) * _number(video.get('height')) * fps * 0.4))
+        if rate >= 2**31:
+            raise ValueError('Source exceeds the supported encoder bitrate. Original retained without downscaling.')
+        duration = _duration(metadata, video)
+        estimate = source.stat().st_size * 2 if copy_video else max(source.stat().st_size * 5, rate * duration / 8 * 1.3)
+        if shutil.disk_usage(source.parent).free < max(estimate, 512 * 1024 * 1024):
+            raise ValueError('Not enough storage for a high-quality playable copy. Original retained; free space and retry.')
         original_hash = _fingerprint(source)
         fd, temporary = tempfile.mkstemp(prefix='Glint-Photos-', suffix='.mp4', dir=source.parent)
         os.close(fd)
-        args = ['-hide_banner', '-y', '-i', str(source), '-map', f'0:{video.get("index", 0)}', '-map', '0:a:0?',
-                '-map_metadata', '0', '-c:v', 'hevc_videotoolbox', '-allow_sw', '0', '-tag:v', 'hvc1',
-                '-c:a', 'aac', '-b:a', '256k', '-movflags', '+faststart']
-        source_rate = int(video.get('bit_rate') or (metadata.get('format') or {}).get('bit_rate') or 16000000)
-        args += ['-b:v', str(min(60000000, max(12000000, source_rate)))]
-        if before['verifiedHDR']:
-            args += ['-profile:v', 'main10', '-pix_fmt', 'p010le', '-color_primaries', 'bt2020',
-                     '-color_trc', video['color_transfer'], '-colorspace', video.get('color_space') if video.get('color_space') in {'bt2020nc', 'bt2020c'} else 'bt2020nc']
+        args = ['-hide_banner', '-y', '-noautorotate', '-i', str(source),
+                '-map', f'0:{video.get("index", 0)}', '-map', '0:a:0?', '-map_metadata', '0']
+        if copy_video:
+            args += ['-c:v', 'copy', '-tag:v', 'hvc1' if codec == 'hevc' else 'avc1']
         else:
-            args += ['-profile:v', 'main', '-pix_fmt', 'yuv420p']
-        result = bridge.run_ffmpeg([*args, temporary])
+            args += ['-c:v', 'hevc_videotoolbox', '-allow_sw', '0', '-prio_speed', '0',
+                     '-tag:v', 'hvc1', '-b:v', str(rate), '-fps_mode', 'passthrough']
+            ten_bit = before['verifiedHDR'] or (before['bitDepth'] or 0) >= 10
+            args += ['-profile:v', 'main10' if ten_bit else 'main', '-pix_fmt', 'p010le' if ten_bit else 'yuv420p']
+            for field, option in [('color_primaries', '-color_primaries'), ('color_transfer', '-color_trc'),
+                                  ('color_space', '-colorspace'), ('color_range', '-color_range')]:
+                value = video.get(field)
+                if value and value not in {'unknown', 'unspecified'}:
+                    args += [option, value]
+        if audio:
+            args += ['-c:a', 'copy'] if copy_audio else ['-c:a', 'aac', '-b:a', str(max(320000, 128000 * int(audio.get('channels') or 2)))]
+        args += ['-movflags', '+faststart', temporary]
+        result = bridge.run_ffmpeg(args)
         if result.exit_code != 0:
-            raise RuntimeError('The device could not create this HEVC copy. The original is untouched. ' + result.combined_output[-1200:])
-        copied_video = _video(bridge.probe_metadata(temporary))
-        if not copied_video or copied_video.get('codec_name') != 'hevc':
-            raise RuntimeError('HEVC verification failed. The original is untouched.')
-        after = classify_video(copied_video)
-        if before['verifiedHDR'] and (not after['verifiedHDR'] or after['transfer'] != before['transfer']):
-            raise RuntimeError('The exported copy did not retain verified HDR. It was discarded; the original is untouched.')
+            raise RuntimeError('Playable-copy preparation failed. Original retained. ' + result.combined_output[-800:])
+        after = _verify_copy(metadata, bridge.probe_metadata(temporary), codec if copy_video else 'hevc')
         if _fingerprint(source) != original_hash:
             raise RuntimeError('The source changed during export. The copy was discarded.')
-        result = {'success': True, 'path': temporary, 'verifiedHDR': after['verifiedHDR'],
-                  'rangeLabel': after['rangeLabel'], 'sourceUnchanged': True,
-                  'note': 'Separate HEVC/AAC copy. Dolby Vision metadata is not preserved.' if before['dolbyVision'] else 'Separate HEVC/AAC copy; original unchanged.'}
+        note = 'Video stream preserved without re-encoding.' if copy_video else 'High-quality HEVC copy at source resolution and frame timing.'
+        if before['dolbyVision'] and not copy_video:
+            note += ' HLG/PQ base HDR retained; Dolby Vision dynamic metadata is not preserved.'
+        report = {'success': True, 'path': temporary, 'verifiedHDR': after['verifiedHDR'],
+                  'rangeLabel': after['rangeLabel'], 'sourceUnchanged': True, 'note': note,
+                  'videoCopied': bool(copy_video)}
         temporary = None
-        return json.dumps(result)
-    except Exception as error:
-        return json.dumps({'success': False, 'error': str(error)})
+        return json.dumps(report)
+    except (Exception, KeyboardInterrupt) as error:
+        return json.dumps({'success': False, 'error': str(error) or 'Conversion cancelled. Original retained.',
+                           'retryWithEncode': bool(copy_video and not isinstance(error, KeyboardInterrupt))})
     finally:
         if temporary and os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def glint_make_photos_copy(path):
+    return _make_photos_copy(path)
+
+
+def glint_transcode_photos_copy(path):
+    return _make_photos_copy(path, force_encode=True)
