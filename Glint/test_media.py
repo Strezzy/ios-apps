@@ -48,7 +48,9 @@ class ExportTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.source = Path(self.temp.name)/'source.webm'
+        # macOS exposes /var through /private/var. Compare canonical paths, as the
+        # production resolver does, so the fake bridge identifies its source.
+        self.source = Path(self.temp.name).resolve() / 'source.webm'
         self.source.write_bytes(b'original-encoded-stream')
         self.original = self.source.read_bytes()
         self.output_hdr = True
@@ -57,7 +59,7 @@ class ExportTests(unittest.TestCase):
         owner = self
         class Bridge:
             def probe_metadata(self, path):
-                source = Path(path) == owner.source
+                source = Path(path).resolve() == owner.source
                 output = stream(codec_name='vp9' if source else 'hevc')
                 if not source and not owner.output_hdr:
                     output.update(color_transfer='bt709',color_primaries='bt709',pix_fmt='yuv420p')
@@ -100,6 +102,13 @@ class ExportTests(unittest.TestCase):
         self.assertTrue(result['success'])
         self.assertTrue(result['verifiedHDR'])
         self.assertEqual(result['codec'],'vp9')
+    def test_symlinked_source_keeps_correct_metadata(self):
+        alias = self.source.with_name('linked.webm')
+        alias.symlink_to(self.source)
+        result = json.loads(media.glint_inspect_media(str(alias)))
+        self.assertTrue(result['success'])
+        self.assertEqual(result['codec'],'vp9')
+        self.assertEqual(self.source.read_bytes(),self.original)
 
 
 if __name__ == '__main__':
