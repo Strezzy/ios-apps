@@ -784,14 +784,25 @@
     },
     {
       "name": "Glint",
-      "subtitle": "Source-first video downloader",
+      "subtitle": "Maximum-resolution HDR downloader",
       "developerName": "Strezzy",
-      "localizedDescription": "Preview: native Liquid Glass downloader; source-first streams, reported HDR formats, saved-file HDR inspection and separate Photos copies. Compiled and automated-tested; physical iPhone behavior remains unverified.",
-      "category": "utilities",
+      "localizedDescription": "Save Instagram Reels and videos in the highest resolution HDR stream Instagram exposes. Native warm Liquid Glass interface, yt-dlp on device, manual stream inspection, queues, a local library and protected Instagram sign-in. The main video action requires HDR and never silently falls back to SDR. Source video is not resized or re-encoded. Optional Photos copies are separate HEVC exports; Dolby Vision metadata is not preserved in converted copies. Preview: physical iPhone login, HDR retrieval, Photos export and LiveContainer behavior still need device testing.",
+      "category": "photo-video",
       "tintColor": "#F05C29",
       "bundleIdentifier": "com.strezzy.glint",
       "iconURL": "https://raw.githubusercontent.com/Strezzy/ios-apps/main/assets/Glint.png",
       "versions": [
+        {
+          "version": "0.1.0",
+          "buildVersion": "4.1",
+          "buildNumber": "4.1",
+          "date": "2026-10-29T02:13:40Z",
+          "localizedDescription": "Save Instagram Reels and videos in the highest resolution HDR stream Instagram exposes. Native warm Liquid Glass interface, yt-dlp on device, manual stream inspection, queues, a local library and protected Instagram sign-in. The main video action requires HDR and never silently falls back to SDR. Source video is not resized or re-encoded. Optional Photos copies are separate HEVC exports; Dolby Vision metadata is not preserved in converted copies. Preview: physical iPhone login, HDR retrieval, Photos export and LiveContainer behavior still need device testing.",
+          "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build4.1/Glint-LiveContainer.ipa",
+          "size": 47020592,
+          "minOSVersion": "17.0",
+          "sha256": "0c72861cf6d885a6fc4aa20806e274242d00f5a46e9042b9818dfa2172822d37"
+        },
         {
           "version": "0.1.0",
           "buildVersion": "3.1",
@@ -805,14 +816,15 @@
         }
       ],
       "version": "0.1.0",
-      "versionDate": "2026-10-29T01:51:06Z",
-      "versionDescription": "Preview: native Liquid Glass downloader; source-first streams, reported HDR formats, saved-file HDR inspection and separate Photos copies. Compiled and automated-tested; physical iPhone behavior remains unverified.",
-      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build3.1/Glint.ipa",
-      "size": 47032881,
+      "versionDate": "2026-10-29T02:13:40Z",
+      "versionDescription": "Save Instagram Reels and videos in the highest resolution HDR stream Instagram exposes. Native warm Liquid Glass interface, yt-dlp on device, manual stream inspection, queues, a local library and protected Instagram sign-in. The main video action requires HDR and never silently falls back to SDR. Source video is not resized or re-encoded. Optional Photos copies are separate HEVC exports; Dolby Vision metadata is not preserved in converted copies. Preview: physical iPhone login, HDR retrieval, Photos export and LiveContainer behavior still need device testing.",
+      "downloadURL": "https://github.com/Strezzy/ios-apps/releases/download/glint-0.1.0-build4.1/Glint-LiveContainer.ipa",
+      "size": 47020592,
       "appPermissions": {
         "entitlements": [],
         "privacy": {
-          "NSPhotoLibraryAddUsageDescription": "Glint adds videos to Photos only when you choose Save to Photos."
+          "NSCameraUsageDescription": "Palladium does not use the camera directly. This message is included because bundled system APIs may reference camera access.",
+          "NSPhotoLibraryAddUsageDescription": "Save downloaded videos to your photo library."
         }
       }
     }
