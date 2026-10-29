@@ -141,6 +141,7 @@ struct GlintPlayer: View {
             }.background(Color.black.opacity(0.04))
                 .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
             .sheet(isPresented: $exporting) { GlintFilesExporter(urls: [url]) { _ in exporting = false } }
             .sheet(isPresented: $saving) { GlintMediaSheet(url: url) }
             .onReceive(NotificationCenter.default.publisher(for: .glintOpenInstagram)) { _ in dismiss() }

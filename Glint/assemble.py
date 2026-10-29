@@ -139,12 +139,17 @@ change(content, '                .tag(AppTab.download)\n', '''                .t
                     .tag(AppTab.instagram)
 ''')
 queue = 'Palladium/Views/ContentView+DownloadQueue.swift'
+change('Palladium/Models/DownloadQueue.swift', '    var batchQuality: BatchQualitySelection?', '    var glintBrowserRequest: Bool? = nil\n    var batchQuality: BatchQualitySelection?')
+change('Palladium/Models/DownloadQueue.swift', '        for index in items.indices where items[index].status == .pending {\n            items[index].configuration.batchQuality = selection', '        for index in items.indices where items[index].status == .pending && items[index].configuration.glintBrowserRequest != true {\n            items[index].configuration.batchQuality = selection')
+change(queue, '        if perLinkQualityActive {', '        if perLinkQualityActive && nextItem.configuration.glintBrowserRequest != true {')
 queue_file = ROOT / queue
 queue_file.write_text(queue_file.read_text().replace('selectedTab = .download', 'if selectedTab != .instagram { selectedTab = .download }'))
+change(queue, '    private func runQueuedDownload(_ item: DownloadQueueItem, logAction: String) {\n        if selectedTab != .instagram { selectedTab = .download }', '    private func runQueuedDownload(_ item: DownloadQueueItem, logAction: String) {\n        if item.configuration.glintBrowserRequest != true && selectedTab != .instagram { selectedTab = .download }')
 # Exporting completed media goes directly to Files, without changing log exports.
 change(content, 'ShareSheet(activityItems: payload.activityItems)', '''GlintFilesExporter(urls: payload.activityItems.compactMap { $0 as? URL }) { saved in
                 if !saved {
-                    shareSheetCompletion = awaitingQueueItemID == nil ? nil : { handleQueuePostDownloadActionCompletion(false) }
+                    if awaitingQueueItemID != nil { shareSheetCompletion = { handleQueuePostDownloadActionCompletion(false) } }
+                    else { shareSheetCompletion = nil }
                 }
                 sharePayload = nil
             }''')

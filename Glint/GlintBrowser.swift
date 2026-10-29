@@ -298,7 +298,7 @@ extension ContentView {
                 selectedCookieFileName = selectedName; defaultUseCookies = true; useCookies = true
                 refreshImportedCookieFiles()
             }
-            let configuration = QueuedDownloadConfiguration(
+            var configuration = QueuedDownloadConfiguration(
                 presetRawValue: DownloadPreset.autoVideo.rawValue, presetArgumentsJSON: "{}", extraArguments: "",
                 downloadPlaylist: false, downloadSubtitles: downloadSubtitles, embedThumbnail: false,
                 autoRetryFailedDownloads: false, subtitleLanguagePattern: resolvedSubtitleLanguagePattern,
@@ -306,6 +306,7 @@ extension ContentView {
                 afterDownloadBehaviorRawValue: AfterDownloadBehavior.saveToApplicationFolder.rawValue,
                 postProcessing: PostProcessingPreferences(), filenameExportPreset: filenameExportPreset,
                 customFilenameTemplate: customFilenameTemplate)
+            configuration.glintBrowserRequest = true
             downloadQueue.append(linksText: post.absoluteString, configuration: configuration)
             persistDownloadQueue()
             glintBrowserQueueRequested = !downloadQueue.isActive

@@ -52,7 +52,7 @@ struct GlintMediaSheet: View {
                         Button { exporting = true } label: {
                             Label("Save to Files", systemImage: "folder").frame(maxWidth: .infinity).padding(.vertical, 12)
                         }.buttonStyle(.bordered).buttonBorderShape(.capsule)
-                        Text("Files exports this original file unchanged, including VP9 and HDR. Photos uses a compatible copy when needed.")
+                        Text("Files exports the selected file unchanged, including VP9 and HDR. Photos uses a compatible copy when needed.")
                             .font(.caption).foregroundStyle(.secondary)
                         if activity.busy { Text("Photos conversion is available when the current download finishes. You can save to Files now.").font(.caption).foregroundStyle(.secondary) }
                         GlintOriginCard(url: url).disabled(busy)
